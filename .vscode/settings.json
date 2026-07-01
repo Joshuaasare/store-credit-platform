@@ -1,0 +1,8 @@
+{
+  "nxConsole.generateAiAgentRules": true,
+  "editor.quickSuggestions": {
+    "other": "on",
+    "comments": "off",
+    "strings": "off"
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "skills": {
+    "feature": {
+      "skillPath": "skills/feature/SKILL.md",
+      "source": "local"
+    },
+    "test-affected": {
+      "skillPath": "skills/test-affected/SKILL.md",
+      "source": "local"
+    },
+    "browser-check": {
+      "skillPath": "skills/browser-check/SKILL.md",
+      "source": "local"
+    },
+    "feature-request": {
+      "skillPath": "skills/feature-request/SKILL.md",
+      "source": "local"
+    }
+  }
+}

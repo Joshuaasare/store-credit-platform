@@ -1,0 +1,31 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compileOnSave": false,
+  "files": [],
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./*"]
+    }
+  },
+  "references": [
+    {
+      "path": "./libs/web-components"
+    },
+    {
+      "path": "./apps/storecredit-api"
+    },
+    {
+      "path": "./apps/admin-webapp-vite"
+    },
+    {
+      "path": "./apps/super-admin-webapp"
+    },
+    {
+      "path": "./apps/smartschool-guardians"
+    },
+    {
+      "path": "./libs/api-services"
+    }
+  ]
+}

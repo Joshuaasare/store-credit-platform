@@ -1,0 +1,20 @@
+{
+  "$schema": "https://ui.shadcn.com/schema.json",
+  "style": "new-york",
+  "rsc": false,
+  "tsx": true,
+  "tailwind": {
+    "config": "",
+    "css": "apps/admin-webapp-vite/src/styles.css",
+    "baseColor": "slate",
+    "cssVariables": true,
+    "rsc": true
+  },
+  "aliases": {
+    "components": "libs/web-components/src",
+    "utils": "libs/web-components/src/lib/utils",
+    "hooks": "libs/web-components/src/hooks",
+    "lib": "libs/web-components/src/lib"
+  },
+  "iconLibrary": "lucide"
+}
