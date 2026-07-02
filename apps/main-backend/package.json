@@ -104,6 +104,7 @@
   },
   "dependencies": {
     "@fastify/autoload": "~6.0.3",
+    "@fastify/cors": "^11.2.0",
     "@fastify/env": "^5.0.3",
     "@fastify/sensible": "~6.0.2",
     "dotenv": "^17.4.2",

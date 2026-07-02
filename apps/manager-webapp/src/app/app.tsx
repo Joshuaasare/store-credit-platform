@@ -29,7 +29,7 @@ export function App() {
         <Route
           path="/"
           element={
-            <div>
+            <div className="bg-black">
               This is the generated root route.{" "}
               <Link to="/page-2">Click here for page 2.</Link>
             </div>

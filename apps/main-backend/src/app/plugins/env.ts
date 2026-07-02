@@ -15,7 +15,6 @@ import type { FastifyInstance } from "fastify";
 // Environment variable schema
 const schema = {
   type: "object",
-  required: ["SUPABASE_URL", "SUPABASE_SECRET_KEY"],
   properties: {
     // Server Configuration
     NODE_ENV: {
