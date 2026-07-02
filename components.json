@@ -5,7 +5,7 @@
   "tsx": true,
   "tailwind": {
     "config": "",
-    "css": "apps/admin-webapp-vite/src/styles.css",
+    "css": "apps/manager-webapp/src/styles.css",
     "baseColor": "slate",
     "cssVariables": true,
     "rsc": true

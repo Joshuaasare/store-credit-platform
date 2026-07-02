@@ -13,16 +13,10 @@
       "path": "./libs/web-components"
     },
     {
-      "path": "./apps/storecredit-api"
+      "path": "./apps/manager-webapp"
     },
     {
-      "path": "./apps/admin-webapp-vite"
-    },
-    {
-      "path": "./apps/super-admin-webapp"
-    },
-    {
-      "path": "./apps/smartschool-guardians"
+      "path": "./apps/main-backend"
     },
     {
       "path": "./libs/api-services"
