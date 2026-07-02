@@ -6,7 +6,7 @@ import path from "path";
 
 export default defineConfig(() => ({
   root: __dirname,
-  cacheDir: "../../node_modules/.vite/apps/manager-webapp",
+  cacheDir: "../../node_modules/.vite/apps/main-webapp",
   server: {
     port: 4200,
     host: "localhost",
@@ -42,7 +42,7 @@ export default defineConfig(() => ({
   //  plugins: [ nxViteTsPaths() ],iai
   // },
   build: {
-    outDir: "../../dist/apps/manager-webapp",
+    outDir: "../../dist/apps/main-webapp",
     emptyOutDir: true,
     reportCompressedSize: true,
     commonjsOptions: {

@@ -4,7 +4,7 @@
   "license": "MIT",
   "private": true,
   "scripts": {
-    "generate:types": "node apps/smartschool-api/scripts/type-first-workflow.js"
+    "generate:types": "node apps/main-backend/scripts/type-first-workflow.js"
   },
   "browserslist": [
     "chrome >= 64",

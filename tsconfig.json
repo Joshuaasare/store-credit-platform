@@ -3,7 +3,6 @@
   "compileOnSave": false,
   "files": [],
   "compilerOptions": {
-    "baseUrl": ".",
     "paths": {
       "@/*": ["./*"]
     }
@@ -13,7 +12,7 @@
       "path": "./libs/web-components"
     },
     {
-      "path": "./apps/manager-webapp"
+      "path": "./apps/main-webapp"
     },
     {
       "path": "./apps/main-backend"

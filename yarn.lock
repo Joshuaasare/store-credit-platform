@@ -8628,9 +8628,9 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@store-credit-platform/manager-webapp@workspace:apps/manager-webapp":
+"@store-credit-platform/main-webapp@workspace:apps/main-webapp":
   version: 0.0.0-use.local
-  resolution: "@store-credit-platform/manager-webapp@workspace:apps/manager-webapp"
+  resolution: "@store-credit-platform/main-webapp@workspace:apps/main-webapp"
   languageName: unknown
   linkType: soft
 

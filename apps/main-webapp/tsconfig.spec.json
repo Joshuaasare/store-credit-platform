@@ -2,8 +2,7 @@
   "compilerOptions": {
     "outDir": "./out-tsc/jest",
     "jsx": "react-jsx",
-    "rootDir": "src",
-    "baseUrl": ".",
+    "rootDir": ".",
     "lib": ["dom", "ES2015"],
     "types": [
       "jest",

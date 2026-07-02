@@ -21,7 +21,7 @@ describe("App", () => {
     );
     expect(
       getAllByText(
-        new RegExp("Welcome @store-credit-platform/manager-webapp", "gi"),
+        new RegExp("Welcome @store-credit-platform/main-webapp", "gi"),
       ).length > 0,
     ).toBeTruthy();
   });
