@@ -12,7 +12,6 @@
       "vite/client"
     ],
     "rootDir": "src",
-    "baseUrl": ".",
     "paths": {
       "@shared/*": ["./src/app/shared/*"]
     }
