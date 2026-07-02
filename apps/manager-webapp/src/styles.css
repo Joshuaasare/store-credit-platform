@@ -1,0 +1,267 @@
+/* You can add global styles to this file, and also import other style files */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --radius: 0.625rem;
+  --maroon: #800000;
+}
+
+/* Light theme (default) */
+[data-theme="light"] {
+  --background: 0 0% 100%;
+  --foreground: 0 0% 15%;
+  --card: 0 0% 100%;
+  --card-foreground: 0 0% 15%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 0 0% 15%;
+  --primary: 0 0% 20%;
+  --primary-foreground: 0 0% 98%;
+  --secondary: 0 0% 97%;
+  --secondary-foreground: 0 0% 20%;
+  --muted: 0 0% 97%;
+  --muted-foreground: 0 0% 55%;
+  --accent: 0 0% 97%;
+  --accent-foreground: 0 0% 20%;
+  --destructive: 0 85% 60%;
+  --destructive-foreground: 0 85% 60%;
+  --border: 0 0% 92%;
+  --input: 0 0% 92%;
+  --ring: 0 0% 70%;
+  --ring-offset-background: 0 0% 100%;
+  --chart-1: 25 95% 53%;
+  --chart-2: 184 71% 60%;
+  --chart-3: 227 50% 45%;
+  --chart-4: 84 81% 75%;
+  --chart-5: 70 70% 75%;
+  --sidebar: 0 0% 100%;
+  --sidebar-foreground: 0 0% 15%;
+  --sidebar-primary: 0 0% 20%;
+  --sidebar-primary-foreground: 0 0% 98%;
+  --sidebar-accent: 0 0% 97%;
+  --sidebar-accent-foreground: 0 0% 20%;
+  --sidebar-border: 0 0% 92%;
+  --sidebar-ring: 0 0% 70%;
+
+  /** custom styles */
+  --custom-yellow-100: #f5eed2;
+}
+
+[data-theme="dark"] {
+  --background: 0 0% 14%;
+  --foreground: 0 0% 98%;
+  --card: 0 0% 14%;
+  --card-foreground: 0 0% 98%;
+  --popover: 0 0% 14%;
+  --popover-foreground: 0 0% 98%;
+  --primary: 0 0% 98%;
+  --primary-foreground: 0 0% 20%;
+  --secondary: 0 0% 27%;
+  --secondary-foreground: 0 0% 98%;
+  --muted: 0 0% 27%;
+  --muted-foreground: 0 0% 70%;
+  --accent: 0 0% 27%;
+  --accent-foreground: 0 0% 98%;
+  --destructive: 0 70% 50%;
+  --destructive-foreground: 0 80% 70%;
+  --border: 0 0% 27%;
+  --input: 0 0% 27%;
+  --ring: 0 0% 44%;
+  --ring-offset-background: 0 0% 14%;
+  --chart-1: 264 75% 50%;
+  --chart-2: 162 65% 70%;
+  --chart-3: 70 70% 75%;
+  --chart-4: 304 65% 65%;
+  --chart-5: 16 75% 65%;
+  --sidebar: 0 0% 20%;
+  --sidebar-foreground: 0 0% 98%;
+  --sidebar-primary: 264 75% 50%;
+  --sidebar-primary-foreground: 0 0% 98%;
+  --sidebar-accent: 0 0% 27%;
+  --sidebar-accent-foreground: 0 0% 98%;
+  --sidebar-border: 0 0% 27%;
+  --sidebar-ring: 0 0% 44%;
+}
+
+/* Blue theme */
+[data-theme="blue"] {
+  --background: 220 15% 98%;
+  --foreground: 220 25% 25%;
+  --card: 220 15% 100%;
+  --card-foreground: 220 25% 25%;
+  --popover: 220 15% 100%;
+  --popover-foreground: 220 25% 25%;
+  --primary: 220 80% 50%;
+  --primary-foreground: 220 15% 98%;
+  --secondary: 220 20% 90%;
+  --secondary-foreground: 220 40% 30%;
+  --muted: 220 10% 90%;
+  --muted-foreground: 220 15% 50%;
+  --accent: 220 35% 85%;
+  --accent-foreground: 220 50% 25%;
+  --destructive: 0 75% 60%;
+  --destructive-foreground: 0 10% 98%;
+  --border: 220 10% 85%;
+  --input: 220 10% 85%;
+  --ring: 220 80% 50%;
+  --ring-offset-background: 220 15% 98%;
+  --sidebar: 220 20% 95%;
+  --sidebar-foreground: 220 25% 25%;
+  --sidebar-primary: 220 80% 50%;
+  --sidebar-primary-foreground: 220 15% 98%;
+  --sidebar-accent: 220 35% 85%;
+  --sidebar-accent-foreground: 220 50% 25%;
+  --sidebar-border: 220 10% 85%;
+  --sidebar-ring: 220 80% 50%;
+}
+
+/* Warm theme */
+[data-theme="warm"] {
+  --background: 40 20% 98%;
+  --foreground: 40 25% 25%;
+  --card: 40 15% 100%;
+  --card-foreground: 40 25% 25%;
+  --popover: 40 15% 100%;
+  --popover-foreground: 40 25% 25%;
+  --primary: 25 70% 55%;
+  --primary-foreground: 40 10% 98%;
+  --secondary: 40 20% 90%;
+  --secondary-foreground: 40 40% 30%;
+  --muted: 40 10% 90%;
+  --muted-foreground: 40 15% 50%;
+  --accent: 40 35% 85%;
+  --accent-foreground: 40 50% 25%;
+  --destructive: 0 75% 60%;
+  --destructive-foreground: 0 10% 98%;
+  --border: 40 10% 85%;
+  --input: 40 10% 85%;
+  --ring: 25 70% 55%;
+  --ring-offset-background: 40 20% 98%;
+  --sidebar: 40 20% 95%;
+  --sidebar-foreground: 40 25% 25%;
+  --sidebar-primary: 25 70% 55%;
+  --sidebar-primary-foreground: 40 10% 98%;
+  --sidebar-accent: 40 35% 85%;
+  --sidebar-accent-foreground: 40 50% 25%;
+  --sidebar-border: 40 10% 85%;
+  --sidebar-ring: 25 70% 55%;
+}
+
+/* Slate theme */
+[data-theme="slate"] {
+  --background: 215 25% 15%; /* slate-900 */
+  --foreground: 215 10% 98%; /* Very light text for contrast */
+  --card: 215 25% 17%; /* Slightly lighter than background */
+  --card-foreground: 215 10% 98%;
+  --popover: 215 25% 17%;
+  --popover-foreground: 215 10% 98%;
+  --primary: 210 70% 70%; /* Light blue for primary actions */
+  --primary-foreground: 215 25% 15%;
+  --secondary: 215 20% 25%; /* Slightly lighter slate */
+  --secondary-foreground: 215 10% 98%;
+  --muted: 215 20% 25%;
+  --muted-foreground: 215 10% 70%;
+  --accent: 210 45% 35%; /* Subtle blue accent */
+  --accent-foreground: 215 10% 98%;
+  --destructive: 0 75% 60%; /* Keep destructive consistent */
+  --destructive-foreground: 215 10% 98%;
+  --border: 215 20% 30%;
+  --input: 215 20% 30%;
+  --ring: 210 70% 70%;
+  --ring-offset-background: 215 25% 15%;
+  --chart-1: 210 70% 70%;
+  --chart-2: 180 65% 65%;
+  --chart-3: 280 60% 60%;
+  --chart-4: 30 70% 70%;
+  --chart-5: 120 65% 60%;
+  --sidebar: 215 25% 20%; /* Slightly different from main background */
+  --sidebar-foreground: 215 10% 98%;
+  --sidebar-primary: 210 70% 70%;
+  --sidebar-primary-foreground: 215 25% 15%;
+  --sidebar-accent: 210 45% 35%;
+  --sidebar-accent-foreground: 215 10% 98%;
+  --sidebar-border: 215 20% 30%;
+  --sidebar-ring: 210 70% 70%;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+
+  /* Fix for Android Chrome - solid backgrounds for modals and overlays */
+  [data-radix-dialog-overlay] {
+    background-color: rgba(0, 0, 0, 0.8) !important;
+  }
+
+  /* Backdrop blur fallback for browsers without support */
+  @supports not (backdrop-filter: blur(10px)) {
+    .backdrop-blur,
+    .backdrop-blur-sm,
+    .backdrop-blur-md,
+    .backdrop-blur-lg {
+      backdrop-filter: none !important;
+      -webkit-backdrop-filter: none !important;
+    }
+  }
+}
+
+@layer components {
+  /* Ensure dialogs render above other content */
+  [data-radix-popper-content-wrapper] {
+    z-index: 50;
+  }
+}
+
+/* Fix dialog "pop out from bottom-right" v3 regression.
+ * v3 tailwindcss-animate `enter` keyframe overrides the entire `transform`
+ * property (translate3d + scale3d), which clobbers v3's
+ * `translate-x-[-50%] translate-y-[-50%]` centering mechanism (which uses
+ * the same `transform` property). v4 used a standalone `translate` property
+ * that didn't conflict. We override the animation-name so the dialog uses
+ * a custom keyframe that includes the `-50%` centering translate inside
+ * the keyframe itself. Note: var() fallbacks use 0px (not 0) so that
+ * `calc(-50% + <fallback>)` is a valid type. */
+@keyframes dialog-enter {
+  from {
+    opacity: var(--tw-enter-opacity, 1);
+    transform: translate3d(
+        calc(-50% + var(--tw-enter-translate-x, 0px)),
+        calc(-50% + var(--tw-enter-translate-y, 0px)),
+        0
+      )
+      scale3d(
+        var(--tw-enter-scale, 1),
+        var(--tw-enter-scale, 1),
+        var(--tw-enter-scale, 1)
+      )
+      rotate(var(--tw-enter-rotate, 0));
+  }
+}
+@keyframes dialog-exit {
+  to {
+    opacity: var(--tw-exit-opacity, 1);
+    transform: translate3d(
+        calc(-50% + var(--tw-exit-translate-x, 0px)),
+        calc(-50% + var(--tw-exit-translate-y, 0px)),
+        0
+      )
+      scale3d(
+        var(--tw-exit-scale, 1),
+        var(--tw-exit-scale, 1),
+        var(--tw-exit-scale, 1)
+      )
+      rotate(var(--tw-exit-rotate, 0));
+  }
+}
+
+[data-slot="dialog-content"][data-state="open"] {
+  animation-name: dialog-enter !important;
+}
+[data-slot="dialog-content"][data-state="closed"] {
+  animation-name: dialog-exit !important;
+}
