@@ -1,8 +1,10 @@
 {
-  "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "outDir": "./out-tsc/jest",
     "jsx": "react-jsx",
+    "rootDir": "src",
+    "baseUrl": ".",
+    "lib": ["dom", "ES2015"],
     "types": [
       "jest",
       "node",
@@ -24,7 +26,7 @@
   ],
   "references": [
     {
-      "path": "./tsconfig.app.json"
+      "path": "../../libs/web-components/tsconfig.lib.json"
     }
   ]
 }
