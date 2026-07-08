@@ -9,6 +9,7 @@
 - start with putting together all the types you need for the feature
 - Use the database schema in database.types.ts to understand the structure of the data, relationships, and constraints and how we'll be filtering the data from the frontend.
 - Always modify backend types in the types folder. Never modify types in the schema folder directly.
+- Create all the necessary types for the project in
 - Run yarn:generate-types to generate the corresponding schema files and the fronted types. (NB in the backend you'll be using the types from the schema file and not the direct types)
 - DO NOT modify the generated schema files directly. If you need to make changes to the types, always modify the backend types in the types folder and then run yarn:generate-types to update the schema files and frontend types accordingly.
 - implement the API endpoints for the feature in the backend and services with pagination and search support.
