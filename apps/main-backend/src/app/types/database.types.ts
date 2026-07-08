@@ -39,35 +39,403 @@ export type Database = {
   }
   public: {
     Tables: {
-      users: {
+      branch_credit_config: {
+        Row: {
+          branch_id: number
+          created_at: string
+          credit_type: Database["public"]["Enums"]["credit_type"] | null
+          credit_validity: number | null
+          deleted_at: string | null
+          fixed_credit_value: number | null
+          id: number
+          is_active: boolean
+          maximum_allowed_credit: number | null
+          percentage_credit_value: number | null
+          terms: string | null
+          threshold_amount: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          branch_id: number
+          created_at?: string
+          credit_type?: Database["public"]["Enums"]["credit_type"] | null
+          credit_validity?: number | null
+          deleted_at?: string | null
+          fixed_credit_value?: number | null
+          id?: number
+          is_active?: boolean
+          maximum_allowed_credit?: number | null
+          percentage_credit_value?: number | null
+          terms?: string | null
+          threshold_amount?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          branch_id?: number
+          created_at?: string
+          credit_type?: Database["public"]["Enums"]["credit_type"] | null
+          credit_validity?: number | null
+          deleted_at?: string | null
+          fixed_credit_value?: number | null
+          id?: number
+          is_active?: boolean
+          maximum_allowed_credit?: number | null
+          percentage_credit_value?: number | null
+          terms?: string | null
+          threshold_amount?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "branch_credits_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      branch_customer: {
+        Row: {
+          branch_id: number
+          created_at: string
+          customer_id: number
+          deleted_at: string
+          id: number
+          updated_at: string | null
+        }
+        Insert: {
+          branch_id: number
+          created_at?: string
+          customer_id: number
+          deleted_at: string
+          id?: number
+          updated_at?: string | null
+        }
+        Update: {
+          branch_id?: number
+          created_at?: string
+          customer_id?: number
+          deleted_at?: string
+          id?: number
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "branch_customer_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "branch_customer_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      branches: {
+        Row: {
+          address: string | null
+          city: string
+          country_code: string
+          created_at: string
+          deleted_at: string | null
+          id: number
+          merchant_id: number
+          phone: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          address?: string | null
+          city: string
+          country_code: string
+          created_at?: string
+          deleted_at?: string | null
+          id?: number
+          merchant_id: number
+          phone?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          address?: string | null
+          city?: string
+          country_code?: string
+          created_at?: string
+          deleted_at?: string | null
+          id?: number
+          merchant_id?: number
+          phone?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "branches_merchant_id_fkey"
+            columns: ["merchant_id"]
+            isOneToOne: false
+            referencedRelation: "merchants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      customer_credit: {
+        Row: {
+          branch_id: number
+          created_at: string
+          credit_amount: number
+          customer_id: number
+          deleted_at: string | null
+          expires_at: number | null
+          id: number
+          updated_at: string | null
+        }
+        Insert: {
+          branch_id: number
+          created_at?: string
+          credit_amount: number
+          customer_id: number
+          deleted_at?: string | null
+          expires_at?: number | null
+          id?: number
+          updated_at?: string | null
+        }
+        Update: {
+          branch_id?: number
+          created_at?: string
+          credit_amount?: number
+          customer_id?: number
+          deleted_at?: string | null
+          expires_at?: number | null
+          id?: number
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_credit_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_credit_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      customer_transactions: {
+        Row: {
+          amount: number
+          branch_id: number
+          created_at: string
+          customer_id: number
+          deleted_at: string | null
+          id: number
+          recorded_by_user_id: string | null
+          transaction_date: number
+          updated_at: string | null
+        }
+        Insert: {
+          amount: number
+          branch_id: number
+          created_at?: string
+          customer_id: number
+          deleted_at?: string | null
+          id?: number
+          recorded_by_user_id?: string | null
+          transaction_date: number
+          updated_at?: string | null
+        }
+        Update: {
+          amount?: number
+          branch_id?: number
+          created_at?: string
+          customer_id?: number
+          deleted_at?: string | null
+          id?: number
+          recorded_by_user_id?: string | null
+          transaction_date?: number
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_transactions_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_transactions_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_transactions_recorded_by_user_id_fkey"
+            columns: ["recorded_by_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      customers: {
         Row: {
           created_at: string
           deleted_at: string | null
-          email: string | null
-          id: string
-          otp: string | null
-          otp_attempts: number | null
-          otp_expires_at: string | null
+          id: number
+          phone: string | null
+          unique_id: string | null
           updated_at: string | null
         }
         Insert: {
           created_at?: string
           deleted_at?: string | null
-          email?: string | null
-          id: string
-          otp?: string | null
-          otp_attempts?: number | null
-          otp_expires_at?: string | null
+          id?: number
+          phone?: string | null
+          unique_id?: string | null
           updated_at?: string | null
         }
         Update: {
           created_at?: string
           deleted_at?: string | null
+          id?: number
+          phone?: string | null
+          unique_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      merchants: {
+        Row: {
+          country_code: string
+          created_at: string
+          deleted_at: string | null
+          id: number
+          is_active: boolean
+          name: string
+          phone: string
+          slug: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          country_code: string
+          created_at?: string
+          deleted_at?: string | null
+          id?: number
+          is_active?: boolean
+          name: string
+          phone: string
+          slug?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          country_code?: string
+          created_at?: string
+          deleted_at?: string | null
+          id?: number
+          is_active?: boolean
+          name?: string
+          phone?: string
+          slug?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      staff: {
+        Row: {
+          address: string | null
+          branch_id: number
+          created_at: string
+          deleted_at: string | null
+          id: number
+          notes: string | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          address?: string | null
+          branch_id: number
+          created_at?: string
+          deleted_at?: string | null
+          id?: number
+          notes?: string | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          address?: string | null
+          branch_id?: number
+          created_at?: string
+          deleted_at?: string | null
+          id?: number
+          notes?: string | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "staff_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "staff_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      users: {
+        Row: {
+          access_granted: boolean
+          created_at: string
+          deleted_at: string | null
+          email: string | null
+          id: string
+          other_names: string | null
+          otp: string | null
+          otp_attempts: number | null
+          otp_expires_at: string | null
+          surname: string
+          updated_at: string | null
+        }
+        Insert: {
+          access_granted?: boolean
+          created_at?: string
+          deleted_at?: string | null
           email?: string | null
-          id?: string
+          id: string
+          other_names?: string | null
           otp?: string | null
           otp_attempts?: number | null
           otp_expires_at?: string | null
+          surname: string
+          updated_at?: string | null
+        }
+        Update: {
+          access_granted?: boolean
+          created_at?: string
+          deleted_at?: string | null
+          email?: string | null
+          id?: string
+          other_names?: string | null
+          otp?: string | null
+          otp_attempts?: number | null
+          otp_expires_at?: string | null
+          surname?: string
           updated_at?: string | null
         }
         Relationships: []
@@ -80,7 +448,8 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      credit_type: "fixed" | "percentage"
+      role: "manager" | "cashier"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -210,6 +579,9 @@ export const Constants = {
     Enums: {},
   },
   public: {
-    Enums: {},
+    Enums: {
+      credit_type: ["fixed", "percentage"],
+      role: ["manager", "cashier"],
+    },
   },
 } as const

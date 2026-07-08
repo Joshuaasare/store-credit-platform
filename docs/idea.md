@@ -27,8 +27,10 @@ store-credit-app/
 ├── packages/
 │ └── shared/ # Shared TypeScript types and Zod validation schemas
 └── PROJECT_BRIEF.md # This file 6. Database Tables (Supabase)
-We need 4 main tables:
 
+I want us to implement a robust database plan and schema that can handle both the current requirements and future scalability. For with shops, i think we would want to distinguish the various branches of the shops. So we will have a store table, a branch table,We would also like to have a staff table, to house all the staff in a particular store. We then need a role table, which is primarily for granting role based access to specific staff members. Roles can be manager, cashier etc. In end, the idea is that this can turn into a inventory managment system, but we'll start with the bulk of the crediting system for now.
+
+I've created below a simple idea of some of the db, but what we'll create should be far more robust and scalable than whats below.
 profiles: Stores user info.
 id (uuid), phone_number (text), role (text: 'owner', 'cashier', 'customer')
 shops: Stores shop settings.
