@@ -457,6 +457,7 @@ export type Database = {
           otp: string | null
           otp_attempts: number | null
           otp_expires_at: string | null
+          phone: string | null
           surname: string
           updated_at: string | null
         }
@@ -470,6 +471,7 @@ export type Database = {
           otp?: string | null
           otp_attempts?: number | null
           otp_expires_at?: string | null
+          phone?: string | null
           surname: string
           updated_at?: string | null
         }
@@ -483,6 +485,7 @@ export type Database = {
           otp?: string | null
           otp_attempts?: number | null
           otp_expires_at?: string | null
+          phone?: string | null
           surname?: string
           updated_at?: string | null
         }

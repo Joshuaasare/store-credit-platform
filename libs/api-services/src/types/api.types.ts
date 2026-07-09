@@ -1,6 +1,6 @@
 /**
  * Auto-generated API Types
- * Generated on: 2026-07-08T13:25:38.667Z
+ * Generated on: 2026-07-08T13:59:49.174Z
  * 
  * ⚠️ DO NOT EDIT MANUALLY
  * Source: apps/smartschool-api/src/app/types/
@@ -31,29 +31,77 @@ export type BaseUserRole = {
   assigned_by_user_id: string;
 };
 
-// ========================================
-// API-SPECIFIC TYPES
-// ========================================
-export interface UserData {
+export interface UserWithRoles {
   id: string;
   email: string;
   phone: string | null;
-  is_access_granted: boolean;
-  user_roles: BaseUserRole[];
+  surname: string;
+  other_names: string | null;
+  access_granted: boolean;
+  roles: BaseUserRole[];
 }
 
-export interface VerifyOTPRequest {
+
+export type SendSMSMessageParams = {
+  phone: string; 
+  message: string; 
+  sender?: string; 
+};
+
+export type SendSMSMessageResponse = {
+  status: "success";
+};
+
+export type SMSMessageErrorReponse = {
+  status: "error";
+  message: string;
+};
+
+// ========================================
+// API-SPECIFIC TYPES
+// ========================================
+export interface SendOtpRequest {
+  phone: string;
+}
+
+export interface VerifyOtpRequest {
   phone: string;
   otp: string;
 }
 
-export interface SendOTPRequest {
-  phone: string;
+export interface AuthUser {
+  id: string;
+  email: string;
+  phone: string | null;
+  surname: string;
+  other_names: string | null;
+  access_granted: boolean;
+  roles: BaseUserRole[];
 }
 
-export interface VerifyOTPResponse {
+export interface AuthSession {
+  access_token: string;
+  refresh_token: string;
+  expires_in: number;
+  expires_at: number;
+  token_type: string;
+  user: AuthUser;
+}
+
+export interface SendOtpResponse {
   success: true;
   message: string;
+}
+
+export interface VerifyOtpResponse {
+  success: true;
+  message: string;
+  data: AuthSession;
+}
+
+export interface GetCurrentUserResponse {
+  success: true;
+  data: AuthUser;
 }
 
 export interface AuthErrorResponse {
@@ -62,12 +110,7 @@ export interface AuthErrorResponse {
   details?: any[];
 }
 
-export interface GetCurrentUserResponse {
-  success: true;
-  data: UserData;
-}
-
-export type GetCurrentUserApiResponse =
-  | GetCurrentUserResponse
-  | AuthErrorResponse;
+export type SendOtpApiResponse = SendOtpResponse | AuthErrorResponse;
+export type VerifyOtpApiResponse = VerifyOtpResponse | AuthErrorResponse;
+export type GetCurrentUserApiResponse = GetCurrentUserResponse | AuthErrorResponse;
 
