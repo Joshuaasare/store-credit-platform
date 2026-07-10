@@ -1,5 +1,5 @@
 export default {
-  displayName: "@store-credit-platform/manager-webapp",
+  displayName: "@store-credit-platform/main-webapp",
   preset: "../../jest.preset.js",
   transform: {
     "^(?!.*\\.(js|jsx|ts|tsx|css|json)$)": "@nx/react/plugins/jest",
@@ -7,4 +7,7 @@ export default {
   },
   moduleFileExtensions: ["ts", "tsx", "js", "jsx"],
   coverageDirectory: "test-output/jest/coverage",
+  moduleNameMapper: {
+    "^@shared/(.*)$": "<rootDir>/src/app/shared/$1",
+  },
 };

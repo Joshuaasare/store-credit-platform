@@ -107,14 +107,7 @@ for (const typeFile of apiTypeFiles) {
 console.log("\n📦 Copying types to frontends...");
 
 const frontedPaths = [
-  path.join(
-    __dirname,
-    "../../super-admin-webapp/src/app/shared/types/api.types.ts",
-  ),
-  path.join(
-    __dirname,
-    "../../admin-webapp-vite/src/app/shared/types/api.types.ts",
-  ),
+  path.join(__dirname, "../../main-webapp/src/app/shared/types/api.types.ts"),
   path.join(__dirname, "../../../libs/api-services/src/types/api.types.ts"),
 ];
 
@@ -133,7 +126,7 @@ for (const frontedPath of frontedPaths) {
  * Script: yarn generate:types
  * 
  * TYPE-FIRST WORKFLOW:
- * 1. Edit types in backend: apps/smartschool-api/src/app/types/*.types.ts
+ * 1. Edit types in backend: apps/main-backend/src/app/types/*.types.ts
  * 2. Run: yarn generate:types
  * 3. Backend gets TypeBox schemas (for validation)
  * 4. Frontend gets TypeScript types (for type safety)
@@ -154,13 +147,13 @@ ${mainTypesContent}
 ${apiTypesContent}`;
 
   fs.writeFileSync(frontedPath, frontendContent);
-  console.log(`   ✅ Types: admin-webapp/src/app/shared/types/api.types.ts`);
+  console.log(`   ✅ Types: main-webapp/src/app/shared/types/api.types.ts`);
 
   // Run post-processing to fix schema imports
   console.log("\n🔧 Post-processing schemas...");
   const { execSync } = require("child_process");
   try {
-    execSync("node apps/smartschool-api/scripts/fix-schema-imports.js", {
+    execSync("node apps/main-backend/scripts/fix-schema-imports.js", {
       stdio: "inherit",
     });
   } catch (error) {

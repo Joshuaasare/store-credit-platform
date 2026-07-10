@@ -1,14 +1,17 @@
 import * as path from "path";
 import { FastifyInstance } from "fastify";
 import AutoLoad from "@fastify/autoload";
+import cookie from "@fastify/cookie";
 
 /* eslint-disable-next-line */
 export interface AppOptions {}
 
 export async function app(fastify: FastifyInstance, opts: AppOptions) {
-  // Place here your custom code!
-
-  // Do not touch the following lines
+  // Register cookie plugin for httpOnly refresh token storage
+  await fastify.register(cookie, {
+    secret: process.env.REFRESH_TOKEN_SECRET || "dev-refresh-secret-change-in-production",
+    parseOptions: {},
+  });
 
   // This loads all plugins defined in plugins
   // those should be support plugins that are reused
