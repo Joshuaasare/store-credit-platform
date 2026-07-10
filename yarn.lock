@@ -3348,6 +3348,16 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@fastify/cookie@npm:^11.1.1":
+  version: 11.1.1
+  resolution: "@fastify/cookie@npm:11.1.1"
+  dependencies:
+    cookie: "npm:^2.0.0"
+    fastify-plugin: "npm:^6.0.0"
+  checksum: 10c0/fad3588bc08f727632b42e69cf037cc915fad422f18adfb45b2eed0cbb27266ed60d99db3acca72f2388a1b27ef8d9f9d1a49527282deefdbc0284e59dabe57f
+  languageName: node
+  linkType: hard
+
 "@fastify/cors@npm:^11.2.0":
   version: 11.2.0
   resolution: "@fastify/cors@npm:11.2.0"
@@ -8651,6 +8661,7 @@ __metadata:
     "@expo/metro-config": "npm:~54.0.9"
     "@expo/metro-runtime": "npm:~6.1.2"
     "@fastify/autoload": "npm:~6.0.3"
+    "@fastify/cookie": "npm:^11.1.1"
     "@fastify/sensible": "npm:~6.0.2"
     "@fastify/type-provider-typebox": "npm:^6.1.0"
     "@hookform/resolvers": "npm:^5.2.2"
@@ -8751,6 +8762,7 @@ __metadata:
     jest-environment-node: "npm:^30.0.2"
     jest-util: "npm:^30.0.2"
     jiti: "npm:2.4.2"
+    jose: "npm:^6.2.3"
     jsdom: "npm:~22.1.0"
     json-schema-to-typescript: "npm:^15.0.4"
     jsonc-eslint-parser: "npm:^2.1.0"
@@ -13055,6 +13067,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"cookie@npm:^2.0.0":
+  version: 2.0.1
+  resolution: "cookie@npm:2.0.1"
+  checksum: 10c0/dcf3bd6ec9d0f4f32be7575e23242866cb53be55fc3d4cf36215638596661cec1327a3b4ca286ba15eba8f2abd443e422b8c5f708af4ea9f75b4d3dedc67ee4c
+  languageName: node
+  linkType: hard
+
 "cookie@npm:~0.7.1":
   version: 0.7.2
   resolution: "cookie@npm:0.7.2"
@@ -15959,6 +15978,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"fastify-plugin@npm:^6.0.0":
+  version: 6.0.0
+  resolution: "fastify-plugin@npm:6.0.0"
+  checksum: 10c0/4d9207efcbb0e6e8bd849eb8e00b097ae2d73590b1499f51d0bed135d08664e19d9428f2e8fc1a126b55ec4d2ac011dbcc72e753c255c46a751d6d34b57e5d4f
+  languageName: node
+  linkType: hard
+
 "fastify-plugin@npm:~5.0.1":
   version: 5.0.1
   resolution: "fastify-plugin@npm:5.0.1"
@@ -18723,6 +18749,13 @@ __metadata:
   version: 1.4.0
   resolution: "jju@npm:1.4.0"
   checksum: 10c0/f3f444557e4364cfc06b1abf8331bf3778b26c0c8552ca54429bc0092652172fdea26cbffe33e1017b303d5aa506f7ede8571857400efe459cb7439180e2acad
+  languageName: node
+  linkType: hard
+
+"jose@npm:^6.2.3":
+  version: 6.2.3
+  resolution: "jose@npm:6.2.3"
+  checksum: 10c0/aa91bccba22cc84d86308f833749bcb0b00441e35c24e0ac79abeac5f76dc62d47bdef9c1da6a0c609f5da6478595f52b252085888b89dbdb163861e40ea4188
   languageName: node
   linkType: hard
 

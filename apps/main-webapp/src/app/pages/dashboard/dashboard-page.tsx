@@ -1,4 +1,4 @@
-import { useAuthStore } from "../../stores/auth-store";
+import { useAuthStore } from "@shared/stores/authStore";
 import { Button } from "@store-credit-platform/web-components";
 
 export default function DashboardPage() {

@@ -9,6 +9,17 @@ export interface VerifyOtpRequest {
   otp: string;
 }
 
+export interface AccessTokenPayload {
+  sub: string;
+  phone: string | null;
+  roles: string[];
+  iat: number;
+  exp: number;
+  iss: string;
+  aud: string;
+  jti: string;
+}
+
 export interface AuthUser {
   id: string;
   email: string;
@@ -21,7 +32,6 @@ export interface AuthUser {
 
 export interface AuthSession {
   access_token: string;
-  refresh_token: string;
   expires_in: number;
   expires_at: number;
   token_type: string;
@@ -39,6 +49,36 @@ export interface VerifyOtpResponse {
   data: AuthSession;
 }
 
+export interface RefreshTokenResponse {
+  success: true;
+  message: string;
+  data: AuthSession;
+}
+
+export interface LogoutResponse {
+  success: true;
+  message: string;
+}
+
+export interface SessionListItem {
+  id: string;
+  device_fingerprint: string | null;
+  created_at: string;
+  expires_at: string;
+  revoked_at: string | null;
+  is_current: boolean;
+}
+
+export interface SessionListResponse {
+  success: true;
+  data: SessionListItem[];
+}
+
+export interface SessionRevokeResponse {
+  success: true;
+  message: string;
+}
+
 export interface GetCurrentUserResponse {
   success: true;
   data: AuthUser;
@@ -47,9 +87,13 @@ export interface GetCurrentUserResponse {
 export interface AuthErrorResponse {
   success: false;
   error: string;
-  details?: any[];
+  details?: unknown[];
 }
 
 export type SendOtpApiResponse = SendOtpResponse | AuthErrorResponse;
 export type VerifyOtpApiResponse = VerifyOtpResponse | AuthErrorResponse;
+export type RefreshTokenApiResponse = RefreshTokenResponse | AuthErrorResponse;
+export type LogoutApiResponse = LogoutResponse | AuthErrorResponse;
+export type SessionListApiResponse = SessionListResponse | AuthErrorResponse;
+export type SessionRevokeApiResponse = SessionRevokeResponse | AuthErrorResponse;
 export type GetCurrentUserApiResponse = GetCurrentUserResponse | AuthErrorResponse;

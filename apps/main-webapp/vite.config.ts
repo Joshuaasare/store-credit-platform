@@ -10,10 +10,10 @@ export default defineConfig(() => ({
   server: {
     port: 4200,
     host: "localhost",
-    // Proxy API requests to backend
+    // Proxy backend requests to avoid CORS in dev
     proxy: {
-      "/api": {
-        target: "http://localhost:3000",
+      "/auth": {
+        target: "http://localhost:3001",
         changeOrigin: true,
       },
     },

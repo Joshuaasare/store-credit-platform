@@ -353,6 +353,133 @@ export type Database = {
         }
         Relationships: []
       }
+      rate_limit_log: {
+        Row: {
+          action: string
+          attempted_at: string | null
+          id: number
+          ip_address: unknown
+          phone: string
+        }
+        Insert: {
+          action: string
+          attempted_at?: string | null
+          id?: number
+          ip_address: unknown
+          phone: string
+        }
+        Update: {
+          action?: string
+          attempted_at?: string | null
+          id?: number
+          ip_address?: unknown
+          phone?: string
+        }
+        Relationships: []
+      }
+      refresh_tokens: {
+        Row: {
+          device_fingerprint: string
+          expires_at: string
+          family_id: string
+          ip_address: unknown
+          issued_at: string | null
+          jti: string
+          parent_jti: string | null
+          replaced_at: string | null
+          replaced_by_jti: string | null
+          revoked_at: string | null
+          token_hash: string
+          user_id: string
+        }
+        Insert: {
+          device_fingerprint: string
+          expires_at: string
+          family_id: string
+          ip_address?: unknown
+          issued_at?: string | null
+          jti: string
+          parent_jti?: string | null
+          replaced_at?: string | null
+          replaced_by_jti?: string | null
+          revoked_at?: string | null
+          token_hash: string
+          user_id: string
+        }
+        Update: {
+          device_fingerprint?: string
+          expires_at?: string
+          family_id?: string
+          ip_address?: unknown
+          issued_at?: string | null
+          jti?: string
+          parent_jti?: string | null
+          replaced_at?: string | null
+          replaced_by_jti?: string | null
+          revoked_at?: string | null
+          token_hash?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "refresh_tokens_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sessions: {
+        Row: {
+          created_at: string | null
+          device_fingerprint: string
+          device_name: string | null
+          expires_at: string
+          id: string
+          ip_address: unknown
+          last_used_at: string | null
+          refresh_token_jti: string
+          revoked_at: string | null
+          revoked_reason: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          device_fingerprint: string
+          device_name?: string | null
+          expires_at: string
+          id?: string
+          ip_address?: unknown
+          last_used_at?: string | null
+          refresh_token_jti: string
+          revoked_at?: string | null
+          revoked_reason?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          device_fingerprint?: string
+          device_name?: string | null
+          expires_at?: string
+          id?: string
+          ip_address?: unknown
+          last_used_at?: string | null
+          refresh_token_jti?: string
+          revoked_at?: string | null
+          revoked_reason?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sessions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       staff: {
         Row: {
           address: string | null
@@ -453,11 +580,12 @@ export type Database = {
           deleted_at: string | null
           email: string | null
           id: string
+          last_login_at: string | null
           other_names: string | null
           otp: string | null
           otp_attempts: number | null
           otp_expires_at: string | null
-          phone: string | null
+          phone: string
           surname: string
           updated_at: string | null
         }
@@ -467,11 +595,12 @@ export type Database = {
           deleted_at?: string | null
           email?: string | null
           id: string
+          last_login_at?: string | null
           other_names?: string | null
           otp?: string | null
           otp_attempts?: number | null
           otp_expires_at?: string | null
-          phone?: string | null
+          phone: string
           surname: string
           updated_at?: string | null
         }
@@ -481,11 +610,12 @@ export type Database = {
           deleted_at?: string | null
           email?: string | null
           id?: string
+          last_login_at?: string | null
           other_names?: string | null
           otp?: string | null
           otp_attempts?: number | null
           otp_expires_at?: string | null
-          phone?: string | null
+          phone?: string
           surname?: string
           updated_at?: string | null
         }

@@ -1,27 +1,36 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useForm } from "react-hook-form";
 import { Button } from "@store-credit-platform/web-components";
 import { createAuthService } from "@store-credit-platform/api-services";
-import { supabase } from "../../shared/lib/supabase";
+import { PhoneInput } from "../../components/PhoneInput/PhoneInput";
 
-const authService = createAuthService(supabase as any);
+const authService = createAuthService();
+
+interface LoginFormData {
+  phone: string;
+}
 
 export default function LoginPage() {
   const navigate = useNavigate();
-  const [phone, setPhone] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const { control, handleSubmit } = useForm<LoginFormData>({
+    defaultValues: {
+      phone: "",
+    },
+  });
+
+  const onSubmit = async (data: LoginFormData) => {
     setError("");
     setIsLoading(true);
 
     try {
-      const response = await authService.sendOtp({ phone });
+      const response = await authService.sendOtp({ phone: data.phone });
 
       if (response.success) {
-        navigate("/verify-otp", { state: { phone } });
+        navigate("/verify-otp", { state: { phone: data.phone } });
       } else {
         setError(response.error || "Failed to send OTP");
       }
@@ -42,27 +51,14 @@ export default function LoginPage() {
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label
-              htmlFor="phone"
-              className="block text-sm font-medium text-gray-700"
-            >
-              Phone Number
-            </label>
-            <input
-              id="phone"
-              type="tel"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              placeholder="+233 20 000 0000"
-              required
-              className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-            />
-            <p className="mt-1 text-xs text-gray-500">
-              Format: +233 20 XXX XXXX (Ghana)
-            </p>
-          </div>
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          <PhoneInput
+            name="phone"
+            control={control}
+            label="Phone Number"
+            placeholder="20 000 0000"
+            required
+          />
 
           {error && (
             <div className="rounded-md bg-red-50 p-3 text-sm text-red-700">

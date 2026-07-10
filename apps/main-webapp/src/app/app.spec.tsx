@@ -13,7 +13,7 @@ const mockState = {
   initialize: jest.fn(),
 };
 
-jest.mock("./stores/auth-store", () => ({
+jest.mock("@shared/stores/authStore", () => ({
   useAuthStore: jest.fn().mockImplementation((selector?: (state: typeof mockState) => unknown) => {
     if (typeof selector === "function") {
       return selector(mockState);

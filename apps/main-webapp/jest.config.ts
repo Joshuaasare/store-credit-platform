@@ -7,4 +7,7 @@ export default {
   },
   moduleFileExtensions: ["ts", "tsx", "js", "jsx"],
   coverageDirectory: "test-output/jest/coverage",
+  moduleNameMapper: {
+    "^@shared/(.*)$": "<rootDir>/src/app/shared/$1",
+  },
 };

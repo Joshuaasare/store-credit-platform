@@ -2,10 +2,9 @@ import { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@store-credit-platform/web-components";
 import { createAuthService } from "@store-credit-platform/api-services";
-import { supabase } from "../../shared/lib/supabase";
-import { useAuthStore } from "../../stores/auth-store";
+import { useAuthStore } from "@shared/stores/authStore";
 
-const authService = createAuthService(supabase as any);
+const authService = createAuthService();
 
 export default function VerifyOtpPage() {
   const location = useLocation();

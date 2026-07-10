@@ -1,4 +1,4 @@
-import { SupabaseClient } from "@supabase/supabase-js";
+import { accessTokenStorage } from "./accessTokenStorage.js";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:3001";
 
@@ -19,25 +19,19 @@ export type ApiRequestFunction = <T>(
 ) => Promise<T>;
 
 /**
- * Factory function to create API request functions configured with a Supabase client
- * This allows the same service functions to work with different Supabase clients
- * (web browser client, Expo client, server-side client, etc.)
+ * Factory function to create API request functions
  */
-export function createApiClient(
-  supabaseClient: SupabaseClient<any, "public", "public", any, any>,
-) {
+export function createApiClient() {
   /**
-   * Authenticated API request - requires valid session
+   * Authenticated API request - requires valid custom JWT access token
    */
   async function apiRequest<T>(
     endpoint: string,
     options: RequestOptions = {},
   ): Promise<T> {
-    const {
-      data: { session },
-    } = await supabaseClient.auth.getSession();
+    const accessToken = accessTokenStorage.getAccessToken();
 
-    if (!session?.access_token) {
+    if (!accessToken) {
       throw new Error("No authentication token available");
     }
 
@@ -45,13 +39,14 @@ export function createApiClient(
     const url = `${API_BASE_URL}${endpoint}`;
     const headers = {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${session.access_token}`,
+      Authorization: `Bearer ${accessToken}`,
       ...options.headers,
     };
 
     const config: RequestInit = {
       ...options,
       headers,
+      credentials: "include",
     };
 
     // Convert body to JSON if it's an object
@@ -77,7 +72,7 @@ export function createApiClient(
 
   /**
    * Public API request (no authentication required)
-   * Use this for endpoints like password reset, OTP, login, etc.
+   * Use this for endpoints like OTP send, login, etc.
    */
   async function publicApiRequest<T>(
     endpoint: string,
@@ -92,6 +87,7 @@ export function createApiClient(
     const config: RequestInit = {
       ...options,
       headers,
+      credentials: "include",
     };
 
     // Convert body to JSON if it's an object
@@ -122,21 +118,19 @@ export function createApiClient(
     endpoint: string,
     options: RequestOptions = {},
   ): Promise<Blob> {
-    const {
-      data: { session },
-    } = await supabaseClient.auth.getSession();
+    const accessToken = accessTokenStorage.getAccessToken();
 
-    if (!session?.access_token) {
+    if (!accessToken) {
       throw new Error("No authentication token available");
     }
 
     const url = `${API_BASE_URL}${endpoint}`;
     const headers = {
-      Authorization: `Bearer ${session.access_token}`,
+      Authorization: `Bearer ${accessToken}`,
       ...options.headers,
     };
 
-    const config: RequestInit = { ...options, headers };
+    const config: RequestInit = { ...options, headers, credentials: "include" };
 
     const response = await fetch(url, config);
 
