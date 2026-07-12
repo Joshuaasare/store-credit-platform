@@ -6,7 +6,7 @@ import { useAuthStore } from "@shared/stores/authStore";
 
 const authService = createAuthService();
 
-export default function VerifyOtpPage() {
+export default function VerifyOtp() {
   const location = useLocation();
   const navigate = useNavigate();
   const setSession = useAuthStore((state) => state.setSession);
@@ -31,7 +31,9 @@ export default function VerifyOtpPage() {
         setError(response.error || "Invalid code. Please try again.");
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "An unexpected error occurred");
+      setError(
+        err instanceof Error ? err.message : "An unexpected error occurred",
+      );
     } finally {
       setIsLoading(false);
     }

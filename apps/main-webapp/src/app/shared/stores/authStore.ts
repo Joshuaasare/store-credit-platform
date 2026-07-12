@@ -17,6 +17,9 @@ interface AuthState {
   initialize: () => Promise<void>;
 }
 
+// Guard against concurrent initialize calls (e.g. React StrictMode double-mount)
+let initPromise: Promise<void> | null = null;
+
 export const useAuthStore = create<AuthState>()(
   persist(
     (set) => ({
@@ -39,33 +42,43 @@ export const useAuthStore = create<AuthState>()(
       },
 
       initialize: async () => {
-        const authService = createAuthService();
+        if (initPromise) return initPromise;
 
-        async function fetchUser(): Promise<AuthUser | null> {
-          try {
-            const data = await authService.getCurrentUser();
-            if (data.success) return data.data;
-          } catch {
-            // ignore — will fall through to refresh attempt
+        initPromise = (async () => {
+          const authService = createAuthService();
+
+          async function fetchUser(): Promise<AuthUser | null> {
+            try {
+              const data = await authService.getCurrentUser();
+              if (data.success) return data.data;
+            } catch {
+              // ignore — will fall through to refresh attempt
+            }
+            return null;
           }
-          return null;
-        }
 
-        let user = await fetchUser();
+          let user = await fetchUser();
 
-        if (!user) {
-          // Try silent refresh using httpOnly cookie
-          const refreshed = await tryRefreshToken();
-          if (refreshed) {
-            user = await fetchUser();
+          if (!user) {
+            // Try silent refresh using httpOnly cookie
+            const refreshed = await tryRefreshToken();
+            if (refreshed) {
+              user = await fetchUser();
+            }
           }
-        }
 
-        if (user) {
-          set({ user, isAuthenticated: true, isLoading: false });
-        } else {
-          accessTokenStorage.clearAccessToken();
-          set({ user: null, isAuthenticated: false, isLoading: false });
+          if (user) {
+            set({ user, isAuthenticated: true, isLoading: false });
+          } else {
+            accessTokenStorage.clearAccessToken();
+            set({ user: null, isAuthenticated: false, isLoading: false });
+          }
+        })();
+
+        try {
+          await initPromise;
+        } finally {
+          initPromise = null;
         }
       },
     }),

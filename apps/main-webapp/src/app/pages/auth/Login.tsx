@@ -11,7 +11,7 @@ interface LoginFormData {
   phone: string;
 }
 
-export default function LoginPage() {
+export default function Login() {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
@@ -35,7 +35,9 @@ export default function LoginPage() {
         setError(response.error || "Failed to send OTP");
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "An unexpected error occurred");
+      setError(
+        err instanceof Error ? err.message : "An unexpected error occurred",
+      );
     } finally {
       setIsLoading(false);
     }
@@ -66,11 +68,7 @@ export default function LoginPage() {
             </div>
           )}
 
-          <Button
-            type="submit"
-            disabled={isLoading}
-            className="w-full"
-          >
+          <Button type="submit" disabled={isLoading} className="w-full">
             {isLoading ? "Sending code..." : "Send Login Code"}
           </Button>
         </form>

@@ -208,6 +208,12 @@ export class TokenService {
       throw new Error("Invalid refresh token");
     }
 
+    // Detect actual token reuse (theft): token was already rotated
+    if (existing.replaced_at) {
+      await this.revokeTokenFamily(existing.family_id);
+      throw new Error("Token family revoked due to suspected theft");
+    }
+
     if (existing.revoked_at) {
       throw new Error("Refresh token has been revoked");
     }
@@ -220,11 +226,9 @@ export class TokenService {
       existing.device_fingerprint &&
       existing.device_fingerprint !== deviceFingerprint
     ) {
-      // Potential token theft — revoke the entire family
-      await this.revokeTokenFamily(existing.family_id);
-      throw new Error(
-        "Token family revoked due to suspected theft",
-      );
+      // Fingerprint changed — require re-authentication, but do not revoke the family.
+      // This avoids kicking users out due to dynamic IP changes (WiFi → mobile, VPN, ISP rotation).
+      throw new Error("Session expired. Please sign in again.");
     }
 
     // Generate a new token in the same family

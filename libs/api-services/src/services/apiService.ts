@@ -4,6 +4,41 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:3001";
 
 export type APIResponse<T> = (T & { success: true }) | APIErrorResponse;
 
+// Guard against concurrent refresh attempts across multiple 401s
+let refreshPromise: Promise<boolean> | null = null;
+
+async function doRefresh(): Promise<boolean> {
+  try {
+    const url = `${API_BASE_URL}/auth/refresh`;
+    const response = await fetch(url, {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({}),
+    });
+    const data = (await response.json()) as APIResponse<{
+      access_token: string;
+    }>;
+    if (response.ok && data.success && "data" in data && data.access_token) {
+      accessTokenStorage.setAccessToken(data.access_token);
+      return true;
+    }
+    return false;
+  } catch {
+    return false;
+  }
+}
+
+export async function refreshAccessToken(): Promise<boolean> {
+  if (refreshPromise) return refreshPromise;
+  refreshPromise = doRefresh();
+  try {
+    return await refreshPromise;
+  } finally {
+    refreshPromise = null;
+  }
+}
+
 export type APIErrorResponse = {
   success: false;
   error: string;
@@ -55,7 +90,20 @@ export function createApiClient() {
     }
 
     // Make request
-    const response = await fetch(url, config);
+    let response = await fetch(url, config);
+
+    // If 401 and we had a token, try silent refresh once and retry
+    if (response.status === 401 && accessTokenStorage.getAccessToken()) {
+      const refreshed = await refreshAccessToken();
+      if (refreshed) {
+        const retryConfig = { ...config };
+        retryConfig.headers = {
+          ...retryConfig.headers,
+          Authorization: `Bearer ${accessTokenStorage.getAccessToken()}`,
+        };
+        response = await fetch(url, retryConfig);
+      }
+    }
 
     // Parse response
     const data = (await response.json()) as APIResponse<T>;
@@ -132,7 +180,20 @@ export function createApiClient() {
 
     const config: RequestInit = { ...options, headers, credentials: "include" };
 
-    const response = await fetch(url, config);
+    let response = await fetch(url, config);
+
+    // If 401 and we had a token, try silent refresh once and retry
+    if (response.status === 401 && accessTokenStorage.getAccessToken()) {
+      const refreshed = await refreshAccessToken();
+      if (refreshed) {
+        const retryConfig = { ...config };
+        retryConfig.headers = {
+          ...retryConfig.headers,
+          Authorization: `Bearer ${accessTokenStorage.getAccessToken()}`,
+        };
+        response = await fetch(url, retryConfig);
+      }
+    }
 
     if (!response.ok) {
       const errorText = await response.text().catch(() => "Unknown error");

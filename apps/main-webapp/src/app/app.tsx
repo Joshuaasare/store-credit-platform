@@ -3,9 +3,12 @@ import { Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "./shared/providers/theme-provider";
 import { useAuthStore } from "@shared/stores/authStore";
 import ProtectedRoute from "./components/ProtectedRoute/ProtectedRoute";
-import LoginPage from "./pages/auth/Login";
-import VerifyOtpPage from "./pages/auth/VerifyOTP";
-import DashboardPage from "./pages/dashboard/dashboard-page";
+import Login from "./pages/Auth/Login";
+import VerifyOtp from "./pages/Auth/VerifyOTP";
+import Credits from "./pages/Credits/Credits";
+import Dashboard from "./pages/Dashboard/Dashboard";
+import MainLayout from "./pages/MainLayout/MainLayout";
+import Profile from "./pages/Profile/Profile";
 
 export function App() {
   const initialize = useAuthStore((state) => state.initialize);
@@ -17,17 +20,16 @@ export function App() {
   return (
     <ThemeProvider defaultTheme="light">
       <Routes>
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/verify-otp" element={<VerifyOtpPage />} />
-        <Route
-          path="/dashboard"
-          element={
-            <ProtectedRoute>
-              <DashboardPage />
-            </ProtectedRoute>
-          }
-        />
-        <Route path="/" element={<NavigateToDashboard />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/verify-otp" element={<VerifyOtp />} />
+        <Route element={<ProtectedRoute />}>
+          <Route element={<MainLayout />}>
+            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/credits" element={<Credits />} />
+            <Route path="/profile" element={<Profile />} />
+            <Route path="/" element={<NavigateToDashboard />} />
+          </Route>
+        </Route>
       </Routes>
     </ThemeProvider>
   );
@@ -44,7 +46,7 @@ function NavigateToDashboard() {
     );
   }
 
-  return isAuthenticated ? <DashboardPage /> : <LoginPage />;
+  return isAuthenticated ? <Dashboard /> : <Login />;
 }
 
 export default App;
