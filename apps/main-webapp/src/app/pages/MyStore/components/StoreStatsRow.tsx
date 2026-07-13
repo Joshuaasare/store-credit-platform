@@ -11,8 +11,7 @@ const STATS = [
     key: "branches",
     label: "Branches",
     icon: Store,
-    chip: "bg-chart-1/15 text-chart-1",
-    line: "bg-chart-1",
+    dot: "bg-chart-1",
     currency: false,
     value: (m: MerchantWithStats) => m.branch_count,
   },
@@ -20,8 +19,7 @@ const STATS = [
     key: "staff",
     label: "Staff",
     icon: Users,
-    chip: "bg-chart-2/15 text-chart-2",
-    line: "bg-chart-2",
+    dot: "bg-chart-2",
     currency: false,
     value: (m: MerchantWithStats) => m.staff_count,
   },
@@ -29,8 +27,7 @@ const STATS = [
     key: "customers",
     label: "Customers",
     icon: UserRound,
-    chip: "bg-chart-3/15 text-chart-3",
-    line: "bg-chart-3",
+    dot: "bg-chart-3",
     currency: false,
     value: (m: MerchantWithStats) => m.customer_count,
   },
@@ -38,8 +35,7 @@ const STATS = [
     key: "issued",
     label: "Credit issued (lifetime)",
     icon: Coins,
-    chip: "bg-chart-4/15 text-chart-4",
-    line: "bg-chart-4",
+    dot: "bg-chart-4",
     currency: true,
     value: (m: MerchantWithStats) => m.lifetime_credit_issued,
   },
@@ -55,27 +51,20 @@ export function StoreStatsRow({ merchant }: StoreStatsRowProps) {
         return (
           <Card
             key={stat.key}
-            className="group relative animate-fade-in-up overflow-hidden p-5 transition-all hover:-translate-y-0.5 hover:shadow-md motion-reduce:animate-none"
+            className="group animate-fade-in-up p-5 transition-colors hover:border-primary/30 motion-reduce:animate-none"
             style={{ animationDelay: `${i * 60}ms` }}
           >
-            <span
-              aria-hidden
-              className={`absolute inset-x-0 top-0 h-0.5 ${stat.line} opacity-70`}
-            />
-            <div className="flex items-center gap-3">
-              <div
-                className={`flex h-10 w-10 items-center justify-center rounded-xl ${stat.chip}`}
-              >
-                <Icon className="h-5 w-5" />
-              </div>
-              <div className="min-w-0">
-                <div className="text-2xl font-semibold tracking-tight tabular-nums">
+            <div className="flex items-start justify-between">
+              <div>
+                <div className="text-[28px] font-semibold leading-none tracking-tight tabular-nums">
                   {display}
                 </div>
-                <div className="text-muted-foreground truncate text-[11px] uppercase tracking-wide">
+                <div className="text-muted-foreground mt-2.5 flex items-center gap-1.5 text-xs">
+                  <span className={`inline-block h-1.5 w-1.5 rounded-full ${stat.dot}`} />
                   {stat.label}
                 </div>
               </div>
+              <Icon className="text-muted-foreground/40 h-4 w-4" />
             </div>
           </Card>
         );

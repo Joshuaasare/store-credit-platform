@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { AlertTriangle, Wallet } from "lucide-react";
 import { Card } from "@store-credit-platform/web-components";
 
@@ -13,103 +14,208 @@ function formatCedi(n: number): string {
   })}`;
 }
 
+const R = 52;
+const C = 2 * Math.PI * R;
+
 export function PoolStatusCard({ used, limit }: PoolStatusCardProps) {
-  if (limit == null || limit <= 0) {
-    return (
-      <Card className="relative animate-fade-in-up overflow-hidden p-6 motion-reduce:animate-none">
-        <div className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
-            <Wallet className="h-4 w-4" />
-          </div>
-          <h3 className="text-sm font-semibold">Credit pool</h3>
-        </div>
-        <p className="text-muted-foreground mt-3 text-xs">
-          No limit configured for this merchant.
-        </p>
-        <div className="mt-3 text-3xl font-semibold tracking-tight tabular-nums">
-          {formatCedi(used)}
-        </div>
-        <p className="text-muted-foreground text-xs">issued so far</p>
-      </Card>
-    );
-  }
+  const [mode, setMode] = useState<"percent" | "absolute">("percent");
 
-  const pct = Math.min(100, (used / limit) * 100);
-  const over = used > limit;
-  const warn = pct > 90 && !over;
-  const remaining = Math.max(0, limit - used);
-
+  const hasLimit = limit != null && limit > 0;
+  const rawPct = hasLimit ? (used / limit) * 100 : 0;
+  const over = hasLimit && used > limit;
+  const warn = hasLimit && rawPct > 90 && !over;
   const state = over ? "over" : warn ? "warn" : "ok";
-  const tint =
+  const pct = Math.min(100, rawPct); // arc capped at full
+  const remaining = hasLimit ? Math.max(0, limit - used) : 0;
+
+  const color =
     state === "over"
-      ? "from-destructive/10 via-card to-card"
+      ? "hsl(var(--destructive))"
       : state === "warn"
-        ? "from-amber-500/10 via-card to-card"
-        : "from-primary/10 via-card to-card";
-  const barGradient =
+        ? "#f59e0b"
+        : "hsl(var(--primary))";
+  const lightColor =
     state === "over"
-      ? "from-rose-500 to-destructive"
+      ? "hsl(var(--destructive) / 0.55)"
       : state === "warn"
-        ? "from-amber-400 to-amber-600"
-        : "from-primary/80 to-primary";
-  const pill =
+        ? "#fcd34d"
+        : "hsl(var(--primary) / 0.55)";
+  const dotColor =
     state === "over"
-      ? "bg-destructive/10 text-destructive"
-      : "bg-amber-500/10 text-amber-600";
+      ? "bg-destructive"
+      : state === "warn"
+        ? "bg-amber-500"
+        : "bg-primary";
+
+  const dash = (C * pct) / 100;
+  const angle = (-90 + (pct / 100) * 360) * (Math.PI / 180);
+  const dx = 60 + R * Math.cos(angle);
+  const dy = 60 + R * Math.sin(angle);
+
+  const centerValue =
+    !hasLimit || mode === "absolute"
+      ? formatCedi(used)
+      : `${pct.toFixed(0)}%`;
+  const centerCaption =
+    !hasLimit
+      ? "issued · no limit"
+      : mode === "percent"
+        ? "used"
+        : `of ${formatCedi(limit as number)}`;
+
+  const noteColor =
+    state === "over"
+      ? "text-destructive"
+      : state === "warn"
+        ? "text-amber-600"
+        : "text-muted-foreground";
+  const note = !hasLimit
+    ? "No limit configured — pool is uncapped"
+    : over
+      ? `Over limit by ${formatCedi(used - (limit as number))}`
+      : warn
+        ? `Near limit · ${formatCedi(remaining)} remaining`
+        : `${formatCedi(remaining)} remaining`;
 
   return (
-    <Card
-      className={`relative animate-fade-in-up overflow-hidden bg-gradient-to-br ${tint} p-6 motion-reduce:animate-none`}
-    >
+    <Card className="animate-fade-in-up p-6 motion-reduce:animate-none">
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
-            <Wallet className="h-4 w-4" />
-          </div>
-          <h3 className="text-sm font-semibold">Credit pool</h3>
+        <div className="text-muted-foreground flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide">
+          <Wallet className="h-3.5 w-3.5" />
+          Credit pool
         </div>
-        {(warn || over) && (
-          <span
-            className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[11px] font-medium ${pill}`}
-          >
-            <AlertTriangle className="h-3 w-3" />
-            {over ? "Over limit" : "Near limit"}
-          </span>
+        <span
+          className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 text-[11px] font-medium ${
+            !hasLimit
+              ? "bg-muted text-muted-foreground"
+              : state === "over"
+                ? "bg-destructive/10 text-destructive"
+                : state === "warn"
+                  ? "bg-amber-500/10 text-amber-600"
+                  : "bg-primary/10 text-primary"
+          }`}
+        >
+          {!hasLimit
+            ? "Uncapped"
+            : state === "over"
+              ? "Over"
+              : state === "warn"
+                ? "Near limit"
+                : "Healthy"}
+        </span>
+      </div>
+
+      {/* radial ring — click to toggle center value (only when a limit is set) */}
+      <div className="mt-4 flex justify-center">
+        <button
+          type="button"
+          onClick={() => hasLimit && setMode((m) => (m === "percent" ? "absolute" : "percent"))}
+          className="focus-visible:ring-ring group relative rounded-full outline-none focus-visible:ring-2 disabled:cursor-default"
+          aria-label="Toggle pool value between percentage and currency"
+          title={hasLimit ? "Toggle percentage / currency" : "No limit set"}
+          disabled={!hasLimit}
+        >
+          <svg viewBox="0 0 120 120" className="h-36 w-36" role="img" aria-hidden>
+            <defs>
+              <linearGradient id="poolArc" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor={lightColor} />
+                <stop offset="100%" stopColor={color} />
+              </linearGradient>
+            </defs>
+            {/* track — dashed when uncapped to hint "no ceiling" */}
+            <circle
+              cx="60"
+              cy="60"
+              r={R}
+              fill="none"
+              stroke="hsl(var(--muted))"
+              strokeWidth="10"
+              strokeDasharray={hasLimit ? undefined : "6 8"}
+            />
+            {/* progress arc */}
+            {pct > 0 && (
+              <circle
+                cx="60"
+                cy="60"
+                r={R}
+                fill="none"
+                stroke="url(#poolArc)"
+                strokeWidth="10"
+                strokeLinecap="round"
+                strokeDasharray={`${dash} ${C}`}
+                transform="rotate(-90 60 60)"
+                className="transition-all duration-500"
+              />
+            )}
+            {/* end-of-arc dot with card halo */}
+            {pct > 0 && pct < 100 && (
+              <>
+                <circle cx={dx} cy={dy} r="7.5" fill="hsl(var(--card))" />
+                <circle cx={dx} cy={dy} r="5" fill={color} />
+              </>
+            )}
+            {pct >= 100 && (
+              <>
+                <circle cx="60" cy="8" r="7.5" fill="hsl(var(--card))" />
+                <circle cx="60" cy="8" r="5" fill={color} />
+              </>
+            )}
+          </svg>
+          {/* center value */}
+          <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+            <div className="text-[26px] font-semibold leading-none tracking-tight tabular-nums">
+              {centerValue}
+            </div>
+            <div className="text-muted-foreground mt-1.5 text-[10px] uppercase tracking-wide">
+              {centerCaption}
+            </div>
+          </div>
+        </button>
+      </div>
+
+      {/* breakdown */}
+      <div className="mt-5 space-y-2">
+        <Row dot={dotColor} label="Used" value={formatCedi(used)} />
+        {hasLimit && (
+          <>
+            <Row
+              dot="bg-muted-foreground/30"
+              label="Remaining"
+              value={formatCedi(remaining)}
+            />
+            <Row
+              dot="bg-muted-foreground/30"
+              label="Limit"
+              value={formatCedi(limit as number)}
+            />
+          </>
         )}
       </div>
 
-      <div className="mt-5 flex items-baseline gap-2">
-        <span className="text-4xl font-semibold tracking-tight tabular-nums">
-          {pct.toFixed(0)}
-          <span className="text-muted-foreground text-xl">%</span>
-        </span>
-        <span className="text-muted-foreground text-xs">used</span>
-      </div>
-
-      <div className="mt-1 text-sm tabular-nums">
-        <span className="font-medium">{formatCedi(used)}</span>
-        <span className="text-muted-foreground"> / {formatCedi(limit)}</span>
-      </div>
-
-      <div className="mt-4 h-2.5 w-full overflow-hidden rounded-full bg-muted">
-        <div
-          className={`h-full rounded-full bg-gradient-to-r ${barGradient} transition-all`}
-          style={{ width: `${pct}%` }}
-        />
-      </div>
-
-      <div className="mt-3 flex items-center justify-between text-xs">
-        <span className="text-muted-foreground">
-          {over ? "Over by" : "Remaining"}
-        </span>
-        <span
-          className={`font-semibold tabular-nums ${
-            over ? "text-destructive" : "text-foreground"
-          }`}
-        >
-          {formatCedi(over ? used - limit : remaining)}
-        </span>
+      <div className={`mt-4 flex items-center gap-1.5 text-xs ${noteColor}`}>
+        {(warn || over) && <AlertTriangle className="h-3.5 w-3.5" />}
+        {note}
       </div>
     </Card>
+  );
+}
+
+function Row({
+  dot,
+  label,
+  value,
+}: {
+  dot: string;
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="flex items-center justify-between text-xs">
+      <div className="text-muted-foreground flex items-center gap-2">
+        <span className={`inline-block h-2 w-2 rounded-full ${dot}`} />
+        {label}
+      </div>
+      <span className="font-medium tabular-nums">{value}</span>
+    </div>
   );
 }

@@ -35,14 +35,14 @@ export function BranchesList({ branches, isManager, loading }: BranchesListProps
       </div>
 
       {loading && branches.length === 0 ? (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          {Array.from({ length: 3 }).map((_, i) => (
-            <Skeleton key={i} className="h-52 rounded-2xl" />
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Skeleton key={i} className="h-44 rounded-2xl" />
           ))}
         </div>
       ) : branches.length === 0 ? (
-        <Card className="flex flex-col items-center justify-center gap-3 p-10 text-center">
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-muted text-muted-foreground">
+        <Card className="flex flex-col items-center justify-center gap-3 p-12 text-center">
+          <div className="flex h-11 w-11 items-center justify-center rounded-lg border bg-muted/40 text-muted-foreground">
             <Plus className="h-5 w-5" />
           </div>
           <div>
@@ -57,7 +57,7 @@ export function BranchesList({ branches, isManager, loading }: BranchesListProps
           </div>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           {branches.map((branch, i) => (
             <div
               key={branch.id}
