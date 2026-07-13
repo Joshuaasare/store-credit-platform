@@ -82,14 +82,14 @@ export default function MainLayout() {
           })}
         </nav>
       ) : (
-        /* Web: clean floating pill tab bar matching the reference image */
+        /* Web: floating pill tab bar — icon in ring, label below */
         <nav
           className={cn(
             "fixed bottom-6 left-1/2 z-50 -translate-x-1/2",
-            "flex items-stretch",
-            "rounded-[2rem] bg-white px-2",
-            "ring-primary/20 shadow-primary/10 ring-1",
-            "dark:bg-slate-900 dark:ring-white/10",
+            "flex items-start gap-1",
+            "rounded-[2rem] bg-white py-2",
+            "shadow-[0_8px_30px_rgba(0,0,0,0.12)]",
+            "ring-1 ring-black/5",
           )}
           aria-label="Primary navigation"
         >
@@ -101,35 +101,37 @@ export default function MainLayout() {
                 key={item.url}
                 onClick={() => navigate(item.url)}
                 className={cn(
-                  "relative flex flex-col items-center justify-center gap-1",
-                  "min-w-[6rem] cursor-pointer rounded-full outline-none",
-                  "py-4 transition-colors duration-300",
-                  "focus-visible:ring-primary/40 focus-visible:ring-2 focus-visible:ring-offset-2",
+                  "group relative flex flex-col items-center gap-1.5",
+                  "min-w-[5.5rem] cursor-pointer outline-none",
+                  "rounded-2xl px-2 pb-1 pt-1",
+                  "transition-colors duration-300",
+                  "focus-visible:ring-primary/40 focus-visible:ring-2",
                   isActive
                     ? "text-primary"
                     : "text-muted-foreground hover:text-foreground",
                 )}
                 aria-current={isActive ? "page" : undefined}
               >
-                {/* Icon */}
-                <Icon
+                {/* Ring container with icon */}
+                <span
                   className={cn(
-                    "h-6 w-6 transition-all duration-300",
-                    isActive ? "scale-110 stroke-[2.5]" : "stroke-[1.5]",
+                    "flex h-10 w-10 items-center justify-center rounded-full",
+                    "transition-all duration-300",
+                    isActive
+                      ? "bg-primary text-primary-foreground shadow-sm"
+                      : "bg-muted text-muted-foreground group-hover:bg-muted/80",
                   )}
-                />
+                >
+                  <Icon
+                    className={cn(
+                      "h-5 w-5 transition-all duration-300",
+                      isActive ? "scale-110 stroke-[2.5]" : "stroke-[1.5]",
+                    )}
+                  />
+                </span>
+                <span className="sr-only">{item.title}</span>
 
-                {/* Label */}
-                {/* <span className="text-[11px] font-semibold leading-none tracking-wide">
-                  {item.title}
-                </span> */}
-
-                {/* <span
-                  className={cn(
-                    "bg-primary mt-0.5 h-1.5 w-1.5 rounded-full transition-all duration-300",
-                    isActive ? "scale-100 opacity-100" : "scale-0 opacity-0",
-                  )}
-                /> */}
+                {/* Label outside the ring */}
               </button>
             );
           })}

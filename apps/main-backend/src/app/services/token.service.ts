@@ -209,8 +209,7 @@ export class TokenService {
     }
 
     if (existing.replaced_at) {
-      // Token was already rotated — likely a concurrent refresh race.
-      // Don't nuke the family; just require re-auth.
+      // Token was already rotated — likely reuse. Don't nuke the family; just require re-auth.
       throw new Error("Session expired. Please sign in again.");
     }
 
@@ -222,15 +221,6 @@ export class TokenService {
       throw new Error("Refresh token has expired");
     }
 
-    if (
-      existing.device_fingerprint &&
-      existing.device_fingerprint !== deviceFingerprint
-    ) {
-      // Fingerprint changed — require re-authentication, but do not revoke the family.
-      // This avoids kicking users out due to dynamic IP changes (WiFi → mobile, VPN, ISP rotation).
-      throw new Error("Session expired. Please sign in again.");
-    }
-
     // Generate a new token in the same family
     const { token, tokenHash, jti } = this.generateOpaqueToken();
 
@@ -240,7 +230,7 @@ export class TokenService {
       jti,
       existing.user_id,
       existing.family_id,
-      deviceFingerprint,
+      existing.device_fingerprint ?? deviceFingerprint,
       undefined,
       existing.jti,
     );
