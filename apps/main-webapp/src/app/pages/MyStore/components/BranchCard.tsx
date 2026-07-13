@@ -33,24 +33,40 @@ export function BranchCard({ branch, isManager, onOpenDetail }: BranchCardProps)
   return (
     <>
       <Card
-        className="group h-full cursor-pointer p-5 transition-all hover:-translate-y-0.5 hover:shadow-md"
+        className="group relative h-full cursor-pointer overflow-hidden p-5 transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-lg"
         onClick={onOpenDetail}
       >
+        {/* left accent strip */}
+        <span
+          aria-hidden
+          className="absolute inset-y-0 left-0 w-1 bg-gradient-to-b from-primary/60 to-primary/20 opacity-0 transition-opacity group-hover:opacity-100"
+        />
+
         <div className="flex items-start justify-between gap-2">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-sm font-semibold text-primary">
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 text-sm font-semibold text-primary ring-1 ring-primary/15">
               {(displayName[0] ?? "?").toUpperCase()}
             </div>
-            <div>
-              <h3 className="text-sm font-semibold leading-tight">{displayName}</h3>
-              <p className="text-muted-foreground text-xs">
+            <div className="min-w-0">
+              <h3 className="truncate text-sm font-semibold leading-tight">
+                {displayName}
+              </h3>
+              <p className="text-muted-foreground truncate text-xs">
                 {branch.city}
                 {country ? ` ${country.flag}` : ""}
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-1">
-            <Badge variant={branch.is_active ? "default" : "secondary"}>
+          <div className="flex shrink-0 items-center gap-1">
+            <Badge
+              variant={branch.is_active ? "default" : "secondary"}
+              className="gap-1"
+            >
+              <span
+                className={`inline-block h-1.5 w-1.5 rounded-full ${
+                  branch.is_active ? "bg-emerald-500" : "bg-muted-foreground"
+                }`}
+              />
               {branch.is_active ? "Active" : "Inactive"}
             </Badge>
             {isManager && (
@@ -83,28 +99,34 @@ export function BranchCard({ branch, isManager, onOpenDetail }: BranchCardProps)
         <div className="text-muted-foreground mt-4 space-y-1.5 text-xs">
           {branch.address && (
             <div className="flex items-center gap-2">
-              <MapPin className="h-3.5 w-3.5" /> {branch.address}
+              <MapPin className="h-3.5 w-3.5 shrink-0" /> {branch.address}
             </div>
           )}
           {branch.phone && (
             <div className="flex items-center gap-2">
-              <Phone className="h-3.5 w-3.5" /> {branch.phone}
+              <Phone className="h-3.5 w-3.5 shrink-0" /> {branch.phone}
             </div>
           )}
         </div>
 
-        <div className="mt-4 grid grid-cols-3 gap-2 border-t pt-3 text-xs">
-          <Stat icon={Users} label="Staff" value={branch.staff_count} />
-          <Stat icon={UserRound} label="Customers" value={branch.customer_count} />
+        <div className="mt-4 grid grid-cols-3 gap-2 border-t pt-3">
+          <Stat icon={Users} label="Staff" value={String(branch.staff_count)} />
+          <Stat
+            icon={UserRound}
+            label="Customers"
+            value={branch.customer_count.toLocaleString()}
+          />
           <Stat
             icon={Coins}
             label="This month"
-            value={branch.credit_issued_this_month}
+            value={formatCedi(branch.credit_issued_this_month)}
+            accent
           />
         </div>
 
-        <p className="text-muted-foreground mt-3 text-[11px]">
-          Last activity: {lastActivity}
+        <p className="text-muted-foreground mt-3 flex items-center gap-1 text-[11px]">
+          <span className="inline-block h-1 w-1 rounded-full bg-muted-foreground/50" />
+          Last activity {lastActivity}
         </p>
       </Card>
 
@@ -121,10 +143,12 @@ function Stat({
   icon: Icon,
   label,
   value,
+  accent = false,
 }: {
   icon: React.ComponentType<{ className?: string }>;
   label: string;
-  value: number;
+  value: string;
+  accent?: boolean;
 }) {
   return (
     <div className="flex flex-col">
@@ -132,9 +156,20 @@ function Stat({
         <Icon className="h-3 w-3" />
         <span className="text-[10px] uppercase tracking-wide">{label}</span>
       </div>
-      <span className="mt-0.5 font-semibold tabular-nums">
-        {value.toLocaleString()}
+      <span
+        className={`mt-0.5 truncate text-sm font-semibold tabular-nums ${
+          accent ? "text-primary" : ""
+        }`}
+      >
+        {value}
       </span>
     </div>
   );
+}
+
+function formatCedi(n: number): string {
+  return `GH₵${n.toLocaleString(undefined, {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  })}`;
 }

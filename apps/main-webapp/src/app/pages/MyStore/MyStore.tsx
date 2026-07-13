@@ -58,8 +58,13 @@ export default function MyStorePage() {
   }
 
   return (
-    <div className="min-h-screen bg-background px-4 py-6 md:px-8 md:py-10">
-      <div className="mx-auto max-w-7xl space-y-8">
+    <div className="relative min-h-screen bg-background px-4 py-6 md:px-8 md:py-10">
+      {/* subtle page-top gradient anchor */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 top-0 h-64 bg-gradient-to-b from-primary/5 to-transparent"
+      />
+      <div className="relative mx-auto max-w-7xl space-y-8">
         <StoreHero merchant={merchant} isManager={isManager} />
 
         <StoreStatsRow merchant={merchant} />

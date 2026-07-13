@@ -19,16 +19,16 @@ export function BranchesList({ branches, isManager, loading }: BranchesListProps
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-lg font-semibold">Branches</h2>
-          <p className="text-muted-foreground text-xs">
-            {branches.length} {branches.length === 1 ? "branch" : "branches"}
-          </p>
+        <div className="flex items-center gap-2.5">
+          <h2 className="text-lg font-semibold tracking-tight">Branches</h2>
+          <span className="inline-flex h-5 items-center rounded-full border bg-muted/50 px-2 text-[11px] font-medium text-muted-foreground tabular-nums">
+            {branches.length}
+          </span>
         </div>
         {isManager && (
           <BranchEditDialog open={editOpen} onOpenChange={setEditOpen}>
-            <Button size="sm" onClick={() => setEditOpen(true)}>
-              <Plus className="mr-2 h-4 w-4" /> Add branch
+            <Button size="sm" onClick={() => setEditOpen(true)} className="shadow-sm">
+              <Plus className="mr-1.5 h-4 w-4" /> Add branch
             </Button>
           </BranchEditDialog>
         )}
@@ -37,16 +37,24 @@ export function BranchesList({ branches, isManager, loading }: BranchesListProps
       {loading && branches.length === 0 ? (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
           {Array.from({ length: 3 }).map((_, i) => (
-            <Skeleton key={i} className="h-48 rounded-2xl" />
+            <Skeleton key={i} className="h-52 rounded-2xl" />
           ))}
         </div>
       ) : branches.length === 0 ? (
-        <Card className="p-8 text-center">
-          <p className="text-muted-foreground text-sm">
-            {isManager
-              ? "No branches yet. Add your first branch."
-              : "No branch assigned."}
-          </p>
+        <Card className="flex flex-col items-center justify-center gap-3 p-10 text-center">
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-muted text-muted-foreground">
+            <Plus className="h-5 w-5" />
+          </div>
+          <div>
+            <p className="text-sm font-medium">
+              {isManager ? "No branches yet" : "No branch assigned"}
+            </p>
+            <p className="text-muted-foreground mt-1 text-xs">
+              {isManager
+                ? "Add your first branch to start issuing credit."
+                : "Contact your admin to be assigned to a branch."}
+            </p>
+          </div>
         </Card>
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">

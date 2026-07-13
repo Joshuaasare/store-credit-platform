@@ -27,6 +27,15 @@ export default function MainLayout() {
     i.url === "/" ? location.pathname === "/" : location.pathname.startsWith(i.url),
   );
 
+  // Shared surface treatment — mirrors the StoreHero: primary-tinted gradient,
+  // ring, blur, and a decorative primary blob. Token-driven so it adapts to both
+  // light and slate themes automatically.
+  const surfaceGradient = "bg-gradient-to-br from-primary/10 via-card to-card";
+  const surfaceRing = "ring-1 ring-primary/10";
+  const shadow = isLight
+    ? "shadow-[0_8px_30px_rgba(0,0,0,0.12)]"
+    : "shadow-[0_8px_30px_rgba(0,0,0,0.45)]";
+
   return (
     <div className="relative flex min-h-screen flex-col">
       <Toaster richColors position="top-right" />
@@ -35,19 +44,24 @@ export default function MainLayout() {
       </main>
 
       {isMobile ? (
-        /* Mobile: liquid glass bottom tab navigator */
+        /* Mobile: liquid-glass bottom tab navigator — hero-styled */
         <nav
           className={cn(
             "fixed bottom-4 left-4 right-4 z-50 mx-auto max-w-sm",
             "flex items-center justify-around",
             "rounded-full border backdrop-blur-2xl",
             "transition-all duration-500 ease-out",
-            isLight
-              ? "border-white/50 bg-white/40 shadow-[0_8px_32px_rgba(0,0,0,0.2),inset_0_1px_0_rgba(255,255,255,0.6)]"
-              : "border-slate-700/40 bg-slate-900/70 shadow-[0_8px_32px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,255,255,0.08)]",
+            surfaceGradient,
+            surfaceRing,
+            shadow,
           )}
           aria-label="Primary navigation"
         >
+          {/* decorative primary blob */}
+          <div
+            aria-hidden
+            className="pointer-events-none absolute -right-10 -top-10 h-24 w-24 rounded-full bg-primary/20 blur-2xl"
+          />
           {navItems.map((item) => {
             const isActive = location.pathname === item.url;
             const Icon = item.icon;
@@ -59,12 +73,8 @@ export default function MainLayout() {
                   "group relative flex flex-1 flex-col items-center justify-center gap-1 rounded-full py-3 transition-all duration-500 ease-out",
                   "focus-visible:ring-ring min-w-[4rem] cursor-pointer outline-none focus-visible:ring-2",
                   isActive
-                    ? isLight
-                      ? "text-slate-700"
-                      : "text-amber-400"
-                    : isLight
-                      ? "text-slate-400 hover:text-slate-600"
-                      : "text-slate-500 hover:text-slate-300",
+                    ? "text-primary"
+                    : "text-muted-foreground hover:text-foreground",
                 )}
                 aria-current={isActive ? "page" : undefined}
               >
@@ -72,9 +82,7 @@ export default function MainLayout() {
                   <span
                     className={cn(
                       "absolute inset-x-2 inset-y-1 rounded-full backdrop-blur-sm transition-all duration-500 ease-out",
-                      isLight
-                        ? "bg-white/60 shadow-[inset_0_1px_0_rgba(255,255,255,0.8)]"
-                        : "bg-amber-500/15 shadow-[inset_0_1px_0_rgba(251,191,36,0.25)]",
+                      "bg-primary/15 ring-1 ring-primary/20",
                     )}
                   />
                 )}
@@ -92,23 +100,26 @@ export default function MainLayout() {
           })}
         </nav>
       ) : (
-        /* Web: modern floating left-side navigator */
+        /* Web: modern floating left-side navigator — hero-styled */
         <nav
           className={cn(
             "group/nav fixed left-4 top-5 z-50",
             "flex flex-col items-start gap-2",
             "w-[4.5rem] hover:w-44",
-            "rounded-2xl px-2 py-3",
-            "shadow-[0_8px_30px_rgba(0,0,0,0.12)]",
-            "ring-1",
+            "rounded-2xl border px-2 py-3",
+            shadow,
+            surfaceRing,
             "transition-[width] duration-300 ease-out",
             "overflow-hidden",
-            isLight
-              ? "bg-white ring-black/5"
-              : "bg-slate-900 ring-amber-500/20",
+            surfaceGradient,
           )}
           aria-label="Primary navigation"
         >
+          {/* decorative primary blob */}
+          <div
+            aria-hidden
+            className="pointer-events-none absolute -left-8 -top-8 h-24 w-24 rounded-full bg-primary/15 blur-2xl"
+          />
           {navItems.map((item, index) => {
             const isActive = index === activeIndex;
             const Icon = item.icon;
@@ -122,12 +133,8 @@ export default function MainLayout() {
                   "cursor-pointer transition-colors duration-200",
                   "focus-visible:ring-2",
                   isActive
-                    ? isLight
-                      ? "text-slate-700"
-                      : "text-amber-400"
-                    : isLight
-                      ? "text-slate-400 hover:text-slate-600"
-                      : "text-slate-500 hover:text-slate-300",
+                    ? "text-primary"
+                    : "text-muted-foreground hover:text-foreground",
                 )}
                 aria-current={isActive ? "page" : undefined}
               >
@@ -136,23 +143,18 @@ export default function MainLayout() {
                   <span
                     className={cn(
                       "absolute left-0 top-1/2 h-6 w-[3px] -translate-y-1/2 rounded-r-full transition-all duration-300",
-                      isLight ? "bg-slate-700" : "bg-amber-500",
+                      "bg-primary",
                     )}
                   />
                 )}
 
-                {/* Ring container with icon */}
+                {/* Ring container with icon — hero-avatar style when active */}
                 <span
                   className={cn(
-                    "flex h-9 w-9 shrink-0 items-center justify-center rounded-full",
-                    "transition-all duration-300",
+                    "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition-all duration-300",
                     isActive
-                      ? isLight
-                        ? "bg-slate-700 text-white shadow-sm"
-                        : "bg-amber-500 text-slate-900 shadow-[0_0_12px_rgba(245,158,11,0.35)]"
-                      : isLight
-                        ? "bg-slate-100 text-slate-400"
-                        : "bg-slate-800 text-slate-400",
+                      ? "bg-gradient-to-br from-primary/20 to-primary/5 text-primary ring-1 ring-primary/20"
+                      : "bg-muted/60 text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary",
                   )}
                 >
                   <Icon
