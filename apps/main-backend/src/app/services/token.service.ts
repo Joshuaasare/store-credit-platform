@@ -208,10 +208,10 @@ export class TokenService {
       throw new Error("Invalid refresh token");
     }
 
-    // Detect actual token reuse (theft): token was already rotated
     if (existing.replaced_at) {
-      await this.revokeTokenFamily(existing.family_id);
-      throw new Error("Token family revoked due to suspected theft");
+      // Token was already rotated — likely a concurrent refresh race.
+      // Don't nuke the family; just require re-auth.
+      throw new Error("Session expired. Please sign in again.");
     }
 
     if (existing.revoked_at) {

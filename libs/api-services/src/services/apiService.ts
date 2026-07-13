@@ -1,4 +1,5 @@
 import { accessTokenStorage } from "./accessTokenStorage.js";
+import { RefreshTokenApiResponse } from "../types/api.types.js";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:3001";
 
@@ -16,11 +17,9 @@ async function doRefresh(): Promise<boolean> {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({}),
     });
-    const data = (await response.json()) as APIResponse<{
-      access_token: string;
-    }>;
-    if (response.ok && data.success && "data" in data && data.access_token) {
-      accessTokenStorage.setAccessToken(data.access_token);
+    const data = (await response.json()) as RefreshTokenApiResponse;
+    if (response.ok && data.success && data.data?.access_token) {
+      accessTokenStorage.setAccessToken(data.data.access_token);
       return true;
     }
     return false;

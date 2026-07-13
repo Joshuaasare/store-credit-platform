@@ -1,4 +1,4 @@
-import { createApiClient } from "./apiService.js";
+import { createApiClient, refreshAccessToken } from "./apiService.js";
 import { accessTokenStorage } from "./accessTokenStorage.js";
 import {
   SendOtpRequest,
@@ -74,13 +74,7 @@ export function createAuthService() {
  */
 export async function tryRefreshToken(): Promise<boolean> {
   try {
-    const authService = createAuthService();
-    const response = await authService.refreshToken();
-    if (response.success) {
-      accessTokenStorage.setAccessToken(response.data.access_token);
-      return true;
-    }
-    return false;
+    return await refreshAccessToken();
   } catch {
     accessTokenStorage.clearAccessToken();
     return false;

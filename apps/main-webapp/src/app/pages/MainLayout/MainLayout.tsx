@@ -1,4 +1,4 @@
-import { LayoutDashboard, Wallet, User } from "lucide-react";
+import { LayoutDashboard, Wallet, UsersRound, Settings } from "lucide-react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { cn, useIsMobile } from "@store-credit-platform/web-components";
 
@@ -6,12 +6,15 @@ export const routes = {
   DASHBOARD: "/dashboard",
   CREDITS: "/credits",
   PROFILE: "/profile",
+  USERS: "/users",
+  SETTINGS: "/settings",
 };
 
 const navItems = [
   { title: "Dashboard", url: routes.DASHBOARD, icon: LayoutDashboard },
   { title: "Credits", url: routes.CREDITS, icon: Wallet },
-  { title: "Profile", url: routes.PROFILE, icon: User },
+  { title: "Users", url: routes.USERS, icon: UsersRound },
+  { title: "Settings", url: routes.SETTINGS, icon: Settings },
 ];
 
 export default function MainLayout() {
@@ -19,9 +22,11 @@ export default function MainLayout() {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
 
+  const activeIndex = navItems.findIndex((i) => i.url === location.pathname);
+
   return (
     <div className="relative flex min-h-screen flex-col">
-      <main className="flex-1 bg-background text-foreground pb-24">
+      <main className="bg-background text-foreground flex-1">
         <Outlet />
       </main>
 
@@ -34,7 +39,7 @@ export default function MainLayout() {
             "rounded-full border border-white/50 bg-white/40 backdrop-blur-2xl",
             "shadow-[0_8px_32px_rgba(0,0,0,0.2),inset_0_1px_0_rgba(255,255,255,0.6)]",
             "transition-all duration-500 ease-out",
-            "dark:border-white/25 dark:bg-slate-900/50 dark:shadow-[0_8px_32px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,255,255,0.15)]"
+            "dark:border-white/25 dark:bg-slate-900/50 dark:shadow-[0_8px_32px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,255,255,0.15)]",
           )}
           aria-label="Primary navigation"
         >
@@ -47,10 +52,10 @@ export default function MainLayout() {
                 onClick={() => navigate(item.url)}
                 className={cn(
                   "group relative flex flex-1 flex-col items-center justify-center gap-1 rounded-full py-3 transition-all duration-500 ease-out",
-                  "min-w-[4rem] cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                  "focus-visible:ring-ring min-w-[4rem] cursor-pointer outline-none focus-visible:ring-2",
                   isActive
                     ? "text-primary"
-                    : "text-muted-foreground hover:text-foreground"
+                    : "text-muted-foreground hover:text-foreground",
                 )}
                 aria-current={isActive ? "page" : undefined}
               >
@@ -59,14 +64,14 @@ export default function MainLayout() {
                     className={cn(
                       "absolute inset-x-2 inset-y-1 rounded-full transition-all duration-500 ease-out",
                       "bg-white/60 shadow-[inset_0_1px_0_rgba(255,255,255,0.8)] backdrop-blur-sm",
-                      "dark:bg-white/30 dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.2)]"
+                      "dark:bg-white/30 dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.2)]",
                     )}
                   />
                 )}
                 <Icon
                   className={cn(
                     "relative z-10 h-5 w-5 transition-transform duration-300",
-                    isActive && "scale-110"
+                    isActive && "scale-110",
                   )}
                 />
                 <span className="relative z-10 text-[10px] font-medium tracking-wide">
@@ -77,54 +82,54 @@ export default function MainLayout() {
           })}
         </nav>
       ) : (
-        /* Web: prominent bottom button bar with hover animations */
+        /* Web: clean floating pill tab bar matching the reference image */
         <nav
           className={cn(
             "fixed bottom-6 left-1/2 z-50 -translate-x-1/2",
-            "flex items-center gap-2",
-            "rounded-2xl border border-white/40 bg-white/35 p-2",
-            "shadow-[0_12px_40px_rgba(0,0,0,0.18),inset_0_1px_0_rgba(255,255,255,0.5)]",
-            "backdrop-blur-2xl transition-all duration-500 ease-out",
-            "dark:border-white/20 dark:bg-slate-900/40 dark:shadow-[0_12px_40px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,255,255,0.12)]"
+            "flex items-stretch",
+            "rounded-[2rem] bg-white px-2",
+            "ring-primary/20 shadow-primary/10 ring-1",
+            "dark:bg-slate-900 dark:ring-white/10",
           )}
           aria-label="Primary navigation"
         >
-          {navItems.map((item) => {
-            const isActive = location.pathname === item.url;
+          {navItems.map((item, index) => {
+            const isActive = index === activeIndex;
             const Icon = item.icon;
             return (
               <button
                 key={item.url}
                 onClick={() => navigate(item.url)}
                 className={cn(
-                  "group relative flex items-center gap-2.5 overflow-hidden rounded-xl px-5 py-3.5 text-sm font-semibold",
-                  "cursor-pointer outline-none transition-all duration-500 ease-out",
-                  "focus-visible:ring-2 focus-visible:ring-ring",
+                  "relative flex flex-col items-center justify-center gap-1",
+                  "min-w-[6rem] cursor-pointer rounded-full outline-none",
+                  "py-4 transition-colors duration-300",
+                  "focus-visible:ring-primary/40 focus-visible:ring-2 focus-visible:ring-offset-2",
                   isActive
-                    ? "bg-white/50 text-foreground shadow-[inset_0_1px_0_rgba(255,255,255,0.7)] backdrop-blur-md dark:bg-white/25 dark:text-white"
-                    : "bg-transparent text-muted-foreground hover:bg-white/40 hover:text-foreground hover:shadow-lg hover:scale-105 dark:hover:bg-white/20"
+                    ? "text-primary"
+                    : "text-muted-foreground hover:text-foreground",
                 )}
                 aria-current={isActive ? "page" : undefined}
               >
+                {/* Icon */}
                 <Icon
                   className={cn(
-                    "h-5 w-5 transition-all duration-300",
-                    !isActive && "group-hover:scale-110"
+                    "h-6 w-6 transition-all duration-300",
+                    isActive ? "scale-110 stroke-[2.5]" : "stroke-[1.5]",
                   )}
                 />
-                <span className="relative">{item.title}</span>
-                {isActive && (
-                  <span className="absolute inset-0 rounded-xl ring-1 ring-white/60 dark:ring-white/30" />
-                )}
-                {!isActive && (
-                  <span
-                    className={cn(
-                      "absolute inset-0 rounded-xl opacity-0 transition-opacity duration-500",
-                      "group-hover:opacity-100",
-                      "bg-white/30 dark:bg-white/10"
-                    )}
-                  />
-                )}
+
+                {/* Label */}
+                {/* <span className="text-[11px] font-semibold leading-none tracking-wide">
+                  {item.title}
+                </span> */}
+
+                {/* <span
+                  className={cn(
+                    "bg-primary mt-0.5 h-1.5 w-1.5 rounded-full transition-all duration-300",
+                    isActive ? "scale-100 opacity-100" : "scale-0 opacity-0",
+                  )}
+                /> */}
               </button>
             );
           })}
