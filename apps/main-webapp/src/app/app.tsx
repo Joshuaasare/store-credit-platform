@@ -1,12 +1,12 @@
 import { useEffect } from "react";
-import { Routes, Route } from "react-router-dom";
-import { ThemeProvider } from "./shared/providers/theme-provider";
+import { Routes, Route, Navigate } from "react-router-dom";
+import { ThemeProvider } from "./shared/providers/ThemeProvider";
 import { useAuthStore } from "@shared/stores/authStore";
 import ProtectedRoute from "./components/ProtectedRoute/ProtectedRoute";
 import Login from "./pages/Auth/Login";
 import VerifyOtp from "./pages/Auth/VerifyOTP";
 import Credits from "./pages/Credits/Credits";
-import Dashboard from "./pages/Dashboard/Dashboard";
+import MyStore from "./pages/MyStore/MyStore";
 import MainLayout from "./pages/MainLayout/MainLayout";
 import Profile from "./pages/Profile/Profile";
 
@@ -24,29 +24,15 @@ export function App() {
         <Route path="/verify-otp" element={<VerifyOtp />} />
         <Route element={<ProtectedRoute />}>
           <Route element={<MainLayout />}>
-            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/" element={<MyStore />} />
             <Route path="/credits" element={<Credits />} />
             <Route path="/profile" element={<Profile />} />
-            <Route path="/" element={<NavigateToDashboard />} />
+            <Route path="/dashboard" element={<Navigate to="/" replace />} />
           </Route>
         </Route>
       </Routes>
     </ThemeProvider>
   );
-}
-
-function NavigateToDashboard() {
-  const { isAuthenticated, isLoading } = useAuthStore();
-
-  if (isLoading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-indigo-600 border-t-transparent"></div>
-      </div>
-    );
-  }
-
-  return isAuthenticated ? <Dashboard /> : <Login />;
 }
 
 export default App;

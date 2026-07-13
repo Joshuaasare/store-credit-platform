@@ -145,6 +145,7 @@ export type Database = {
           created_at: string
           deleted_at: string | null
           id: number
+          is_active: boolean
           merchant_id: number
           name: string | null
           phone: string | null
@@ -157,6 +158,7 @@ export type Database = {
           created_at?: string
           deleted_at?: string | null
           id?: number
+          is_active?: boolean
           merchant_id: number
           name?: string | null
           phone?: string | null
@@ -169,6 +171,7 @@ export type Database = {
           created_at?: string
           deleted_at?: string | null
           id?: number
+          is_active?: boolean
           merchant_id?: number
           name?: string | null
           phone?: string | null
@@ -237,33 +240,42 @@ export type Database = {
           amount: number
           branch_id: number
           created_at: string
+          credit_generated: number | null
+          credit_redeemed: number | null
           customer_id: number
           deleted_at: string | null
           id: number
           recorded_by_user_id: string | null
           transaction_date: number
+          transaction_type: Database["public"]["Enums"]["transaction_type"]
           updated_at: string | null
         }
         Insert: {
           amount: number
           branch_id: number
           created_at?: string
+          credit_generated?: number | null
+          credit_redeemed?: number | null
           customer_id: number
           deleted_at?: string | null
           id?: number
           recorded_by_user_id?: string | null
           transaction_date: number
+          transaction_type?: Database["public"]["Enums"]["transaction_type"]
           updated_at?: string | null
         }
         Update: {
           amount?: number
           branch_id?: number
           created_at?: string
+          credit_generated?: number | null
+          credit_redeemed?: number | null
           customer_id?: number
           deleted_at?: string | null
           id?: number
           recorded_by_user_id?: string | null
           transaction_date?: number
+          transaction_type?: Database["public"]["Enums"]["transaction_type"]
           updated_at?: string | null
         }
         Relationships: [
@@ -321,6 +333,8 @@ export type Database = {
         Row: {
           country_code: string
           created_at: string
+          credit_pool_limit: number | null
+          credit_pool_used: number
           deleted_at: string | null
           id: number
           is_active: boolean
@@ -332,6 +346,8 @@ export type Database = {
         Insert: {
           country_code: string
           created_at?: string
+          credit_pool_limit?: number | null
+          credit_pool_used?: number
           deleted_at?: string | null
           id?: number
           is_active?: boolean
@@ -343,6 +359,8 @@ export type Database = {
         Update: {
           country_code?: string
           created_at?: string
+          credit_pool_limit?: number | null
+          credit_pool_used?: number
           deleted_at?: string | null
           id?: number
           is_active?: boolean
@@ -631,6 +649,7 @@ export type Database = {
     Enums: {
       credit_type: "fixed" | "percentage"
       role: "manager" | "cashier"
+      transaction_type: "purchase" | "credit_redeem" | "credit_adjustment"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -763,6 +782,7 @@ export const Constants = {
     Enums: {
       credit_type: ["fixed", "percentage"],
       role: ["manager", "cashier"],
+      transaction_type: ["purchase", "credit_redeem", "credit_adjustment"],
     },
   },
 } as const

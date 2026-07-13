@@ -1,0 +1,4 @@
+- [Type-first workflow](type-first-workflow.md) — how `yarn generate:types` flows `.types.ts` → TypeBox `.schema.ts` → frontend `api.types.ts`.
+- [Supabase CLI access](supabase-cli-access.md) — CLI is installed but not logged in; can't apply migrations or run type-gen from the DB.
+- [Backend route mounting](backend-route-mounting.md) — routes auto-load with no `/api` prefix; auth routes mount at `/auth/...`.
+- [Jest mock pattern](jest-supabase-mock.md) — how to mock the supabase chainable client in service specs.

@@ -1,32 +1,36 @@
-import { LayoutDashboard, Wallet, UsersRound, Settings } from "lucide-react";
+import { Store, Wallet, UserRound } from "lucide-react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
-import { cn, useIsMobile } from "@store-credit-platform/web-components";
+import { cn, useIsMobile, Toaster } from "@store-credit-platform/web-components";
+import { useTheme } from "../../shared/providers/ThemeProvider";
 
 export const routes = {
-  DASHBOARD: "/dashboard",
+  MY_STORE: "/",
   CREDITS: "/credits",
   PROFILE: "/profile",
-  USERS: "/users",
-  SETTINGS: "/settings",
 };
 
 const navItems = [
-  { title: "Dashboard", url: routes.DASHBOARD, icon: LayoutDashboard },
+  { title: "My Store", url: routes.MY_STORE, icon: Store },
   { title: "Credits", url: routes.CREDITS, icon: Wallet },
-  { title: "Users", url: routes.USERS, icon: UsersRound },
-  { title: "Settings", url: routes.SETTINGS, icon: Settings },
+  { title: "Profile", url: routes.PROFILE, icon: UserRound },
 ];
 
 export default function MainLayout() {
   const location = useLocation();
   const navigate = useNavigate();
   const isMobile = useIsMobile();
+  const { theme } = useTheme();
 
-  const activeIndex = navItems.findIndex((i) => i.url === location.pathname);
+  const isLight = theme === "light";
+  // "/" should match only when exactly on the index route; sub-paths fall back to no match.
+  const activeIndex = navItems.findIndex((i) =>
+    i.url === "/" ? location.pathname === "/" : location.pathname.startsWith(i.url),
+  );
 
   return (
     <div className="relative flex min-h-screen flex-col">
-      <main className="bg-background text-foreground flex-1">
+      <Toaster richColors position="top-right" />
+      <main className={cn("bg-background text-foreground flex-1")}>
         <Outlet />
       </main>
 
@@ -36,10 +40,11 @@ export default function MainLayout() {
           className={cn(
             "fixed bottom-4 left-4 right-4 z-50 mx-auto max-w-sm",
             "flex items-center justify-around",
-            "rounded-full border border-white/50 bg-white/40 backdrop-blur-2xl",
-            "shadow-[0_8px_32px_rgba(0,0,0,0.2),inset_0_1px_0_rgba(255,255,255,0.6)]",
+            "rounded-full border backdrop-blur-2xl",
             "transition-all duration-500 ease-out",
-            "dark:border-white/25 dark:bg-slate-900/50 dark:shadow-[0_8px_32px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,255,255,0.15)]",
+            isLight
+              ? "border-white/50 bg-white/40 shadow-[0_8px_32px_rgba(0,0,0,0.2),inset_0_1px_0_rgba(255,255,255,0.6)]"
+              : "border-slate-700/40 bg-slate-900/70 shadow-[0_8px_32px_rgba(0,0,0,0.5),inset_0_1px_0_rgba(255,255,255,0.08)]",
           )}
           aria-label="Primary navigation"
         >
@@ -54,17 +59,22 @@ export default function MainLayout() {
                   "group relative flex flex-1 flex-col items-center justify-center gap-1 rounded-full py-3 transition-all duration-500 ease-out",
                   "focus-visible:ring-ring min-w-[4rem] cursor-pointer outline-none focus-visible:ring-2",
                   isActive
-                    ? "text-primary"
-                    : "text-muted-foreground hover:text-foreground",
+                    ? isLight
+                      ? "text-slate-700"
+                      : "text-amber-400"
+                    : isLight
+                      ? "text-slate-400 hover:text-slate-600"
+                      : "text-slate-500 hover:text-slate-300",
                 )}
                 aria-current={isActive ? "page" : undefined}
               >
                 {isActive && (
                   <span
                     className={cn(
-                      "absolute inset-x-2 inset-y-1 rounded-full transition-all duration-500 ease-out",
-                      "bg-white/60 shadow-[inset_0_1px_0_rgba(255,255,255,0.8)] backdrop-blur-sm",
-                      "dark:bg-white/30 dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.2)]",
+                      "absolute inset-x-2 inset-y-1 rounded-full backdrop-blur-sm transition-all duration-500 ease-out",
+                      isLight
+                        ? "bg-white/60 shadow-[inset_0_1px_0_rgba(255,255,255,0.8)]"
+                        : "bg-amber-500/15 shadow-[inset_0_1px_0_rgba(251,191,36,0.25)]",
                     )}
                   />
                 )}
@@ -82,14 +92,20 @@ export default function MainLayout() {
           })}
         </nav>
       ) : (
-        /* Web: floating pill tab bar — icon in ring, label below */
+        /* Web: modern floating left-side navigator */
         <nav
           className={cn(
-            "fixed bottom-6 left-1/2 z-50 -translate-x-1/2",
-            "flex items-start gap-1",
-            "rounded-[2rem] bg-white py-2",
+            "group/nav fixed left-4 top-5 z-50",
+            "flex flex-col items-start gap-2",
+            "w-[4.5rem] hover:w-44",
+            "rounded-2xl px-2 py-3",
             "shadow-[0_8px_30px_rgba(0,0,0,0.12)]",
-            "ring-1 ring-black/5",
+            "ring-1",
+            "transition-[width] duration-300 ease-out",
+            "overflow-hidden",
+            isLight
+              ? "bg-white ring-black/5"
+              : "bg-slate-900 ring-amber-500/20",
           )}
           aria-label="Primary navigation"
         >
@@ -101,37 +117,62 @@ export default function MainLayout() {
                 key={item.url}
                 onClick={() => navigate(item.url)}
                 className={cn(
-                  "group relative flex flex-col items-center gap-1.5",
-                  "min-w-[5.5rem] cursor-pointer outline-none",
-                  "rounded-2xl px-2 pb-1 pt-1",
-                  "transition-colors duration-300",
-                  "focus-visible:ring-primary/40 focus-visible:ring-2",
+                  "relative flex w-full items-center gap-3 rounded-xl outline-none",
+                  "px-2 py-2.5",
+                  "cursor-pointer transition-colors duration-200",
+                  "focus-visible:ring-2",
                   isActive
-                    ? "text-primary"
-                    : "text-muted-foreground hover:text-foreground",
+                    ? isLight
+                      ? "text-slate-700"
+                      : "text-amber-400"
+                    : isLight
+                      ? "text-slate-400 hover:text-slate-600"
+                      : "text-slate-500 hover:text-slate-300",
                 )}
                 aria-current={isActive ? "page" : undefined}
               >
+                {/* Active left-edge indicator */}
+                {isActive && (
+                  <span
+                    className={cn(
+                      "absolute left-0 top-1/2 h-6 w-[3px] -translate-y-1/2 rounded-r-full transition-all duration-300",
+                      isLight ? "bg-slate-700" : "bg-amber-500",
+                    )}
+                  />
+                )}
+
                 {/* Ring container with icon */}
                 <span
                   className={cn(
-                    "flex h-10 w-10 items-center justify-center rounded-full",
+                    "flex h-9 w-9 shrink-0 items-center justify-center rounded-full",
                     "transition-all duration-300",
                     isActive
-                      ? "bg-primary text-primary-foreground shadow-sm"
-                      : "bg-muted text-muted-foreground group-hover:bg-muted/80",
+                      ? isLight
+                        ? "bg-slate-700 text-white shadow-sm"
+                        : "bg-amber-500 text-slate-900 shadow-[0_0_12px_rgba(245,158,11,0.35)]"
+                      : isLight
+                        ? "bg-slate-100 text-slate-400"
+                        : "bg-slate-800 text-slate-400",
                   )}
                 >
                   <Icon
                     className={cn(
-                      "h-5 w-5 transition-all duration-300",
+                      "h-[18px] w-[18px] transition-all duration-300",
                       isActive ? "scale-110 stroke-[2.5]" : "stroke-[1.5]",
                     )}
                   />
                 </span>
-                <span className="sr-only">{item.title}</span>
 
-                {/* Label outside the ring */}
+                {/* Label — hidden until hover */}
+                <span
+                  className={cn(
+                    "whitespace-nowrap text-sm font-medium tracking-wide",
+                    "opacity-0 transition-all duration-200 group-hover/nav:opacity-100",
+                    "translate-x-[-4px] group-hover/nav:translate-x-0",
+                  )}
+                >
+                  {item.title}
+                </span>
               </button>
             );
           })}

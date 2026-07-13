@@ -13,6 +13,8 @@ export interface AccessTokenPayload {
   sub: string;
   phone: string | null;
   roles: string[];
+  merchant_id: number | null;
+  branch_id: number | null;
   iat: number;
   exp: number;
   iss: string;
@@ -28,6 +30,8 @@ export interface AuthUser {
   other_names: string | null;
   access_granted: boolean;
   roles: BaseUserRole[];
+  merchant_id: number | null;
+  branch_id: number | null;
 }
 
 export interface AuthSession {

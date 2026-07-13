@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { Button } from "@store-credit-platform/web-components";
 import { createAuthService } from "@store-credit-platform/api-services";
+import { useAuthStore } from "@shared/stores/authStore";
 import { PhoneInput } from "../../components/PhoneInput/PhoneInput";
 
 const authService = createAuthService();
@@ -72,6 +73,33 @@ export default function Login() {
             {isLoading ? "Sending code..." : "Send Login Code"}
           </Button>
         </form>
+
+        {/* DEV — delete before production */}
+        <button
+          type="button"
+          onClick={async () => {
+            setIsLoading(true);
+            try {
+              const res = await authService.verifyOtp({
+                phone: "0549270550",
+                otp: "123456",
+              });
+              if (res.success) {
+                useAuthStore.getState().setSession(res.data);
+                navigate("/dashboard");
+              }
+            } catch (e) {
+              setError(e instanceof Error ? e.message : "Dev login failed");
+            } finally {
+              setIsLoading(false);
+            }
+          }}
+          disabled={isLoading}
+          className="mt-4 w-full rounded-md bg-amber-50 px-3 py-2 text-xs font-medium text-amber-700 ring-1 ring-amber-200 hover:bg-amber-100 disabled:opacity-50"
+        >
+          Dev Login
+        </button>
+        {/* END DEV */}
       </div>
     </div>
   );
