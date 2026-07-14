@@ -68,6 +68,14 @@ slug: Type.Union([
 Type.String(),
 Type.Null()
 ]),
+logo_url: Type.Union([
+Type.String(),
+Type.Null()
+]),
+cover_photo_url: Type.Union([
+Type.String(),
+Type.Null()
+]),
 is_active: Type.Boolean(),
 created_at: Type.String()
 })

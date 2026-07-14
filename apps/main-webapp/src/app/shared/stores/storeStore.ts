@@ -131,6 +131,10 @@ export const useStoreStore = create<StoreState>((set, get) => ({
             ? { country_code: payload.country_code! }
             : {}),
           ...("slug" in payload ? { slug: payload.slug ?? null } : {}),
+          ...("logo_url" in payload ? { logo_url: payload.logo_url ?? null } : {}),
+          ...("cover_photo_url" in payload
+            ? { cover_photo_url: payload.cover_photo_url ?? null }
+            : {}),
         },
       });
     }

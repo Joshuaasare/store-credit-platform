@@ -99,6 +99,8 @@ export class MerchantService {
       phone: merchant.phone,
       country_code: merchant.country_code,
       slug: merchant.slug,
+      logo_url: merchant.logo_url,
+      cover_photo_url: merchant.cover_photo_url,
       is_active: merchant.is_active,
       created_at: merchant.created_at,
       branch_count: branchCount ?? 0,
@@ -129,6 +131,9 @@ export class MerchantService {
     if (payload.country_code !== undefined)
       update.country_code = payload.country_code;
     if (payload.slug !== undefined) update.slug = payload.slug;
+    if (payload.logo_url !== undefined) update.logo_url = payload.logo_url;
+    if (payload.cover_photo_url !== undefined)
+      update.cover_photo_url = payload.cover_photo_url;
 
     const { error } = await supabaseAdmin
       .from("merchants")

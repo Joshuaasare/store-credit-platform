@@ -3,8 +3,8 @@ export const QueryFragments = {
   assigned_by_user_id`,
   BASE_USER: `id, email, phone, surname, other_names, access_granted, 
   otp, otp_expires_at`,
-  BASE_MERCHART: `id, name, phone, country_code, slug, is_active, 
-  created_at,credit_pool_used, credit_pool_limit`,
+  BASE_MERCHART: `id, name, phone, country_code, slug, is_active,
+  created_at, credit_pool_used, credit_pool_limit, logo_url, cover_photo_url`,
   BASE_BRANCH: `id, merchant_id, name, phone, address, city, country_code, is_active, created_at`,
 
   /**

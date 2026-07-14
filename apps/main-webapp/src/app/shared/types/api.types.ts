@@ -63,6 +63,8 @@ export interface BaseMerchant {
   phone: string;
   country_code: string;
   slug: string | null;
+  logo_url: string | null;
+  cover_photo_url: string | null;
   is_active: boolean;
   created_at: string;
 }
@@ -242,6 +244,8 @@ export interface UpdateMerchantRequest {
   phone?: string;
   country_code?: string;
   slug?: string | null;
+  logo_url?: string | null;
+  cover_photo_url?: string | null;
 }
 
 export interface MerchantMutationResponse {

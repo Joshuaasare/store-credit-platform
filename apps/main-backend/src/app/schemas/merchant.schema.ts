@@ -24,6 +24,14 @@ country_code: Type.Optional(Type.String()),
 slug: Type.Optional(Type.Union([
 Type.String(),
 Type.Null()
+])),
+logo_url: Type.Optional(Type.Union([
+Type.String(),
+Type.Null()
+])),
+cover_photo_url: Type.Optional(Type.Union([
+Type.String(),
+Type.Null()
 ]))
 })
 
