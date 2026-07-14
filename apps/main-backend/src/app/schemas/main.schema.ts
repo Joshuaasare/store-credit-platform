@@ -57,3 +57,46 @@ export const SMSMessageErrorReponse = Type.Object({
 status: Type.Literal("error"),
 message: Type.String()
 })
+
+export type BaseMerchant = Static<typeof BaseMerchant>
+export const BaseMerchant = Type.Object({
+id: Type.Number(),
+name: Type.String(),
+phone: Type.String(),
+country_code: Type.String(),
+slug: Type.Union([
+Type.String(),
+Type.Null()
+]),
+is_active: Type.Boolean(),
+created_at: Type.String()
+})
+
+export type BaseBranch = Static<typeof BaseBranch>
+export const BaseBranch = Type.Object({
+id: Type.Number(),
+merchant_id: Type.Number(),
+name: Type.Union([
+Type.String(),
+Type.Null()
+]),
+phone: Type.Union([
+Type.String(),
+Type.Null()
+]),
+address: Type.Union([
+Type.String(),
+Type.Null()
+]),
+city: Type.String(),
+country_code: Type.String(),
+is_active: Type.Boolean(),
+created_at: Type.String()
+})
+
+export type ApiErrorResponse = Static<typeof ApiErrorResponse>
+export const ApiErrorResponse = Type.Object({
+success: Type.Literal(false),
+error: Type.String(),
+details: Type.Optional(Type.Array(Type.Unknown()))
+})

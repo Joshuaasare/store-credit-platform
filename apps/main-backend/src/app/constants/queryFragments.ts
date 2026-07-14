@@ -1,7 +1,11 @@
 export const QueryFragments = {
-  BASE_USER_ROLE: `id,created_at,role,updated_at,user_id,assigned_by_user_id`,
-
-  BASE_USER: `id, email, phone, surname, other_names, access_granted, otp, otp_expires_at`,
+  BASE_USER_ROLE: `id,created_at,role,updated_at,user_id,
+  assigned_by_user_id`,
+  BASE_USER: `id, email, phone, surname, other_names, access_granted, 
+  otp, otp_expires_at`,
+  BASE_MERCHART: `id, name, phone, country_code, slug, is_active, 
+  created_at,credit_pool_used, credit_pool_limit`,
+  BASE_BRANCH: `id, merchant_id, name, phone, address, city, country_code, is_active, created_at`,
 
   /**
    * Staff → Branch → Merchant lookup, filtered by user_id.

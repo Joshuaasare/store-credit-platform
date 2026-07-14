@@ -1,4 +1,4 @@
-import { merchantService } from "./merchant.service";
+import { merchantService } from "../services/merchant.service";
 import { supabaseAdmin } from "../utils/supabase.client";
 
 jest.mock("../utils/supabase.client", () => ({
@@ -11,7 +11,11 @@ const supabaseFrom = supabaseAdmin.from as jest.Mock;
 
 // Chainable Supabase mock builder
 function wrapResult(r: any): any {
-  if (r && typeof r === "object" && ("data" in r || "error" in r || "count" in r)) {
+  if (
+    r &&
+    typeof r === "object" &&
+    ("data" in r || "error" in r || "count" in r)
+  ) {
     return r;
   }
   return { data: r, error: null, count: null };
@@ -34,7 +38,8 @@ function chainable(resolver: () => any): any {
     single: jest.fn(async () => wrapResult(resolver())),
     maybeSingle: jest.fn(async () => wrapResult(resolver())),
   };
-  obj.then = (resolve: any) => Promise.resolve(wrapResult(resolver())).then(resolve);
+  obj.then = (resolve: any) =>
+    Promise.resolve(wrapResult(resolver())).then(resolve);
   return obj;
 }
 

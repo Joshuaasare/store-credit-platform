@@ -2,6 +2,7 @@ import { Store, Wallet, UserRound } from "lucide-react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { cn, useIsMobile, Toaster } from "@store-credit-platform/web-components";
 import { useTheme } from "../../shared/providers/ThemeProvider";
+import { ThemeToggle } from "../../components/ThemeToggle/ThemeToggle";
 
 export const routes = {
   MY_STORE: "/",
@@ -39,6 +40,7 @@ export default function MainLayout() {
   return (
     <div className="relative flex min-h-screen flex-col">
       <Toaster richColors position="top-right" />
+      <ThemeToggle />
       <main className={cn("bg-background text-foreground flex-1")}>
         <Outlet />
       </main>

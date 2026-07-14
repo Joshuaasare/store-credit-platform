@@ -1,0 +1,57 @@
+import { Type, Static } from '@sinclair/typebox'
+import { BaseBranch, ApiErrorResponse } from './main.schema'
+
+
+
+export type BranchWithAggregates = Static<typeof BranchWithAggregates>
+export const BranchWithAggregates = Type.Composite([BaseBranch, Type.Object({
+staff_count: Type.Number(),
+customer_count: Type.Number(),
+credit_issued_this_month: Type.Number(),
+last_activity_date: Type.Union([
+Type.String(),
+Type.Null()
+])
+})])
+
+export type BranchListResponse = Static<typeof BranchListResponse>
+export const BranchListResponse = Type.Object({
+success: Type.Literal(true),
+data: Type.Array(BranchWithAggregates)
+})
+
+export type BranchMutationResponse = Static<typeof BranchMutationResponse>
+export const BranchMutationResponse = Type.Object({
+success: Type.Literal(true),
+data: BranchWithAggregates
+})
+
+export type CreateBranchRequest = Static<typeof CreateBranchRequest>
+export const CreateBranchRequest = Type.Object({
+name: Type.String(),
+phone: Type.Optional(Type.String()),
+address: Type.Optional(Type.String()),
+city: Type.String(),
+country_code: Type.String()
+})
+
+export type UpdateBranchRequest = Static<typeof UpdateBranchRequest>
+export const UpdateBranchRequest = Type.Object({
+name: Type.Optional(Type.String()),
+phone: Type.Optional(Type.String()),
+address: Type.Optional(Type.String()),
+city: Type.Optional(Type.String()),
+country_code: Type.Optional(Type.String())
+})
+
+export type BranchListApiResponse = Static<typeof BranchListApiResponse>
+export const BranchListApiResponse = Type.Union([
+BranchListResponse,
+ApiErrorResponse
+])
+
+export type BranchMutationApiResponse = Static<typeof BranchMutationApiResponse>
+export const BranchMutationApiResponse = Type.Union([
+BranchMutationResponse,
+ApiErrorResponse
+])

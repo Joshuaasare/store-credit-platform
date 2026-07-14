@@ -1,5 +1,9 @@
 import { FastifyInstance } from "fastify";
-import { requireAuth, requireRoles, AuthenticatedRequest } from "../../middleware/auth.middleware";
+import {
+  requireAuth,
+  requireRoles,
+  AuthenticatedRequest,
+} from "../../middleware/auth.middleware";
 import { branchService } from "../../services/branch.service";
 import { merchantService } from "../../services/merchant.service";
 import {
@@ -7,7 +11,7 @@ import {
   UpdateBranchRequest,
   BranchListApiResponse,
   BranchMutationApiResponse,
-} from "../../schemas/merchant.schema";
+} from "../../schemas/branch.schema";
 
 export default async function (fastify: FastifyInstance) {
   /**
@@ -37,7 +41,8 @@ export default async function (fastify: FastifyInstance) {
           return { success: true, data: [] };
         }
 
-        const branches = await branchService.listBranchesForMerchant(merchantId);
+        const branches =
+          await branchService.listBranchesForMerchant(merchantId);
         return { success: true, data: branches };
       } catch (error) {
         const message =

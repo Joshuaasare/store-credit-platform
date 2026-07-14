@@ -45,10 +45,7 @@ export class MerchantService {
   ): Promise<MerchantWithStats | null> {
     const { data: merchant, error } = await supabaseAdmin
       .from("merchants")
-      .select(
-        `id, name, phone, country_code, slug, is_active, created_at,
-         credit_pool_used, credit_pool_limit`,
-      )
+      .select(QueryFragments.BASE_MERCHART)
       .eq("id", merchantId)
       .is("deleted_at", null)
       .maybeSingle();
@@ -65,7 +62,10 @@ export class MerchantService {
     // staff_count — staff joined to branches of this merchant
     const { count: staffCount } = await supabaseAdmin
       .from("staff")
-      .select("id, branch_id!inner(merchant_id)", { count: "exact", head: true })
+      .select("id, branch_id!inner(merchant_id)", {
+        count: "exact",
+        head: true,
+      })
       .eq("branch_id.merchant_id", merchantId)
       .is("deleted_at", null);
 
@@ -121,10 +121,13 @@ export class MerchantService {
     merchantId: number,
     payload: UpdateMerchantRequest,
   ): Promise<MerchantWithStats | null> {
-    const update: Record<string, unknown> = { updated_at: new Date().toISOString() };
+    const update: Record<string, unknown> = {
+      updated_at: new Date().toISOString(),
+    };
     if (payload.name !== undefined) update.name = payload.name;
     if (payload.phone !== undefined) update.phone = payload.phone;
-    if (payload.country_code !== undefined) update.country_code = payload.country_code;
+    if (payload.country_code !== undefined)
+      update.country_code = payload.country_code;
     if (payload.slug !== undefined) update.slug = payload.slug;
 
     const { error } = await supabaseAdmin

@@ -1,9 +1,10 @@
 import { supabaseAdmin } from "../utils/supabase.client";
+import { QueryFragments } from "../constants/queryFragments";
 import {
   BranchWithAggregates,
   CreateBranchRequest,
   UpdateBranchRequest,
-} from "../schemas/merchant.schema";
+} from "../schemas/branch.schema";
 
 /**
  * Branch service — list/create/update branches for a merchant with
@@ -20,9 +21,7 @@ export class BranchService {
   ): Promise<BranchWithAggregates[]> {
     const { data: branches, error } = await supabaseAdmin
       .from("branches")
-      .select(
-        `id, merchant_id, name, phone, address, city, country_code, is_active, created_at`,
-      )
+      .select(QueryFragments.BASE_BRANCH)
       .eq("merchant_id", merchantId)
       .is("deleted_at", null)
       .order("created_at", { ascending: false });
@@ -116,13 +115,13 @@ export class BranchService {
         country_code: payload.country_code,
         is_active: true,
       })
-      .select(
-        `id, merchant_id, name, phone, address, city, country_code, is_active, created_at`,
-      )
+      .select(QueryFragments.BASE_BRANCH)
       .single();
 
     if (error || !branch) {
-      throw new Error(`Failed to create branch: ${error?.message ?? "unknown"}`);
+      throw new Error(
+        `Failed to create branch: ${error?.message ?? "unknown"}`,
+      );
     }
 
     return {
@@ -163,17 +162,22 @@ export class BranchService {
       throw new Error("Branch not found");
     }
     if (existing.merchant_id !== merchantId) {
-      const err = new Error("Forbidden: branch does not belong to your merchant");
+      const err = new Error(
+        "Forbidden: branch does not belong to your merchant",
+      );
       (err as Error & { statusCode?: number }).statusCode = 403;
       throw err;
     }
 
-    const update: Record<string, unknown> = { updated_at: new Date().toISOString() };
+    const update: Record<string, unknown> = {
+      updated_at: new Date().toISOString(),
+    };
     if (payload.name !== undefined) update.name = payload.name;
     if (payload.phone !== undefined) update.phone = payload.phone;
     if (payload.address !== undefined) update.address = payload.address;
     if (payload.city !== undefined) update.city = payload.city;
-    if (payload.country_code !== undefined) update.country_code = payload.country_code;
+    if (payload.country_code !== undefined)
+      update.country_code = payload.country_code;
 
     const { error } = await supabaseAdmin
       .from("branches")

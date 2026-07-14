@@ -1,4 +1,4 @@
-import { branchService } from "./branch.service";
+import { branchService } from "../services/branch.service";
 import { supabaseAdmin } from "../utils/supabase.client";
 
 jest.mock("../utils/supabase.client", () => ({
@@ -8,7 +8,11 @@ jest.mock("../utils/supabase.client", () => ({
 const supabaseFrom = supabaseAdmin.from as jest.Mock;
 
 function wrapResult(r: any): any {
-  if (r && typeof r === "object" && ("data" in r || "error" in r || "count" in r)) {
+  if (
+    r &&
+    typeof r === "object" &&
+    ("data" in r || "error" in r || "count" in r)
+  ) {
     return r;
   }
   return { data: r, error: null, count: null };
@@ -116,12 +120,7 @@ describe("BranchService", () => {
         if (call === 1) {
           return chainable(() => ({ data: branches, error: null }));
         }
-        const perBranchResults: any[] = [
-          { count: 0 },
-          { count: 0 },
-          [],
-          null,
-        ];
+        const perBranchResults: any[] = [{ count: 0 }, { count: 0 }, [], null];
         const idx = (call - 2) % 4;
         return chainable(() => perBranchResults[idx]);
       });

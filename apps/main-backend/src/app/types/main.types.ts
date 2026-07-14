@@ -34,3 +34,31 @@ export type SMSMessageErrorReponse = {
   status: "error";
   message: string;
 };
+
+export interface BaseMerchant {
+  id: number;
+  name: string;
+  phone: string;
+  country_code: string;
+  slug: string | null;
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface BaseBranch {
+  id: number;
+  merchant_id: number;
+  name: string | null;
+  phone: string | null;
+  address: string | null;
+  city: string;
+  country_code: string;
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface ApiErrorResponse {
+  success: false;
+  error: string;
+  details?: unknown[];
+}

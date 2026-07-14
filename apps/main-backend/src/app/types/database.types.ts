@@ -332,12 +332,14 @@ export type Database = {
       merchants: {
         Row: {
           country_code: string
+          cover_photo_url: string | null
           created_at: string
           credit_pool_limit: number | null
           credit_pool_used: number
           deleted_at: string | null
           id: number
           is_active: boolean
+          logo_url: string | null
           name: string
           phone: string
           slug: string | null
@@ -345,12 +347,14 @@ export type Database = {
         }
         Insert: {
           country_code: string
+          cover_photo_url?: string | null
           created_at?: string
           credit_pool_limit?: number | null
           credit_pool_used?: number
           deleted_at?: string | null
           id?: number
           is_active?: boolean
+          logo_url?: string | null
           name: string
           phone: string
           slug?: string | null
@@ -358,12 +362,14 @@ export type Database = {
         }
         Update: {
           country_code?: string
+          cover_photo_url?: string | null
           created_at?: string
           credit_pool_limit?: number | null
           credit_pool_used?: number
           deleted_at?: string | null
           id?: number
           is_active?: boolean
+          logo_url?: string | null
           name?: string
           phone?: string
           slug?: string | null
