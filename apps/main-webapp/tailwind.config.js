@@ -99,9 +99,14 @@ module.exports = {
           "0%": { opacity: "0", transform: "translateX(2rem)" },
           "100%": { opacity: "1", transform: "translateX(0)" },
         },
+        "fade-in-up": {
+          "0%": { opacity: "0", transform: "translateY(0.75rem)" },
+          "100%": { opacity: "1", transform: "translateY(0)" },
+        },
       },
       animation: {
         "fade-left": "fade-left 0.2s ease",
+        "fade-in-up": "fade-in-up 0.4s ease-out both",
       },
     },
   },

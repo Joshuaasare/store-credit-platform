@@ -22,6 +22,14 @@ Type.String(),
 Type.Null()
 ]),
 roles: Type.Array(Type.String()),
+merchant_id: Type.Union([
+Type.Number(),
+Type.Null()
+]),
+branch_id: Type.Union([
+Type.Number(),
+Type.Null()
+]),
 iat: Type.Number(),
 exp: Type.Number(),
 iss: Type.String(),
@@ -43,7 +51,15 @@ Type.String(),
 Type.Null()
 ]),
 access_granted: Type.Boolean(),
-roles: Type.Array(BaseUserRole)
+roles: Type.Array(BaseUserRole),
+merchant_id: Type.Union([
+Type.Number(),
+Type.Null()
+]),
+branch_id: Type.Union([
+Type.Number(),
+Type.Null()
+])
 })
 
 export type AuthSession = Static<typeof AuthSession>

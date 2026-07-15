@@ -170,6 +170,8 @@ export default async function (fastify: FastifyInstance) {
           user.id,
           user.phone,
           user.roles.map((r) => r.role),
+          user.merchant_id,
+          user.branch_id,
         );
 
         const nowSeconds = Math.floor(Date.now() / 1000);

@@ -1,6 +1,6 @@
 /**
  * Auto-generated API Types
- * Generated on: 2026-07-09T20:40:58.404Z
+ * Generated on: 2026-07-14T00:48:09.616Z
  * 
  * ⚠️ DO NOT EDIT MANUALLY
  * Source: apps/smartschool-api/src/app/types/
@@ -57,6 +57,36 @@ export type SMSMessageErrorReponse = {
   message: string;
 };
 
+export interface BaseMerchant {
+  id: number;
+  name: string;
+  phone: string;
+  country_code: string;
+  slug: string | null;
+  logo_url: string | null;
+  cover_photo_url: string | null;
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface BaseBranch {
+  id: number;
+  merchant_id: number;
+  name: string | null;
+  phone: string | null;
+  address: string | null;
+  city: string;
+  country_code: string;
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface ApiErrorResponse {
+  success: false;
+  error: string;
+  details?: unknown[];
+}
+
 // ========================================
 // API-SPECIFIC TYPES
 // ========================================
@@ -73,6 +103,8 @@ export interface AccessTokenPayload {
   sub: string;
   phone: string | null;
   roles: string[];
+  merchant_id: number | null;
+  branch_id: number | null;
   iat: number;
   exp: number;
   iss: string;
@@ -88,6 +120,8 @@ export interface AuthUser {
   other_names: string | null;
   access_granted: boolean;
   roles: BaseUserRole[];
+  merchant_id: number | null;
+  branch_id: number | null;
 }
 
 export interface AuthSession {
@@ -157,4 +191,76 @@ export type LogoutApiResponse = LogoutResponse | AuthErrorResponse;
 export type SessionListApiResponse = SessionListResponse | AuthErrorResponse;
 export type SessionRevokeApiResponse = SessionRevokeResponse | AuthErrorResponse;
 export type GetCurrentUserApiResponse = GetCurrentUserResponse | AuthErrorResponse;
+
+export interface BranchWithAggregates extends BaseBranch {
+  staff_count: number;
+  customer_count: number;
+  credit_issued_this_month: number;
+  last_activity_date: string | null;
+}
+
+export interface BranchListResponse {
+  success: true;
+  data: BranchWithAggregates[];
+}
+
+export interface BranchMutationResponse {
+  success: true;
+  data: BranchWithAggregates;
+}
+
+export interface CreateBranchRequest {
+  name: string;
+  phone?: string;
+  address?: string;
+  city: string;
+  country_code: string;
+}
+
+export interface UpdateBranchRequest {
+  name?: string;
+  phone?: string;
+  address?: string;
+  city?: string;
+  country_code?: string;
+}
+
+export type BranchListApiResponse = BranchListResponse | ApiErrorResponse;
+export type BranchMutationApiResponse =
+  | BranchMutationResponse
+  | ApiErrorResponse;
+
+export interface MerchantWithStats extends BaseMerchant {
+  branch_count: number;
+  staff_count: number;
+  customer_count: number;
+  lifetime_credit_issued: number;
+  credit_pool_used: number;
+  credit_pool_limit: number | null;
+}
+
+export interface UpdateMerchantRequest {
+  name?: string;
+  phone?: string;
+  country_code?: string;
+  slug?: string | null;
+  logo_url?: string | null;
+  cover_photo_url?: string | null;
+}
+
+export interface MerchantMutationResponse {
+  success: true;
+  data: MerchantWithStats;
+}
+
+export interface MerchantMeResponse {
+  success: true;
+  data: MerchantWithStats | null;
+}
+
+export type MerchantMeApiResponse = MerchantMeResponse | ApiErrorResponse;
+
+export type MerchantMutationApiResponse =
+  | MerchantMutationResponse
+  | ApiErrorResponse;
 

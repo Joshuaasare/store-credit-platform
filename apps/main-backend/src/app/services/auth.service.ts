@@ -102,6 +102,22 @@ export class AuthService {
     const { phone, otp } = data;
     const normalizedPhone = this.normalizePhone(phone);
 
+    // DEV bypass — delete before production
+    if (
+      process.env.NODE_ENV === "development" &&
+      normalizedPhone === process.env.DEV_MOCK_PHONE &&
+      otp === process.env.DEV_MOCK_OTP
+    ) {
+      const { data: user } = await supabaseAdmin
+        .from("users")
+        .select(QueryFragments.BASE_USER)
+        .eq("phone", normalizedPhone)
+        .is("deleted_at", null)
+        .single();
+      if (!user) throw new Error("Dev mock user not found.");
+      return await this.buildDevSession(user, userAgent, clientIp);
+    }
+
     // Check in-memory OTP store first
     const otpEntry = getOtp(normalizedPhone);
 
@@ -160,6 +176,9 @@ export class AuthService {
       .eq("user_id", user.id)
       .is("deleted_at", null);
 
+    // Resolve merchant_id / primary branch_id via staff → branches → merchants
+    const staffAssignment = await this.resolveStaffAssignment(user.id);
+
     const authUserResponse: AuthUser = {
       id: user.id,
       email: user.email || "",
@@ -176,6 +195,8 @@ export class AuthService {
           created_at: r.created_at,
           updated_at: r.updated_at,
         })) || [],
+      merchant_id: staffAssignment?.merchant_id ?? null,
+      branch_id: staffAssignment?.branch_id ?? null,
     };
 
     // Issue custom JWT access token
@@ -183,6 +204,8 @@ export class AuthService {
       user.id,
       user.phone,
       authUserResponse.roles.map((r) => r.role),
+      authUserResponse.merchant_id,
+      authUserResponse.branch_id,
     );
 
     // Generate and store refresh token
@@ -191,8 +214,11 @@ export class AuthService {
       clientIp,
     );
     const familyId = crypto.randomUUID();
-    const { token: refreshToken, tokenHash: refreshTokenHash, jti } =
-      TokenService.generateOpaqueToken();
+    const {
+      token: refreshToken,
+      tokenHash: refreshTokenHash,
+      jti,
+    } = TokenService.generateOpaqueToken();
 
     await TokenService.storeRefreshToken(
       refreshTokenHash,
@@ -244,6 +270,9 @@ export class AuthService {
       .eq("user_id", user.id)
       .is("deleted_at", null);
 
+    // Resolve merchant_id / primary branch_id for AuthUser
+    const staffAssignment = await this.resolveStaffAssignment(user.id);
+
     return {
       id: user.id,
       email: user.email || "",
@@ -260,6 +289,92 @@ export class AuthService {
           created_at: r.created_at,
           updated_at: r.updated_at,
         })) || [],
+      merchant_id: staffAssignment?.merchant_id ?? null,
+      branch_id: staffAssignment?.branch_id ?? null,
+    };
+  }
+
+  /**
+   * DEV session builder — delete before production.
+   */
+  private async buildDevSession(
+    user: any,
+    userAgent?: string,
+    clientIp?: string,
+  ): Promise<{
+    access_token: string;
+    refresh_token: string;
+    expires_in: number;
+    expires_at: number;
+    token_type: string;
+    user: AuthUser;
+  }> {
+    const { data: roles } = await supabaseAdmin
+      .from("staff_user_roles")
+      .select(`id, role, created_at, updated_at, user_id, assigned_by_user_id`)
+      .eq("user_id", user.id)
+      .is("deleted_at", null);
+
+    const staffAssignment = await this.resolveStaffAssignment(user.id);
+
+    const authUserResponse: AuthUser = {
+      id: user.id,
+      email: user.email || "",
+      phone: user.phone,
+      surname: user.surname,
+      other_names: user.other_names,
+      access_granted: user.access_granted,
+      roles:
+        roles?.map((r) => ({
+          id: r.id,
+          role: r.role,
+          user_id: r.user_id,
+          assigned_by_user_id: r.assigned_by_user_id,
+          created_at: r.created_at,
+          updated_at: r.updated_at,
+        })) || [],
+      merchant_id: staffAssignment?.merchant_id ?? null,
+      branch_id: staffAssignment?.branch_id ?? null,
+    };
+
+    const accessToken = await TokenService.signAccessToken(
+      user.id,
+      user.phone,
+      authUserResponse.roles.map((r) => r.role),
+      authUserResponse.merchant_id,
+      authUserResponse.branch_id,
+    );
+
+    const deviceFingerprint = TokenService.computeDeviceFingerprint(
+      userAgent,
+      clientIp,
+    );
+    const familyId = crypto.randomUUID();
+    const {
+      token: refreshToken,
+      tokenHash: refreshTokenHash,
+      jti,
+    } = TokenService.generateOpaqueToken();
+
+    await TokenService.storeRefreshToken(
+      refreshTokenHash,
+      jti,
+      user.id,
+      familyId,
+      deviceFingerprint,
+      clientIp,
+    );
+
+    const nowSeconds = Math.floor(Date.now() / 1000);
+    const expiresIn = 15 * 60;
+
+    return {
+      access_token: accessToken,
+      refresh_token: refreshToken,
+      expires_in: expiresIn,
+      expires_at: nowSeconds + expiresIn,
+      token_type: "Bearer",
+      user: authUserResponse,
     };
   }
 
@@ -275,5 +390,32 @@ export class AuthService {
       cleaned = "+" + cleaned;
     }
     return cleaned;
+  }
+
+  /**
+   * Resolve a user's primary merchant_id and branch_id via the staff table.
+   * Returns null if the user has no staff row (e.g. unassigned admin).
+   * Picks the first active staff row ordered by id for determinism.
+   */
+  private async resolveStaffAssignment(
+    userId: string,
+  ): Promise<{ merchant_id: number; branch_id: number } | null> {
+    const { data: staff } = await supabaseAdmin
+      .from("staff")
+      .select(QueryFragments.STAFF_MERCHANT_LOOKUP)
+      .eq("user_id", userId)
+      .is("deleted_at", null)
+      .order("id", { ascending: true })
+      .limit(1)
+      .maybeSingle();
+
+    if (!staff) return null;
+    const branch = (staff as any)?.branches;
+    const merchant = branch?.merchants;
+    if (!branch?.id || !merchant?.id) return null;
+    return {
+      merchant_id: Number(merchant.id),
+      branch_id: Number(branch.id),
+    };
   }
 }

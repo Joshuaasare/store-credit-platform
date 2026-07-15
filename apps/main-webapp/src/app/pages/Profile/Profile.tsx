@@ -1,24 +1,53 @@
+import { useNavigate } from "react-router-dom";
+import { LogOut } from "lucide-react";
+import { Button, Card } from "@store-credit-platform/web-components";
 import { useAuthStore } from "@shared/stores/authStore";
 
 export default function ProfilePage() {
-  const { user } = useAuthStore();
+  const { user, logout } = useAuthStore();
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    logout();
+    navigate("/login", { replace: true });
+  };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-8">
-      <div className="mx-auto max-w-4xl">
-        <h1 className="text-2xl font-bold text-gray-900">Profile</h1>
-        <div className="mt-4 space-y-2 text-sm text-gray-600">
-          <p>
-            <strong>Name:</strong> {user?.surname}
-          </p>
-          <p>
-            <strong>Email:</strong> {user?.email}
-          </p>
-          <p>
-            <strong>Phone:</strong> {user?.phone}
-          </p>
+    <div className="min-h-screen bg-background px-4 py-6 md:px-8 md:py-10">
+      <div className="mx-auto max-w-3xl space-y-6">
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-semibold tracking-tight">Profile</h1>
+          <Button variant="outline" size="sm" onClick={handleLogout}>
+            <LogOut className="mr-2 h-4 w-4" /> Logout
+          </Button>
         </div>
+
+        <Card className="p-6">
+          <div className="space-y-2 text-sm">
+            <Row label="Surname" value={user?.surname ?? "—"} />
+            <Row label="Other names" value={user?.other_names ?? "—"} />
+            <Row label="Email" value={user?.email ?? "—"} />
+            <Row label="Phone" value={user?.phone ?? "—"} />
+            <Row
+              label="Roles"
+              value={user?.roles.map((r) => r.role).join(", ") || "None"}
+            />
+            <Row
+              label="Access"
+              value={user?.access_granted ? "Granted" : "Denied"}
+            />
+          </div>
+        </Card>
       </div>
+    </div>
+  );
+}
+
+function Row({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-start justify-between gap-4 border-b last:border-0 pb-2 last:pb-0">
+      <span className="text-muted-foreground">{label}</span>
+      <span className="font-medium">{value}</span>
     </div>
   );
 }
