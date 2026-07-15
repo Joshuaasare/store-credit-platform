@@ -39,12 +39,12 @@ export function BranchCard({ branch, isManager, onOpenDetail }: BranchCardProps)
   return (
     <>
       <Card
-        className="group flex h-full cursor-pointer flex-col p-5 transition-all hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-md"
+        className="group bg-gradient-to-br from-primary/[0.04] to-card flex h-full cursor-pointer flex-col p-5 transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md"
         onClick={onOpenDetail}
       >
         <div className="flex items-start justify-between gap-3">
           <div className="flex min-w-0 items-center gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border bg-muted/40 text-sm font-semibold text-muted-foreground">
+            <div className="from-primary/15 to-primary/5 text-primary ring-primary/20 flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br text-sm font-semibold ring-1">
               {(displayName[0] ?? "?").toUpperCase()}
             </div>
             <div className="min-w-0">

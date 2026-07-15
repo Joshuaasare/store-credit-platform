@@ -245,11 +245,11 @@ export function StoreHero({ merchant, isManager }: StoreHeroProps) {
             <>
               {/* Upload-in-progress overlay (shown regardless of hover) */}
               {logo.isWorking && (
-                <div className="absolute inset-0 z-20 flex items-center justify-center rounded-2xl bg-black/60">
+                <div className="absolute inset-0 z-20 flex items-center justify-center rounded-lg bg-black/60">
                   <Loader2 className="h-7 w-7 animate-spin text-white" />
                 </div>
               )}
-              <div className="pointer-events-none absolute inset-0 flex items-center justify-center rounded-2xl bg-black/50 opacity-0 transition-opacity duration-200 group-hover/logo:pointer-events-auto group-hover/logo:opacity-100">
+              <div className="pointer-events-none absolute inset-0 flex items-center justify-center rounded-lg bg-black/50 opacity-0 transition-opacity duration-200 group-hover/logo:pointer-events-auto group-hover/logo:opacity-100">
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <button

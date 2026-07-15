@@ -1,5 +1,5 @@
 import { Store, Users, UserRound, Coins } from "lucide-react";
-import { Card } from "@store-credit-platform/web-components";
+import { Card, cn } from "@store-credit-platform/web-components";
 import { MerchantWithStats } from "@shared/types/api.types";
 
 interface StoreStatsRowProps {
@@ -12,6 +12,9 @@ const STATS = [
     label: "Branches",
     icon: Store,
     dot: "bg-chart-1",
+    gradient: "from-chart-1/[0.07]",
+    chip: "bg-chart-1/10 text-chart-1",
+    hoverBorder: "hover:border-chart-1/40",
     currency: false,
     value: (m: MerchantWithStats) => m.branch_count,
   },
@@ -20,6 +23,9 @@ const STATS = [
     label: "Staff",
     icon: Users,
     dot: "bg-chart-2",
+    gradient: "from-chart-2/[0.07]",
+    chip: "bg-chart-2/10 text-chart-2",
+    hoverBorder: "hover:border-chart-2/40",
     currency: false,
     value: (m: MerchantWithStats) => m.staff_count,
   },
@@ -28,6 +34,9 @@ const STATS = [
     label: "Customers",
     icon: UserRound,
     dot: "bg-chart-3",
+    gradient: "from-chart-3/[0.07]",
+    chip: "bg-chart-3/10 text-chart-3",
+    hoverBorder: "hover:border-chart-3/40",
     currency: false,
     value: (m: MerchantWithStats) => m.customer_count,
   },
@@ -36,6 +45,9 @@ const STATS = [
     label: "Credit issued (lifetime)",
     icon: Coins,
     dot: "bg-chart-4",
+    gradient: "from-chart-4/[0.07]",
+    chip: "bg-chart-4/10 text-chart-4",
+    hoverBorder: "hover:border-chart-4/40",
     currency: true,
     value: (m: MerchantWithStats) => m.lifetime_credit_issued,
   },
@@ -51,7 +63,11 @@ export function StoreStatsRow({ merchant }: StoreStatsRowProps) {
         return (
           <Card
             key={stat.key}
-            className="group animate-fade-in-up p-5 transition-colors hover:border-primary/30 motion-reduce:animate-none"
+            className={cn(
+              "group animate-fade-in-up bg-gradient-to-br to-card p-5 transition-all motion-reduce:animate-none",
+              stat.gradient,
+              stat.hoverBorder,
+            )}
             style={{ animationDelay: `${i * 60}ms` }}
           >
             <div className="flex items-start justify-between">
@@ -64,7 +80,14 @@ export function StoreStatsRow({ merchant }: StoreStatsRowProps) {
                   {stat.label}
                 </div>
               </div>
-              <Icon className="text-muted-foreground/40 h-4 w-4" />
+              <div
+                className={cn(
+                  "flex h-8 w-8 items-center justify-center rounded-lg transition-transform group-hover:scale-105",
+                  stat.chip,
+                )}
+              >
+                <Icon className="h-4 w-4" />
+              </div>
             </div>
           </Card>
         );

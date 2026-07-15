@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { AlertTriangle, Wallet } from "lucide-react";
-import { Card } from "@store-credit-platform/web-components";
+import { Card, cn } from "@store-credit-platform/web-components";
 
 interface PoolStatusCardProps {
   used: number;
@@ -77,8 +77,21 @@ export function PoolStatusCard({ used, limit }: PoolStatusCardProps) {
         ? `Near limit · ${formatCedi(remaining)} remaining`
         : `${formatCedi(remaining)} remaining`;
 
+  const wash = !hasLimit
+    ? "from-muted/40"
+    : over
+      ? "from-destructive/[0.07]"
+      : warn
+        ? "from-amber-500/[0.07]"
+        : "from-primary/[0.06]";
+
   return (
-    <Card className="animate-fade-in-up p-6 motion-reduce:animate-none">
+    <Card
+      className={cn(
+        "animate-fade-in-up bg-gradient-to-br to-card p-6 motion-reduce:animate-none",
+        wash,
+      )}
+    >
       <div className="flex items-center justify-between">
         <div className="text-muted-foreground flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide">
           <Wallet className="h-3.5 w-3.5" />
