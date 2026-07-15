@@ -14,4 +14,18 @@ export const QueryFragments = {
    * and merchant, all filtered by `deleted_at is null`.
    */
   STAFF_MERCHANT_LOOKUP: `id, branch_id, user_id, branches ( id, merchant_id, merchants ( id ) )`,
+
+  /**
+   * Bare customers row used for lookups / inserts.
+   */
+  BASE_CUSTOMER: `id, phone, unique_id, user_id, created_at, deleted_at`,
+
+  /**
+   * Customer transactions list with joined customer (→ users for name), branch,
+   * and recorded_by_user (users.surname). Used by the Transactions page.
+   */
+  CUSTOMER_TRANSACTION_WITH_JOINS: `id, customer_id, branch_id, recorded_by_user_id, amount, transaction_date, transaction_type, created_at,
+    customer:customers ( id, phone, user_id, users ( id, surname, other_names ) ),
+    branch:branches ( id, name ),
+    recorded_by_user:users ( id, surname )`,
 } as const;

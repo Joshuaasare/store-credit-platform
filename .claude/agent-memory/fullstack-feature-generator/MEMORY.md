@@ -2,3 +2,6 @@
 - [Supabase CLI access](supabase-cli-access.md) — CLI is installed but not logged in; can't apply migrations or run type-gen from the DB.
 - [Backend route mounting](backend-route-mounting.md) — routes auto-load with no `/api` prefix; auth routes mount at `/auth/...`.
 - [Jest mock pattern](jest-supabase-mock.md) — how to mock the supabase chainable client in service specs.
+- [database.types hand-edits](database-types-hand-edits.md) — user permits hand-editing database.types.ts when codegen is blocked; widen nullable columns, add RPC signatures.
+- [Webapp typecheck baseline](webapp-typecheck-baseline.md) — main-webapp typecheck has known pre-existing failures (tsconfig.spec, Auth/auth casing, __mocks__/supabase.ts); don't chase them.
+- [Backend local boot](backend-local-boot.md) — required env vars + `npx nx serve main-backend` to smoke-check route registration.

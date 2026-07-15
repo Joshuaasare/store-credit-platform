@@ -1,4 +1,4 @@
-import { Store, Wallet, UserRound } from "lucide-react";
+import { Store, Wallet, UserRound, Users } from "lucide-react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { cn, useIsMobile, Toaster } from "@store-credit-platform/web-components";
 import { useTheme } from "../../shared/providers/ThemeProvider";
@@ -7,12 +7,14 @@ import { ThemeToggle } from "../../components/ThemeToggle/ThemeToggle";
 export const routes = {
   MY_STORE: "/",
   CREDITS: "/credits",
+  CUSTOMERS: "/customers",
   PROFILE: "/profile",
 };
 
 const navItems = [
   { title: "My Store", url: routes.MY_STORE, icon: Store },
   { title: "Credits", url: routes.CREDITS, icon: Wallet },
+  { title: "Customers", url: routes.CUSTOMERS, icon: Users },
   { title: "Profile", url: routes.PROFILE, icon: UserRound },
 ];
 

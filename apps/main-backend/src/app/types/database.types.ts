@@ -108,7 +108,9 @@ export type Database = {
           branch_id: number
           created_at?: string
           customer_id: number
-          deleted_at: string
+          // Column is NOT NULL in the generated schema but app code intentionally
+          // inserts NULL here to mark an "active" link (soft-delete uses a timestamp).
+          deleted_at: string | null
           id?: number
           updated_at?: string | null
         }
@@ -116,7 +118,8 @@ export type Database = {
           branch_id?: number
           created_at?: string
           customer_id?: number
-          deleted_at?: string
+          // App reactivates soft-deleted links by setting deleted_at back to null.
+          deleted_at?: string | null
           id?: number
           updated_at?: string | null
         }
@@ -261,7 +264,7 @@ export type Database = {
           id?: number
           recorded_by_user_id?: string | null
           transaction_date: number
-          transaction_type?: Database["public"]["Enums"]["transaction_type"]
+          transaction_type: Database["public"]["Enums"]["transaction_type"]
           updated_at?: string | null
         }
         Update: {
@@ -310,6 +313,7 @@ export type Database = {
           phone: string | null
           unique_id: string | null
           updated_at: string | null
+          user_id: string | null
         }
         Insert: {
           created_at?: string
@@ -318,6 +322,7 @@ export type Database = {
           phone?: string | null
           unique_id?: string | null
           updated_at?: string | null
+          user_id?: string | null
         }
         Update: {
           created_at?: string
@@ -326,8 +331,17 @@ export type Database = {
           phone?: string | null
           unique_id?: string | null
           updated_at?: string | null
+          user_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "customers_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       merchants: {
         Row: {
@@ -650,12 +664,42 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_customer_leaderboard: {
+        Args: {
+          p_merchant_id: number
+          p_branch_id?: number | null
+          p_sort?: string
+          p_start_epoch?: number | null
+          p_end_epoch?: number | null
+          p_limit?: number
+          p_offset?: number
+        }
+        Returns: {
+          customer_id: number
+          phone: string | null
+          user_id: string | null
+          customer_name: string
+          branch_id: number | null
+          total_purchases: number
+          total_credits_issued: number
+          total_credits_redeemed: number
+          transaction_count: number
+        }[]
+      }
+      get_customer_leaderboard_count: {
+        Args: {
+          p_merchant_id: number
+          p_branch_id?: number | null
+          p_start_epoch?: number | null
+          p_end_epoch?: number | null
+        }
+        Returns: number
+      }
     }
     Enums: {
       credit_type: "fixed" | "percentage"
       role: "manager" | "cashier"
-      transaction_type: "purchase" | "credit_redeem" | "credit_adjustment"
+      transaction_type: "purchase" | "credit_issue" | "credit_redeem"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -788,7 +832,7 @@ export const Constants = {
     Enums: {
       credit_type: ["fixed", "percentage"],
       role: ["manager", "cashier"],
-      transaction_type: ["purchase", "credit_redeem", "credit_adjustment"],
+      transaction_type: ["purchase", "credit_issue", "credit_redeem"],
     },
   },
 } as const
