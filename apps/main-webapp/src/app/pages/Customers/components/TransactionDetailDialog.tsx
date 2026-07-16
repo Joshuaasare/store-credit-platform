@@ -13,16 +13,16 @@ import {
   cn,
   Badge,
 } from "@store-credit-platform/web-components";
-import { TransactionRow } from "@shared/types/customer.types";
+import { CustomerTransactions } from "@shared/types/api.types";
 import { formatEpochDateTime, formatGHS } from "@shared/utils/format";
 
 interface TransactionDetailDialogProps {
-  row: TransactionRow | null;
+  row: CustomerTransactions | null;
   onOpenChange: (open: boolean) => void;
 }
 
 const TYPE_META: Record<
-  TransactionRow["transaction_type"],
+  CustomerTransactions["transaction_type"],
   { label: string; chip: string }
 > = {
   purchase: {
@@ -40,11 +40,18 @@ const TYPE_META: Record<
   },
 };
 
+function customerDisplayName(r: CustomerTransactions): string {
+  const u = r.customer?.users;
+  if (!u) return "Unnamed customer";
+  const name = `${u.surname}${u.other_names ? " " + u.other_names : ""}`.trim();
+  return name || "Unnamed customer";
+}
+
 const DETAIL_FIELDS: {
   key: string;
   label: string;
   icon: LucideIcon;
-  value: (row: TransactionRow) => string;
+  value: (row: CustomerTransactions) => string;
 }[] = [
   {
     key: "date",
@@ -68,25 +75,25 @@ const DETAIL_FIELDS: {
     key: "branch",
     label: "Branch",
     icon: Building2,
-    value: (r) => r.branch_name?.trim() || "—",
+    value: (r) => r.branch?.name?.trim() || "—",
   },
   {
     key: "customer",
     label: "Customer",
     icon: UserRound,
-    value: (r) => r.customer_name?.trim() || "Unnamed customer",
+    value: (r) => customerDisplayName(r),
   },
   {
     key: "phone",
     label: "Customer phone",
     icon: Phone,
-    value: (r) => r.customer_phone ?? "—",
+    value: (r) => r.customer?.phone ?? "—",
   },
   {
     key: "recorded_by",
     label: "Recorded by",
     icon: UserRound,
-    value: (r) => r.recorded_by_name?.trim() || "—",
+    value: (r) => r.recorded_by_user?.surname?.trim() || "—",
   },
 ];
 
@@ -96,7 +103,7 @@ export function TransactionDetailDialog({
 }: TransactionDetailDialogProps) {
   const open = row !== null;
   const meta = row ? TYPE_META[row.transaction_type] : null;
-  const displayName = row?.customer_name?.trim() || "Unnamed customer";
+  const displayName = row ? customerDisplayName(row) : "Unnamed customer";
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -117,7 +124,7 @@ export function TransactionDetailDialog({
               </h2>
               <p className="text-muted-foreground mt-1 truncate text-sm">
                 <Phone className="mr-1.5 inline h-3.5 w-3.5 align-text-bottom" />
-                {row?.customer_phone ?? "—"}
+                {row?.customer?.phone ?? "—"}
               </p>
               {row && meta && (
                 <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">

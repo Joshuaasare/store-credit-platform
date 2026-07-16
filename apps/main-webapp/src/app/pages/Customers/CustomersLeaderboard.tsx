@@ -7,7 +7,7 @@ import { DataTable } from "../../components/DataTable/DataTable";
 import InfiniteScroll from "../../components/InfiniteScroll/InfiniteScroll";
 import { customerService } from "@store-credit-platform/api-services";
 import { useStoreStore } from "@shared/stores/storeStore";
-import { LeaderboardRow } from "@shared/types/customer.types";
+import { LeaderboardRow } from "@shared/types/api.types";
 import { formatGHS } from "@shared/utils/format";
 import {
   CustomersFilters,

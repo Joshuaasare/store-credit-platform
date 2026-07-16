@@ -7,7 +7,7 @@ import { DataTable } from "../../components/DataTable/DataTable";
 import InfiniteScroll from "../../components/InfiniteScroll/InfiniteScroll";
 import { customerService } from "@store-credit-platform/api-services";
 import { useStoreStore } from "@shared/stores/storeStore";
-import { TransactionRow } from "@shared/types/customer.types";
+import { CustomerTransactions } from "@shared/types/api.types";
 import { formatEpochDate, formatGHS } from "@shared/utils/format";
 import {
   CustomersFilters,
@@ -27,7 +27,7 @@ function thisYearRange(): { start: number; end: number } {
 }
 
 const TYPE_META: Record<
-  TransactionRow["transaction_type"],
+  CustomerTransactions["transaction_type"],
   { label: string; chip: string }
 > = {
   purchase: {
@@ -45,11 +45,18 @@ const TYPE_META: Record<
   },
 };
 
-const AMOUNT_COLOR: Record<TransactionRow["transaction_type"], string> = {
+const AMOUNT_COLOR: Record<CustomerTransactions["transaction_type"], string> = {
   purchase: "text-foreground",
   credit_issue: "text-emerald-600 dark:text-emerald-400",
   credit_redeem: "text-amber-600 dark:text-amber-400",
 };
+
+function customerDisplayName(r: CustomerTransactions): string {
+  const u = r.customer?.users;
+  if (!u) return "Unnamed customer";
+  const name = `${u.surname}${u.other_names ? " " + u.other_names : ""}`.trim();
+  return name || "Unnamed customer";
+}
 
 export default function CustomersTransactions() {
   const { branches } = useStoreStore();
@@ -63,7 +70,7 @@ export default function CustomersTransactions() {
     };
   });
   const [addOpen, setAddOpen] = useState(false);
-  const [detailRow, setDetailRow] = useState<TransactionRow | null>(null);
+  const [detailRow, setDetailRow] = useState<CustomerTransactions | null>(null);
 
   const transactionsQuery = useInfiniteQuery({
     queryKey: [
@@ -95,7 +102,7 @@ export default function CustomersTransactions() {
 
   const rows = useMemo(() => {
     const pages = transactionsQuery.data?.pages ?? [];
-    const out: TransactionRow[] = [];
+    const out: CustomerTransactions[] = [];
     for (const p of pages) {
       if (p.success) out.push(...p.data.rows);
     }
@@ -109,7 +116,7 @@ export default function CustomersTransactions() {
   const hasNextPage = transactionsQuery.hasNextPage;
   const isFetching = transactionsQuery.isFetching;
 
-  const columns: ColumnDef<TransactionRow>[] = useMemo(
+  const columns: ColumnDef<CustomerTransactions>[] = useMemo(
     () => [
       {
         id: "date",
@@ -125,13 +132,14 @@ export default function CustomersTransactions() {
         header: "Customer",
         cell: ({ row }) => {
           const r = row.original;
-          const name = r.customer_name?.trim() || "Unnamed customer";
+          const name = customerDisplayName(r);
+          const phone = r.customer?.phone ?? "";
           return (
             <div className="min-w-0">
               <div className="truncate font-medium">{name}</div>
-              {r.customer_phone && (
+              {phone && (
                 <div className="text-muted-foreground truncate text-xs">
-                  {r.customer_phone}
+                  {phone}
                 </div>
               )}
             </div>
@@ -143,7 +151,7 @@ export default function CustomersTransactions() {
         header: "Branch",
         cell: ({ row }) => (
           <span className="truncate">
-            {row.original.branch_name?.trim() || `#${row.original.branch_id}`}
+            {row.original.branch?.name?.trim() || `#${row.original.branch_id}`}
           </span>
         ),
       },
@@ -173,7 +181,7 @@ export default function CustomersTransactions() {
         header: "Recorded by",
         cell: ({ row }) => (
           <span className="text-muted-foreground text-sm">
-            {row.original.recorded_by_name?.trim() || "—"}
+            {row.original.recorded_by_user?.surname?.trim() || "—"}
           </span>
         ),
       },

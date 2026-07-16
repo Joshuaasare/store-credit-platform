@@ -15,7 +15,7 @@ import {
   cn,
 } from "@store-credit-platform/web-components";
 import { BranchWithAggregates } from "@shared/types/api.types";
-import { LeaderboardSort } from "@shared/types/customer.types";
+import { LeaderboardSort } from "@shared/types/api.types";
 
 export type DatePreset = "this_year" | "custom" | "all";
 

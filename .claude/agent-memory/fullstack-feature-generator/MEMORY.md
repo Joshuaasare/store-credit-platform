@@ -5,3 +5,4 @@
 - [database.types hand-edits](database-types-hand-edits.md) — user permits hand-editing database.types.ts when codegen is blocked; widen nullable columns, add RPC signatures.
 - [Webapp typecheck baseline](webapp-typecheck-baseline.md) — main-webapp typecheck has known pre-existing failures (tsconfig.spec, Auth/auth casing, __mocks__/supabase.ts); don't chase them.
 - [Backend local boot](backend-local-boot.md) — required env vars + `npx nx serve main-backend` to smoke-check route registration.
+- [Schema hand-edits leak](schema-hand-edits-leak.md) — regenerating main.schema.ts strips hand-edited BaseMerchant/UpdateMerchantRequest fields; backport them to source .types.ts first.

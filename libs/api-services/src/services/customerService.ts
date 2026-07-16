@@ -7,7 +7,7 @@ import {
   LeaderboardStatsApiResponse,
   TransactionsApiResponse,
   CreatePurchaseApiResponse,
-} from "../types/customer.types.js";
+} from "../types/api.types.js";
 
 /**
  * Customer service — wraps the Customers backend endpoints.

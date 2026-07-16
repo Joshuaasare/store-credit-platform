@@ -4,54 +4,14 @@ import { AccessTokenPayload } from "../schemas/auth.schema";
 import {
   LeaderboardRow,
   LeaderboardSort,
-  TransactionRow,
+  LeaderboardFilters,
+  TransactionsFilters,
+  LeaderboardPage,
+  LeaderboardStats,
+  TransactionsPage,
+  CreatePurchaseRequest,
+  CustomerTransactions,
 } from "../schemas/customers.schema";
-
-// ────────────────────────────────────────────────────────────────────────────
-// Input types
-// ────────────────────────────────────────────────────────────────────────────
-
-export interface LeaderboardFilters {
-  sort?: LeaderboardSort;
-  branchId?: number | null;
-  start?: number | null;
-  end?: number | null;
-  limit?: number;
-  offset?: number;
-}
-
-export interface TransactionsFilters {
-  branchId?: number | null;
-  start?: number | null;
-  end?: number | null;
-  limit?: number;
-  offset?: number;
-}
-
-export interface LeaderboardPage {
-  rows: LeaderboardRow[];
-  total: number;
-  offset: number;
-  limit: number;
-}
-
-export interface LeaderboardStats {
-  total_customers: number;
-  total_purchases: number;
-  total_credits_issued: number;
-}
-
-export interface TransactionsPage {
-  rows: TransactionRow[];
-  total: number;
-  offset: number;
-  limit: number;
-}
-
-export interface CreatePurchasePayload {
-  phone: string;
-  amount: number;
-}
 
 // ────────────────────────────────────────────────────────────────────────────
 // Service
@@ -79,11 +39,11 @@ export class CustomerService {
   ): Promise<LeaderboardPage> {
     const limit = filters.limit ?? CustomerService.DEFAULT_LIMIT;
     const offset = filters.offset ?? 0;
-    const sort = filters.sort ?? "purchases";
+    const sort: LeaderboardSort = filters.sort ?? "purchases";
 
     const rpcParams = {
       p_merchant_id: merchantId,
-      p_branch_id: filters.branchId ?? null,
+      p_branch_id: filters.branch_id ?? null,
       p_sort: sort,
       p_start_epoch: filters.start ?? null,
       p_end_epoch: filters.end ?? null,
@@ -95,7 +55,7 @@ export class CustomerService {
       supabaseAdmin.rpc("get_customer_leaderboard", rpcParams),
       supabaseAdmin.rpc("get_customer_leaderboard_count", {
         p_merchant_id: merchantId,
-        p_branch_id: filters.branchId ?? null,
+        p_branch_id: filters.branch_id ?? null,
         p_start_epoch: filters.start ?? null,
         p_end_epoch: filters.end ?? null,
       }),
@@ -112,24 +72,10 @@ export class CustomerService {
       );
     }
 
-    const rawRows = (rowsResult.data ?? []) as Array<Record<string, unknown>>;
-    const rows: LeaderboardRow[] = rawRows.map((r) => ({
-      customer_id: Number(r.customer_id),
-      phone: (r.phone as string | null) ?? null,
-      user_id: (r.user_id as string | null) ?? null,
-      customer_name: (r.customer_name as string) ?? "Unnamed customer",
-      branch_id:
-        r.branch_id == null ? null : Number(r.branch_id as string | number),
-      total_purchases: Number(r.total_purchases ?? 0),
-      total_credits_issued: Number(r.total_credits_issued ?? 0),
-      total_credits_redeemed: Number(r.total_credits_redeemed ?? 0),
-      transaction_count: Number(r.transaction_count ?? 0),
-    }));
+    const rows = (rowsResult.data ?? []) as unknown as LeaderboardRow[];
 
     const total =
-      countResult.data == null
-        ? 0
-        : Number((countResult.data as unknown));
+      countResult.data == null ? 0 : Number(countResult.data as unknown);
 
     return { rows, total, offset, limit };
   }
@@ -144,7 +90,7 @@ export class CustomerService {
   ): Promise<LeaderboardStats> {
     const rpcParams = {
       p_merchant_id: merchantId,
-      p_branch_id: filters.branchId ?? null,
+      p_branch_id: filters.branch_id ?? null,
       p_start_epoch: filters.start ?? null,
       p_end_epoch: filters.end ?? null,
     };
@@ -163,17 +109,13 @@ export class CustomerService {
     ]);
 
     if (countRes.error) {
-      throw new Error(
-        `Failed to load stats count: ${countRes.error.message}`,
-      );
+      throw new Error(`Failed to load stats count: ${countRes.error.message}`);
     }
     if (rowsRes.error) {
-      throw new Error(
-        `Failed to load stats rows: ${rowsRes.error.message}`,
-      );
+      throw new Error(`Failed to load stats rows: ${rowsRes.error.message}`);
     }
 
-    const allRows = (rowsRes.data ?? []) as Array<Record<string, unknown>>;
+    const allRows = (rowsRes.data ?? []) as unknown as LeaderboardRow[];
     const total_customers =
       countRes.data == null ? 0 : Number(countRes.data as unknown);
     const total_purchases = allRows.reduce(
@@ -191,6 +133,7 @@ export class CustomerService {
   /**
    * Merchant-scoped transactions list, ordered by transaction_date desc.
    * Uses Supabase `.range()` offset pagination with a parallel count query.
+   * Returns the nested BASE-composition shape (`CustomerTransactions[]`).
    */
   async getTransactions(
     merchantId: number,
@@ -217,13 +160,15 @@ export class CustomerService {
 
     const baseQuery = supabaseAdmin
       .from("customer_transactions")
-      .select(QueryFragments.CUSTOMER_TRANSACTION_WITH_JOINS)
+      .select(
+        `${QueryFragments.BASE_CUSTOMER_TRANSACTION}, customer:customers(${QueryFragments.BASE_CUSTOMER}, users(${QueryFragments.BASE_USER_PROFILE})), branch:branches(${QueryFragments.BASE_BRANCH}), recorded_by_user:users(${QueryFragments.BASE_USER_PROFILE})`,
+      )
       .in("branch_id", branchIds)
       .is("deleted_at", null)
       .order("transaction_date", { ascending: false });
 
-    if (filters.branchId != null) {
-      baseQuery.eq("branch_id", filters.branchId);
+    if (filters.branch_id != null) {
+      baseQuery.eq("branch_id", filters.branch_id);
     }
     if (filters.start != null) {
       baseQuery.gte("transaction_date", filters.start);
@@ -237,8 +182,8 @@ export class CustomerService {
       .select("id", { count: "exact", head: true })
       .in("branch_id", branchIds)
       .is("deleted_at", null);
-    if (filters.branchId != null) {
-      countQuery.eq("branch_id", filters.branchId);
+    if (filters.branch_id != null) {
+      countQuery.eq("branch_id", filters.branch_id);
     }
     if (filters.start != null) {
       countQuery.gte("transaction_date", filters.start);
@@ -261,40 +206,7 @@ export class CustomerService {
       );
     }
 
-    const rows: TransactionRow[] = (pageRes.data ?? []).map((r) => {
-      const row = r as unknown as Record<string, unknown>;
-      const customer = (row.customer as Record<string, unknown> | null) ?? null;
-      const user =
-        (customer?.users as Record<string, unknown> | null) ?? null;
-      const branch = (row.branch as Record<string, unknown> | null) ?? null;
-      const recordedBy =
-        (row.recorded_by_user as Record<string, unknown> | null) ?? null;
-
-      const surname = (user?.surname as string | null) ?? null;
-      const otherNames = (user?.other_names as string | null) ?? null;
-      const name =
-        surname || otherNames
-          ? `${surname ?? ""}${surname && otherNames ? " " : ""}${otherNames ?? ""}`.trim()
-          : null;
-
-      return {
-        id: Number(row.id),
-        transaction_date: Number(row.transaction_date),
-        amount: Number(row.amount),
-        transaction_type: row.transaction_type as
-          | "purchase"
-          | "credit_issue"
-          | "credit_redeem",
-        customer_id: Number(row.customer_id),
-        customer_name: name,
-        customer_phone: (customer?.phone as string | null) ?? null,
-        branch_id: Number(row.branch_id),
-        branch_name: (branch?.name as string | null) ?? null,
-        recorded_by_user_id:
-          (row.recorded_by_user_id as string | null) ?? null,
-        recorded_by_name: (recordedBy?.surname as string | null) ?? null,
-      };
-    });
+    const rows = (pageRes.data ?? []) as unknown as CustomerTransactions[];
 
     return {
       rows,
@@ -309,11 +221,12 @@ export class CustomerService {
    * the `branch_customer` junction row if missing. The caller's `branch_id`
    * must be present on the JWT (or resolved from staff); otherwise a 400 is
    * thrown. No credit-issuance logic — that is a separate future feature.
+   * Returns the nested BASE-composition row (`CustomerTransactions`).
    */
   async createPurchase(
     user: AccessTokenPayload,
-    payload: CreatePurchasePayload,
-  ): Promise<TransactionRow> {
+    payload: CreatePurchaseRequest,
+  ): Promise<CustomerTransactions> {
     // 1. Resolve caller's branch_id — prefer JWT, fallback to staff lookup.
     let branchId = user.branch_id;
     if (branchId == null) {
@@ -407,7 +320,13 @@ export class CustomerService {
         transaction_type: "purchase",
         transaction_date: nowEpoch,
       })
-      .select(QueryFragments.CUSTOMER_TRANSACTION_WITH_JOINS)
+      .select(
+        `${QueryFragments.BASE_CUSTOMER_TRANSACTION}, 
+        customer:customers(${QueryFragments.BASE_CUSTOMER}, 
+        users(${QueryFragments.BASE_USER_PROFILE})), 
+        branch:branches(${QueryFragments.BASE_BRANCH}), 
+        recorded_by_user:users(${QueryFragments.BASE_USER_PROFILE})`,
+      )
       .single();
 
     if (txErr || !txRow) {
@@ -416,37 +335,7 @@ export class CustomerService {
       );
     }
 
-    const row = txRow as unknown as Record<string, unknown>;
-    const customer = (row.customer as Record<string, unknown> | null) ?? null;
-    const userRow =
-      (customer?.users as Record<string, unknown> | null) ?? null;
-    const branch = (row.branch as Record<string, unknown> | null) ?? null;
-    const recordedBy =
-      (row.recorded_by_user as Record<string, unknown> | null) ?? null;
-    const surname = (userRow?.surname as string | null) ?? null;
-    const otherNames = (userRow?.other_names as string | null) ?? null;
-    const name =
-      surname || otherNames
-        ? `${surname ?? ""}${surname && otherNames ? " " : ""}${otherNames ?? ""}`.trim()
-        : null;
-
-    return {
-      id: Number(row.id),
-      transaction_date: Number(row.transaction_date),
-      amount: Number(row.amount),
-      transaction_type: row.transaction_type as
-        | "purchase"
-        | "credit_issue"
-        | "credit_redeem",
-      customer_id: Number(row.customer_id),
-      customer_name: name,
-      customer_phone: (customer?.phone as string | null) ?? null,
-      branch_id: Number(row.branch_id),
-      branch_name: (branch?.name as string | null) ?? null,
-      recorded_by_user_id:
-        (row.recorded_by_user_id as string | null) ?? null,
-      recorded_by_name: (recordedBy?.surname as string | null) ?? null,
-    };
+    return txRow as unknown as CustomerTransactions;
   }
 }
 

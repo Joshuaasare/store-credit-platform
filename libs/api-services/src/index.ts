@@ -5,4 +5,4 @@ export * from "./services/storeService.js";
 export * from "./services/customerService.js";
 export * from "./services/storageService.js";
 export * from "./services/accessTokenStorage.js";
-export * from "./types/customer.types.js";
+export * from "./types/api.types.js";

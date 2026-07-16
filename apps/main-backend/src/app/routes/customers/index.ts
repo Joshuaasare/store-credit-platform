@@ -52,7 +52,7 @@ export default async function (fastify: FastifyInstance) {
         const q = request.query as LeaderboardQuerystring;
         const page = await customerService.getLeaderboard(merchantId, {
           sort: q.sort,
-          branchId: q.branch_id ?? null,
+          branch_id: q.branch_id ?? null,
           start: q.start ?? null,
           end: q.end ?? null,
           limit: q.limit ?? 20,
@@ -98,7 +98,7 @@ export default async function (fastify: FastifyInstance) {
         }
         const q = request.query as LeaderboardQuerystring;
         const stats = await customerService.getLeaderboardStats(merchantId, {
-          branchId: q.branch_id ?? null,
+          branch_id: q.branch_id ?? null,
           start: q.start ?? null,
           end: q.end ?? null,
         });
@@ -142,7 +142,7 @@ export default async function (fastify: FastifyInstance) {
         }
         const q = request.query as TransactionsQuerystring;
         const page = await customerService.getTransactions(merchantId, {
-          branchId: q.branch_id ?? null,
+          branch_id: q.branch_id ?? null,
           start: q.start ?? null,
           end: q.end ?? null,
           limit: q.limit ?? 20,

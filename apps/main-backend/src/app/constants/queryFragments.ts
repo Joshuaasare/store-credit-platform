@@ -21,11 +21,16 @@ export const QueryFragments = {
   BASE_CUSTOMER: `id, phone, unique_id, user_id, created_at, deleted_at`,
 
   /**
-   * Customer transactions list with joined customer (→ users for name), branch,
-   * and recorded_by_user (users.surname). Used by the Transactions page.
+   * Bare customer_transactions row. Excludes the deprecated
+   * `credit_generated` / `credit_redeemed` columns — `amount` is canonical
+   * per `transaction_type`.
    */
-  CUSTOMER_TRANSACTION_WITH_JOINS: `id, customer_id, branch_id, recorded_by_user_id, amount, transaction_date, transaction_type, created_at,
-    customer:customers ( id, phone, user_id, users ( id, surname, other_names ) ),
-    branch:branches ( id, name ),
-    recorded_by_user:users ( id, surname )`,
+  BASE_CUSTOMER_TRANSACTION: `id, customer_id, branch_id, recorded_by_user_id, amount, transaction_date, transaction_type, created_at`,
+
+  /**
+   * Slim users projection for customer / recorded-by joins. Excludes
+   * otp / otp_expires_at / access_granted so sensitive fields never travel
+   * over the transactions API.
+   */
+  BASE_USER_PROFILE: `id, surname, other_names, phone`,
 } as const;
