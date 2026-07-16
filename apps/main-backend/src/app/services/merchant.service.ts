@@ -20,7 +20,7 @@ export class MerchantService {
   ): Promise<{ merchant_id: number; branch_id: number } | null> {
     const { data: staff } = await supabaseAdmin
       .from("staff")
-      .select(QueryFragments.STAFF_MERCHANT_LOOKUP)
+      .select(`id,branches(id,merchants(id))`)
       .eq("user_id", userId)
       .is("deleted_at", null)
       .order("id", { ascending: true })
