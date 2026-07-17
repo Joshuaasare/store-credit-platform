@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { ColumnDef } from "@tanstack/react-table";
 import { Users, ShoppingBag, Coins } from "lucide-react";
-import { Card, Skeleton } from "@store-credit-platform/web-components";
+import { Card, Skeleton, cn } from "@store-credit-platform/web-components";
 import { DataTable } from "../../components/DataTable/DataTable";
 import InfiniteScroll from "../../components/InfiniteScroll/InfiniteScroll";
 import { customerService } from "@store-credit-platform/api-services";
@@ -167,6 +167,7 @@ export default function CustomersLeaderboard() {
         <StatCard
           label="Customers"
           icon={<Users className="h-4 w-4" />}
+          tone="primary"
           value={
             stats ? stats.total_customers.toLocaleString() : <Skeleton className="h-6 w-16" />
           }
@@ -174,6 +175,7 @@ export default function CustomersLeaderboard() {
         <StatCard
           label="Purchases (window)"
           icon={<ShoppingBag className="h-4 w-4" />}
+          tone="emerald"
           value={
             stats ? (
               formatGHS(stats.total_purchases)
@@ -185,6 +187,7 @@ export default function CustomersLeaderboard() {
         <StatCard
           label="Credits issued (window)"
           icon={<Coins className="h-4 w-4" />}
+          tone="amber"
           value={
             stats ? (
               formatGHS(stats.total_credits_issued)
@@ -256,18 +259,41 @@ interface StatCardProps {
   label: string;
   icon: React.ReactNode;
   value: React.ReactNode;
+  tone?: "primary" | "emerald" | "amber";
 }
 
-function StatCard({ label, icon, value }: StatCardProps) {
+const TONE_CHIP: Record<NonNullable<StatCardProps["tone"]>, string> = {
+  primary: "bg-primary/10 text-primary",
+  emerald: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
+  amber: "bg-amber-500/10 text-amber-600 dark:text-amber-400",
+};
+
+function StatCard({ label, icon, value, tone = "primary" }: StatCardProps) {
   return (
-    <Card className="p-4">
-      <div className="flex items-center justify-between">
-        <span className="text-muted-foreground inline-flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wide">
-          {icon}
+    <Card className="relative overflow-hidden p-4">
+      <div
+        aria-hidden
+        className={cn(
+          "pointer-events-none absolute -right-10 -top-10 h-24 w-24 rounded-full blur-2xl",
+          tone === "primary" && "bg-primary/10",
+          tone === "emerald" && "bg-emerald-500/10",
+          tone === "amber" && "bg-amber-500/10",
+        )}
+      />
+      <div className="relative flex items-center justify-between">
+        <span className="text-muted-foreground text-[11px] font-medium uppercase tracking-wide">
           {label}
         </span>
+        <span
+          className={cn(
+            "inline-flex h-7 w-7 items-center justify-center rounded-lg",
+            TONE_CHIP[tone],
+          )}
+        >
+          {icon}
+        </span>
       </div>
-      <div className="mt-2 text-2xl font-semibold tracking-tight tabular-nums">
+      <div className="relative mt-2 text-2xl font-semibold tracking-tight tabular-nums">
         {value}
       </div>
     </Card>

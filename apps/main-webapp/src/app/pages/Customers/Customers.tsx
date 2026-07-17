@@ -1,9 +1,14 @@
 import { useLocation, useNavigate, Outlet } from "react-router-dom";
-import { Tabs, TabsList, TabsTrigger } from "@store-credit-platform/web-components";
+import { Users } from "lucide-react";
+import {
+  Tabs,
+  TabsList,
+  TabsTrigger,
+} from "@store-credit-platform/web-components";
 
 const TABS = [
-  { value: "leaderboard", label: "Leaderboard" },
   { value: "transactions", label: "Transactions" },
+  { value: "leaderboard", label: "Leaderboard" },
 ] as const;
 
 export default function Customers() {
@@ -22,26 +27,40 @@ export default function Customers() {
   };
 
   return (
-    <div className="relative min-h-screen bg-background px-4 py-6 md:px-8 md:py-10">
+    <div className="bg-background relative min-h-screen px-4 py-6 md:px-8 md:py-10">
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-x-0 top-0 h-64 bg-gradient-to-b from-primary/5 to-transparent"
+        className="from-primary/5 pointer-events-none absolute inset-x-0 top-0 h-64 bg-gradient-to-b to-transparent"
       />
       <div className="relative mx-auto max-w-7xl space-y-6">
-        {/* Hero header strip */}
-        <div className="space-y-2">
-          <h1 className="text-3xl font-semibold tracking-tight">Customers</h1>
-          <p className="text-muted-foreground text-sm">
-            Track your top customers and every purchase, credit issue, and redemption.
-          </p>
+        {/* Hero header card */}
+        <div className="bg-card relative overflow-hidden rounded-2xl border p-6 shadow-sm">
+          <div
+            aria-hidden
+            className="from-primary/25 via-primary/10 pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-gradient-to-br to-transparent blur-2xl"
+          />
+          <div
+            aria-hidden
+            className="pointer-events-none absolute -bottom-20 right-24 h-40 w-40 rounded-full bg-gradient-to-br from-emerald-500/20 via-emerald-500/5 to-transparent blur-2xl"
+          />
+          <div className="relative flex items-start gap-4">
+            <div className="from-primary to-primary/70 text-primary-foreground flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br shadow-sm">
+              <Users className="h-6 w-6" />
+            </div>
+            <div className="space-y-1">
+              <h1 className="text-2xl font-semibold tracking-tight">
+                Customers
+              </h1>
+              <p className="text-muted-foreground text-sm">
+                Track your top customers and every purchase, credit issue, and
+                redemption.
+              </p>
+            </div>
+          </div>
         </div>
 
         {/* Top tabs */}
-        <Tabs
-          value={activeTab}
-          onValueChange={onTabChange}
-          className="w-full"
-        >
+        <Tabs value={activeTab} onValueChange={onTabChange} className="w-full">
           <TabsList>
             {TABS.map((t) => (
               <TabsTrigger key={t.value} value={t.value} className="px-4">
