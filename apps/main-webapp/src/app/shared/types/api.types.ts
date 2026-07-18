@@ -1,6 +1,6 @@
 /**
  * Auto-generated API Types
- * Generated on: 2026-07-15T21:08:03.197Z
+ * Generated on: 2026-07-18T01:44:26.427Z
  * 
  * ⚠️ DO NOT EDIT MANUALLY
  * Source: apps/smartschool-api/src/app/types/
@@ -332,6 +332,7 @@ export interface TransactionsPage {
 export interface CreatePurchaseRequest {
   phone: string;
   amount: number;
+  branch_id?: number | null;
 }
 
 export type LeaderboardQuerystring = LeaderboardFilters;

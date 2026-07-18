@@ -95,51 +95,6 @@ export type Database = {
           },
         ]
       }
-      branch_customer: {
-        Row: {
-          branch_id: number
-          created_at: string
-          customer_id: number
-          deleted_at: string
-          id: number
-          updated_at: string | null
-        }
-        Insert: {
-          branch_id: number
-          created_at?: string
-          customer_id: number
-          // Column is NOT NULL in the generated schema but app code intentionally
-          // inserts NULL here to mark an "active" link (soft-delete uses a timestamp).
-          deleted_at: string | null
-          id?: number
-          updated_at?: string | null
-        }
-        Update: {
-          branch_id?: number
-          created_at?: string
-          customer_id?: number
-          // App reactivates soft-deleted links by setting deleted_at back to null.
-          deleted_at?: string | null
-          id?: number
-          updated_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "branch_customer_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: false
-            referencedRelation: "branches"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "branch_customer_customer_id_fkey"
-            columns: ["customer_id"]
-            isOneToOne: false
-            referencedRelation: "customers"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       branches: {
         Row: {
           address: string | null
@@ -666,33 +621,37 @@ export type Database = {
     Functions: {
       get_customer_leaderboard: {
         Args: {
-          p_merchant_id: number
-          p_branch_id?: number | null
-          p_sort?: string
-          p_start_epoch?: number | null
-          p_end_epoch?: number | null
+          p_branch_id?: number
+          p_end_epoch?: number
           p_limit?: number
+          p_merchant_id: number
           p_offset?: number
+          p_sort?: string
+          p_start_epoch?: number
         }
         Returns: {
+          branch_id: number
           customer_id: number
-          phone: string | null
-          user_id: string | null
           customer_name: string
-          branch_id: number | null
-          total_purchases: number
+          phone: string
           total_credits_issued: number
           total_credits_redeemed: number
+          total_purchases: number
           transaction_count: number
+          user_id: string
         }[]
       }
       get_customer_leaderboard_count: {
         Args: {
+          p_branch_id?: number
+          p_end_epoch?: number
           p_merchant_id: number
-          p_branch_id?: number | null
-          p_start_epoch?: number | null
-          p_end_epoch?: number | null
+          p_start_epoch?: number
         }
+        Returns: number
+      }
+      get_distinct_customer_count: {
+        Args: { p_branch_id?: number; p_merchant_id: number }
         Returns: number
       }
     }

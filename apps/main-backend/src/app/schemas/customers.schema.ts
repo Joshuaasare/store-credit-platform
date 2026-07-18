@@ -113,7 +113,11 @@ limit: Type.Number()
 export type CreatePurchaseRequest = Static<typeof CreatePurchaseRequest>
 export const CreatePurchaseRequest = Type.Object({
 phone: Type.String(),
-amount: Type.Number()
+amount: Type.Number(),
+branch_id: Type.Optional(Type.Union([
+Type.Number(),
+Type.Null()
+]))
 })
 
 export type LeaderboardQuerystring = Static<typeof LeaderboardQuerystring>

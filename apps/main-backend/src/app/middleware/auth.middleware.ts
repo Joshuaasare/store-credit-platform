@@ -5,8 +5,11 @@ import { AccessTokenPayload } from "../schemas/auth.schema";
 /**
  * Custom request type with authenticated user payload
  */
-export interface AuthenticatedRequest extends FastifyRequest {
-  user?: AccessTokenPayload;
+
+declare module "fastify" {
+  interface FastifyRequest {
+    user?: AccessTokenPayload;
+  }
 }
 
 /**
@@ -14,7 +17,7 @@ export interface AuthenticatedRequest extends FastifyRequest {
  * This should be used on ALL protected routes.
  */
 export async function requireAuth(
-  request: AuthenticatedRequest,
+  request: FastifyRequest,
   reply: FastifyReply,
 ) {
   try {
@@ -52,7 +55,7 @@ export async function requireAuth(
  */
 export function requireRoles(...allowedRoles: string[]) {
   return async (
-    request: AuthenticatedRequest,
+    request: FastifyRequest,
     reply: FastifyReply,
   ): Promise<void> => {
     const user = request.user;

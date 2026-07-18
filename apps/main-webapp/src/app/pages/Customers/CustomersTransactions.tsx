@@ -2,7 +2,13 @@ import { useMemo, useState } from "react";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { ColumnDef } from "@tanstack/react-table";
 import { Plus, Receipt } from "lucide-react";
-import { Button, Card, Skeleton, Badge, cn } from "@store-credit-platform/web-components";
+import {
+  Button,
+  Card,
+  Skeleton,
+  Badge,
+  cn,
+} from "@store-credit-platform/web-components";
 import { DataTable } from "../../components/DataTable/DataTable";
 import InfiniteScroll from "../../components/InfiniteScroll/InfiniteScroll";
 import { customerService } from "@store-credit-platform/api-services";
@@ -18,11 +24,13 @@ import { TransactionDetailDialog } from "./components/TransactionDetailDialog";
 
 const LIMIT = 20;
 
-function thisYearRange(): { start: number; end: number } {
+function thisYearRange(): { start: number; end: null } {
   const now = new Date();
   return {
     start: Math.floor(new Date(now.getFullYear(), 0, 1).getTime() / 1000),
-    end: Math.floor(now.getTime() / 1000),
+    // end=null → "no upper bound". Keeps newly-created transactions in-window
+    // so they appear immediately on refetch after a purchase is added.
+    end: null,
   };
 }
 
@@ -36,8 +44,7 @@ const TYPE_META: Record<
   },
   credit_issue: {
     label: "Credit issued",
-    chip:
-      "border-emerald-500/20 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
+    chip: "border-emerald-500/20 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
   },
   credit_redeem: {
     label: "Credit redeemed",
@@ -161,7 +168,10 @@ export default function CustomersTransactions() {
         cell: ({ row }) => {
           const meta = TYPE_META[row.original.transaction_type];
           return (
-            <Badge variant="outline" className={cn("border bg-transparent", meta.chip)}>
+            <Badge
+              variant="outline"
+              className={cn("border bg-transparent", meta.chip)}
+            >
               {meta.label}
             </Badge>
           );
@@ -171,7 +181,12 @@ export default function CustomersTransactions() {
         id: "amount",
         header: "Amount",
         cell: ({ row }) => (
-          <span className={cn("font-medium tabular-nums", AMOUNT_COLOR[row.original.transaction_type])}>
+          <span
+            className={cn(
+              "font-medium tabular-nums",
+              AMOUNT_COLOR[row.original.transaction_type],
+            )}
+          >
             {formatGHS(row.original.amount)}
           </span>
         ),
@@ -199,7 +214,11 @@ export default function CustomersTransactions() {
           branches={branches}
           rightSlot={
             <AddPurchaseDialog open={addOpen} onOpenChange={setAddOpen}>
-              <Button onClick={() => setAddOpen(true)} size="sm" className="shadow-sm">
+              <Button
+                onClick={() => setAddOpen(true)}
+                size="sm"
+                className="shadow-sm"
+              >
                 <Plus className="mr-1.5 h-4 w-4" /> Add a purchase
               </Button>
             </AddPurchaseDialog>
@@ -211,8 +230,10 @@ export default function CustomersTransactions() {
       <Card className="p-0">
         <div className="flex items-center justify-between border-b px-4 py-3">
           <div className="flex items-center gap-2">
-            <h2 className="text-base font-semibold tracking-tight">Transactions</h2>
-            <span className="inline-flex h-5 items-center rounded-full border bg-muted/50 px-2 text-[11px] font-medium text-muted-foreground tabular-nums">
+            <h2 className="text-base font-semibold tracking-tight">
+              Transactions
+            </h2>
+            <span className="bg-muted/50 text-muted-foreground inline-flex h-5 items-center rounded-full border px-2 text-[11px] font-medium tabular-nums">
               {total}
             </span>
           </div>
@@ -240,13 +261,24 @@ export default function CustomersTransactions() {
             hasPagination={false}
             onRowClick={(row) => setDetailRow(row.original)}
             emptyStateComponent={
-              <div className="flex flex-col items-center justify-center gap-2 py-12 text-center">
-                <Receipt className="text-muted-foreground h-8 w-8" />
-                <p className="text-sm font-medium">No transactions in this window</p>
-                <p className="text-muted-foreground text-xs">
-                  Try a different date range or branch filter, or record a new purchase.
-                </p>
-              </div>
+              transactionsQuery.isPending ? (
+                <div className="w-full space-y-2 p-2">
+                  {Array.from({ length: 2 }).map((_, i) => (
+                    <Skeleton key={i} className="h-20 w-full" />
+                  ))}
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center gap-2 py-12 text-center">
+                  <Receipt className="text-muted-foreground h-8 w-8" />
+                  <p className="text-sm font-medium">
+                    No transactions in this window
+                  </p>
+                  <p className="text-muted-foreground text-xs">
+                    Try a different date range or branch filter, or record a new
+                    purchase.
+                  </p>
+                </div>
+              )
             }
           />
         </InfiniteScroll>

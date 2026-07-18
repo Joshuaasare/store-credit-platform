@@ -1,5 +1,5 @@
-import { FastifyInstance } from "fastify";
-import { requireAuth, AuthenticatedRequest } from "../../middleware/auth.middleware";
+import { FastifyInstance, FastifyRequest } from "fastify";
+import { requireAuth } from "../../middleware/auth.middleware";
 import { merchantService } from "../../services/merchant.service";
 import { customerService } from "../../services/customers.service";
 import {
@@ -13,7 +13,7 @@ import {
 } from "../../schemas/customers.schema";
 
 async function resolveMerchantId(
-  request: AuthenticatedRequest,
+  request: FastifyRequest,
 ): Promise<number | null> {
   const user = request.user!;
   if (user.merchant_id != null) return user.merchant_id;
@@ -39,7 +39,7 @@ export default async function (fastify: FastifyInstance) {
         401: LeaderboardApiResponse,
       },
     },
-    handler: async (request: AuthenticatedRequest, reply) => {
+    handler: async (request, reply) => {
       try {
         const merchantId = await resolveMerchantId(request);
         if (merchantId == null) {
@@ -86,7 +86,7 @@ export default async function (fastify: FastifyInstance) {
         401: LeaderboardStatsApiResponse,
       },
     },
-    handler: async (request: AuthenticatedRequest, reply) => {
+    handler: async (request, reply) => {
       try {
         const merchantId = await resolveMerchantId(request);
         if (merchantId == null) {
@@ -130,7 +130,7 @@ export default async function (fastify: FastifyInstance) {
         401: TransactionsApiResponse,
       },
     },
-    handler: async (request: AuthenticatedRequest, reply) => {
+    handler: async (request, reply) => {
       try {
         const merchantId = await resolveMerchantId(request);
         if (merchantId == null) {
@@ -140,7 +140,7 @@ export default async function (fastify: FastifyInstance) {
             error: "Forbidden: no merchant assigned to this user",
           };
         }
-        const q = request.query as TransactionsQuerystring;
+        const q = request.query;
         const page = await customerService.getTransactions(merchantId, {
           branch_id: q.branch_id ?? null,
           start: q.start ?? null,
@@ -151,7 +151,9 @@ export default async function (fastify: FastifyInstance) {
         return { success: true, data: page };
       } catch (error) {
         const message =
-          error instanceof Error ? error.message : "Failed to load transactions";
+          error instanceof Error
+            ? error.message
+            : "Failed to load transactions";
         request.log.error(error, "GET /customers/transactions failed");
         reply.status(400);
         return { success: false, error: message };
@@ -161,8 +163,8 @@ export default async function (fastify: FastifyInstance) {
 
   /**
    * POST /customers/transactions/purchase
-   * Records a purchase transaction. Auto-creates the customer (by phone) and
-   * the branch_customer junction row. No credit issuance in this feature.
+   * Records a purchase transaction. Auto-creates the customer (by phone) if
+   * missing. No credit issuance in this feature.
    */
   fastify.post<{
     Body: CreatePurchaseRequest;
@@ -177,7 +179,7 @@ export default async function (fastify: FastifyInstance) {
         401: CreatePurchaseApiResponse,
       },
     },
-    handler: async (request: AuthenticatedRequest, reply) => {
+    handler: async (request, reply) => {
       try {
         const merchantId = await resolveMerchantId(request);
         if (merchantId == null) {
@@ -187,17 +189,21 @@ export default async function (fastify: FastifyInstance) {
             error: "Forbidden: no merchant assigned to this user",
           };
         }
-        const body = request.body as CreatePurchaseRequest;
+        const body = request.body;
         const row = await customerService.createPurchase(request.user!, {
           phone: body.phone,
           amount: body.amount,
+          branch_id: body.branch_id ?? null,
         });
         reply.status(201);
         return { success: true, data: row };
       } catch (error) {
         const message =
           error instanceof Error ? error.message : "Failed to record purchase";
-        request.log.error(error, "POST /customers/transactions/purchase failed");
+        request.log.error(
+          error,
+          "POST /customers/transactions/purchase failed",
+        );
         reply.status(400);
         return { success: false, error: message };
       }

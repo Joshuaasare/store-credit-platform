@@ -69,15 +69,19 @@ export class MerchantService {
       .eq("branch_id.merchant_id", merchantId)
       .is("deleted_at", null);
 
-    // customer_count — unique customers across this merchant's branches
-    const { count: customerCount } = await supabaseAdmin
-      .from("branch_customer")
-      .select("customer_id, branch_id!inner(merchant_id)", {
-        count: "exact",
-        head: true,
-      })
-      .eq("branch_id.merchant_id", merchantId)
-      .is("deleted_at", null);
+    // customer_count — distinct customers who have transacted across this
+    // merchant's branches (server-side aggregate via RPC).
+    const { data: custCountRes, error: custCountErr } =
+      await supabaseAdmin.rpc("get_distinct_customer_count", {
+        p_merchant_id: merchantId,
+      });
+    if (custCountErr) {
+      throw new Error(
+        `Failed to load merchant customer count: ${custCountErr.message}`,
+      );
+    }
+    const customerCount =
+      custCountRes == null ? 0 : Number(custCountRes as unknown);
 
     // lifetime_credit_issued — sum of credit_generated across the merchant's
     // transactions (credit_redeem / credit_adjustment excluded from "issued").

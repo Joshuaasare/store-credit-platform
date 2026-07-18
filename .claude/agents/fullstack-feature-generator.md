@@ -93,6 +93,23 @@ Implement the frontend components/hooks using React Query:
 - For pagination, We will use the react Query useInfiteQuery for the paginated fetch.
 - Use the InfiniteScroll.tsx component for management infinite scroll.
 - For tables, use the DataTable.tsx component for displaying data in a table format.
+- When fetching table data, show a loading spinner or skeleton while the data is being fetched.
+- When showing a toast, add either `successToastProperties` or `errorToastProperties` to the toast function call.
+
+#### Form Submission UX (mandatory)
+
+Every form that submits to the backend — whether a `useMutation` or an async `onSubmit` calling a Zustand store action — MUST give the user a clear, blocking loading state while the request is in flight. This applies to dialogs (Add Branch, Add Purchase, Edit Merchant, etc.) and any inline form.
+
+Required behavior:
+
+- **Primary submit button** must be `disabled` while the request is pending, and its label must swap to a "Saving..." / "Adding..." / "Recording..." style string so the user sees the action is in progress.
+- **Cancel button** must also be `disabled` while the request is pending, so the user cannot dismiss the dialog mid-submit and lose the in-flight result (a late success toast on a closed dialog is confusing; a late error with no visible form is worse).
+- For `useMutation`, gate on `mutation.isPending` (or `isSubmitting` from `react-hook-form` when the submit handler is `async` and `await`s the store call directly).
+- Reset loading state automatically when the mutation settles — React Query / `react-hook-form` handle this for you; do not manage a manual `isSubmitting` `useState` for this.
+
+Reference implementation: see `apps/main-webapp/src/app/pages/MyStore/components/BranchEditDialog.tsx` (uses `react-hook-form`'s `isSubmitting`) and `apps/main-webapp/src/app/pages/Customers/components/AddPurchaseDialog.tsx` (uses `mutation.isPending`). Mirror those patterns exactly.
+
+Do not ship a form whose submit button stays enabled and unlabeled through a network round-trip — that is a regression.
 
 ## Decision Framework: New File vs. Existing File
 

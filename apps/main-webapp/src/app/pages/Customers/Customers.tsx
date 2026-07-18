@@ -17,9 +17,9 @@ export default function Customers() {
 
   const activeTab = (() => {
     const segments = location.pathname.split("/").filter(Boolean);
-    // ["customers", "transactions"] -> "transactions"; default -> "leaderboard"
-    if (segments[1] === "transactions") return "transactions";
-    return "leaderboard";
+    // ["customers", "leaderboard"] -> "leaderboard"; default -> "transactions"
+    if (segments[1] === "leaderboard") return "leaderboard";
+    return "transactions";
   })();
 
   const onTabChange = (value: string) => {

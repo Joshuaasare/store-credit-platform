@@ -97,7 +97,8 @@ const schema = {
     // CORS
     ALLOWED_ORIGINS: {
       type: "string",
-      default: "http://localhost:4200,http://localhost:3000",
+      default:
+        "http://localhost:4200,http://localhost:3000,http://localhost:4201",
       description: "Comma-separated list of allowed origins",
     },
   },

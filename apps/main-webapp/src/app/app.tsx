@@ -31,7 +31,7 @@ export function App() {
             <Route path="/credits" element={<Credits />} />
             <Route path="/profile" element={<Profile />} />
             <Route path="/customers" element={<Customers />}>
-              <Route index element={<Navigate to="leaderboard" replace />} />
+              <Route index element={<Navigate to="transactions" replace />} />
               <Route path="leaderboard" element={<CustomersLeaderboard />} />
               <Route path="transactions" element={<CustomersTransactions />} />
             </Route>

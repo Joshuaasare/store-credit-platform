@@ -20,7 +20,7 @@ import {
 /**
  * Customer service — leaderboard (via Postgres RPC), transactions list
  * (via Supabase range queries), and purchase creation (auto-creates customer
- * + branch_customer junction row by phone).
+ * by phone).
  *
  * All reads/writes are scoped to a verified merchant_id resolved upstream
  * from the JWT. `amount` is canonical per `transaction_type`; `credit_generated`
@@ -43,10 +43,10 @@ export class CustomerService {
 
     const rpcParams = {
       p_merchant_id: merchantId,
-      p_branch_id: filters.branch_id ?? null,
+      p_branch_id: filters.branch_id ?? undefined,
       p_sort: sort,
-      p_start_epoch: filters.start ?? null,
-      p_end_epoch: filters.end ?? null,
+      p_start_epoch: filters.start ?? undefined,
+      p_end_epoch: filters.end ?? undefined,
       p_limit: limit,
       p_offset: offset,
     };
@@ -55,9 +55,9 @@ export class CustomerService {
       supabaseAdmin.rpc("get_customer_leaderboard", rpcParams),
       supabaseAdmin.rpc("get_customer_leaderboard_count", {
         p_merchant_id: merchantId,
-        p_branch_id: filters.branch_id ?? null,
-        p_start_epoch: filters.start ?? null,
-        p_end_epoch: filters.end ?? null,
+        p_branch_id: filters.branch_id ?? undefined,
+        p_start_epoch: filters.start ?? undefined,
+        p_end_epoch: filters.end ?? undefined,
       }),
     ]);
 
@@ -90,9 +90,9 @@ export class CustomerService {
   ): Promise<LeaderboardStats> {
     const rpcParams = {
       p_merchant_id: merchantId,
-      p_branch_id: filters.branch_id ?? null,
-      p_start_epoch: filters.start ?? null,
-      p_end_epoch: filters.end ?? null,
+      p_branch_id: filters.branch_id ?? undefined,
+      p_start_epoch: filters.start ?? undefined,
+      p_end_epoch: filters.end ?? undefined,
     };
 
     // Distinct customer count + sum-by-type via two RPC calls.
@@ -217,39 +217,26 @@ export class CustomerService {
   }
 
   /**
-   * Create a `purchase` transaction. Auto-creates the customer (by phone) and
-   * the `branch_customer` junction row if missing. The caller's `branch_id`
-   * must be present on the JWT (or resolved from staff); otherwise a 400 is
-   * thrown. No credit-issuance logic — that is a separate future feature.
+   * Create a `purchase` transaction. Auto-creates the customer (by phone) if
+   * missing. The branch is resolved in this order: explicit `payload.branch_id`
+   * (must belong to the caller's merchant), then the caller's JWT `branch_id`,
+   * then the staff lookup. No credit-issuance logic — that is a separate
+   * future feature. The customer's branch affiliation is derived from their
+   * transactions, so no junction row is maintained.
    * Returns the nested BASE-composition row (`CustomerTransactions`).
    */
   async createPurchase(
     user: AccessTokenPayload,
     payload: CreatePurchaseRequest,
   ): Promise<CustomerTransactions> {
-    // 1. Resolve caller's branch_id — prefer JWT, fallback to staff lookup.
-    let branchId = user.branch_id;
-    if (branchId == null) {
-      const { data: staff } = await supabaseAdmin
-        .from("staff")
-        .select("id, branch_id")
-        .eq("user_id", user.sub)
-        .is("deleted_at", null)
-        .order("id", { ascending: true })
-        .limit(1)
-        .maybeSingle();
-      if (!staff) {
-        throw new Error("Caller has no assigned branch");
-      }
-      branchId = (staff as { branch_id: number }).branch_id;
-    }
+    const branchId = payload.branch_id ?? user.branch_id;
     if (branchId == null) {
       throw new Error("Caller has no assigned branch");
     }
 
     const phone = payload.phone.trim();
 
-    // 2. Lookup existing customer by phone (deleted_at IS NULL).
+    // 1. Lookup existing customer by phone (deleted_at IS NULL).
     const { data: existing } = await supabaseAdmin
       .from("customers")
       .select(QueryFragments.BASE_CUSTOMER)
@@ -274,41 +261,7 @@ export class CustomerService {
       customerId = created.id;
     }
 
-    // 3. Upsert branch_customer junction (deleted_at is required on insert).
-    const { data: existingLink } = await supabaseAdmin
-      .from("branch_customer")
-      .select("id, deleted_at")
-      .eq("branch_id", branchId)
-      .eq("customer_id", customerId)
-      .maybeSingle();
-
-    if (!existingLink) {
-      const { error: linkErr } = await supabaseAdmin
-        .from("branch_customer")
-        .insert({
-          branch_id: branchId,
-          customer_id: customerId,
-          deleted_at: null,
-        });
-      if (linkErr) {
-        throw new Error(
-          `Failed to link customer to branch: ${linkErr.message}`,
-        );
-      }
-    } else if (existingLink.deleted_at != null) {
-      // Reactivate a soft-deleted link.
-      const { error: reactivateErr } = await supabaseAdmin
-        .from("branch_customer")
-        .update({ deleted_at: null, updated_at: new Date().toISOString() })
-        .eq("id", existingLink.id);
-      if (reactivateErr) {
-        throw new Error(
-          `Failed to reactivate customer-branch link: ${reactivateErr.message}`,
-        );
-      }
-    }
-
-    // 4. Insert the purchase transaction row.
+    // 2. Insert the purchase transaction row.
     const nowEpoch = Math.floor(Date.now() / 1000);
     const { data: txRow, error: txErr } = await supabaseAdmin
       .from("customer_transactions")
@@ -321,10 +274,10 @@ export class CustomerService {
         transaction_date: nowEpoch,
       })
       .select(
-        `${QueryFragments.BASE_CUSTOMER_TRANSACTION}, 
-        customer:customers(${QueryFragments.BASE_CUSTOMER}, 
-        users(${QueryFragments.BASE_USER_PROFILE})), 
-        branch:branches(${QueryFragments.BASE_BRANCH}), 
+        `${QueryFragments.BASE_CUSTOMER_TRANSACTION},
+        customer:customers(${QueryFragments.BASE_CUSTOMER},
+        users(${QueryFragments.BASE_USER_PROFILE})),
+        branch:branches(${QueryFragments.BASE_BRANCH}),
         recorded_by_user:users(${QueryFragments.BASE_USER_PROFILE})`,
       )
       .single();

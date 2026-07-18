@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -15,18 +15,30 @@ import {
   Button,
   Input,
   Label,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from "@store-credit-platform/web-components";
 import { customerService } from "@store-credit-platform/api-services";
+import { useStoreStore } from "@shared/stores/storeStore";
+import { useAuthStore } from "@shared/stores/authStore";
 import { PhoneInput } from "../../../components/PhoneInput/PhoneInput";
+import {
+  errorToastProperties,
+  successToastProperties,
+} from "@shared/utils/misc.utils";
 
 const purchaseSchema = z.object({
   phone: z
     .string()
     .min(6, "Enter a valid phone number")
-    .regex(/^\+\d{6,}$/, "Phone must be in E.164 format (e.g. +233...)"),
+    .regex(/^\+?\d+$/, "Enter a valid phone number"),
   amount: z
     .number({ error: "Amount is required" })
     .min(0.01, "Amount must be greater than zero"),
+  branchId: z.number().nullable(),
 });
 
 type PurchaseFormValues = z.infer<typeof purchaseSchema>;
@@ -43,6 +55,10 @@ export function AddPurchaseDialog({
   children,
 }: AddPurchaseDialogProps) {
   const queryClient = useQueryClient();
+  const { branches } = useStoreStore();
+  const user = useAuthStore((s) => s.user);
+
+  const userBranchId = user?.branch_id ?? null;
 
   const {
     register,
@@ -54,32 +70,37 @@ export function AddPurchaseDialog({
     resolver: zodResolver(purchaseSchema),
     defaultValues: {
       phone: "",
-      amount: undefined as unknown as number,
+      amount: NaN,
+      branchId: userBranchId,
     },
   });
 
   useEffect(() => {
     if (open) {
-      reset({ phone: "", amount: NaN });
+      reset({ phone: "", amount: NaN, branchId: userBranchId });
     }
-  }, [open, reset]);
+  }, [open, reset, userBranchId]);
 
   const mutation = useMutation({
     mutationFn: async (values: PurchaseFormValues) => {
       const res = await customerService.createPurchase({
         phone: values.phone,
         amount: values.amount,
+        branch_id: values.branchId,
       });
       if (!res.success) throw new Error(res.error);
       return res.data;
     },
     onSuccess: () => {
-      toast.success("Purchase recorded");
+      toast.success("Purchase recorded", successToastProperties);
       void queryClient.invalidateQueries({ queryKey: ["customers"] });
       onOpenChange?.(false);
     },
     onError: (err) => {
-      toast.error(err instanceof Error ? err.message : "Failed to record purchase");
+      toast.error(
+        err instanceof Error ? err.message : "Failed to record purchase",
+        errorToastProperties,
+      );
     },
   });
 
@@ -94,8 +115,8 @@ export function AddPurchaseDialog({
         <DialogHeader>
           <DialogTitle>Add a purchase</DialogTitle>
           <DialogDescription>
-            Log a customer purchase. A new customer is created automatically when
-            the phone isn&rsquo;t already on file.
+            Log a customer purchase. A new customer is created automatically
+            when the phone isn&rsquo;t already on file.
           </DialogDescription>
         </DialogHeader>
 
@@ -105,6 +126,36 @@ export function AddPurchaseDialog({
             <PhoneInput name="phone" control={control} />
             {errors.phone && (
               <p className="text-destructive text-xs">{errors.phone.message}</p>
+            )}
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="purchase-branch">Branch *</Label>
+            <Controller
+              control={control}
+              name="branchId"
+              render={({ field }) => (
+                <Select
+                  value={field.value == null ? "" : String(field.value)}
+                  onValueChange={(v) => field.onChange(Number(v))}
+                >
+                  <SelectTrigger id="purchase-branch" className="w-full">
+                    <SelectValue placeholder="Select a branch" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {branches.map((b) => (
+                      <SelectItem key={b.id} value={String(b.id)}>
+                        {b.name?.trim() || "Unnamed branch"}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            />
+            {errors.branchId && (
+              <p className="text-destructive text-xs">
+                {errors.branchId.message}
+              </p>
             )}
           </div>
 
@@ -122,7 +173,9 @@ export function AddPurchaseDialog({
               })}
             />
             {errors.amount && (
-              <p className="text-destructive text-xs">{errors.amount.message}</p>
+              <p className="text-destructive text-xs">
+                {errors.amount.message}
+              </p>
             )}
           </div>
 
@@ -131,6 +184,7 @@ export function AddPurchaseDialog({
               type="button"
               variant="outline"
               onClick={() => onOpenChange?.(false)}
+              disabled={mutation.isPending}
             >
               Cancel
             </Button>

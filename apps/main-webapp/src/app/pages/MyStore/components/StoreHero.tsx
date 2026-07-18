@@ -19,6 +19,10 @@ import { getCountryByCode } from "@shared/utils/countries";
 import { compressImage } from "@shared/utils/imageCompression.utils";
 import { useStoreStore } from "@shared/stores/storeStore";
 import { MerchantEditDialog } from "./MerchantEditDialog";
+import {
+  errorToastProperties,
+  successToastProperties,
+} from "@shared/utils/misc.utils";
 
 const STORE_ASSETS_BUCKET = "store-assets";
 const storage = createStorageService();
@@ -59,9 +63,15 @@ function useStoreImageUpload(
         contentType: compressed.type || "image/jpeg",
       });
       await updateMerchant({ [field]: publicUrl } as UpdateMerchantRequest);
-      toast.success(field === "logo_url" ? "Logo updated" : "Cover updated");
+      toast.success(
+        field === "logo_url" ? "Logo updated" : "Cover updated",
+        successToastProperties,
+      );
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Upload failed");
+      toast.error(
+        err instanceof Error ? err.message : "Upload failed",
+        errorToastProperties,
+      );
     } finally {
       setIsWorking(false);
     }

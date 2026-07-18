@@ -1,8 +1,10 @@
+import { useEffect } from "react";
 import { Store, Wallet, UserRound, Users } from "lucide-react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { cn, useIsMobile, Toaster } from "@store-credit-platform/web-components";
 import { useTheme } from "../../shared/providers/ThemeProvider";
 import { ThemeToggle } from "../../components/ThemeToggle/ThemeToggle";
+import { useStoreStore } from "@shared/stores/storeStore";
 
 export const routes = {
   MY_STORE: "/",
@@ -23,6 +25,14 @@ export default function MainLayout() {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   const { theme } = useTheme();
+  const ensureStoreLoaded = useStoreStore((s) => s.ensureStoreLoaded);
+
+  // Bootstrap shared store data once per authenticated session so every
+  // child route (My Store, Customers, etc.) sees populated merchant + branches
+  // regardless of which route is the entry point.
+  useEffect(() => {
+    void ensureStoreLoaded();
+  }, [ensureStoreLoaded]);
 
   const isLight = theme === "light";
   // "/" should match only when exactly on the index route; sub-paths fall back to no match.

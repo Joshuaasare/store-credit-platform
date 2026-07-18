@@ -1,5 +1,5 @@
 import { FastifyInstance } from "fastify";
-import { requireAuth, requireRoles, AuthenticatedRequest } from "../../middleware/auth.middleware";
+import { requireAuth, requireRoles } from "../../middleware/auth.middleware";
 import { merchantService } from "../../services/merchant.service";
 import {
   UpdateMerchantRequest,
@@ -23,7 +23,7 @@ export default async function (fastify: FastifyInstance) {
         401: MerchantMeApiResponse,
       },
     },
-    handler: async (request: AuthenticatedRequest, reply) => {
+    handler: async (request, reply) => {
       try {
         const user = request.user!;
         // Prefer the JWT-embedded merchant_id; fall back to staff lookup.
@@ -37,7 +37,8 @@ export default async function (fastify: FastifyInstance) {
           return { success: true, data: null };
         }
 
-        const merchant = await merchantService.getMyMerchantWithStats(merchantId);
+        const merchant =
+          await merchantService.getMyMerchantWithStats(merchantId);
         if (!merchant) {
           return { success: true, data: null };
         }
@@ -70,7 +71,7 @@ export default async function (fastify: FastifyInstance) {
         400: MerchantMutationApiResponse,
       },
     },
-    handler: async (request: AuthenticatedRequest, reply) => {
+    handler: async (request, reply) => {
       try {
         const user = request.user!;
         let merchantId = user.merchant_id;

@@ -2,7 +2,6 @@ import { FastifyInstance } from "fastify";
 import {
   requireAuth,
   requireRoles,
-  AuthenticatedRequest,
 } from "../../middleware/auth.middleware";
 import { branchService } from "../../services/branch.service";
 import { merchantService } from "../../services/merchant.service";
@@ -28,7 +27,7 @@ export default async function (fastify: FastifyInstance) {
         401: BranchListApiResponse,
       },
     },
-    handler: async (request: AuthenticatedRequest, reply) => {
+    handler: async (request, reply) => {
       try {
         const user = request.user!;
         let merchantId = user.merchant_id;
@@ -72,7 +71,7 @@ export default async function (fastify: FastifyInstance) {
         400: BranchMutationApiResponse,
       },
     },
-    handler: async (request: AuthenticatedRequest, reply) => {
+    handler: async (request, reply) => {
       try {
         const user = request.user!;
         let merchantId = user.merchant_id;
@@ -125,7 +124,7 @@ export default async function (fastify: FastifyInstance) {
         400: BranchMutationApiResponse,
       },
     },
-    handler: async (request: AuthenticatedRequest, reply) => {
+    handler: async (request, reply) => {
       try {
         const user = request.user!;
         const branchId = Number((request.params as { id: string }).id);

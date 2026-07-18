@@ -145,12 +145,16 @@ export function CustomersFilters({
 
   const applyDatePreset = (preset: DatePreset) => {
     if (preset === "this_year") {
+      // "This year" = Jan 1 of the current year onwards, with no upper bound.
+      // Using end=null (instead of end=now) means transactions created after
+      // the preset is applied still fall in-window and appear immediately on
+      // refetch — otherwise a freshly-added purchase would be filtered out
+      // until the user manually re-applies the filter.
       const now = new Date();
       const start = Math.floor(
         new Date(now.getFullYear(), 0, 1).getTime() / 1000,
       );
-      const end = Math.floor(now.getTime() / 1000);
-      onChange({ ...value, datePreset: preset, start, end });
+      onChange({ ...value, datePreset: preset, start, end: null });
     } else if (preset === "all") {
       onChange({ ...value, datePreset: preset, start: null, end: null });
     } else {

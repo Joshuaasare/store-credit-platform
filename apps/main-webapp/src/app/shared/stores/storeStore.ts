@@ -17,6 +17,7 @@ interface StoreState {
   error: string | null;
 
   fetchStore: () => Promise<void>;
+  ensureStoreLoaded: () => Promise<void>;
   refreshBranches: () => Promise<void>;
   createBranch: (payload: CreateBranchRequest) => Promise<BranchWithAggregates>;
   updateBranch: (
@@ -61,6 +62,15 @@ export const useStoreStore = create<StoreState>((set, get) => ({
         error: err instanceof Error ? err.message : "Failed to load store",
       });
     }
+  },
+
+  // Idempotent boot helper — fetches only if we don't already have merchant
+  // data and aren't currently loading. Used by the authenticated layout so
+  // every child page sees populated `branches` regardless of entry route.
+  ensureStoreLoaded: async () => {
+    const { merchant, loading } = get();
+    if (merchant != null || loading) return;
+    await get().fetchStore();
   },
 
   refreshBranches: async () => {

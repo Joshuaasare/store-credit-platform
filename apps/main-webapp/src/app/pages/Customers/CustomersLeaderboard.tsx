@@ -16,11 +16,13 @@ import {
 
 const LIMIT = 20;
 
-function thisYearRange(): { start: number; end: number } {
+function thisYearRange(): { start: number; end: null } {
   const now = new Date();
   return {
     start: Math.floor(new Date(now.getFullYear(), 0, 1).getTime() / 1000),
-    end: Math.floor(now.getTime() / 1000),
+    // end=null → "no upper bound". Keeps newly-created transactions in-window
+    // so the leaderboard reflects purchases added in the current session.
+    end: null,
   };
 }
 
@@ -97,7 +99,8 @@ export default function CustomersLeaderboard() {
   }, [leaderboardQuery.data]);
 
   const stats = statsQuery.data?.success ? statsQuery.data.data : null;
-  const lastPage = leaderboardQuery.data?.pages?.[leaderboardQuery.data.pages.length - 1];
+  const lastPage =
+    leaderboardQuery.data?.pages?.[leaderboardQuery.data.pages.length - 1];
   const total = lastPage?.success ? lastPage.data.total : 0;
 
   const hasNextPage = leaderboardQuery.hasNextPage;
@@ -134,7 +137,8 @@ export default function CustomersLeaderboard() {
         header: "Branch",
         cell: ({ row }) => {
           const bid = row.original.branch_id;
-          if (bid == null) return <span className="text-muted-foreground">—</span>;
+          if (bid == null)
+            return <span className="text-muted-foreground">—</span>;
           const b = branches.find((x) => x.id === bid);
           return (
             <span className="truncate">{b?.name?.trim() || `#${bid}`}</span>
@@ -169,7 +173,11 @@ export default function CustomersLeaderboard() {
           icon={<Users className="h-4 w-4" />}
           tone="primary"
           value={
-            stats ? stats.total_customers.toLocaleString() : <Skeleton className="h-6 w-16" />
+            stats ? (
+              stats.total_customers.toLocaleString()
+            ) : (
+              <Skeleton className="h-6 w-16" />
+            )
           }
         />
         <StatCard
@@ -212,8 +220,10 @@ export default function CustomersLeaderboard() {
       <Card className="p-0">
         <div className="flex items-center justify-between border-b px-4 py-3">
           <div className="flex items-center gap-2">
-            <h2 className="text-base font-semibold tracking-tight">Leaderboard</h2>
-            <span className="inline-flex h-5 items-center rounded-full border bg-muted/50 px-2 text-[11px] font-medium text-muted-foreground tabular-nums">
+            <h2 className="text-base font-semibold tracking-tight">
+              Leaderboard
+            </h2>
+            <span className="bg-muted/50 text-muted-foreground inline-flex h-5 items-center rounded-full border px-2 text-[11px] font-medium tabular-nums">
               {total}
             </span>
           </div>
@@ -240,13 +250,23 @@ export default function CustomersLeaderboard() {
             data={rows}
             hasPagination={false}
             emptyStateComponent={
-              <div className="flex flex-col items-center justify-center gap-2 py-12 text-center">
-                <Users className="text-muted-foreground h-8 w-8" />
-                <p className="text-sm font-medium">No customers in this window</p>
-                <p className="text-muted-foreground text-xs">
-                  Try a different date range or branch filter.
-                </p>
-              </div>
+              leaderboardQuery.isPending ? (
+                <div className="w-full space-y-2 p-2">
+                  {Array.from({ length: 2 }).map((_, i) => (
+                    <Skeleton key={i} className="h-20 w-full" />
+                  ))}
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center gap-2 py-12 text-center">
+                  <Users className="text-muted-foreground h-8 w-8" />
+                  <p className="text-sm font-medium">
+                    No customers in this window
+                  </p>
+                  <p className="text-muted-foreground text-xs">
+                    Try a different date range or branch filter.
+                  </p>
+                </div>
+              )
             }
           />
         </InfiniteScroll>
@@ -293,7 +313,7 @@ function StatCard({ label, icon, value, tone = "primary" }: StatCardProps) {
           {icon}
         </span>
       </div>
-      <div className="relative mt-2 text-2xl font-semibold tracking-tight tabular-nums">
+      <div className="relative mt-2 text-2xl font-semibold tabular-nums tracking-tight">
         {value}
       </div>
     </Card>

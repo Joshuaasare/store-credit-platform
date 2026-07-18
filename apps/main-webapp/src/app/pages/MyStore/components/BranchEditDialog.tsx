@@ -20,12 +20,22 @@ import { PhoneInput } from "../../../components/PhoneInput/PhoneInput";
 import { countries, CountryCode } from "@shared/utils/countries";
 import { useStoreStore } from "@shared/stores/storeStore";
 import { BranchWithAggregates } from "@shared/types/api.types";
+import {
+  errorToastProperties,
+  successToastProperties,
+} from "@shared/utils/misc.utils";
 
 const branchSchema = z.object({
-  name: z.string().min(2, "Name must be at least 2 characters").max(80, "Name must be 80 characters or less"),
+  name: z
+    .string()
+    .min(2, "Name must be at least 2 characters")
+    .max(80, "Name must be 80 characters or less"),
   phone: z.string().optional(),
   address: z.string().optional(),
-  city: z.string().min(1, "City is required").max(60, "City must be 60 characters or less"),
+  city: z
+    .string()
+    .min(1, "City is required")
+    .max(60, "City must be 60 characters or less"),
   country_code: z.string().min(1, "Country is required"),
 });
 
@@ -94,7 +104,7 @@ export function BranchEditDialog({
           city: values.city,
           country_code: values.country_code,
         });
-        toast.success("Branch updated");
+        toast.success("Branch updated", successToastProperties);
       } else {
         await createBranch({
           name: values.name,
@@ -103,11 +113,14 @@ export function BranchEditDialog({
           city: values.city,
           country_code: values.country_code,
         });
-        toast.success("Branch added");
+        toast.success("Branch added", successToastProperties);
       }
       onOpenChange?.(false);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to save branch");
+      toast.error(
+        err instanceof Error ? err.message : "Failed to save branch",
+        errorToastProperties,
+      );
     }
   };
 
@@ -127,7 +140,11 @@ export function BranchEditDialog({
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div className="space-y-1.5">
             <Label htmlFor="branch-name">Name *</Label>
-            <Input id="branch-name" {...register("name")} placeholder="e.g. Osu Branch" />
+            <Input
+              id="branch-name"
+              {...register("name")}
+              placeholder="e.g. Osu Branch"
+            />
             {errors.name && (
               <p className="text-destructive text-xs">{errors.name.message}</p>
             )}
@@ -143,15 +160,25 @@ export function BranchEditDialog({
 
           <div className="space-y-1.5">
             <Label htmlFor="branch-address">Address</Label>
-            <Input id="branch-address" {...register("address")} placeholder="Street / landmark" />
+            <Input
+              id="branch-address"
+              {...register("address")}
+              placeholder="Street / landmark"
+            />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label htmlFor="branch-city">City *</Label>
-              <Input id="branch-city" {...register("city")} placeholder="City" />
+              <Input
+                id="branch-city"
+                {...register("city")}
+                placeholder="City"
+              />
               {errors.city && (
-                <p className="text-destructive text-xs">{errors.city.message}</p>
+                <p className="text-destructive text-xs">
+                  {errors.city.message}
+                </p>
               )}
             </div>
             <div className="space-y-1.5">
@@ -159,11 +186,15 @@ export function BranchEditDialog({
               <Combobox
                 options={countryOptions}
                 value={watchedCountry}
-                onValueChange={(v) => setValue("country_code", v, { shouldValidate: true })}
+                onValueChange={(v) =>
+                  setValue("country_code", v, { shouldValidate: true })
+                }
                 placeholder="Select country"
               />
               {errors.country_code && (
-                <p className="text-destructive text-xs">{errors.country_code.message}</p>
+                <p className="text-destructive text-xs">
+                  {errors.country_code.message}
+                </p>
               )}
             </div>
           </div>
@@ -173,11 +204,16 @@ export function BranchEditDialog({
               type="button"
               variant="outline"
               onClick={() => onOpenChange?.(false)}
+              disabled={isSubmitting}
             >
               Cancel
             </Button>
             <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? "Saving..." : isEdit ? "Save changes" : "Add branch"}
+              {isSubmitting
+                ? "Saving..."
+                : isEdit
+                  ? "Save changes"
+                  : "Add branch"}
             </Button>
           </DialogFooter>
         </form>

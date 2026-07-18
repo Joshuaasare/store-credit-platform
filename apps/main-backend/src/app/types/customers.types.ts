@@ -73,6 +73,7 @@ export interface TransactionsPage {
 export interface CreatePurchaseRequest {
   phone: string;
   amount: number;
+  branch_id?: number | null;
 }
 
 export type LeaderboardQuerystring = LeaderboardFilters;
