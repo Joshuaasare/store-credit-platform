@@ -12,9 +12,13 @@ import {
   DialogContent,
   cn,
   Badge,
+  Monogram,
 } from "@store-credit-platform/web-components";
 import { CustomerTransactions } from "@shared/types/api.types";
-import { customerDisplayName } from "@shared/utils/customers.utils";
+import {
+  customerDisplayName,
+  customerInitials,
+} from "@shared/utils/customers.utils";
 import { formatEpochDateTime, formatGHS } from "@shared/utils/format";
 import { formatDisplayNumber } from "@shared/utils/ui.utils";
 
@@ -109,11 +113,16 @@ export function TransactionDetailDialog({
             className="bg-primary/15 pointer-events-none absolute -right-16 -top-20 h-56 w-56 rounded-full blur-3xl"
           />
           <div className="relative flex items-start gap-4">
-            {displayName[0] && (
-              <div className="from-primary/15 to-primary/5 text-primary ring-primary/20 flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br text-xl font-semibold ring-1">
-                {displayName[0].toUpperCase()}
-              </div>
-            )}
+            <Monogram
+              text={row ? customerInitials(row) : "?"}
+              seed={
+                row?.customer?.user_id ??
+                row?.customer?.phone ??
+                String(row?.customer_id ?? "")
+              }
+              size="lg"
+              className="ring-primary/20 shadow-sm ring-1"
+            />
             <div className="min-w-0 flex-1 pr-8">
               <h2 className="truncate text-2xl font-semibold tracking-tight">
                 {displayName}

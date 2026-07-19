@@ -8766,6 +8766,7 @@ __metadata:
     jsdom: "npm:~22.1.0"
     json-schema-to-typescript: "npm:^15.0.4"
     jsonc-eslint-parser: "npm:^2.1.0"
+    libphonenumber-js: "npm:^1.13.9"
     lodash.find: "npm:^4.6.0"
     lodash.uniqby: "npm:^4.7.0"
     lucide-react: "npm:^0.542.0"
@@ -19293,6 +19294,13 @@ __metadata:
     prelude-ls: "npm:^1.2.1"
     type-check: "npm:~0.4.0"
   checksum: 10c0/effb03cad7c89dfa5bd4f6989364bfc79994c2042ec5966cb9b95990e2edee5cd8969ddf42616a0373ac49fac1403437deaf6e9050fbbaa3546093a59b9ac94e
+  languageName: node
+  linkType: hard
+
+"libphonenumber-js@npm:^1.13.9":
+  version: 1.13.9
+  resolution: "libphonenumber-js@npm:1.13.9"
+  checksum: 10c0/837187fe0bacbcea3b813476cc897233951a6113220e7b2523c6974989f475b380be7c632bf33bbadaa22532375733f3c64d80f7039578b8e1c77ea7dd052f0f
   languageName: node
   linkType: hard
 

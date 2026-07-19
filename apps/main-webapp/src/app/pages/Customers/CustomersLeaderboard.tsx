@@ -2,7 +2,12 @@ import { useMemo, useState } from "react";
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { ColumnDef } from "@tanstack/react-table";
 import { Users, ShoppingBag, Coins } from "lucide-react";
-import { Card, Skeleton, cn } from "@store-credit-platform/web-components";
+import {
+  Card,
+  Skeleton,
+  cn,
+  Monogram,
+} from "@store-credit-platform/web-components";
 import { DataTable } from "../../components/DataTable/DataTable";
 import InfiniteScroll from "../../components/InfiniteScroll/InfiniteScroll";
 import { customerService } from "@store-credit-platform/api-services";
@@ -10,6 +15,7 @@ import { useStoreStore } from "@shared/stores/storeStore";
 import { LeaderboardRow } from "@shared/types/api.types";
 import { startOfYearEpoch } from "@shared/utils/date.utils";
 import { formatGHS } from "@shared/utils/format";
+import { leaderboardInitials } from "@shared/utils/customers.utils";
 import {
   CustomersFilters,
   CustomersFiltersValue,
@@ -111,14 +117,24 @@ export default function CustomersLeaderboard() {
         cell: ({ row }) => {
           const r = row.original;
           const name = r.customer_name?.trim() || "";
+          const isLinked = r.user_id != null && name && name !== "Unnamed customer";
           return (
-            <div className="min-w-0">
-              <div className="truncate font-medium">{name}</div>
-              {r.phone && (
-                <div className="text-muted-foreground truncate text-xs">
-                  {formatDisplayNumber(r.phone)}
+            <div className="flex min-w-0 items-center gap-3">
+              <Monogram
+                text={leaderboardInitials(r)}
+                seed={r.user_id ?? r.phone ?? String(r.customer_id)}
+                size="sm"
+              />
+              <div className="min-w-0">
+                <div className="truncate font-medium">
+                  {isLinked ? name : formatDisplayNumber(r.phone) ?? "Unnamed customer"}
                 </div>
-              )}
+                {isLinked && r.phone && (
+                  <div className="text-muted-foreground truncate text-xs">
+                    {formatDisplayNumber(r.phone)}
+                  </div>
+                )}
+              </div>
             </div>
           );
         },

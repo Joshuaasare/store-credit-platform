@@ -1,4 +1,4 @@
-import { CustomerTransactions } from "@shared/types/api.types";
+import { CustomerTransactions, LeaderboardRow } from "@shared/types/api.types";
 
 /**
  * Display name for a customer transactions row.
@@ -12,4 +12,50 @@ export function customerDisplayName(r: CustomerTransactions): string {
   if (!u) return "";
   const name = `${u.surname}${u.other_names ? " " + u.other_names : ""}`.trim();
   return name || "";
+}
+
+/**
+ * 1-2 char initials for a Monogram avatar.
+ *
+ * Linked customer (has `users`): first letter of first word + first letter of
+ * last word from the display name (e.g. "Joshua Asare" → "JA"); single-word
+ * names take the first two chars (e.g. "Kojo" → "KO").
+ *
+ * Unlinked customer (no `users`): last 2 digits of the phone, so two
+ * anonymous customers with different phones still get distinct monograms.
+ * Returns "?" if neither is available.
+ */
+export function customerInitials(r: CustomerTransactions): string {
+  const name = customerDisplayName(r);
+  if (name) {
+    const parts = name.split(/\s+/).filter(Boolean);
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    }
+    return name.slice(0, 2).toUpperCase();
+  }
+  const phone = r.customer?.phone?.replace(/\D/g, "") ?? "";
+  if (phone.length >= 2) return phone.slice(-2);
+  return "?";
+}
+
+/**
+ * Same as `customerInitials` but for leaderboard rows, which resolve the
+ * display name server-side (`customer_name` is "Unnamed customer" when
+ * unlinked). `user_id == null` flags the unlinked case.
+ */
+export function leaderboardInitials(r: LeaderboardRow): string {
+  if (r.user_id != null) {
+    const name = r.customer_name?.trim() ?? "";
+    if (name && name !== "Unnamed customer") {
+      const parts = name.split(/\s+/).filter(Boolean);
+      if (parts.length >= 2) {
+        return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+      }
+      return name.slice(0, 2).toUpperCase();
+    }
+  }
+  const phone = r.phone?.replace(/\D/g, "") ?? "";
+  if (phone.length >= 2) return phone.slice(-2);
+  return "?";
 }
