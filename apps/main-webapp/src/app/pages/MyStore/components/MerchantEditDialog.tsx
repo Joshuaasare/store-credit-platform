@@ -21,6 +21,12 @@ import { PhoneInput } from "../../../components/PhoneInput/PhoneInput";
 import { countries, CountryCode } from "@shared/utils/countries";
 import { useStoreStore } from "@shared/stores/storeStore";
 import { MerchantWithStats } from "@shared/types/api.types";
+import {
+  errorToastProperties,
+  successToastProperties,
+} from "@shared/utils/misc.utils";
+import { slugify } from "@shared/utils/string.utils";
+import { Loader2 } from "lucide-react";
 
 const merchantSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -37,17 +43,10 @@ interface MerchantEditDialogProps {
   children?: React.ReactNode;
 }
 
-function slugify(value: string): string {
-  return value
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9\s-]/g, "")
-    .replace(/\s+/g, "-")
-    .replace(/-+/g, "-")
-    .slice(0, 60);
-}
-
-export function MerchantEditDialog({ merchant, children }: MerchantEditDialogProps) {
+export function MerchantEditDialog({
+  merchant,
+  children,
+}: MerchantEditDialogProps) {
   const { updateMerchant } = useStoreStore();
   const [open, setOpen] = useState(false);
   const [autoSlug, setAutoSlug] = useState(!merchant.slug);
@@ -103,10 +102,13 @@ export function MerchantEditDialog({ merchant, children }: MerchantEditDialogPro
         country_code: values.country_code,
         slug: slugValue,
       });
-      toast.success("Store profile updated");
+      toast.success("Store profile updated", successToastProperties);
       setOpen(false);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to update store");
+      toast.error(
+        err instanceof Error ? err.message : "Failed to update store",
+        errorToastProperties,
+      );
     }
   };
 
@@ -143,18 +145,22 @@ export function MerchantEditDialog({ merchant, children }: MerchantEditDialogPro
             <Combobox
               options={countryOptions}
               value={watchedCountry}
-              onValueChange={(v) => setValue("country_code", v, { shouldValidate: true })}
+              onValueChange={(v) =>
+                setValue("country_code", v, { shouldValidate: true })
+              }
               placeholder="Select country"
             />
             {errors.country_code && (
-              <p className="text-destructive text-xs">{errors.country_code.message}</p>
+              <p className="text-destructive text-xs">
+                {errors.country_code.message}
+              </p>
             )}
           </div>
 
           <div className="space-y-1.5">
             <div className="flex items-center justify-between">
               <Label htmlFor="merchant-slug">Slug (optional)</Label>
-              <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <label className="text-muted-foreground flex items-center gap-1.5 text-xs">
                 <Checkbox
                   checked={autoSlug}
                   onCheckedChange={(v) => {
@@ -169,7 +175,9 @@ export function MerchantEditDialog({ merchant, children }: MerchantEditDialogPro
             <Input
               id="merchant-slug"
               disabled={autoSlug}
-              placeholder={autoSlug ? computedSlug || "store-slug" : "store-slug"}
+              placeholder={
+                autoSlug ? computedSlug || "store-slug" : "store-slug"
+              }
               {...register("slug")}
             />
             {errors.slug && (
@@ -178,11 +186,17 @@ export function MerchantEditDialog({ merchant, children }: MerchantEditDialogPro
           </div>
 
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setOpen(false)}
+              disabled={isSubmitting}
+            >
               Cancel
             </Button>
             <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? "Saving..." : "Save changes"}
+              {isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
+              Save changes
             </Button>
           </DialogFooter>
         </form>

@@ -95,48 +95,6 @@ export type Database = {
           },
         ]
       }
-      branch_customer: {
-        Row: {
-          branch_id: number
-          created_at: string
-          customer_id: number
-          deleted_at: string
-          id: number
-          updated_at: string | null
-        }
-        Insert: {
-          branch_id: number
-          created_at?: string
-          customer_id: number
-          deleted_at: string
-          id?: number
-          updated_at?: string | null
-        }
-        Update: {
-          branch_id?: number
-          created_at?: string
-          customer_id?: number
-          deleted_at?: string
-          id?: number
-          updated_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "branch_customer_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: false
-            referencedRelation: "branches"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "branch_customer_customer_id_fkey"
-            columns: ["customer_id"]
-            isOneToOne: false
-            referencedRelation: "customers"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       branches: {
         Row: {
           address: string | null
@@ -261,7 +219,7 @@ export type Database = {
           id?: number
           recorded_by_user_id?: string | null
           transaction_date: number
-          transaction_type?: Database["public"]["Enums"]["transaction_type"]
+          transaction_type: Database["public"]["Enums"]["transaction_type"]
           updated_at?: string | null
         }
         Update: {
@@ -310,6 +268,7 @@ export type Database = {
           phone: string | null
           unique_id: string | null
           updated_at: string | null
+          user_id: string | null
         }
         Insert: {
           created_at?: string
@@ -318,6 +277,7 @@ export type Database = {
           phone?: string | null
           unique_id?: string | null
           updated_at?: string | null
+          user_id?: string | null
         }
         Update: {
           created_at?: string
@@ -326,8 +286,17 @@ export type Database = {
           phone?: string | null
           unique_id?: string | null
           updated_at?: string | null
+          user_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "customers_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       merchants: {
         Row: {
@@ -650,12 +619,46 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_customer_leaderboard: {
+        Args: {
+          p_branch_id?: number
+          p_end_epoch?: number
+          p_limit?: number
+          p_merchant_id: number
+          p_offset?: number
+          p_sort?: string
+          p_start_epoch?: number
+        }
+        Returns: {
+          branch_id: number
+          customer_id: number
+          customer_name: string
+          phone: string
+          total_credits_issued: number
+          total_credits_redeemed: number
+          total_purchases: number
+          transaction_count: number
+          user_id: string
+        }[]
+      }
+      get_customer_leaderboard_count: {
+        Args: {
+          p_branch_id?: number
+          p_end_epoch?: number
+          p_merchant_id: number
+          p_start_epoch?: number
+        }
+        Returns: number
+      }
+      get_distinct_customer_count: {
+        Args: { p_branch_id?: number; p_merchant_id: number }
+        Returns: number
+      }
     }
     Enums: {
       credit_type: "fixed" | "percentage"
       role: "manager" | "cashier"
-      transaction_type: "purchase" | "credit_redeem" | "credit_adjustment"
+      transaction_type: "purchase" | "credit_issue" | "credit_redeem"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -788,7 +791,7 @@ export const Constants = {
     Enums: {
       credit_type: ["fixed", "percentage"],
       role: ["manager", "cashier"],
-      transaction_type: ["purchase", "credit_redeem", "credit_adjustment"],
+      transaction_type: ["purchase", "credit_issue", "credit_redeem"],
     },
   },
 } as const

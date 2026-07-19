@@ -16,19 +16,13 @@ import {
   cn,
 } from "@store-credit-platform/web-components";
 import { BranchWithAggregates } from "@shared/types/api.types";
-import { getCountryByCode } from "@shared/utils/countries";
+import { CountryCode, getCountryByCode } from "@shared/utils/countries";
 import { CountryFlag } from "../../../components/CountryFlag/CountryFlag";
+import { formatGHSCompact } from "@shared/utils/format";
 
 interface BranchDetailDialogProps {
   branch: BranchWithAggregates | null;
   onOpenChange: (open: boolean) => void;
-}
-
-function formatCedi(n: number): string {
-  return `GH₵${n.toLocaleString(undefined, {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 2,
-  })}`;
 }
 
 const MINI_STATS: {
@@ -75,7 +69,12 @@ const DETAIL_FIELDS: {
   icon: LucideIcon;
   value: (b: BranchWithAggregates, countryName: string) => string;
 }[] = [
-  { key: "address", label: "Address", icon: MapPin, value: (b) => b.address ?? "—" },
+  {
+    key: "address",
+    label: "Address",
+    icon: MapPin,
+    value: (b) => b.address ?? "—",
+  },
   { key: "phone", label: "Phone", icon: Phone, value: (b) => b.phone ?? "—" },
   {
     key: "country",
@@ -89,16 +88,25 @@ const DETAIL_FIELDS: {
     icon: Clock,
     value: (b) =>
       b.last_activity_date
-        ? formatDistanceToNow(new Date(b.last_activity_date), { addSuffix: true })
+        ? formatDistanceToNow(new Date(b.last_activity_date), {
+            addSuffix: true,
+          })
         : "No activity yet",
   },
 ];
 
-export function BranchDetailDialog({ branch, onOpenChange }: BranchDetailDialogProps) {
+export function BranchDetailDialog({
+  branch,
+  onOpenChange,
+}: BranchDetailDialogProps) {
   const open = branch !== null;
-  const country = branch ? getCountryByCode(branch.country_code as any) : undefined;
-  const countryName = country ? country.name : (branch?.country_code ?? "—");
-  const displayName = branch?.name?.trim() || "Unnamed branch";
+  const country = branch
+    ? getCountryByCode(branch.country_code as CountryCode)
+    : undefined;
+  const countryName = country
+    ? `${country.name} ${country.flag}`
+    : (branch?.country_code ?? "—");
+  const displayName = branch?.name?.trim() || "x";
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -144,14 +152,18 @@ export function BranchDetailDialog({ branch, onOpenChange }: BranchDetailDialogP
                   <span
                     className={cn(
                       "inline-block h-1.5 w-1.5 rounded-full",
-                      branch?.is_active ? "bg-emerald-500" : "bg-muted-foreground/50",
+                      branch?.is_active
+                        ? "bg-emerald-500"
+                        : "bg-muted-foreground/50",
                     )}
                   />
                   {branch?.is_active ? "Active" : "Inactive"}
                 </span>
                 <span className="text-muted-foreground/60">·</span>
                 <span className="text-muted-foreground">
-                  {branch ? `Since ${new Date(branch.created_at).getFullYear()}` : ""}
+                  {branch
+                    ? `Since ${new Date(branch.created_at).getFullYear()}`
+                    : ""}
                 </span>
               </div>
             </div>
@@ -164,8 +176,10 @@ export function BranchDetailDialog({ branch, onOpenChange }: BranchDetailDialogP
                 <span className="bg-chart-4 inline-block h-1.5 w-1.5 rounded-full" />
                 Credit issued this month
               </div>
-              <div className="mt-1.5 text-3xl font-semibold tracking-tight tabular-nums">
-                {branch ? formatCedi(branch.credit_issued_this_month) : "—"}
+              <div className="mt-1.5 text-3xl font-semibold tabular-nums tracking-tight">
+                {branch
+                  ? formatGHSCompact(branch.credit_issued_this_month)
+                  : "—"}
               </div>
             </div>
           </div>
@@ -181,7 +195,7 @@ export function BranchDetailDialog({ branch, onOpenChange }: BranchDetailDialogP
                 <div
                   key={s.key}
                   className={cn(
-                    "bg-gradient-to-br to-card rounded-xl border p-3.5",
+                    "to-card rounded-xl border bg-gradient-to-br p-3.5",
                     s.gradient,
                   )}
                 >
@@ -189,12 +203,16 @@ export function BranchDetailDialog({ branch, onOpenChange }: BranchDetailDialogP
                     <span className={cn("rounded-md p-1.5", s.chip)}>
                       <Icon className="h-3.5 w-3.5" />
                     </span>
-                    <span className={`inline-block h-1.5 w-1.5 rounded-full ${s.dot}`} />
+                    <span
+                      className={`inline-block h-1.5 w-1.5 rounded-full ${s.dot}`}
+                    />
                   </div>
-                  <div className="mt-2.5 text-lg font-semibold leading-none tabular-nums">
+                  <div className="mt-2.5 text-lg font-semibold tabular-nums leading-none">
                     {branch ? s.value(branch) : "—"}
                   </div>
-                  <div className="text-muted-foreground mt-1 text-[11px]">{s.label}</div>
+                  <div className="text-muted-foreground mt-1 text-[11px]">
+                    {s.label}
+                  </div>
                 </div>
               );
             })}
@@ -217,7 +235,9 @@ export function BranchDetailDialog({ branch, onOpenChange }: BranchDetailDialogP
                     <div className="text-muted-foreground text-[11px] uppercase tracking-wide">
                       {f.label}
                     </div>
-                    <div className="mt-0.5 truncate text-sm font-medium">{value}</div>
+                    <div className="mt-0.5 truncate text-sm font-medium">
+                      {value}
+                    </div>
                   </div>
                 </div>
               );

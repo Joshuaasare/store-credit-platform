@@ -402,7 +402,7 @@ export class AuthService {
   ): Promise<{ merchant_id: number; branch_id: number } | null> {
     const { data: staff } = await supabaseAdmin
       .from("staff")
-      .select(QueryFragments.STAFF_MERCHANT_LOOKUP)
+      .select(`id,branches(id,merchants(id))`)
       .eq("user_id", userId)
       .is("deleted_at", null)
       .order("id", { ascending: true })
@@ -410,7 +410,7 @@ export class AuthService {
       .maybeSingle();
 
     if (!staff) return null;
-    const branch = (staff as any)?.branches;
+    const branch = staff?.branches;
     const merchant = branch?.merchants;
     if (!branch?.id || !merchant?.id) return null;
     return {

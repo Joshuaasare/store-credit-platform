@@ -1,17 +1,11 @@
 import { useState } from "react";
 import { AlertTriangle, Wallet } from "lucide-react";
 import { Card, cn } from "@store-credit-platform/web-components";
+import { formatGHSCompact } from "@shared/utils/format";
 
 interface PoolStatusCardProps {
   used: number;
   limit: number | null;
-}
-
-function formatCedi(n: number): string {
-  return `GH₵${n.toLocaleString(undefined, {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 2,
-  })}`;
 }
 
 const R = 52;
@@ -54,14 +48,14 @@ export function PoolStatusCard({ used, limit }: PoolStatusCardProps) {
 
   const centerValue =
     !hasLimit || mode === "absolute"
-      ? formatCedi(used)
+      ? formatGHSCompact(used)
       : `${pct.toFixed(0)}%`;
   const centerCaption =
     !hasLimit
       ? "issued · no limit"
       : mode === "percent"
         ? "used"
-        : `of ${formatCedi(limit as number)}`;
+        : `of ${formatGHSCompact(limit as number)}`;
 
   const noteColor =
     state === "over"
@@ -72,10 +66,10 @@ export function PoolStatusCard({ used, limit }: PoolStatusCardProps) {
   const note = !hasLimit
     ? "No limit configured — pool is uncapped"
     : over
-      ? `Over limit by ${formatCedi(used - (limit as number))}`
+      ? `Over limit by ${formatGHSCompact(used - (limit as number))}`
       : warn
-        ? `Near limit · ${formatCedi(remaining)} remaining`
-        : `${formatCedi(remaining)} remaining`;
+        ? `Near limit · ${formatGHSCompact(remaining)} remaining`
+        : `${formatGHSCompact(remaining)} remaining`;
 
   const wash = !hasLimit
     ? "from-muted/40"
@@ -188,18 +182,18 @@ export function PoolStatusCard({ used, limit }: PoolStatusCardProps) {
 
       {/* breakdown */}
       <div className="mt-5 space-y-2">
-        <Row dot={dotColor} label="Used" value={formatCedi(used)} />
+        <Row dot={dotColor} label="Used" value={formatGHSCompact(used)} />
         {hasLimit && (
           <>
             <Row
               dot="bg-muted-foreground/30"
               label="Remaining"
-              value={formatCedi(remaining)}
+              value={formatGHSCompact(remaining)}
             />
             <Row
               dot="bg-muted-foreground/30"
               label="Limit"
-              value={formatCedi(limit as number)}
+              value={formatGHSCompact(limit as number)}
             />
           </>
         )}

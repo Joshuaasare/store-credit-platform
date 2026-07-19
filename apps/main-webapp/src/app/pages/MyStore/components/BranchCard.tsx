@@ -12,6 +12,7 @@ import { useState } from "react";
 import { BranchWithAggregates } from "@shared/types/api.types";
 import { getCountryByCode } from "@shared/utils/countries";
 import { CountryFlag } from "../../../components/CountryFlag/CountryFlag";
+import { formatGHSCompact } from "@shared/utils/format";
 import { BranchEditDialog } from "./BranchEditDialog";
 
 interface BranchCardProps {
@@ -20,14 +21,11 @@ interface BranchCardProps {
   onOpenDetail: () => void;
 }
 
-function formatCedi(n: number): string {
-  return `GH₵${n.toLocaleString(undefined, {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 2,
-  })}`;
-}
-
-export function BranchCard({ branch, isManager, onOpenDetail }: BranchCardProps) {
+export function BranchCard({
+  branch,
+  isManager,
+  onOpenDetail,
+}: BranchCardProps) {
   const [editOpen, setEditOpen] = useState(false);
   const country = getCountryByCode(branch.country_code as any);
   const displayName = branch.name?.trim() || "Unnamed branch";
@@ -40,7 +38,7 @@ export function BranchCard({ branch, isManager, onOpenDetail }: BranchCardProps)
   return (
     <>
       <Card
-        className="group bg-gradient-to-br from-primary/[0.04] to-card flex h-full cursor-pointer flex-col p-5 transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md"
+        className="from-primary/[0.04] to-card hover:border-primary/40 group flex h-full cursor-pointer flex-col bg-gradient-to-br p-5 transition-all hover:-translate-y-0.5 hover:shadow-md"
         onClick={onOpenDetail}
       >
         <div className="flex items-start justify-between gap-3">
@@ -81,7 +79,7 @@ export function BranchCard({ branch, isManager, onOpenDetail }: BranchCardProps)
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-7 w-7 text-muted-foreground"
+                    className="text-muted-foreground h-7 w-7"
                     onClick={(e) => e.stopPropagation()}
                   >
                     <MoreVertical className="h-4 w-4" />
@@ -104,10 +102,12 @@ export function BranchCard({ branch, isManager, onOpenDetail }: BranchCardProps)
 
         {/* hero readout */}
         <div className="mt-6">
-          <div className="text-[28px] font-semibold leading-none tracking-tight tabular-nums">
-            {formatCedi(branch.credit_issued_this_month)}
+          <div className="text-[28px] font-semibold tabular-nums leading-none tracking-tight">
+            {formatGHSCompact(branch.credit_issued_this_month)}
           </div>
-          <div className="text-muted-foreground mt-1.5 text-xs">credit issued this month</div>
+          <div className="text-muted-foreground mt-1.5 text-xs">
+            credit issued this month
+          </div>
         </div>
 
         {/* quiet secondary line */}

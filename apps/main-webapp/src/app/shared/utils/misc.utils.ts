@@ -6,7 +6,7 @@ export const toastProperties: ExternalToast = {
   closeButton: true,
   duration: constants.toast.SHORT_TOAST_DURATION,
   richColors: true,
-  id: "smart-school-toast",
+  id: "smart-credit-toast",
 };
 
 export const successToastProperties: ExternalToast = {
@@ -14,7 +14,7 @@ export const successToastProperties: ExternalToast = {
   closeButton: true,
   duration: constants.toast.SHORT_TOAST_DURATION,
   richColors: true,
-  id: "smart-school-toast",
+  id: "smart-credit-success-toast",
 };
 
 export const errorToastProperties: ExternalToast = {
@@ -22,5 +22,5 @@ export const errorToastProperties: ExternalToast = {
   closeButton: true,
   duration: constants.toast.LONG_TOAST_DURATION,
   richColors: true,
-  id: "smart-school-error-toast",
+  id: "smart-credit-error-toast",
 };

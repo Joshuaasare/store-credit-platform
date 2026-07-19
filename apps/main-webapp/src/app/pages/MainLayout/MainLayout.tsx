@@ -1,19 +1,26 @@
 import { useEffect, useState } from "react";
-import { Menu, Store, Wallet, UserRound, X } from "lucide-react";
+import { Menu, Store, Wallet, UserRound, X, Users } from "lucide-react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
-import { cn, useIsMobile, Toaster } from "@store-credit-platform/web-components";
+import {
+  cn,
+  useIsMobile,
+  Toaster,
+} from "@store-credit-platform/web-components";
 import { useTheme } from "../../shared/providers/ThemeProvider";
 import { ThemeToggle } from "../../components/ThemeToggle/ThemeToggle";
+import { useStoreStore } from "@shared/stores/storeStore";
 
 export const routes = {
   MY_STORE: "/",
   CREDITS: "/credits",
+  CUSTOMERS: "/customers",
   PROFILE: "/profile",
 };
 
 const navItems = [
   { title: "My Store", url: routes.MY_STORE, icon: Store },
   { title: "Credits", url: routes.CREDITS, icon: Wallet },
+  { title: "Customers", url: routes.CUSTOMERS, icon: Users },
   { title: "Profile", url: routes.PROFILE, icon: UserRound },
 ];
 
@@ -23,11 +30,21 @@ export default function MainLayout() {
   const isMobile = useIsMobile();
   const { theme } = useTheme();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const ensureStoreLoaded = useStoreStore((s) => s.ensureStoreLoaded);
+
+  // Bootstrap shared store data once per authenticated session so every
+  // child route (My Store, Customers, etc.) sees populated merchant + branches
+  // regardless of which route is the entry point.
+  useEffect(() => {
+    void ensureStoreLoaded();
+  }, [ensureStoreLoaded]);
 
   const isLight = theme === "light";
   // "/" should match only when exactly on the index route; sub-paths fall back to no match.
   const activeIndex = navItems.findIndex((i) =>
-    i.url === "/" ? location.pathname === "/" : location.pathname.startsWith(i.url),
+    i.url === "/"
+      ? location.pathname === "/"
+      : location.pathname.startsWith(i.url),
   );
 
   // Shared surface treatment — mirrors the StoreHero: primary-tinted gradient,
@@ -60,7 +77,9 @@ export default function MainLayout() {
     surfaceRing,
     "backdrop-blur-2xl transition-all hover:border-primary/30 hover:shadow-md",
     "outline-none focus-visible:ring-2 focus-visible:ring-ring",
-    isLight ? "shadow-[0_8px_30px_rgba(0,0,0,0.12)]" : "shadow-[0_8px_30px_rgba(0,0,0,0.45)]",
+    isLight
+      ? "shadow-[0_8px_30px_rgba(0,0,0,0.12)]"
+      : "shadow-[0_8px_30px_rgba(0,0,0,0.45)]",
   );
 
   return (
@@ -89,9 +108,9 @@ export default function MainLayout() {
             title={mobileOpen ? "Close menu" : "Open menu"}
           >
             {mobileOpen ? (
-              <X className="h-5 w-5 text-foreground transition-transform duration-300" />
+              <X className="text-foreground h-5 w-5 transition-transform duration-300" />
             ) : (
-              <Menu className="h-5 w-5 text-foreground transition-transform duration-300" />
+              <Menu className="text-foreground h-5 w-5 transition-transform duration-300" />
             )}
           </button>
 
@@ -102,7 +121,7 @@ export default function MainLayout() {
               aria-hidden
               tabIndex={-1}
               onClick={() => setMobileOpen(false)}
-              className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm animate-in fade-in-0 duration-200"
+              className="animate-in fade-in-0 fixed inset-0 z-50 bg-black/50 backdrop-blur-sm duration-200"
             />
           )}
 
@@ -112,11 +131,13 @@ export default function MainLayout() {
               "fixed left-4 top-20 z-[60] flex w-56 flex-col items-start gap-2 rounded-2xl border px-2 py-3",
               "bg-card/80",
               surfaceRing,
-              "backdrop-blur-2xl overflow-hidden",
-              isLight ? "shadow-[0_8px_30px_rgba(0,0,0,0.12)]" : "shadow-[0_8px_30px_rgba(0,0,0,0.45)]",
+              "overflow-hidden backdrop-blur-2xl",
+              isLight
+                ? "shadow-[0_8px_30px_rgba(0,0,0,0.12)]"
+                : "shadow-[0_8px_30px_rgba(0,0,0,0.45)]",
               "transition-all duration-300 ease-out",
               mobileOpen
-                ? "animate-in fade-in-0 slide-in-from-top-2 opacity-100 translate-y-0"
+                ? "animate-in fade-in-0 slide-in-from-top-2 translate-y-0 opacity-100"
                 : "pointer-events-none absolute -translate-y-2 opacity-0",
             )}
             aria-label="Primary navigation"
@@ -125,7 +146,7 @@ export default function MainLayout() {
             {/* decorative primary blob */}
             <div
               aria-hidden
-              className="pointer-events-none absolute -left-8 -top-8 h-20 w-20 rounded-full bg-primary/10 blur-2xl"
+              className="bg-primary/10 pointer-events-none absolute -left-8 -top-8 h-20 w-20 rounded-full blur-2xl"
             />
             {navItems.map((item, index) => {
               const isActive = index === activeIndex;
@@ -159,7 +180,7 @@ export default function MainLayout() {
                     className={cn(
                       "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition-all duration-300",
                       isActive
-                        ? "bg-gradient-to-br from-primary/20 to-primary/5 text-primary ring-1 ring-primary/20"
+                        ? "from-primary/20 to-primary/5 text-primary ring-primary/20 bg-gradient-to-br ring-1"
                         : "bg-muted/60 text-muted-foreground",
                     )}
                   >
@@ -198,7 +219,7 @@ export default function MainLayout() {
           {/* decorative primary blob */}
           <div
             aria-hidden
-            className="pointer-events-none absolute -left-8 -top-8 h-24 w-24 rounded-full bg-primary/15 blur-2xl"
+            className="bg-primary/15 pointer-events-none absolute -left-8 -top-8 h-24 w-24 rounded-full blur-2xl"
           />
           {navItems.map((item, index) => {
             const isActive = index === activeIndex;
@@ -233,7 +254,7 @@ export default function MainLayout() {
                   className={cn(
                     "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition-all duration-300",
                     isActive
-                      ? "bg-gradient-to-br from-primary/20 to-primary/5 text-primary ring-1 ring-primary/20"
+                      ? "from-primary/20 to-primary/5 text-primary ring-primary/20 bg-gradient-to-br ring-1"
                       : "bg-muted/60 text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary",
                   )}
                 >
