@@ -1,6 +1,7 @@
 import { Store, Users, UserRound, Coins } from "lucide-react";
 import { Card, cn } from "@store-credit-platform/web-components";
 import { MerchantWithStats } from "@shared/types/api.types";
+import { formatGHSCompact, formatStatValue } from "@shared/utils/format";
 
 interface StoreStatsRowProps {
   merchant: MerchantWithStats;
@@ -59,7 +60,7 @@ export function StoreStatsRow({ merchant }: StoreStatsRowProps) {
       {STATS.map((stat, i) => {
         const Icon = stat.icon;
         const raw = stat.value(merchant);
-        const display = stat.currency ? formatCedi(raw) : formatStat(raw);
+        const display = stat.currency ? formatGHSCompact(raw) : formatStatValue(raw);
         return (
           <Card
             key={stat.key}
@@ -94,17 +95,4 @@ export function StoreStatsRow({ merchant }: StoreStatsRowProps) {
       })}
     </div>
   );
-}
-
-function formatStat(value: number): string {
-  if (value >= 1000) return value.toLocaleString();
-  if (Number.isInteger(value)) return String(value);
-  return value.toFixed(2);
-}
-
-function formatCedi(n: number): string {
-  return `GH₵${n.toLocaleString(undefined, {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 2,
-  })}`;
 }

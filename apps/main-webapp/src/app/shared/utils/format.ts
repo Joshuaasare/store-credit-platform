@@ -31,6 +31,16 @@ export function formatGHSCompact(amount: number): string {
 }
 
 /**
+ * Generic numeric formatter for stat cards: integers stay bare, large
+ * numbers get locale grouping, and small decimals keep up to 2 places.
+ */
+export function formatStatValue(value: number): string {
+  if (value >= 1000) return value.toLocaleString();
+  if (Number.isInteger(value)) return String(value);
+  return value.toFixed(2);
+}
+
+/**
  * Format a Unix epoch (seconds) as a readable date string.
  */
 export function formatEpochDate(epochSeconds: number): string {

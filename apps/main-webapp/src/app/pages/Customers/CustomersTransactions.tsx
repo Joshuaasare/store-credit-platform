@@ -16,6 +16,7 @@ import { useStoreStore } from "@shared/stores/storeStore";
 import { CustomerTransactions } from "@shared/types/api.types";
 import { startOfYearEpoch } from "@shared/utils/date.utils";
 import { formatEpochDate, formatGHS } from "@shared/utils/format";
+import { customerDisplayName } from "@shared/utils/customers.utils";
 import {
   CustomersFilters,
   CustomersFiltersValue,
@@ -48,13 +49,6 @@ const AMOUNT_COLOR: Record<CustomerTransactions["transaction_type"], string> = {
   credit_issue: "text-emerald-600 dark:text-emerald-400",
   credit_redeem: "text-amber-600 dark:text-amber-400",
 };
-
-function customerDisplayName(r: CustomerTransactions): string {
-  const u = r.customer?.users;
-  if (!u) return "";
-  const name = `${u.surname}${u.other_names ? " " + u.other_names : ""}`.trim();
-  return name || "";
-}
 
 export default function CustomersTransactions() {
   const { branches } = useStoreStore();

@@ -32,3 +32,11 @@ export function fromEpochSeconds(
 export function startOfYearEpoch(date: Date = new Date()): number {
   return toEpochSeconds(new Date(date.getFullYear(), 0, 1));
 }
+
+/**
+ * Returns a Date clamped to the first day of its month at 00:00:00 local.
+ * Used to seed calendar / month-picker views.
+ */
+export function startOfMonth(date: Date): Date {
+  return new Date(date.getFullYear(), date.getMonth(), 1);
+}

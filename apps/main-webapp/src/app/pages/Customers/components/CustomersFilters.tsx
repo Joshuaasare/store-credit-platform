@@ -19,6 +19,7 @@ import { BranchWithAggregates } from "@shared/types/api.types";
 import { LeaderboardSort } from "@shared/types/api.types";
 import {
   fromEpochSeconds,
+  startOfMonth,
   startOfYearEpoch,
   toEpochSeconds,
 } from "@shared/utils/date.utils";
@@ -52,10 +53,6 @@ const DATE_PRESETS: { value: DatePreset; label: string }[] = [
   { value: "all", label: "All" },
   { value: "custom", label: "Custom" },
 ];
-
-function startOfMonth(d: Date): Date {
-  return new Date(d.getFullYear(), d.getMonth(), 1);
-}
 
 function formatRangeLabel(range: DateRange | undefined): string {
   const from = range?.from;

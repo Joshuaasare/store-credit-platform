@@ -29,6 +29,7 @@ import {
   errorToastProperties,
   successToastProperties,
 } from "@shared/utils/misc.utils";
+import { isApiError } from "@shared/utils/api.utils";
 import { Loader2 } from "lucide-react";
 
 const purchaseSchema = z.object({
@@ -89,7 +90,7 @@ export function AddPurchaseDialog({
         amount: values.amount,
         branch_id: values.branchId,
       });
-      if (!res.success) throw new Error(res.error);
+      if (isApiError(res)) throw new Error(res.error);
       return res.data;
     },
     onSuccess: () => {

@@ -17,17 +17,11 @@ import {
 } from "@store-credit-platform/web-components";
 import { BranchWithAggregates } from "@shared/types/api.types";
 import { getCountryByCode } from "@shared/utils/countries";
+import { formatGHSCompact } from "@shared/utils/format";
 
 interface BranchDetailDialogProps {
   branch: BranchWithAggregates | null;
   onOpenChange: (open: boolean) => void;
-}
-
-function formatCedi(n: number): string {
-  return `GH₵${n.toLocaleString(undefined, {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 2,
-  })}`;
 }
 
 const MINI_STATS: {
@@ -172,7 +166,7 @@ export function BranchDetailDialog({
                 Credit issued this month
               </div>
               <div className="mt-1.5 text-3xl font-semibold tabular-nums tracking-tight">
-                {branch ? formatCedi(branch.credit_issued_this_month) : "—"}
+                {branch ? formatGHSCompact(branch.credit_issued_this_month) : "—"}
               </div>
             </div>
           </div>

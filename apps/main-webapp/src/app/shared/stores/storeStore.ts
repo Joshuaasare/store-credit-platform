@@ -9,6 +9,7 @@ import {
   UpdateBranchRequest,
   UpdateMerchantRequest,
 } from "@shared/types/api.types";
+import { isApiError } from "@shared/utils/api.utils";
 
 interface StoreState {
   merchant: MerchantWithStats | null;
@@ -31,10 +32,6 @@ interface StoreState {
 }
 
 const storeService = createStoreService();
-
-function isApiError(value: any): value is { success: false; error: string } {
-  return value && value.success === false && typeof value.error === "string";
-}
 
 export const useStoreStore = create<StoreState>((set, get) => ({
   merchant: null,

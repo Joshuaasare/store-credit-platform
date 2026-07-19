@@ -14,6 +14,7 @@ import {
   Badge,
 } from "@store-credit-platform/web-components";
 import { CustomerTransactions } from "@shared/types/api.types";
+import { customerDisplayName } from "@shared/utils/customers.utils";
 import { formatEpochDateTime, formatGHS } from "@shared/utils/format";
 
 interface TransactionDetailDialogProps {
@@ -38,13 +39,6 @@ const TYPE_META: Record<
     chip: "border-amber-500/20 bg-amber-500/10 text-amber-600 dark:text-amber-400",
   },
 };
-
-function customerDisplayName(r: CustomerTransactions): string {
-  const u = r.customer?.users;
-  if (!u) return "";
-  const name = `${u.surname}${u.other_names ? " " + u.other_names : ""}`.trim();
-  return name || "";
-}
 
 const DETAIL_FIELDS: {
   key: string;
