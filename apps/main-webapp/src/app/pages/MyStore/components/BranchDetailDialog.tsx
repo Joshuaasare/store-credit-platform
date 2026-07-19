@@ -17,6 +17,7 @@ import {
 } from "@store-credit-platform/web-components";
 import { BranchWithAggregates } from "@shared/types/api.types";
 import { getCountryByCode } from "@shared/utils/countries";
+import { CountryFlag } from "../../../components/CountryFlag/CountryFlag";
 
 interface BranchDetailDialogProps {
   branch: BranchWithAggregates | null;
@@ -96,7 +97,7 @@ const DETAIL_FIELDS: {
 export function BranchDetailDialog({ branch, onOpenChange }: BranchDetailDialogProps) {
   const open = branch !== null;
   const country = branch ? getCountryByCode(branch.country_code as any) : undefined;
-  const countryName = country ? `${country.name} ${country.flag}` : branch?.country_code ?? "—";
+  const countryName = country ? country.name : (branch?.country_code ?? "—");
   const displayName = branch?.name?.trim() || "Unnamed branch";
 
   return (
@@ -116,10 +117,20 @@ export function BranchDetailDialog({ branch, onOpenChange }: BranchDetailDialogP
               <h2 className="truncate text-2xl font-semibold tracking-tight">
                 {displayName}
               </h2>
-              <p className="text-muted-foreground mt-1 truncate text-sm">
-                <Building2 className="mr-1.5 inline h-3.5 w-3.5 align-text-bottom" />
-                {branch?.city}
-                {country ? ` · ${country.flag}` : ""}
+              <p className="text-muted-foreground mt-1 flex items-center gap-1.5 truncate text-sm">
+                <Building2 className="h-3.5 w-3.5 shrink-0 align-text-bottom" />
+                <span className="truncate">{branch?.city}</span>
+                {country && (
+                  <>
+                    <span className="text-muted-foreground/40">·</span>
+                    <CountryFlag
+                      code={branch!.country_code as never}
+                      size={16}
+                      title={country.name}
+                      className="shrink-0 rounded-[2px]"
+                    />
+                  </>
+                )}
               </p>
               <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
                 <span

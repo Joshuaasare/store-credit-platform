@@ -11,6 +11,7 @@ import { formatDistanceToNow } from "date-fns";
 import { useState } from "react";
 import { BranchWithAggregates } from "@shared/types/api.types";
 import { getCountryByCode } from "@shared/utils/countries";
+import { CountryFlag } from "../../../components/CountryFlag/CountryFlag";
 import { BranchEditDialog } from "./BranchEditDialog";
 
 interface BranchCardProps {
@@ -51,9 +52,19 @@ export function BranchCard({ branch, isManager, onOpenDetail }: BranchCardProps)
               <h3 className="truncate text-[15px] font-semibold leading-tight">
                 {displayName}
               </h3>
-              <p className="text-muted-foreground mt-0.5 truncate text-xs">
-                {branch.city}
-                {country ? ` · ${country.flag}` : ""}
+              <p className="text-muted-foreground mt-0.5 flex items-center gap-1.5 truncate text-xs">
+                <span className="truncate">{branch.city}</span>
+                {country && (
+                  <>
+                    <span className="text-muted-foreground/40">·</span>
+                    <CountryFlag
+                      code={branch.country_code as never}
+                      size={14}
+                      title={country.name}
+                      className="shrink-0 rounded-[2px]"
+                    />
+                  </>
+                )}
               </p>
             </div>
           </div>

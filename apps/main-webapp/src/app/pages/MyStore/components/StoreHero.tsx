@@ -16,6 +16,7 @@ import {
 } from "@shared/types/api.types";
 import { createStorageService } from "@store-credit-platform/api-services";
 import { getCountryByCode } from "@shared/utils/countries";
+import { CountryFlag } from "../../../components/CountryFlag/CountryFlag";
 import { compressImage } from "@shared/utils/imageCompression.utils";
 import { useStoreStore } from "@shared/stores/storeStore";
 import { MerchantEditDialog } from "./MerchantEditDialog";
@@ -132,7 +133,7 @@ export function StoreHero({ merchant, isManager }: StoreHeroProps) {
   );
 
   return (
-    <div className="group/hero animate-fade-in-up relative flex flex-col gap-5 overflow-hidden rounded-2xl border shadow-sm motion-reduce:animate-none md:flex-row md:items-center md:justify-between">
+    <div className="group/hero animate-fade-in-up relative flex flex-col gap-4 overflow-hidden rounded-2xl border shadow-sm motion-reduce:animate-none md:flex-row md:items-center md:justify-between md:gap-5">
       {/* Background layer */}
       {hasCover ? (
         <>
@@ -208,7 +209,7 @@ export function StoreHero({ merchant, isManager }: StoreHeroProps) {
               variant="outline"
               size="sm"
               className={cn(
-                "h-9 backdrop-blur",
+                "hidden h-9 backdrop-blur md:inline-flex",
                 hasCover
                   ? "border-white/30 bg-black/40 text-white hover:bg-black/60 hover:text-white"
                   : "bg-background/60",
@@ -221,12 +222,12 @@ export function StoreHero({ merchant, isManager }: StoreHeroProps) {
       )}
 
       {/* Content layer */}
-      <div className="relative z-10 flex items-center gap-5 p-8 md:p-10">
+      <div className="relative z-10 flex items-center gap-3 p-5 md:gap-5 md:p-10">
         {/* Logo tile — hover to edit */}
-        <div className="group/logo relative h-20 w-20 shrink-0 md:h-24 md:w-24">
+        <div className="group/logo relative h-14 w-14 shrink-0 md:h-24 md:w-24">
           <div
             className={cn(
-              "z-50 flex h-20 w-20 items-center justify-center overflow-hidden rounded-lg text-2xl font-semibold ring-1 md:h-24 md:w-24",
+              "z-50 flex h-14 w-14 items-center justify-center overflow-hidden rounded-lg text-lg font-semibold ring-1 md:h-24 md:w-24 md:text-2xl",
               "from-secondary/40 to-secondary/30 text-primary ring-primary/20 bg-gradient-to-br",
             )}
           >
@@ -301,25 +302,24 @@ export function StoreHero({ merchant, isManager }: StoreHeroProps) {
           <div className="flex items-center gap-2">
             <h1
               className={cn(
-                "truncate text-3xl font-semibold tracking-tight md:text-4xl",
+                "truncate text-2xl font-semibold tracking-tight md:text-4xl",
                 hasCover ? "text-white" : "text-foreground",
               )}
             >
               {merchant.name}
             </h1>
             {country && (
-              <span
+              <CountryFlag
+                code={merchant.country_code as never}
+                size={28}
                 title={country.name}
-                className="text-3xl leading-none"
-                aria-label={country.name}
-              >
-                {country.flag}
-              </span>
+                className="shrink-0 rounded-sm"
+              />
             )}
           </div>
           <div
             className={cn(
-              "mt-2 flex flex-wrap items-center gap-2 text-sm",
+              "mt-2 flex flex-wrap items-center gap-2 text-xs md:text-sm",
               hasCover ? "text-white/80" : "text-muted-foreground",
             )}
           >
