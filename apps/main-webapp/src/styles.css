@@ -3,12 +3,44 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --radius: 0.625rem;
-  --maroon: #800000;
+/* Inter — self-hosted brand font (open-source substitute for Airbnb Cereal VF).
+ * Four weights cover the entire type scale: 400 body, 500 buttons/captions,
+ * 600 titles, 700 display. Variable-font variant is not shipped by
+ * @fontsource/inter v5, so we declare each weight as its own face. */
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/assets/fonts/inter-latin-400-normal.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url("/assets/fonts/inter-latin-500-normal.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url("/assets/fonts/inter-latin-600-normal.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url("/assets/fonts/inter-latin-700-normal.woff2") format("woff2");
 }
 
-/* Light theme (default) */
+:root {
+  --radius: 0.625rem;
+}
+
+/* Light theme (default) — teal brand voltage */
 [data-theme="light"] {
   --background: 0 0% 100%;
   --foreground: 0 0% 15%;
@@ -16,19 +48,20 @@
   --card-foreground: 0 0% 15%;
   --popover: 0 0% 100%;
   --popover-foreground: 0 0% 15%;
-  --primary: 0 0% 20%;
-  --primary-foreground: 0 0% 98%;
+  --primary: 173 80% 32%;
+  --primary-foreground: 0 0% 100%;
+  --primary-active: 173 80% 26%;
   --secondary: 0 0% 97%;
   --secondary-foreground: 0 0% 20%;
   --muted: 0 0% 97%;
   --muted-foreground: 0 0% 55%;
-  --accent: 0 0% 97%;
-  --accent-foreground: 0 0% 20%;
-  --destructive: 0 85% 60%;
-  --destructive-foreground: 0 85% 60%;
+  --accent: 173 30% 96%;
+  --accent-foreground: 173 60% 22%;
+  --destructive: 0 75% 50%;
+  --destructive-foreground: 0 0% 100%;
   --border: 0 0% 92%;
   --input: 0 0% 92%;
-  --ring: 0 0% 70%;
+  --ring: 173 80% 32%;
   --ring-offset-background: 0 0% 100%;
   --chart-1: 25 95% 53%;
   --chart-2: 184 71% 60%;
@@ -37,12 +70,12 @@
   --chart-5: 70 70% 75%;
   --sidebar: 0 0% 100%;
   --sidebar-foreground: 0 0% 15%;
-  --sidebar-primary: 0 0% 20%;
-  --sidebar-primary-foreground: 0 0% 98%;
-  --sidebar-accent: 0 0% 97%;
-  --sidebar-accent-foreground: 0 0% 20%;
+  --sidebar-primary: 173 80% 32%;
+  --sidebar-primary-foreground: 0 0% 100%;
+  --sidebar-accent: 173 30% 96%;
+  --sidebar-accent-foreground: 173 60% 22%;
   --sidebar-border: 0 0% 92%;
-  --sidebar-ring: 0 0% 70%;
+  --sidebar-ring: 173 80% 32%;
 
   /** custom styles */
   --custom-yellow-100: #f5eed2;
@@ -148,7 +181,7 @@
   --sidebar-ring: 25 70% 55%;
 }
 
-/* Slate theme */
+/* Slate theme — teal voltage, quieter for dark surfaces */
 [data-theme="slate"] {
   --background: 215 25% 15%; /* slate-900 */
   --foreground: 215 10% 98%; /* Very light text for contrast */
@@ -156,19 +189,20 @@
   --card-foreground: 215 10% 98%;
   --popover: 215 25% 17%;
   --popover-foreground: 215 10% 98%;
-  --primary: 210 70% 70%; /* Light blue for primary actions */
+  --primary: 175 70% 55%; /* lighter teal for dark bg readability */
   --primary-foreground: 215 25% 15%;
+  --primary-active: 175 70% 48%;
   --secondary: 215 20% 25%; /* Slightly lighter slate */
   --secondary-foreground: 215 10% 98%;
   --muted: 215 20% 25%;
   --muted-foreground: 215 10% 70%;
-  --accent: 210 45% 35%; /* Subtle blue accent */
-  --accent-foreground: 215 10% 98%;
+  --accent: 175 30% 22%; /* subtle teal wash for dark */
+  --accent-foreground: 175 60% 75%;
   --destructive: 0 75% 60%; /* Keep destructive consistent */
   --destructive-foreground: 215 10% 98%;
   --border: 215 20% 30%;
   --input: 215 20% 30%;
-  --ring: 210 70% 70%;
+  --ring: 175 70% 55%;
   --ring-offset-background: 215 25% 15%;
   --chart-1: 210 70% 70%;
   --chart-2: 180 65% 65%;
@@ -177,12 +211,12 @@
   --chart-5: 120 65% 60%;
   --sidebar: 215 25% 20%; /* Slightly different from main background */
   --sidebar-foreground: 215 10% 98%;
-  --sidebar-primary: 210 70% 70%;
+  --sidebar-primary: 175 70% 55%;
   --sidebar-primary-foreground: 215 25% 15%;
-  --sidebar-accent: 210 45% 35%;
-  --sidebar-accent-foreground: 215 10% 98%;
+  --sidebar-accent: 175 30% 22%;
+  --sidebar-accent-foreground: 175 60% 75%;
   --sidebar-border: 215 20% 30%;
-  --sidebar-ring: 210 70% 70%;
+  --sidebar-ring: 175 70% 55%;
 }
 
 @layer base {
@@ -191,6 +225,19 @@
   }
   body {
     @apply bg-background text-foreground;
+    font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI",
+      Roboto, "Helvetica Neue", Arial, sans-serif;
+  }
+
+  /* Tighten display headings — Inter's cap height is slightly looser than
+   * Airbnb Cereal's, so a -1.5% letter spacing and 1.15 line-height give the
+   * modest-weight headlines (600/700) more visual punch without bumping the
+   * weight past 700. */
+  h1,
+  h2,
+  h3 {
+    line-height: 1.15;
+    letter-spacing: -0.015em;
   }
 
   /* Fix for Android Chrome - solid backgrounds for modals and overlays */
