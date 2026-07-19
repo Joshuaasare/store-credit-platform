@@ -41,7 +41,7 @@ export default function Customers() {
           />
           <div
             aria-hidden
-            className="pointer-events-none absolute -bottom-20 right-24 h-40 w-40 rounded-full bg-gradient-to-br from-emerald-500/20 via-emerald-500/5 to-transparent blur-2xl"
+            className="pointer-events-none absolute -bottom-20 right-24 h-40 w-40 rounded-full bg-gradient-to-br from-primary/20 via-primary/5 to-transparent blur-2xl"
           />
           <div className="relative flex items-start gap-4">
             <div className="from-primary to-primary/70 text-primary-foreground flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br shadow-sm">

@@ -12,6 +12,18 @@ module.exports = {
   theme: {
     extend: {
       zIndex: { 2: "2", 40: "40" },
+      fontFamily: {
+        sans: [
+          "Inter",
+          "-apple-system",
+          "BlinkMacSystemFont",
+          "Segoe UI",
+          "Roboto",
+          "Helvetica Neue",
+          "Arial",
+          "sans-serif",
+        ],
+      },
       spacing: {
         13: "3.25rem",
         15: "3.75rem",
@@ -86,7 +98,6 @@ module.exports = {
           5: "hsl(var(--chart-5))",
         },
         "custom-yellow-100": "var(--custom-yellow-100)",
-        maroon: "var(--maroon)",
       },
       borderRadius: {
         lg: "var(--radius)",
