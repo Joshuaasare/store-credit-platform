@@ -157,7 +157,7 @@ Every purchase or credit event is recorded here. This is the immutable log.
 
 **Note**: This table currently does not distinguish between "purchase transactions" and "credit redemption transactions". To support the 4 rules properly, we need a `transaction_type` and `credit_amount` column here. We will augment this table with:
 
-- `transaction_type`: `purchase`, `credit_redeem`, `credit_adjustment`
+- `transaction_type`: `purchase`, `credit_redeem`, `credit_issue`
 - `credit_generated`: the calculated credit from this purchase (if any)
 - `credit_redeemed`: the credit used (if any)
 

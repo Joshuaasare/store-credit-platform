@@ -108,3 +108,58 @@ success: Type.Literal(false),
 error: Type.String(),
 details: Type.Optional(Type.Array(Type.Unknown()))
 })
+
+export type TransactionTypeValues = Static<typeof TransactionTypeValues>
+export const TransactionTypeValues = Type.Union([
+Type.Literal("purchase"),
+Type.Literal("credit_issue"),
+Type.Literal("credit_redeem")
+])
+
+export type BaseCustomer = Static<typeof BaseCustomer>
+export const BaseCustomer = Type.Object({
+id: Type.Number(),
+phone: Type.Union([
+Type.String(),
+Type.Null()
+]),
+unique_id: Type.Union([
+Type.String(),
+Type.Null()
+]),
+user_id: Type.Union([
+Type.String(),
+Type.Null()
+]),
+created_at: Type.String(),
+deleted_at: Type.Union([
+Type.String(),
+Type.Null()
+])
+})
+
+export type BaseCustomerTransaction = Static<typeof BaseCustomerTransaction>
+export const BaseCustomerTransaction = Type.Object({
+id: Type.Number(),
+customer_id: Type.Number(),
+branch_id: Type.Number(),
+recorded_by_user_id: Type.Union([
+Type.String(),
+Type.Null()
+]),
+amount: Type.Number(),
+transaction_date: Type.Number(),
+transaction_type: TransactionTypeValues,
+created_at: Type.String()
+})
+
+export type BaseUserProfile = Static<typeof BaseUserProfile>
+export const BaseUserProfile = Type.Object({
+id: Type.String(),
+surname: Type.String(),
+other_names: Type.Union([
+Type.String(),
+Type.Null()
+]),
+phone: Type.String()
+})

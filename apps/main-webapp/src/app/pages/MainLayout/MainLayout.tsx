@@ -1,18 +1,22 @@
-import { Store, Wallet, UserRound } from "lucide-react";
+import { useEffect } from "react";
+import { Store, Wallet, UserRound, Users } from "lucide-react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { cn, useIsMobile, Toaster } from "@store-credit-platform/web-components";
 import { useTheme } from "../../shared/providers/ThemeProvider";
 import { ThemeToggle } from "../../components/ThemeToggle/ThemeToggle";
+import { useStoreStore } from "@shared/stores/storeStore";
 
 export const routes = {
   MY_STORE: "/",
   CREDITS: "/credits",
+  CUSTOMERS: "/customers",
   PROFILE: "/profile",
 };
 
 const navItems = [
   { title: "My Store", url: routes.MY_STORE, icon: Store },
   { title: "Credits", url: routes.CREDITS, icon: Wallet },
+  { title: "Customers", url: routes.CUSTOMERS, icon: Users },
   { title: "Profile", url: routes.PROFILE, icon: UserRound },
 ];
 
@@ -21,6 +25,14 @@ export default function MainLayout() {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
   const { theme } = useTheme();
+  const ensureStoreLoaded = useStoreStore((s) => s.ensureStoreLoaded);
+
+  // Bootstrap shared store data once per authenticated session so every
+  // child route (My Store, Customers, etc.) sees populated merchant + branches
+  // regardless of which route is the entry point.
+  useEffect(() => {
+    void ensureStoreLoaded();
+  }, [ensureStoreLoaded]);
 
   const isLight = theme === "light";
   // "/" should match only when exactly on the index route; sub-paths fall back to no match.

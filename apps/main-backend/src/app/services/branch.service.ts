@@ -41,12 +41,22 @@ export class BranchService {
           .eq("branch_id", b.id)
           .is("deleted_at", null);
 
-        // customer_count — current branch_customer rows
-        const { count: customerCount } = await supabaseAdmin
-          .from("branch_customer")
-          .select("id", { count: "exact", head: true })
-          .eq("branch_id", b.id)
-          .is("deleted_at", null);
+        // customer_count — distinct customers who have transacted at this branch
+        // (server-side aggregate via RPC; the branch_customer junction is gone).
+        const { data: custCountRes, error: custCountErr } = await supabaseAdmin.rpc(
+          "get_distinct_customer_count",
+          {
+            p_merchant_id: merchantId,
+            p_branch_id: b.id,
+          },
+        );
+        if (custCountErr) {
+          throw new Error(
+            `Failed to load branch customer count: ${custCountErr.message}`,
+          );
+        }
+        const customerCount =
+          custCountRes == null ? 0 : Number(custCountRes as unknown);
 
         // credit_issued_this_month — sum of credit_generated this month
         const { data: issuedRows } = await supabaseAdmin

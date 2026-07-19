@@ -18,6 +18,8 @@ export interface UpdateMerchantRequest {
   phone?: string;
   country_code?: string;
   slug?: string | null;
+  logo_url?: string | null;
+  cover_photo_url?: string | null;
 }
 
 export interface MerchantMutationResponse {

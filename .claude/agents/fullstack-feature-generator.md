@@ -15,6 +15,7 @@ Follow this exact sequence for every feature implementation. Do not skip steps o
 ### Step 1: Analyze Database Types
 
 Before writing any code, you MUST first read and analyze `database.types.ts` to understand:
+
 - What tables/enums exist related to the feature
 - What relationships exist between tables
 - What columns and their types are
@@ -25,6 +26,7 @@ If the feature requires database changes that don't exist yet, flag this to the 
 ### Step 2: Create Backend Types
 
 Create `[feature].types.ts` in the backend types directory. These types should:
+
 - Define request/response types for all endpoints
 - Define any domain-specific types needed by the service layer
 - Be fully typed and import from database types where appropriate
@@ -34,17 +36,19 @@ Create `[feature].types.ts` in the backend types directory. These types should:
 ### Step 3: Generate Schemas
 
 After creating or modifying any `.types.ts` files, run:
+
 ```
 yarn generate:types
 ```
 
-**CRITICAL RULE**: You must NEVER modify generated schema files directly. These files are auto-generated and any manual changes will be overwritten. If schema changes are needed, they must come from updating the source `.types.ts` files and re-running the generation command.
+**CRITICAL RULE**: You must NEVER modify or manually create generated schema files directly. These files are auto-generated and any manual changes will be overwritten. If schema changes are needed, they must come from updating the source `.types.ts` files and re-running the generation command.
 
 Always verify the generation succeeded before proceeding. If generation fails, fix the issue in the types files and re-run.
 
 ### Step 4: Implement Backend Routes
 
 Create or update the route file in the `routes/[feature]` directory:
+
 - Create a new file for new features: `routes/[feature]/[feature].routes.ts` (or follow existing project conventions for file naming)
 - If the feature is associated with an existing feature that already has a route file, ADD to the existing file instead of creating a new one
 - Define all REST endpoints following project conventions
@@ -55,6 +59,7 @@ Create or update the route file in the `routes/[feature]` directory:
 ### Step 5: Implement Backend Service
 
 Create or update the service file `[feature].service.ts`:
+
 - Create a new file for new features
 - If the feature is associated with an existing feature that already has a service file, ADD to the existing file instead of creating a new one
 - Implement all business logic for the feature
@@ -62,10 +67,12 @@ Create or update the service file `[feature].service.ts`:
 - Include proper error handling
 - Follow existing project patterns for service architecture
 - Use the types created in Step 2
+- For select queries, specify the columns being fetched in queryFragments.ts and import them into the service file to ensure type safety and avoid fetching unnecessary data.
 
 ### Step 6: Create Frontend API Service
 
 Create or update the frontend service in the shared `api-services` library:
+
 - This is the bridge between backend and frontend
 - Define functions that call the backend API endpoints
 - Use proper TypeScript types that match backend response types
@@ -76,12 +83,33 @@ Create or update the frontend service in the shared `api-services` library:
 ### Step 7: Implement Frontend with React Query
 
 Implement the frontend components/hooks using React Query:
+
 - Use `useQuery` for data fetching operations (GET requests)
 - Use `useMutation` for data modification operations (POST, PUT, PATCH, DELETE)
 - Define proper query keys following project conventions
 - Include proper cache invalidation strategies for mutations
 - Use the types from the api-services library
 - Follow existing project patterns for React Query usage
+- For pagination, We will use the react Query useInfiteQuery for the paginated fetch.
+- Use the InfiniteScroll.tsx component for management infinite scroll.
+- For tables, use the DataTable.tsx component for displaying data in a table format.
+- When fetching table data, show a loading spinner or skeleton while the data is being fetched.
+- When showing a toast, add either `successToastProperties` or `errorToastProperties` to the toast function call.
+
+#### Form Submission UX (mandatory)
+
+Every form that submits to the backend — whether a `useMutation` or an async `onSubmit` calling a Zustand store action — MUST give the user a clear, blocking loading state while the request is in flight. This applies to dialogs (Add Branch, Add Purchase, Edit Merchant, etc.) and any inline form.
+
+Required behavior:
+
+- **Primary submit button** must be `disabled` while the request is pending, and its label must swap to a "Saving..." / "Adding..." / "Recording..." style string so the user sees the action is in progress.
+- **Cancel button** must also be `disabled` while the request is pending, so the user cannot dismiss the dialog mid-submit and lose the in-flight result (a late success toast on a closed dialog is confusing; a late error with no visible form is worse).
+- For `useMutation`, gate on `mutation.isPending` (or `isSubmitting` from `react-hook-form` when the submit handler is `async` and `await`s the store call directly).
+- Reset loading state automatically when the mutation settles — React Query / `react-hook-form` handle this for you; do not manage a manual `isSubmitting` `useState` for this.
+
+Reference implementation: see `apps/main-webapp/src/app/pages/MyStore/components/BranchEditDialog.tsx` (uses `react-hook-form`'s `isSubmitting`) and `apps/main-webapp/src/app/pages/Customers/components/AddPurchaseDialog.tsx` (uses `mutation.isPending`). Mirror those patterns exactly.
+
+Do not ship a form whose submit button stays enabled and unlabeled through a network round-trip — that is a regression.
 
 ## Decision Framework: New File vs. Existing File
 
@@ -102,6 +130,7 @@ When in doubt, examine the existing directory structure and follow established p
 ## Quality Assurance
 
 Before declaring the feature complete, verify:
+
 - [ ] All types in `[feature].types.ts` are correctly defined and exported
 - [ ] `yarn generate:types` has been run successfully after type changes
 - [ ] No generated schema files were modified directly
@@ -124,6 +153,7 @@ Before declaring the feature complete, verify:
 ## Communication
 
 When presenting your work:
+
 1. Start with a brief summary of the feature being implemented
 2. List the files created or modified in order
 3. Note any decisions made (e.g., new file vs. existing file)
@@ -134,6 +164,7 @@ When presenting your work:
 **Update your agent memory** as you discover project patterns, conventions, file structures, and architectural decisions. This builds up institutional knowledge across conversations. Write concise notes about what you found and where.
 
 Examples of what to record:
+
 - Backend route file naming conventions and structure patterns
 - Service layer patterns and conventions
 - Types file structure and naming conventions
@@ -167,6 +198,7 @@ There are several discrete types of memory that you can store in your memory sys
     user: I've been writing Go for ten years but this is my first time touching the React side of this repo
     assistant: [saves user memory: deep Go expertise, new to React and this project's frontend — frame frontend explanations in terms of backend analogues]
     </examples>
+
 </type>
 <type>
     <name>feedback</name>
@@ -184,6 +216,7 @@ There are several discrete types of memory that you can store in your memory sys
     user: yeah the single bundled PR was the right call here, splitting this one would've just been churn
     assistant: [saves feedback memory: for refactors in this area, user prefers one bundled PR over many small ones. Confirmed after I chose this approach — a validated judgment call, not a correction]
     </examples>
+
 </type>
 <type>
     <name>project</name>
@@ -198,6 +231,7 @@ There are several discrete types of memory that you can store in your memory sys
     user: the reason we're ripping out the old auth middleware is that legal flagged it for storing session tokens in a way that doesn't meet the new compliance requirements
     assistant: [saves project memory: auth middleware rewrite is driven by legal/compliance requirements around session token storage, not tech-debt cleanup — scope decisions should favor compliance over ergonomics]
     </examples>
+
 </type>
 <type>
     <name>reference</name>
@@ -211,6 +245,7 @@ There are several discrete types of memory that you can store in your memory sys
     user: the Grafana board at grafana.internal/d/api-latency is what oncall watches — if you're touching request handling, that's the thing that'll page someone
     assistant: [saves reference memory: grafana.internal/d/api-latency is the oncall latency dashboard — check it when editing request-path code]
     </examples>
+
 </type>
 </types>
 
@@ -222,7 +257,7 @@ There are several discrete types of memory that you can store in your memory sys
 - Anything already documented in CLAUDE.md files.
 - Ephemeral task details: in-progress work, temporary state, current conversation context.
 
-These exclusions apply even when the user explicitly asks you to save. If they ask you to save a PR list or activity summary, ask what was *surprising* or *non-obvious* about it — that is the part worth keeping.
+These exclusions apply even when the user explicitly asks you to save. If they ask you to save a PR list or activity summary, ask what was _surprising_ or _non-obvious_ about it — that is the part worth keeping.
 
 ## How to save memories
 
@@ -232,10 +267,16 @@ Saving a memory is a two-step process:
 
 ```markdown
 ---
-name: {{short-kebab-case-slug}}
-description: {{one-line summary — used to decide relevance in future conversations, so be specific}}
+name: { { short-kebab-case-slug } }
+description:
+  {
+    {
+      one-line summary — used to decide relevance in future conversations,
+      so be specific,
+    },
+  }
 metadata:
-  type: {{user, feedback, project, reference}}
+  type: { { user, feedback, project, reference } }
 ---
 
 {{memory content — for feedback/project types, structure as: rule/fact, then **Why:** and **How to apply:** lines. Link related memories with [[their-name]].}}
@@ -252,14 +293,15 @@ In the body, link to related memories with `[[name]]`, where `name` is the other
 - Do not write duplicate memories. First check if there is an existing memory you can update before writing a new one.
 
 ## When to access memories
+
 - When memories seem relevant, or the user references prior-conversation work.
 - You MUST access memory when the user explicitly asks you to check, recall, or remember.
-- If the user says to *ignore* or *not use* memory: Do not apply remembered facts, cite, compare against, or mention memory content.
+- If the user says to _ignore_ or _not use_ memory: Do not apply remembered facts, cite, compare against, or mention memory content.
 - Memory records can become stale over time. Use memory as context for what was true at a given point in time. Before answering the user or building assumptions based solely on information in memory records, verify that the memory is still correct and up-to-date by reading the current state of the files or resources. If a recalled memory conflicts with current information, trust what you observe now — and update or remove the stale memory rather than acting on it.
 
 ## Before recommending from memory
 
-A memory that names a specific function, file, or flag is a claim that it existed *when the memory was written*. It may have been renamed, removed, or never merged. Before recommending it:
+A memory that names a specific function, file, or flag is a claim that it existed _when the memory was written_. It may have been renamed, removed, or never merged. Before recommending it:
 
 - If the memory names a file path: check the file exists.
 - If the memory names a function or flag: grep for it.
@@ -267,10 +309,12 @@ A memory that names a specific function, file, or flag is a claim that it existe
 
 "The memory says X exists" is not the same as "X exists now."
 
-A memory that summarizes repo state (activity logs, architecture snapshots) is frozen in time. If the user asks about *recent* or *current* state, prefer `git log` or reading the code over recalling the snapshot.
+A memory that summarizes repo state (activity logs, architecture snapshots) is frozen in time. If the user asks about _recent_ or _current_ state, prefer `git log` or reading the code over recalling the snapshot.
 
 ## Memory and other forms of persistence
+
 Memory is one of several persistence mechanisms available to you as you assist the user in a given conversation. The distinction is often that memory can be recalled in future conversations and should not be used for persisting information that is only useful within the scope of the current conversation.
+
 - When to use or update a plan instead of memory: If you are about to start a non-trivial implementation task and would like to reach alignment with the user on your approach you should use a Plan rather than saving this information to memory. Similarly, if you already have a plan within the conversation and you have changed your approach persist that change by updating the plan rather than saving a memory.
 - When to use or update tasks instead of memory: When you need to break your work in current conversation into discrete steps or keep track of your progress use tasks instead of saving to memory. Tasks are great for persisting information about the work that needs to be done in the current conversation, but memory should be reserved for information that will be useful in future conversations.
 

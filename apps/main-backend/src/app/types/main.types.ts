@@ -41,6 +41,8 @@ export interface BaseMerchant {
   phone: string;
   country_code: string;
   slug: string | null;
+  logo_url: string | null;
+  cover_photo_url: string | null;
   is_active: boolean;
   created_at: string;
 }
@@ -61,4 +63,39 @@ export interface ApiErrorResponse {
   success: false;
   error: string;
   details?: unknown[];
+}
+
+export type TransactionTypeValues =
+  | "purchase"
+  | "credit_issue"
+  | "credit_redeem";
+
+export interface BaseCustomer {
+  id: number;
+  phone: string | null;
+  unique_id: string | null;
+  user_id: string | null;
+  created_at: string;
+  deleted_at: string | null;
+}
+
+export interface BaseCustomerTransaction {
+  id: number;
+  customer_id: number;
+  branch_id: number;
+  recorded_by_user_id: string | null;
+  amount: number;
+  transaction_date: number;
+  transaction_type: TransactionTypeValues;
+  created_at: string;
+}
+
+// Slim profile projection of users for customer / recorded-by joins.
+// Deliberately excludes otp / otp_expires_at / access_granted from BASE_USER
+// so those sensitive fields are not shipped over the transactions API.
+export interface BaseUserProfile {
+  id: string;
+  surname: string;
+  other_names: string | null;
+  phone: string;
 }

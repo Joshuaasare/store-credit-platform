@@ -1,5 +1,5 @@
 import { FastifyInstance } from "fastify";
-import { requireAuth, AuthenticatedRequest } from "../../middleware/auth.middleware";
+import { requireAuth } from "../../middleware/auth.middleware";
 import { storageService } from "../../services/storage.service";
 import {
   CreateUploadUrlRequest,
@@ -30,9 +30,9 @@ export default async function (fastify: FastifyInstance) {
         400: UploadUrlApiResponse,
       },
     },
-    handler: async (request: AuthenticatedRequest, reply) => {
+    handler: async (request, reply) => {
       try {
-        const body = request.body as CreateUploadUrlRequest;
+        const body = request.body;
         const result = await storageService.createUploadUrl({
           bucket: body.bucket,
           folder: body.folder,
@@ -44,7 +44,9 @@ export default async function (fastify: FastifyInstance) {
         return { success: true, data: result };
       } catch (error) {
         const message =
-          error instanceof Error ? error.message : "Failed to create upload URL";
+          error instanceof Error
+            ? error.message
+            : "Failed to create upload URL";
         request.log.error(error, "POST /storage/upload-url failed");
         reply.status(400);
         return { success: false, error: message };
@@ -69,9 +71,9 @@ export default async function (fastify: FastifyInstance) {
         400: DownloadUrlApiResponse,
       },
     },
-    handler: async (request: AuthenticatedRequest, reply) => {
+    handler: async (request, reply) => {
       try {
-        const body = request.body as CreateDownloadUrlRequest;
+        const body = request.body;
         const url = await storageService.createDownloadUrl(
           body.bucket,
           body.path,
@@ -107,9 +109,9 @@ export default async function (fastify: FastifyInstance) {
         400: DeleteStorageApiResponse,
       },
     },
-    handler: async (request: AuthenticatedRequest, reply) => {
+    handler: async (request, reply) => {
       try {
-        const body = request.body as DeleteStorageRequest;
+        const body = request.body;
         let deleted = false;
         if (body.paths && body.paths.length > 0) {
           await storageService.deleteFiles(body.bucket, body.paths);
@@ -151,8 +153,8 @@ export default async function (fastify: FastifyInstance) {
         401: PublicUrlApiResponse,
       },
     },
-    handler: async (request: AuthenticatedRequest) => {
-      const { bucket, path } = request.query as { bucket: string; path: string };
+    handler: async (request) => {
+      const { bucket, path } = request.query;
       const publicUrl = storageService.getPublicUrl(bucket, path);
       return { success: true as const, data: { publicUrl } };
     },

@@ -2,10 +2,7 @@ import crypto from "crypto";
 import { FastifyInstance, FastifyReply } from "fastify";
 import { AuthService } from "../../services/auth.service";
 import { TokenService } from "../../services/token.service";
-import {
-  requireAuth,
-  AuthenticatedRequest,
-} from "../../middleware/auth.middleware";
+import { requireAuth } from "../../middleware/auth.middleware";
 import {
   SendOtpRequest,
   VerifyOtpRequest,
@@ -242,7 +239,7 @@ export default async function (fastify: FastifyInstance) {
         401: SessionListApiResponse,
       },
     },
-    handler: async (request: AuthenticatedRequest, reply) => {
+    handler: async (request, reply) => {
       try {
         const userId = request.user!.sub;
         const currentTokenHash = getRefreshTokenHashFromCookie(request);
@@ -277,7 +274,7 @@ export default async function (fastify: FastifyInstance) {
         400: SessionRevokeApiResponse,
       },
     },
-    handler: async (request: AuthenticatedRequest, reply) => {
+    handler: async (request, reply) => {
       try {
         const userId = request.user!.sub;
         const sessionId = (request.params as { id: string }).id;
@@ -313,7 +310,7 @@ export default async function (fastify: FastifyInstance) {
         401: GetCurrentUserApiResponse,
       },
     },
-    handler: async (request: AuthenticatedRequest, reply) => {
+    handler: async (request, reply) => {
       try {
         const userId = request.user!.sub;
         const userData = await authService.getCurrentUser(userId);

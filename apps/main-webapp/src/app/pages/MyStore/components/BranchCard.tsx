@@ -11,19 +11,13 @@ import { formatDistanceToNow } from "date-fns";
 import { useState } from "react";
 import { BranchWithAggregates } from "@shared/types/api.types";
 import { getCountryByCode } from "@shared/utils/countries";
+import { formatGHSCompact } from "@shared/utils/format";
 import { BranchEditDialog } from "./BranchEditDialog";
 
 interface BranchCardProps {
   branch: BranchWithAggregates;
   isManager: boolean;
   onOpenDetail: () => void;
-}
-
-function formatCedi(n: number): string {
-  return `GH₵${n.toLocaleString(undefined, {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 2,
-  })}`;
 }
 
 export function BranchCard({ branch, isManager, onOpenDetail }: BranchCardProps) {
@@ -94,7 +88,7 @@ export function BranchCard({ branch, isManager, onOpenDetail }: BranchCardProps)
         {/* hero readout */}
         <div className="mt-6">
           <div className="text-[28px] font-semibold leading-none tracking-tight tabular-nums">
-            {formatCedi(branch.credit_issued_this_month)}
+            {formatGHSCompact(branch.credit_issued_this_month)}
           </div>
           <div className="text-muted-foreground mt-1.5 text-xs">credit issued this month</div>
         </div>
