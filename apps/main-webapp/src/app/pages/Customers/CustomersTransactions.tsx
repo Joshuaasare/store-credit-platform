@@ -23,6 +23,7 @@ import {
 } from "./components/CustomersFilters";
 import { AddPurchaseDialog } from "./components/AddPurchaseDialog";
 import { TransactionDetailDialog } from "./components/TransactionDetailDialog";
+import { formatDisplayNumber } from "@shared/utils/ui.utils";
 
 const LIMIT = 20;
 
@@ -124,7 +125,7 @@ export default function CustomersTransactions() {
         cell: ({ row }) => {
           const r = row.original;
           const name = customerDisplayName(r);
-          const phone = r.customer?.phone ?? "";
+          const phone = formatDisplayNumber(r.customer?.phone) ?? "";
           return (
             <div className="min-w-0">
               <div className="truncate font-medium">{name}</div>

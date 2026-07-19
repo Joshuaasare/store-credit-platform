@@ -14,6 +14,7 @@ import {
   CustomersFilters,
   CustomersFiltersValue,
 } from "./components/CustomersFilters";
+import { formatDisplayNumber } from "@shared/utils/ui.utils";
 
 const LIMIT = 20;
 
@@ -115,7 +116,7 @@ export default function CustomersLeaderboard() {
               <div className="truncate font-medium">{name}</div>
               {r.phone && (
                 <div className="text-muted-foreground truncate text-xs">
-                  {r.phone}
+                  {formatDisplayNumber(r.phone)}
                 </div>
               )}
             </div>
