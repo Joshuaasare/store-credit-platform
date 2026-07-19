@@ -29,6 +29,7 @@ import {
   errorToastProperties,
   successToastProperties,
 } from "@shared/utils/misc.utils";
+import { Loader2 } from "lucide-react";
 
 const purchaseSchema = z.object({
   phone: z
@@ -189,7 +190,10 @@ export function AddPurchaseDialog({
               Cancel
             </Button>
             <Button type="submit" disabled={mutation.isPending}>
-              {mutation.isPending ? "Saving..." : "Record purchase"}
+              {mutation.isPending && (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              )}
+              Record purchase
             </Button>
           </DialogFooter>
         </form>

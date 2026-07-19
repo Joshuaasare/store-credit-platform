@@ -25,6 +25,8 @@ import {
   errorToastProperties,
   successToastProperties,
 } from "@shared/utils/misc.utils";
+import { slugify } from "@shared/utils/string.utils";
+import { Loader2 } from "lucide-react";
 
 const merchantSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -39,16 +41,6 @@ type MerchantFormValues = z.infer<typeof merchantSchema>;
 interface MerchantEditDialogProps {
   merchant: MerchantWithStats;
   children?: React.ReactNode;
-}
-
-function slugify(value: string): string {
-  return value
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9\s-]/g, "")
-    .replace(/\s+/g, "-")
-    .replace(/-+/g, "-")
-    .slice(0, 60);
 }
 
 export function MerchantEditDialog({
@@ -203,7 +195,8 @@ export function MerchantEditDialog({
               Cancel
             </Button>
             <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? "Saving..." : "Save changes"}
+              {isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
+              Save changes
             </Button>
           </DialogFooter>
         </form>

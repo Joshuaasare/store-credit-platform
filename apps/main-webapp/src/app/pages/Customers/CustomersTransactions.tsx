@@ -14,6 +14,7 @@ import InfiniteScroll from "../../components/InfiniteScroll/InfiniteScroll";
 import { customerService } from "@store-credit-platform/api-services";
 import { useStoreStore } from "@shared/stores/storeStore";
 import { CustomerTransactions } from "@shared/types/api.types";
+import { startOfYearEpoch } from "@shared/utils/date.utils";
 import { formatEpochDate, formatGHS } from "@shared/utils/format";
 import {
   CustomersFilters,
@@ -23,16 +24,6 @@ import { AddPurchaseDialog } from "./components/AddPurchaseDialog";
 import { TransactionDetailDialog } from "./components/TransactionDetailDialog";
 
 const LIMIT = 20;
-
-function thisYearRange(): { start: number; end: null } {
-  const now = new Date();
-  return {
-    start: Math.floor(new Date(now.getFullYear(), 0, 1).getTime() / 1000),
-    // end=null → "no upper bound". Keeps newly-created transactions in-window
-    // so they appear immediately on refetch after a purchase is added.
-    end: null,
-  };
-}
 
 const TYPE_META: Record<
   CustomerTransactions["transaction_type"],
@@ -60,22 +51,21 @@ const AMOUNT_COLOR: Record<CustomerTransactions["transaction_type"], string> = {
 
 function customerDisplayName(r: CustomerTransactions): string {
   const u = r.customer?.users;
-  if (!u) return "Unnamed customer";
+  if (!u) return "";
   const name = `${u.surname}${u.other_names ? " " + u.other_names : ""}`.trim();
-  return name || "Unnamed customer";
+  return name || "";
 }
 
 export default function CustomersTransactions() {
   const { branches } = useStoreStore();
-  const [filters, setFilters] = useState<CustomersFiltersValue>(() => {
-    const yr = thisYearRange();
-    return {
-      branchId: null,
-      datePreset: "this_year",
-      start: yr.start,
-      end: yr.end,
-    };
-  });
+  const [filters, setFilters] = useState<CustomersFiltersValue>(() => ({
+    branchId: null,
+    datePreset: "this_year",
+    start: startOfYearEpoch(),
+    // end=null → "no upper bound". Keeps newly-created transactions in-window
+    // so they appear immediately on refetch after a purchase is added.
+    end: null,
+  }));
   const [addOpen, setAddOpen] = useState(false);
   const [detailRow, setDetailRow] = useState<CustomerTransactions | null>(null);
 

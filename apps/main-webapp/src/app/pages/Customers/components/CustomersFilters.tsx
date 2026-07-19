@@ -17,6 +17,11 @@ import {
 } from "@store-credit-platform/web-components";
 import { BranchWithAggregates } from "@shared/types/api.types";
 import { LeaderboardSort } from "@shared/types/api.types";
+import {
+  fromEpochSeconds,
+  startOfYearEpoch,
+  toEpochSeconds,
+} from "@shared/utils/date.utils";
 
 export type DatePreset = "this_year" | "custom" | "all";
 
@@ -47,16 +52,6 @@ const DATE_PRESETS: { value: DatePreset; label: string }[] = [
   { value: "all", label: "All" },
   { value: "custom", label: "Custom" },
 ];
-
-function epochFromDate(d: Date | undefined): number | null {
-  if (!d) return null;
-  return Math.floor(d.getTime() / 1000);
-}
-
-function dateFromEpoch(epoch: number | null): Date | undefined {
-  if (!epoch) return undefined;
-  return new Date(epoch * 1000);
-}
 
 function startOfMonth(d: Date): Date {
   return new Date(d.getFullYear(), d.getMonth(), 1);
@@ -105,15 +100,15 @@ export function CustomersFilters({
 }: CustomersFiltersProps) {
   const [customOpen, setCustomOpen] = useState(false);
   const [customRange, setCustomRange] = useState<DateRange | undefined>(() => ({
-    from: dateFromEpoch(value.start),
-    to: dateFromEpoch(value.end),
+    from: fromEpochSeconds(value.start),
+    to: fromEpochSeconds(value.end),
   }));
   const [fromMonth, setFromMonth] = useState<Date>(() => {
-    const f = dateFromEpoch(value.start) ?? new Date();
+    const f = fromEpochSeconds(value.start) ?? new Date();
     return startOfMonth(f);
   });
   const [toMonth, setToMonth] = useState<Date>(() => {
-    const t = dateFromEpoch(value.end);
+    const t = fromEpochSeconds(value.end);
     if (t) return startOfMonth(t);
     const d = new Date();
     return startOfMonth(new Date(d.getFullYear(), d.getMonth() + 1, 1));
@@ -137,8 +132,8 @@ export function CustomersFilters({
     onChange({
       ...value,
       datePreset: "custom",
-      start: epochFromDate(from),
-      end: epochFromDate(to),
+      start: from ? toEpochSeconds(from) : null,
+      end: to ? toEpochSeconds(to) : null,
     });
     setCustomOpen(false);
   };
@@ -150,11 +145,12 @@ export function CustomersFilters({
       // the preset is applied still fall in-window and appear immediately on
       // refetch — otherwise a freshly-added purchase would be filtered out
       // until the user manually re-applies the filter.
-      const now = new Date();
-      const start = Math.floor(
-        new Date(now.getFullYear(), 0, 1).getTime() / 1000,
-      );
-      onChange({ ...value, datePreset: preset, start, end: null });
+      onChange({
+        ...value,
+        datePreset: preset,
+        start: startOfYearEpoch(),
+        end: null,
+      });
     } else if (preset === "all") {
       onChange({ ...value, datePreset: preset, start: null, end: null });
     } else {
@@ -163,8 +159,8 @@ export function CustomersFilters({
       // The actual start/end update when the user applies a range; if they
       // cancel, datePreset remains "custom" with the previous range.
       setCustomRange({
-        from: dateFromEpoch(value.start),
-        to: dateFromEpoch(value.end),
+        from: fromEpochSeconds(value.start),
+        to: fromEpochSeconds(value.end),
       });
       if (value.datePreset !== "custom") {
         onChange({ ...value, datePreset: "custom" });
@@ -235,8 +231,8 @@ export function CustomersFilters({
                   onOpenChange={(open) => {
                     setCustomOpen(open);
                     if (open) {
-                      const f = dateFromEpoch(value.start);
-                      const t = dateFromEpoch(value.end);
+                      const f = fromEpochSeconds(value.start);
+                      const t = fromEpochSeconds(value.end);
                       setCustomRange({ from: f, to: t });
                       setFromMonth(startOfMonth(f ?? new Date()));
                       setToMonth(

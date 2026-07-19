@@ -23,6 +23,7 @@ import {
   errorToastProperties,
   successToastProperties,
 } from "@shared/utils/misc.utils";
+import { slugify } from "@shared/utils/string.utils";
 
 const STORE_ASSETS_BUCKET = "store-assets";
 const storage = createStorageService();
@@ -104,18 +105,6 @@ interface StoreHeroProps {
   isManager: boolean;
 }
 
-function slugifyName(value: string): string {
-  return (
-    value
-      .toLowerCase()
-      .trim()
-      .replace(/[^a-z0-9\s-]/g, "")
-      .replace(/\s+/g, "-")
-      .replace(/-+/g, "-")
-      .slice(0, 60) || "store"
-  );
-}
-
 export function StoreHero({ merchant, isManager }: StoreHeroProps) {
   const country = getCountryByCode(merchant.country_code as any);
   const initials = merchant.name
@@ -127,7 +116,7 @@ export function StoreHero({ merchant, isManager }: StoreHeroProps) {
   const hasCover = !!merchant.cover_photo_url;
   const hasLogo = !!merchant.logo_url;
 
-  const merchantFolder = `merchant-${slugifyName(merchant.name)}`;
+  const merchantFolder = `merchant-${slugify(merchant.name, "store")}`;
   const logo = useStoreImageUpload(
     merchant.id,
     merchantFolder,

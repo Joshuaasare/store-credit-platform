@@ -5,6 +5,8 @@
  * — produces "GH₵1,234.50". Use for any customer-facing cedi amount.
  */
 
+import { fromEpochSeconds } from "./date.utils";
+
 const cediFormatter = new Intl.NumberFormat("en-GH", {
   style: "currency",
   currency: "GHS",
@@ -32,8 +34,9 @@ export function formatGHSCompact(amount: number): string {
  * Format a Unix epoch (seconds) as a readable date string.
  */
 export function formatEpochDate(epochSeconds: number): string {
-  if (!epochSeconds) return "—";
-  return new Date(epochSeconds * 1000).toLocaleDateString(undefined, {
+  const d = fromEpochSeconds(epochSeconds);
+  if (!d) return "—";
+  return d.toLocaleDateString(undefined, {
     year: "numeric",
     month: "short",
     day: "numeric",
@@ -44,8 +47,9 @@ export function formatEpochDate(epochSeconds: number): string {
  * Format a Unix epoch (seconds) as a readable date + time string.
  */
 export function formatEpochDateTime(epochSeconds: number): string {
-  if (!epochSeconds) return "—";
-  return new Date(epochSeconds * 1000).toLocaleString(undefined, {
+  const d = fromEpochSeconds(epochSeconds);
+  if (!d) return "—";
+  return d.toLocaleString(undefined, {
     year: "numeric",
     month: "short",
     day: "numeric",

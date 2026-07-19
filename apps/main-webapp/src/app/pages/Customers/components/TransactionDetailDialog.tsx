@@ -31,8 +31,7 @@ const TYPE_META: Record<
   },
   credit_issue: {
     label: "Credit issued",
-    chip:
-      "border-emerald-500/20 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
+    chip: "border-emerald-500/20 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
   },
   credit_redeem: {
     label: "Credit redeemed",
@@ -42,9 +41,9 @@ const TYPE_META: Record<
 
 function customerDisplayName(r: CustomerTransactions): string {
   const u = r.customer?.users;
-  if (!u) return "Unnamed customer";
+  if (!u) return "";
   const name = `${u.surname}${u.other_names ? " " + u.other_names : ""}`.trim();
-  return name || "Unnamed customer";
+  return name || "";
 }
 
 const DETAIL_FIELDS: {
@@ -103,7 +102,7 @@ export function TransactionDetailDialog({
 }: TransactionDetailDialogProps) {
   const open = row !== null;
   const meta = row ? TYPE_META[row.transaction_type] : null;
-  const displayName = row ? customerDisplayName(row) : "Unnamed customer";
+  const displayName = row ? customerDisplayName(row) : "";
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -150,7 +149,7 @@ export function TransactionDetailDialog({
                 <span className="bg-chart-4 inline-block h-1.5 w-1.5 rounded-full" />
                 Amount
               </div>
-              <div className="mt-1.5 text-3xl font-semibold tracking-tight tabular-nums">
+              <div className="mt-1.5 text-3xl font-semibold tabular-nums tracking-tight">
                 {row ? formatGHS(row.amount) : "—"}
               </div>
             </div>
@@ -175,7 +174,9 @@ export function TransactionDetailDialog({
                     <div className="text-muted-foreground text-[11px] uppercase tracking-wide">
                       {f.label}
                     </div>
-                    <div className="mt-0.5 truncate text-sm font-medium">{value}</div>
+                    <div className="mt-0.5 truncate text-sm font-medium">
+                      {value}
+                    </div>
                   </div>
                 </div>
               );

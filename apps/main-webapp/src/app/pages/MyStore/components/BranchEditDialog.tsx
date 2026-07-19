@@ -24,6 +24,7 @@ import {
   errorToastProperties,
   successToastProperties,
 } from "@shared/utils/misc.utils";
+import { Loader2 } from "lucide-react";
 
 const branchSchema = z.object({
   name: z
@@ -209,11 +210,8 @@ export function BranchEditDialog({
               Cancel
             </Button>
             <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting
-                ? "Saving..."
-                : isEdit
-                  ? "Save changes"
-                  : "Add branch"}
+              {isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
+              {isEdit ? "Save changes" : "Add branch"}
             </Button>
           </DialogFooter>
         </form>

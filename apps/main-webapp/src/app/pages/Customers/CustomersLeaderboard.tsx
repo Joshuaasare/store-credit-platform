@@ -8,6 +8,7 @@ import InfiniteScroll from "../../components/InfiniteScroll/InfiniteScroll";
 import { customerService } from "@store-credit-platform/api-services";
 import { useStoreStore } from "@shared/stores/storeStore";
 import { LeaderboardRow } from "@shared/types/api.types";
+import { startOfYearEpoch } from "@shared/utils/date.utils";
 import { formatGHS } from "@shared/utils/format";
 import {
   CustomersFilters,
@@ -16,29 +17,18 @@ import {
 
 const LIMIT = 20;
 
-function thisYearRange(): { start: number; end: null } {
-  const now = new Date();
-  return {
-    start: Math.floor(new Date(now.getFullYear(), 0, 1).getTime() / 1000),
-    // end=null → "no upper bound". Keeps newly-created transactions in-window
-    // so the leaderboard reflects purchases added in the current session.
-    end: null,
-  };
-}
-
 export default function CustomersLeaderboard() {
   const { branches } = useStoreStore();
 
-  const [filters, setFilters] = useState<CustomersFiltersValue>(() => {
-    const yr = thisYearRange();
-    return {
-      sort: "purchases",
-      branchId: null,
-      datePreset: "this_year",
-      start: yr.start,
-      end: yr.end,
-    };
-  });
+  const [filters, setFilters] = useState<CustomersFiltersValue>(() => ({
+    sort: "purchases",
+    branchId: null,
+    datePreset: "this_year",
+    start: startOfYearEpoch(),
+    // end=null → "no upper bound". Keeps newly-created transactions in-window
+    // so the leaderboard reflects purchases added in the current session.
+    end: null,
+  }));
 
   const leaderboardQuery = useInfiniteQuery({
     queryKey: [
@@ -119,7 +109,7 @@ export default function CustomersLeaderboard() {
         header: "Customer",
         cell: ({ row }) => {
           const r = row.original;
-          const name = r.customer_name?.trim() || "Unnamed customer";
+          const name = r.customer_name?.trim() || "";
           return (
             <div className="min-w-0">
               <div className="truncate font-medium">{name}</div>
