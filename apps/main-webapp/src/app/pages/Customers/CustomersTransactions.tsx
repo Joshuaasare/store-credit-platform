@@ -8,6 +8,7 @@ import {
   Skeleton,
   Badge,
   cn,
+  Monogram,
 } from "@store-credit-platform/web-components";
 import { DataTable } from "../../components/DataTable/DataTable";
 import InfiniteScroll from "../../components/InfiniteScroll/InfiniteScroll";
@@ -16,40 +17,23 @@ import { useStoreStore } from "@shared/stores/storeStore";
 import { CustomerTransactions } from "@shared/types/api.types";
 import { startOfYearEpoch } from "@shared/utils/date.utils";
 import { formatEpochDate, formatGHS } from "@shared/utils/format";
-import { customerDisplayName } from "@shared/utils/customers.utils";
+import {
+  customerDisplayName,
+  customerInitials,
+} from "@shared/utils/customers.utils";
 import {
   CustomersFilters,
   CustomersFiltersValue,
 } from "./components/CustomersFilters";
 import { AddPurchaseDialog } from "./components/AddPurchaseDialog";
 import { TransactionDetailDialog } from "./components/TransactionDetailDialog";
-import { formatDisplayNumber } from "@shared/utils/ui.utils";
+import {
+  AMOUNT_COLOR,
+  formatDisplayNumber,
+  TYPE_META,
+} from "@shared/utils/ui.utils";
 
 const LIMIT = 20;
-
-const TYPE_META: Record<
-  CustomerTransactions["transaction_type"],
-  { label: string; chip: string }
-> = {
-  purchase: {
-    label: "Purchase",
-    chip: "border-blue-500/20 bg-blue-500/10 text-blue-600 dark:text-blue-400",
-  },
-  credit_issue: {
-    label: "Credit issued",
-    chip: "border-emerald-500/20 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
-  },
-  credit_redeem: {
-    label: "Credit redeemed",
-    chip: "border-amber-500/20 bg-amber-500/10 text-amber-600 dark:text-amber-400",
-  },
-};
-
-const AMOUNT_COLOR: Record<CustomerTransactions["transaction_type"], string> = {
-  purchase: "text-foreground",
-  credit_issue: "text-emerald-600 dark:text-emerald-400",
-  credit_redeem: "text-amber-600 dark:text-amber-400",
-};
 
 export default function CustomersTransactions() {
   const { branches } = useStoreStore();
@@ -126,14 +110,28 @@ export default function CustomersTransactions() {
           const r = row.original;
           const name = customerDisplayName(r);
           const phone = formatDisplayNumber(r.customer?.phone) ?? "";
+          const isLinked = Boolean(name);
           return (
-            <div className="min-w-0">
-              <div className="truncate font-medium">{name}</div>
-              {phone && (
-                <div className="text-muted-foreground truncate text-xs">
-                  {phone}
+            <div className="flex min-w-0 items-center gap-3">
+              <Monogram
+                text={customerInitials(r)}
+                seed={
+                  r.customer?.user_id ??
+                  r.customer?.phone ??
+                  String(r.customer_id)
+                }
+                size="sm"
+              />
+              <div className="min-w-0">
+                <div className="truncate font-medium">
+                  {isLinked ? name : phone || "Unnamed customer"}
                 </div>
-              )}
+                {isLinked && phone && (
+                  <div className="text-muted-foreground truncate text-xs">
+                    {phone}
+                  </div>
+                )}
+              </div>
             </div>
           );
         },
@@ -192,7 +190,10 @@ export default function CustomersTransactions() {
   return (
     <div className="space-y-6">
       {/* Filters bar + Add a purchase */}
-      <Card className="p-4">
+      <Card
+        className="animate-fade-in-up p-4 motion-reduce:animate-none"
+        style={{ animationDelay: "0ms" }}
+      >
         <CustomersFilters
           value={filters}
           onChange={(next) => setFilters(next)}
@@ -202,7 +203,7 @@ export default function CustomersTransactions() {
               <Button
                 onClick={() => setAddOpen(true)}
                 size="sm"
-                className="shadow-sm"
+                className="rounded-sm shadow-sm"
               >
                 <Plus className="mr-1.5 h-4 w-4" /> Add a purchase
               </Button>
@@ -212,7 +213,10 @@ export default function CustomersTransactions() {
       </Card>
 
       {/* Table card */}
-      <Card className="p-0">
+      <Card
+        className="animate-fade-in-up p-0 motion-reduce:animate-none"
+        style={{ animationDelay: "60ms" }}
+      >
         <div className="flex items-center justify-between border-b px-4 py-3">
           <div className="flex items-center gap-2">
             <h2 className="text-base font-semibold tracking-tight">

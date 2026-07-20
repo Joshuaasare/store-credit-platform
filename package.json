@@ -67,6 +67,7 @@
     "highcharts": "^12.4.0",
     "highcharts-react-official": "^3.2.2",
     "jose": "^6.2.3",
+    "libphonenumber-js": "^1.13.9",
     "lodash.find": "^4.6.0",
     "lodash.uniqby": "^4.7.0",
     "lucide-react": "^0.542.0",

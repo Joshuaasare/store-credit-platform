@@ -31,3 +31,4 @@ export * from "./switch";
 export * from "./checkbox";
 export * from "./animated-tabs";
 export * from "./accordion";
+export * from "./monogram";

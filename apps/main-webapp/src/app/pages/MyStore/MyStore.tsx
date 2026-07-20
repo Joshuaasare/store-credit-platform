@@ -28,7 +28,7 @@ export default function MyStorePage() {
 
   if (error && !merchant) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-background px-4">
+      <div className="flex min-h-screen items-center justify-center px-4">
         <Card className="max-w-md p-6 text-center">
           <h2 className="text-lg font-semibold">Couldn&rsquo;t load your store</h2>
           <p className="text-muted-foreground mt-2 text-sm">{error}</p>
@@ -46,7 +46,7 @@ export default function MyStorePage() {
 
   if (!merchant) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-background px-4">
+      <div className="flex min-h-screen items-center justify-center px-4">
         <Card className="max-w-md p-6 text-center">
           <h2 className="text-lg font-semibold">No store assigned</h2>
           <p className="text-muted-foreground mt-2 text-sm">
@@ -58,7 +58,7 @@ export default function MyStorePage() {
   }
 
   return (
-    <div className="relative min-h-screen bg-background px-4 py-6 md:px-8 md:py-10">
+    <div className="relative min-h-screen px-4 py-6 md:px-8 md:py-10">
       {/* subtle page-top gradient anchor */}
       <div
         aria-hidden
@@ -93,7 +93,7 @@ export default function MyStorePage() {
 
 function MyStoreSkeleton() {
   return (
-    <div className="min-h-screen bg-background px-4 py-6 md:px-8 md:py-10">
+    <div className="min-h-screen px-4 py-6 md:px-8 md:py-10">
       <div className="mx-auto max-w-7xl space-y-8">
         <Skeleton className="h-28 w-full rounded-2xl" />
         <div className="grid grid-cols-2 gap-4 md:grid-cols-4">

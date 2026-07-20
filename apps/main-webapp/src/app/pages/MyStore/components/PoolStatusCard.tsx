@@ -88,7 +88,7 @@ export function PoolStatusCard({ used, limit }: PoolStatusCardProps) {
     >
       <div className="flex items-center justify-between">
         <div className="text-muted-foreground flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide">
-          <Wallet className="h-3.5 w-3.5" />
+          <Wallet className="h-3.5 w-3.5 stroke-[1.5]" />
           Credit pool
         </div>
         <span
@@ -200,7 +200,7 @@ export function PoolStatusCard({ used, limit }: PoolStatusCardProps) {
       </div>
 
       <div className={`mt-4 flex items-center gap-1.5 text-xs ${noteColor}`}>
-        {(warn || over) && <AlertTriangle className="h-3.5 w-3.5" />}
+        {(warn || over) && <AlertTriangle className="h-3.5 w-3.5 stroke-[1.5]" />}
         {note}
       </div>
     </Card>

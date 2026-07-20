@@ -13,10 +13,10 @@ export default function ProfilePage() {
   };
 
   return (
-    <div className="min-h-screen bg-background px-4 py-6 md:px-8 md:py-10">
+    <div className="min-h-screen px-4 py-6 md:px-8 md:py-10">
       <div className="mx-auto max-w-3xl space-y-6">
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-semibold tracking-tight">Profile</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Profile</h1>
           <Button variant="outline" size="sm" onClick={handleLogout}>
             <LogOut className="mr-2 h-4 w-4" /> Logout
           </Button>

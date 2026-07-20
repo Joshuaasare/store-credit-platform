@@ -2,7 +2,12 @@ import { useMemo, useState } from "react";
 import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 import { ColumnDef } from "@tanstack/react-table";
 import { Users, ShoppingBag, Coins } from "lucide-react";
-import { Card, Skeleton, cn } from "@store-credit-platform/web-components";
+import {
+  Card,
+  Skeleton,
+  cn,
+  Monogram,
+} from "@store-credit-platform/web-components";
 import { DataTable } from "../../components/DataTable/DataTable";
 import InfiniteScroll from "../../components/InfiniteScroll/InfiniteScroll";
 import { customerService } from "@store-credit-platform/api-services";
@@ -10,6 +15,7 @@ import { useStoreStore } from "@shared/stores/storeStore";
 import { LeaderboardRow } from "@shared/types/api.types";
 import { startOfYearEpoch } from "@shared/utils/date.utils";
 import { formatGHS } from "@shared/utils/format";
+import { leaderboardInitials } from "@shared/utils/customers.utils";
 import {
   CustomersFilters,
   CustomersFiltersValue,
@@ -111,14 +117,24 @@ export default function CustomersLeaderboard() {
         cell: ({ row }) => {
           const r = row.original;
           const name = r.customer_name?.trim() || "";
+          const isLinked = r.user_id != null && name && name !== "Unnamed customer";
           return (
-            <div className="min-w-0">
-              <div className="truncate font-medium">{name}</div>
-              {r.phone && (
-                <div className="text-muted-foreground truncate text-xs">
-                  {formatDisplayNumber(r.phone)}
+            <div className="flex min-w-0 items-center gap-3">
+              <Monogram
+                text={leaderboardInitials(r)}
+                seed={r.user_id ?? r.phone ?? String(r.customer_id)}
+                size="sm"
+              />
+              <div className="min-w-0">
+                <div className="truncate font-medium">
+                  {isLinked ? name : formatDisplayNumber(r.phone) ?? "Unnamed customer"}
                 </div>
-              )}
+                {isLinked && r.phone && (
+                  <div className="text-muted-foreground truncate text-xs">
+                    {formatDisplayNumber(r.phone)}
+                  </div>
+                )}
+              </div>
             </div>
           );
         },
@@ -161,8 +177,9 @@ export default function CustomersLeaderboard() {
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <StatCard
           label="Customers"
-          icon={<Users className="h-4 w-4" />}
+          icon={<Users className="h-4 w-4 stroke-[1.75]" />}
           tone="primary"
+          style={{ animationDelay: "0ms" }}
           value={
             stats ? (
               stats.total_customers.toLocaleString()
@@ -173,8 +190,9 @@ export default function CustomersLeaderboard() {
         />
         <StatCard
           label="Purchases (window)"
-          icon={<ShoppingBag className="h-4 w-4" />}
+          icon={<ShoppingBag className="h-4 w-4 stroke-[1.75]" />}
           tone="emerald"
+          style={{ animationDelay: "60ms" }}
           value={
             stats ? (
               formatGHS(stats.total_purchases)
@@ -185,8 +203,9 @@ export default function CustomersLeaderboard() {
         />
         <StatCard
           label="Credits issued (window)"
-          icon={<Coins className="h-4 w-4" />}
+          icon={<Coins className="h-4 w-4 stroke-[1.75]" />}
           tone="amber"
+          style={{ animationDelay: "120ms" }}
           value={
             stats ? (
               formatGHS(stats.total_credits_issued)
@@ -198,7 +217,10 @@ export default function CustomersLeaderboard() {
       </div>
 
       {/* Filters */}
-      <Card className="p-4">
+      <Card
+        className="animate-fade-in-up p-4 motion-reduce:animate-none"
+        style={{ animationDelay: "180ms" }}
+      >
         <CustomersFilters
           value={filters}
           onChange={(next) => setFilters(next)}
@@ -208,7 +230,10 @@ export default function CustomersLeaderboard() {
       </Card>
 
       {/* Table card */}
-      <Card className="p-0">
+      <Card
+        className="animate-fade-in-up p-0 motion-reduce:animate-none"
+        style={{ animationDelay: "240ms" }}
+      >
         <div className="flex items-center justify-between border-b px-4 py-3">
           <div className="flex items-center gap-2">
             <h2 className="text-base font-semibold tracking-tight">
@@ -271,6 +296,8 @@ interface StatCardProps {
   icon: React.ReactNode;
   value: React.ReactNode;
   tone?: "primary" | "emerald" | "amber";
+  className?: string;
+  style?: React.CSSProperties;
 }
 
 const TONE_CHIP: Record<NonNullable<StatCardProps["tone"]>, string> = {
@@ -279,9 +306,15 @@ const TONE_CHIP: Record<NonNullable<StatCardProps["tone"]>, string> = {
   amber: "bg-amber-500/10 text-amber-600 dark:text-amber-400",
 };
 
-function StatCard({ label, icon, value, tone = "primary" }: StatCardProps) {
+function StatCard({ label, icon, value, tone = "primary", className, style }: StatCardProps) {
   return (
-    <Card className="relative overflow-hidden p-4">
+    <Card
+      className={cn(
+        "relative animate-fade-in-up overflow-hidden p-4 motion-reduce:animate-none",
+        className,
+      )}
+      style={style}
+    >
       <div
         aria-hidden
         className={cn(
