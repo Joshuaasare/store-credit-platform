@@ -39,62 +39,6 @@ export type Database = {
   }
   public: {
     Tables: {
-      branch_credit_config: {
-        Row: {
-          branch_id: number
-          created_at: string
-          credit_type: Database["public"]["Enums"]["credit_type"] | null
-          credit_validity: number | null
-          deleted_at: string | null
-          fixed_credit_value: number | null
-          id: number
-          is_active: boolean
-          maximum_allowed_credit: number | null
-          percentage_credit_value: number | null
-          terms: string | null
-          threshold_amount: number | null
-          updated_at: string | null
-        }
-        Insert: {
-          branch_id: number
-          created_at?: string
-          credit_type?: Database["public"]["Enums"]["credit_type"] | null
-          credit_validity?: number | null
-          deleted_at?: string | null
-          fixed_credit_value?: number | null
-          id?: number
-          is_active?: boolean
-          maximum_allowed_credit?: number | null
-          percentage_credit_value?: number | null
-          terms?: string | null
-          threshold_amount?: number | null
-          updated_at?: string | null
-        }
-        Update: {
-          branch_id?: number
-          created_at?: string
-          credit_type?: Database["public"]["Enums"]["credit_type"] | null
-          credit_validity?: number | null
-          deleted_at?: string | null
-          fixed_credit_value?: number | null
-          id?: number
-          is_active?: boolean
-          maximum_allowed_credit?: number | null
-          percentage_credit_value?: number | null
-          terms?: string | null
-          threshold_amount?: number | null
-          updated_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "branch_credits_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: false
-            referencedRelation: "branches"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       branches: {
         Row: {
           address: string | null
@@ -149,31 +93,37 @@ export type Database = {
         Row: {
           branch_id: number
           created_at: string
-          credit_amount: number
+          credit_precentage: number | null
+          credit_type: Database["public"]["Enums"]["credit_type"]
           customer_id: number
           deleted_at: string | null
           expires_at: number | null
           id: number
+          max_credit_amount: number | null
           updated_at: string | null
         }
         Insert: {
           branch_id: number
           created_at?: string
-          credit_amount: number
+          credit_precentage?: number | null
+          credit_type: Database["public"]["Enums"]["credit_type"]
           customer_id: number
           deleted_at?: string | null
           expires_at?: number | null
           id?: number
+          max_credit_amount?: number | null
           updated_at?: string | null
         }
         Update: {
           branch_id?: number
           created_at?: string
-          credit_amount?: number
+          credit_precentage?: number | null
+          credit_type?: Database["public"]["Enums"]["credit_type"]
           customer_id?: number
           deleted_at?: string | null
           expires_at?: number | null
           id?: number
+          max_credit_amount?: number | null
           updated_at?: string | null
         }
         Relationships: [
@@ -298,6 +248,65 @@ export type Database = {
           },
         ]
       }
+      fixed_credit_config: {
+        Row: {
+          branch_id: number
+          config_group_id: string
+          created_at: string
+          credit_type: Database["public"]["Enums"]["credit_type"] | null
+          deleted_at: string | null
+          end_date: number | null
+          fixed_credit_value: number | null
+          id: number
+          is_active: boolean
+          maximum_allowed_credit: number | null
+          percentage_credit_value: number | null
+          start_date: number | null
+          terms: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          branch_id: number
+          config_group_id?: string
+          created_at?: string
+          credit_type?: Database["public"]["Enums"]["credit_type"] | null
+          deleted_at?: string | null
+          end_date?: number | null
+          fixed_credit_value?: number | null
+          id?: number
+          is_active?: boolean
+          maximum_allowed_credit?: number | null
+          percentage_credit_value?: number | null
+          start_date?: number | null
+          terms?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          branch_id?: number
+          config_group_id?: string
+          created_at?: string
+          credit_type?: Database["public"]["Enums"]["credit_type"] | null
+          deleted_at?: string | null
+          end_date?: number | null
+          fixed_credit_value?: number | null
+          id?: number
+          is_active?: boolean
+          maximum_allowed_credit?: number | null
+          percentage_credit_value?: number | null
+          start_date?: number | null
+          terms?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fixed_credit_config_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       merchants: {
         Row: {
           country_code: string
@@ -305,6 +314,7 @@ export type Database = {
           created_at: string
           credit_pool_limit: number | null
           credit_pool_used: number
+          credit_stacking_policy: Database["public"]["Enums"]["credit_stacking_policy_type"]
           deleted_at: string | null
           id: number
           is_active: boolean
@@ -320,6 +330,7 @@ export type Database = {
           created_at?: string
           credit_pool_limit?: number | null
           credit_pool_used?: number
+          credit_stacking_policy?: Database["public"]["Enums"]["credit_stacking_policy_type"]
           deleted_at?: string | null
           id?: number
           is_active?: boolean
@@ -335,6 +346,7 @@ export type Database = {
           created_at?: string
           credit_pool_limit?: number | null
           credit_pool_used?: number
+          credit_stacking_policy?: Database["public"]["Enums"]["credit_stacking_policy_type"]
           deleted_at?: string | null
           id?: number
           is_active?: boolean
@@ -419,6 +431,71 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      running_credit_config: {
+        Row: {
+          branch_id: number
+          config_group_id: string
+          created_at: string
+          credit_type: Database["public"]["Enums"]["credit_type"] | null
+          credit_validity: number | null
+          cumulative_scope: Database["public"]["Enums"]["cumulative_scope_type"]
+          deleted_at: string | null
+          eligible_window: number | null
+          fixed_credit_value: number | null
+          id: number
+          is_active: boolean
+          maximum_allowed_credit: number | null
+          percentage_credit_value: number | null
+          terms: string | null
+          threshold_amount: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          branch_id: number
+          config_group_id?: string
+          created_at?: string
+          credit_type?: Database["public"]["Enums"]["credit_type"] | null
+          credit_validity?: number | null
+          cumulative_scope?: Database["public"]["Enums"]["cumulative_scope_type"]
+          deleted_at?: string | null
+          eligible_window?: number | null
+          fixed_credit_value?: number | null
+          id?: number
+          is_active?: boolean
+          maximum_allowed_credit?: number | null
+          percentage_credit_value?: number | null
+          terms?: string | null
+          threshold_amount?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          branch_id?: number
+          config_group_id?: string
+          created_at?: string
+          credit_type?: Database["public"]["Enums"]["credit_type"] | null
+          credit_validity?: number | null
+          cumulative_scope?: Database["public"]["Enums"]["cumulative_scope_type"]
+          deleted_at?: string | null
+          eligible_window?: number | null
+          fixed_credit_value?: number | null
+          id?: number
+          is_active?: boolean
+          maximum_allowed_credit?: number | null
+          percentage_credit_value?: number | null
+          terms?: string | null
+          threshold_amount?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "branch_credits_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
             referencedColumns: ["id"]
           },
         ]
@@ -656,7 +733,9 @@ export type Database = {
       }
     }
     Enums: {
+      credit_stacking_policy_type: "stack" | "best_only"
       credit_type: "fixed" | "percentage"
+      cumulative_scope_type: "per_branch" | "merchant_wide"
       role: "manager" | "cashier"
       transaction_type: "purchase" | "credit_issue" | "credit_redeem"
     }
@@ -789,7 +868,9 @@ export const Constants = {
   },
   public: {
     Enums: {
+      credit_stacking_policy_type: ["stack", "best_only"],
       credit_type: ["fixed", "percentage"],
+      cumulative_scope_type: ["per_branch", "merchant_wide"],
       role: ["manager", "cashier"],
       transaction_type: ["purchase", "credit_issue", "credit_redeem"],
     },

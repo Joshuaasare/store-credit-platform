@@ -190,11 +190,16 @@ export default async function (fastify: FastifyInstance) {
           };
         }
         const body = request.body;
-        const row = await customerService.createPurchase(request.user!, {
-          phone: body.phone,
-          amount: body.amount,
-          branch_id: body.branch_id ?? null,
-        });
+        const row = await customerService.createPurchase(
+          request.user!,
+          {
+            phone: body.phone,
+            amount: body.amount,
+            branch_id: body.branch_id ?? null,
+          },
+          merchantId,
+          request.log,
+        );
         reply.status(201);
         return { success: true, data: row };
       } catch (error) {

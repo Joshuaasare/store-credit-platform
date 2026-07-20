@@ -1,3 +1,4 @@
+import { FastifyBaseLogger } from "fastify";
 import { supabaseAdmin } from "../utils/supabase.client";
 import { QueryFragments } from "../constants/queryFragments";
 import { AccessTokenPayload } from "../schemas/auth.schema";
@@ -12,6 +13,7 @@ import {
   CreatePurchaseRequest,
   CustomerTransactions,
 } from "../schemas/customers.schema";
+import { issueRunningCreditsForPurchase } from "./creditConfig.service";
 
 // ────────────────────────────────────────────────────────────────────────────
 // Service
@@ -220,14 +222,16 @@ export class CustomerService {
    * Create a `purchase` transaction. Auto-creates the customer (by phone) if
    * missing. The branch is resolved in this order: explicit `payload.branch_id`
    * (must belong to the caller's merchant), then the caller's JWT `branch_id`,
-   * then the staff lookup. No credit-issuance logic — that is a separate
-   * future feature. The customer's branch affiliation is derived from their
-   * transactions, so no junction row is maintained.
+   * then the staff lookup. After the purchase row is persisted, any matching
+   * running credit configs are auto-issued; failures there are logged but
+   * never fail the purchase — the purchase row is the source of truth.
    * Returns the nested BASE-composition row (`CustomerTransactions`).
    */
   async createPurchase(
     user: AccessTokenPayload,
     payload: CreatePurchaseRequest,
+    merchantId: number,
+    log?: FastifyBaseLogger,
   ): Promise<CustomerTransactions> {
     const branchId = payload.branch_id ?? user.branch_id;
     if (branchId == null) {
@@ -286,6 +290,22 @@ export class CustomerService {
       throw new Error(
         `Failed to record purchase: ${txErr?.message ?? "unknown"}`,
       );
+    }
+
+    // Non-fatal: auto-issue running credits (decisions 1, 6, 10). The purchase
+    // row is the source of truth; any issuance error is logged and swallowed.
+    try {
+      await issueRunningCreditsForPurchase(
+        supabaseAdmin,
+        merchantId,
+        customerId,
+        branchId,
+        payload.amount,
+        nowEpoch,
+      );
+    } catch (err) {
+      if (log) log.error(err, "issueRunningCreditsForPurchase failed (non-fatal)");
+      else console.error("issueRunningCreditsForPurchase failed (non-fatal)", err);
     }
 
     return txRow as unknown as CustomerTransactions;

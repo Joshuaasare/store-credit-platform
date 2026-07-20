@@ -4,7 +4,6 @@ import {
   Tabs,
   TabsList,
   TabsTrigger,
-  cn,
 } from "@store-credit-platform/web-components";
 
 const TABS = [
