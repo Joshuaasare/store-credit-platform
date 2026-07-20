@@ -87,7 +87,7 @@ export function StoreStatsRow({ merchant }: StoreStatsRowProps) {
                   stat.chip,
                 )}
               >
-                <Icon className="h-4 w-4" />
+                <Icon className="h-4 w-4 stroke-[1.75]" />
               </div>
             </div>
           </Card>

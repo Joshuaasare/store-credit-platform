@@ -126,7 +126,7 @@ export function BranchDetailDialog({
                 {displayName}
               </h2>
               <p className="text-muted-foreground mt-1 flex items-center gap-1.5 truncate text-sm">
-                <Building2 className="h-3.5 w-3.5 shrink-0 align-text-bottom" />
+                <Building2 className="h-3.5 w-3.5 shrink-0 align-text-bottom stroke-[1.5]" />
                 <span className="truncate">{branch?.city}</span>
                 {country && (
                   <>
@@ -201,7 +201,7 @@ export function BranchDetailDialog({
                 >
                   <div className="flex items-center justify-between">
                     <span className={cn("rounded-md p-1.5", s.chip)}>
-                      <Icon className="h-3.5 w-3.5" />
+                      <Icon className="h-3.5 w-3.5 stroke-[1.5]" />
                     </span>
                     <span
                       className={`inline-block h-1.5 w-1.5 rounded-full ${s.dot}`}
@@ -229,7 +229,7 @@ export function BranchDetailDialog({
                   className="border-muted-foreground/10 bg-muted/20 flex items-start gap-3 rounded-lg border p-3"
                 >
                   <span className="bg-muted text-muted-foreground mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-md">
-                    <Icon className="h-3.5 w-3.5" />
+                    <Icon className="h-3.5 w-3.5 stroke-[1.5]" />
                   </span>
                   <div className="min-w-0">
                     <div className="text-muted-foreground text-[11px] uppercase tracking-wide">

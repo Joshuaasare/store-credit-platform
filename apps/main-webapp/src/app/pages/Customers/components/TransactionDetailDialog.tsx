@@ -20,30 +20,12 @@ import {
   customerInitials,
 } from "@shared/utils/customers.utils";
 import { formatEpochDateTime, formatGHS } from "@shared/utils/format";
-import { formatDisplayNumber } from "@shared/utils/ui.utils";
+import { formatDisplayNumber, TYPE_META } from "@shared/utils/ui.utils";
 
 interface TransactionDetailDialogProps {
   row: CustomerTransactions | null;
   onOpenChange: (open: boolean) => void;
 }
-
-const TYPE_META: Record<
-  CustomerTransactions["transaction_type"],
-  { label: string; chip: string }
-> = {
-  purchase: {
-    label: "Purchase",
-    chip: "border-blue-500/20 bg-blue-500/10 text-blue-600 dark:text-blue-400",
-  },
-  credit_issue: {
-    label: "Credit issued",
-    chip: "border-emerald-500/20 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
-  },
-  credit_redeem: {
-    label: "Credit redeemed",
-    chip: "border-amber-500/20 bg-amber-500/10 text-amber-600 dark:text-amber-400",
-  },
-};
 
 const DETAIL_FIELDS: {
   key: string;
@@ -128,7 +110,7 @@ export function TransactionDetailDialog({
                 {displayName}
               </h2>
               <p className="text-muted-foreground mt-1 truncate text-sm">
-                <Phone className="mr-1.5 inline h-3.5 w-3.5 align-text-bottom" />
+                <Phone className="mr-1.5 inline h-3.5 w-3.5 stroke-[1.5] align-text-bottom" />
                 {formatDisplayNumber(row?.customer?.phone) ?? "—"}
               </p>
               {row && meta && (
@@ -174,7 +156,7 @@ export function TransactionDetailDialog({
                   className="border-muted-foreground/10 bg-muted/20 flex items-start gap-3 rounded-lg border p-3"
                 >
                   <span className="bg-muted text-muted-foreground mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-md">
-                    <Icon className="h-3.5 w-3.5" />
+                    <Icon className="h-3.5 w-3.5 stroke-[1.5]" />
                   </span>
                   <div className="min-w-0">
                     <div className="text-muted-foreground text-[11px] uppercase tracking-wide">

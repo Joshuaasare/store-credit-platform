@@ -89,7 +89,7 @@ export default function MainLayout() {
 
       <main
         className={cn(
-          "bg-background text-foreground flex-1",
+          "text-foreground flex-1",
           isMobile && "pt-20",
         )}
       >

@@ -301,7 +301,7 @@ export function StoreHero({ merchant, isManager }: StoreHeroProps) {
           <div className="flex items-center gap-2">
             <h1
               className={cn(
-                "truncate text-2xl font-semibold tracking-tight md:text-4xl",
+                "truncate text-3xl font-bold tracking-tight md:text-4xl",
                 hasCover ? "text-white" : "text-foreground",
               )}
             >

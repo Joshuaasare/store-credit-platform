@@ -38,93 +38,86 @@ export function BranchCard({
   return (
     <>
       <Card
-        className="from-primary/[0.04] to-card hover:border-primary/40 group flex h-full cursor-pointer flex-col bg-gradient-to-br p-5 transition-all hover:-translate-y-0.5 hover:shadow-md"
+        className="group flex h-full cursor-pointer flex-col border-primary/60 p-5 transition-all hover:-translate-y-0.5 hover:shadow-md hover:border-primary"
         onClick={onOpenDetail}
       >
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex min-w-0 items-center gap-3">
-            <div className="from-primary/15 to-primary/5 text-primary ring-primary/20 flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br text-sm font-semibold ring-1">
-              {(displayName[0] ?? "?").toUpperCase()}
-            </div>
-            <div className="min-w-0">
-              <h3 className="truncate text-[15px] font-semibold leading-tight">
-                {displayName}
-              </h3>
-              <p className="text-muted-foreground mt-0.5 flex items-center gap-1.5 truncate text-xs">
-                <span className="truncate">{branch.city}</span>
-                {country && (
-                  <>
-                    <span className="text-muted-foreground/40">·</span>
-                    <CountryFlag
-                      code={branch.country_code as never}
-                      size={14}
-                      title={country.name}
-                      className="shrink-0 rounded-[2px]"
-                    />
-                  </>
-                )}
-              </p>
-            </div>
-          </div>
-          <div className="flex shrink-0 items-center gap-2">
+        {/* Caption */}
+        <div className="text-muted-foreground flex items-center justify-between text-[11px] font-medium uppercase tracking-wide">
+          <span>Credit issued this month</span>
+          {isManager && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="text-muted-foreground h-6 w-6"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <MoreVertical className="h-3.5 w-3.5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setEditOpen(true);
+                  }}
+                >
+                  <Pencil className="mr-2 h-4 w-4" /> Edit branch
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+        </div>
+
+        {/* Hero number */}
+        <div className="mt-2 text-[32px] font-semibold tabular-nums leading-none tracking-tight">
+          {formatGHSCompact(branch.credit_issued_this_month)}
+        </div>
+
+        {/* Divider + branch identity row */}
+        <div className="border-primary/30 mt-5 border-t pt-4">
+          <div className="flex items-center gap-2">
+            <h3 className="truncate text-sm font-semibold leading-tight">
+              {displayName}
+            </h3>
             <span
-              className={`inline-block h-2 w-2 rounded-full ${
+              className={`inline-block h-1.5 w-1.5 shrink-0 rounded-full ${
                 branch.is_active ? "bg-emerald-500" : "bg-muted-foreground/40"
               }`}
               title={branch.is_active ? "Active" : "Inactive"}
             />
-            {isManager && (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="text-muted-foreground h-7 w-7"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <MoreVertical className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setEditOpen(true);
-                    }}
-                  >
-                    <Pencil className="mr-2 h-4 w-4" /> Edit branch
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+          </div>
+          <div className="text-muted-foreground mt-1 flex items-center gap-1.5 truncate text-xs">
+            {country && (
+              <CountryFlag
+                code={branch.country_code as never}
+                size={12}
+                title={country.name}
+                className="shrink-0 rounded-[2px]"
+              />
             )}
+            <span className="truncate">
+              {branch.city}
+              {country ? `, ${country.name}` : ""}
+            </span>
           </div>
         </div>
 
-        {/* hero readout */}
-        <div className="mt-6">
-          <div className="text-[28px] font-semibold tabular-nums leading-none tracking-tight">
-            {formatGHSCompact(branch.credit_issued_this_month)}
+        {/* Footer meta */}
+        <div className="text-muted-foreground mt-auto space-y-2 pt-5 text-xs">
+          <div className="flex items-center gap-3">
+            <span className="inline-flex items-center gap-1.5">
+              <Users className="h-3.5 w-3.5 stroke-[1.75]" />
+              {branch.staff_count} staff
+            </span>
+            <span className="text-muted-foreground/40">·</span>
+            <span className="inline-flex items-center gap-1.5">
+              <UserRound className="h-3.5 w-3.5 stroke-[1.75]" />
+              {branch.customer_count.toLocaleString()} customers
+            </span>
           </div>
-          <div className="text-muted-foreground mt-1.5 text-xs">
-            credit issued this month
-          </div>
-        </div>
-
-        {/* quiet secondary line */}
-        <div className="text-muted-foreground mt-4 flex items-center gap-3 text-xs">
-          <span className="inline-flex items-center gap-1.5">
-            <Users className="h-3.5 w-3.5" />
-            {branch.staff_count} staff
-          </span>
-          <span className="text-muted-foreground/40">·</span>
-          <span className="inline-flex items-center gap-1.5">
-            <UserRound className="h-3.5 w-3.5" />
-            {branch.customer_count.toLocaleString()} customers
-          </span>
-        </div>
-
-        <div className="text-muted-foreground mt-auto pt-5 text-[11px]">
-          Last activity {lastActivity}
+          <div className="text-[11px]">Last activity {lastActivity}</div>
         </div>
       </Card>
 

@@ -177,8 +177,9 @@ export default function CustomersLeaderboard() {
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <StatCard
           label="Customers"
-          icon={<Users className="h-4 w-4" />}
+          icon={<Users className="h-4 w-4 stroke-[1.75]" />}
           tone="primary"
+          style={{ animationDelay: "0ms" }}
           value={
             stats ? (
               stats.total_customers.toLocaleString()
@@ -189,8 +190,9 @@ export default function CustomersLeaderboard() {
         />
         <StatCard
           label="Purchases (window)"
-          icon={<ShoppingBag className="h-4 w-4" />}
+          icon={<ShoppingBag className="h-4 w-4 stroke-[1.75]" />}
           tone="emerald"
+          style={{ animationDelay: "60ms" }}
           value={
             stats ? (
               formatGHS(stats.total_purchases)
@@ -201,8 +203,9 @@ export default function CustomersLeaderboard() {
         />
         <StatCard
           label="Credits issued (window)"
-          icon={<Coins className="h-4 w-4" />}
+          icon={<Coins className="h-4 w-4 stroke-[1.75]" />}
           tone="amber"
+          style={{ animationDelay: "120ms" }}
           value={
             stats ? (
               formatGHS(stats.total_credits_issued)
@@ -214,7 +217,10 @@ export default function CustomersLeaderboard() {
       </div>
 
       {/* Filters */}
-      <Card className="p-4">
+      <Card
+        className="animate-fade-in-up p-4 motion-reduce:animate-none"
+        style={{ animationDelay: "180ms" }}
+      >
         <CustomersFilters
           value={filters}
           onChange={(next) => setFilters(next)}
@@ -224,7 +230,10 @@ export default function CustomersLeaderboard() {
       </Card>
 
       {/* Table card */}
-      <Card className="p-0">
+      <Card
+        className="animate-fade-in-up p-0 motion-reduce:animate-none"
+        style={{ animationDelay: "240ms" }}
+      >
         <div className="flex items-center justify-between border-b px-4 py-3">
           <div className="flex items-center gap-2">
             <h2 className="text-base font-semibold tracking-tight">
@@ -287,6 +296,8 @@ interface StatCardProps {
   icon: React.ReactNode;
   value: React.ReactNode;
   tone?: "primary" | "emerald" | "amber";
+  className?: string;
+  style?: React.CSSProperties;
 }
 
 const TONE_CHIP: Record<NonNullable<StatCardProps["tone"]>, string> = {
@@ -295,9 +306,15 @@ const TONE_CHIP: Record<NonNullable<StatCardProps["tone"]>, string> = {
   amber: "bg-amber-500/10 text-amber-600 dark:text-amber-400",
 };
 
-function StatCard({ label, icon, value, tone = "primary" }: StatCardProps) {
+function StatCard({ label, icon, value, tone = "primary", className, style }: StatCardProps) {
   return (
-    <Card className="relative overflow-hidden p-4">
+    <Card
+      className={cn(
+        "relative animate-fade-in-up overflow-hidden p-4 motion-reduce:animate-none",
+        className,
+      )}
+      style={style}
+    >
       <div
         aria-hidden
         className={cn(

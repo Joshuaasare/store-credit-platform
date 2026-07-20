@@ -27,33 +27,13 @@ import {
 } from "./components/CustomersFilters";
 import { AddPurchaseDialog } from "./components/AddPurchaseDialog";
 import { TransactionDetailDialog } from "./components/TransactionDetailDialog";
-import { formatDisplayNumber } from "@shared/utils/ui.utils";
+import {
+  AMOUNT_COLOR,
+  formatDisplayNumber,
+  TYPE_META,
+} from "@shared/utils/ui.utils";
 
 const LIMIT = 20;
-
-const TYPE_META: Record<
-  CustomerTransactions["transaction_type"],
-  { label: string; chip: string }
-> = {
-  purchase: {
-    label: "Purchase",
-    chip: "border-blue-500/20 bg-blue-500/10 text-blue-600 dark:text-blue-400",
-  },
-  credit_issue: {
-    label: "Credit issued",
-    chip: "border-emerald-500/20 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
-  },
-  credit_redeem: {
-    label: "Credit redeemed",
-    chip: "border-amber-500/20 bg-amber-500/10 text-amber-600 dark:text-amber-400",
-  },
-};
-
-const AMOUNT_COLOR: Record<CustomerTransactions["transaction_type"], string> = {
-  purchase: "text-foreground",
-  credit_issue: "text-emerald-600 dark:text-emerald-400",
-  credit_redeem: "text-amber-600 dark:text-amber-400",
-};
 
 export default function CustomersTransactions() {
   const { branches } = useStoreStore();
@@ -135,7 +115,11 @@ export default function CustomersTransactions() {
             <div className="flex min-w-0 items-center gap-3">
               <Monogram
                 text={customerInitials(r)}
-                seed={r.customer?.user_id ?? r.customer?.phone ?? String(r.customer_id)}
+                seed={
+                  r.customer?.user_id ??
+                  r.customer?.phone ??
+                  String(r.customer_id)
+                }
                 size="sm"
               />
               <div className="min-w-0">
@@ -206,7 +190,10 @@ export default function CustomersTransactions() {
   return (
     <div className="space-y-6">
       {/* Filters bar + Add a purchase */}
-      <Card className="p-4">
+      <Card
+        className="animate-fade-in-up p-4 motion-reduce:animate-none"
+        style={{ animationDelay: "0ms" }}
+      >
         <CustomersFilters
           value={filters}
           onChange={(next) => setFilters(next)}
@@ -216,7 +203,7 @@ export default function CustomersTransactions() {
               <Button
                 onClick={() => setAddOpen(true)}
                 size="sm"
-                className="shadow-sm"
+                className="rounded-sm shadow-sm"
               >
                 <Plus className="mr-1.5 h-4 w-4" /> Add a purchase
               </Button>
@@ -226,7 +213,10 @@ export default function CustomersTransactions() {
       </Card>
 
       {/* Table card */}
-      <Card className="p-0">
+      <Card
+        className="animate-fade-in-up p-0 motion-reduce:animate-none"
+        style={{ animationDelay: "60ms" }}
+      >
         <div className="flex items-center justify-between border-b px-4 py-3">
           <div className="flex items-center gap-2">
             <h2 className="text-base font-semibold tracking-tight">

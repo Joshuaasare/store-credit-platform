@@ -249,7 +249,7 @@ export function CustomersFilters({
                     <button
                       type="button"
                       className={cn(
-                        "rounded-md px-3 py-1.5 text-xs font-medium transition-colors",
+                        "rounded-sm px-3 py-1.5 text-xs font-medium transition-colors",
                         active
                           ? "bg-primary text-primary-foreground shadow-sm"
                           : "text-muted-foreground hover:text-foreground",
@@ -341,7 +341,7 @@ export function CustomersFilters({
                 type="button"
                 onClick={() => applyDatePreset(p.value)}
                 className={cn(
-                  "rounded-md px-3 py-1.5 text-xs font-medium transition-colors",
+                  "rounded-sm px-3 py-1.5 text-xs font-medium transition-colors",
                   active
                     ? "bg-primary text-primary-foreground shadow-sm"
                     : "text-muted-foreground hover:text-foreground",
