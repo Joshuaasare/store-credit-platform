@@ -310,7 +310,7 @@ export class CreditConfigService {
     merchantId: number,
     groupId: string,
     isActive: boolean,
-  ): Promise<void> {
+  ): Promise<RunningCreditConfigGroup> {
     const merchantBranchIds = await getMerchantBranchIds(merchantId);
     const { error } = await supabaseAdmin
       .from("running_credit_config")
@@ -318,6 +318,7 @@ export class CreditConfigService {
       .eq("config_group_id", groupId)
       .in("branch_id", merchantBranchIds);
     if (error) throw new Error(`Failed to toggle running config: ${error.message}`);
+    return fetchRunningGroup(groupId);
   }
 
   // ── Fixed configs ───────────────────────────────────────
@@ -434,7 +435,7 @@ export class CreditConfigService {
     merchantId: number,
     groupId: string,
     isActive: boolean,
-  ): Promise<void> {
+  ): Promise<FixedCreditConfigGroup> {
     const merchantBranchIds = await getMerchantBranchIds(merchantId);
     const { error } = await supabaseAdmin
       .from("fixed_credit_config")
@@ -442,6 +443,7 @@ export class CreditConfigService {
       .eq("config_group_id", groupId)
       .in("branch_id", merchantBranchIds);
     if (error) throw new Error(`Failed to toggle fixed config: ${error.message}`);
+    return fetchFixedGroup(groupId);
   }
 }
 

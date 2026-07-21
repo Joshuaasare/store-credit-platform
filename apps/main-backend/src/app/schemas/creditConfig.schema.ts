@@ -194,6 +194,12 @@ success: Type.Literal(true),
 data: RunningCreditConfigGroup
 })
 
+export type RunningCreditConfigDeleteResponse = Static<typeof RunningCreditConfigDeleteResponse>
+export const RunningCreditConfigDeleteResponse = Type.Object({
+success: Type.Literal(true),
+data: Type.Null()
+})
+
 export type RunningCreditConfigListApiResponse = Static<typeof RunningCreditConfigListApiResponse>
 export const RunningCreditConfigListApiResponse = Type.Union([
 RunningCreditConfigListResponse,
@@ -203,6 +209,12 @@ ApiErrorResponse
 export type RunningCreditConfigMutationApiResponse = Static<typeof RunningCreditConfigMutationApiResponse>
 export const RunningCreditConfigMutationApiResponse = Type.Union([
 RunningCreditConfigMutationResponse,
+ApiErrorResponse
+])
+
+export type RunningCreditConfigDeleteApiResponse = Static<typeof RunningCreditConfigDeleteApiResponse>
+export const RunningCreditConfigDeleteApiResponse = Type.Union([
+RunningCreditConfigDeleteResponse,
 ApiErrorResponse
 ])
 
@@ -218,6 +230,12 @@ success: Type.Literal(true),
 data: FixedCreditConfigGroup
 })
 
+export type FixedCreditConfigDeleteResponse = Static<typeof FixedCreditConfigDeleteResponse>
+export const FixedCreditConfigDeleteResponse = Type.Object({
+success: Type.Literal(true),
+data: Type.Null()
+})
+
 export type FixedCreditConfigListApiResponse = Static<typeof FixedCreditConfigListApiResponse>
 export const FixedCreditConfigListApiResponse = Type.Union([
 FixedCreditConfigListResponse,
@@ -227,6 +245,12 @@ ApiErrorResponse
 export type FixedCreditConfigMutationApiResponse = Static<typeof FixedCreditConfigMutationApiResponse>
 export const FixedCreditConfigMutationApiResponse = Type.Union([
 FixedCreditConfigMutationResponse,
+ApiErrorResponse
+])
+
+export type FixedCreditConfigDeleteApiResponse = Static<typeof FixedCreditConfigDeleteApiResponse>
+export const FixedCreditConfigDeleteApiResponse = Type.Union([
+FixedCreditConfigDeleteResponse,
 ApiErrorResponse
 ])
 

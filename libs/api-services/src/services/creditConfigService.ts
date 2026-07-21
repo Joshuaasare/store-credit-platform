@@ -4,11 +4,13 @@ import {
   UpdateRunningCreditConfigRequest,
   RunningCreditConfigListApiResponse,
   RunningCreditConfigMutationApiResponse,
+  RunningCreditConfigDeleteApiResponse,
   ToggleActiveRequest,
   CreateFixedCreditConfigRequest,
   UpdateFixedCreditConfigRequest,
   FixedCreditConfigListApiResponse,
   FixedCreditConfigMutationApiResponse,
+  FixedCreditConfigDeleteApiResponse,
 } from "../types/api.types.js";
 
 /**
@@ -51,8 +53,8 @@ export function createCreditConfigService() {
     /** DELETE /credit-configs/running/:configGroupId — hard-delete group. */
     async deleteRunningConfig(
       configGroupId: string,
-    ): Promise<RunningCreditConfigMutationApiResponse> {
-      return apiRequest<RunningCreditConfigMutationApiResponse>(
+    ): Promise<RunningCreditConfigDeleteApiResponse> {
+      return apiRequest<RunningCreditConfigDeleteApiResponse>(
         `/credit-configs/running/${configGroupId}`,
         { method: "DELETE" },
       );
@@ -102,8 +104,8 @@ export function createCreditConfigService() {
     /** DELETE /credit-configs/fixed/:configGroupId — hard-delete group. */
     async deleteFixedConfig(
       configGroupId: string,
-    ): Promise<FixedCreditConfigMutationApiResponse> {
-      return apiRequest<FixedCreditConfigMutationApiResponse>(
+    ): Promise<FixedCreditConfigDeleteApiResponse> {
+      return apiRequest<FixedCreditConfigDeleteApiResponse>(
         `/credit-configs/fixed/${configGroupId}`,
         { method: "DELETE" },
       );

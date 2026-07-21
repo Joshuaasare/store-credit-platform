@@ -1,9 +1,8 @@
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { MoreVertical, Pencil, Trash2 } from "lucide-react";
+import { MoreVertical, Pencil, Sparkles, Trash2 } from "lucide-react";
 import {
-  Badge,
   Button,
   Card,
   DropdownMenu,
@@ -89,17 +88,28 @@ export function RunningConfigCard({ config, isManager }: RunningConfigCardProps)
   const scopeLabel =
     config.cumulative_scope === "per_branch" ? "Per-branch" : "Merchant-wide";
 
+  const rows = [
+    { label: "Threshold", value: formatGHS(config.threshold_amount ?? 0) },
+    { label: "Lookback", value: windowLabel },
+    { label: "Validity", value: validityLabel },
+    { label: "Scope", value: scopeLabel },
+    ...(config.maximum_allowed_credit != null
+      ? [{ label: "Max credit", value: formatGHS(config.maximum_allowed_credit) }]
+      : []),
+  ];
+
   return (
     <>
-      <Card className="flex h-full flex-col gap-4 p-5">
+      <Card className="group flex h-full flex-col gap-4 border-slate-200/80 bg-white p-5 shadow-none">
         <div className="flex items-start justify-between gap-2">
           <div className="flex flex-wrap items-center gap-2">
-            <Badge className="bg-primary text-primary-foreground">
+            <span className="inline-flex items-center gap-1.5 rounded-md border border-indigo-100 bg-indigo-50 px-2.5 py-1 text-xs font-semibold text-indigo-700">
               {rewardLabel}
-            </Badge>
-            <Badge variant="outline" className="text-muted-foreground">
-              {config.is_active ? "Active" : "Paused"}
-            </Badge>
+            </span>
+            <span className="inline-flex items-center gap-1.5 rounded-md bg-slate-50 px-2 py-1 text-[11px] font-medium text-slate-600">
+              <Sparkles className="h-3 w-3 text-indigo-500" />
+              Auto-issuing
+            </span>
           </div>
           {isManager && (
             <DropdownMenu>
@@ -134,35 +144,50 @@ export function RunningConfigCard({ config, isManager }: RunningConfigCardProps)
           )}
         </div>
 
-        <div className="space-y-1.5 text-sm">
-          <Row label="Threshold" value={formatGHS(config.threshold_amount ?? 0)} />
-          <Row label="Lookback" value={windowLabel} />
-          <Row label="Validity" value={validityLabel} />
-          <Row label="Scope" value={scopeLabel} />
-          {config.maximum_allowed_credit != null && (
-            <Row
-              label="Max credit"
-              value={formatGHS(config.maximum_allowed_credit)}
-            />
-          )}
-          {config.terms && (
-            <Row label="Terms" value={config.terms} muted />
-          )}
+        <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
+          <span
+            className={
+              config.is_active
+                ? "h-2 w-2 rounded-full bg-emerald-500"
+                : "h-2 w-2 rounded-full bg-slate-300"
+            }
+          />
+          <span className="text-xs font-medium text-slate-700">
+            {config.is_active ? "Active" : "Paused"}
+          </span>
         </div>
 
-        <div className="mt-auto space-y-2 border-t pt-3">
-          <div className="text-muted-foreground text-[11px] font-medium uppercase tracking-wide">
+        <div className="grid grid-cols-2 gap-x-4 gap-y-3">
+          {rows.map((row) => (
+            <div key={row.label} className="space-y-0.5">
+              <div className="text-[11px] font-medium uppercase tracking-wide text-slate-400">
+                {row.label}
+              </div>
+              <div className="text-sm font-semibold text-slate-800">
+                {row.value}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {config.terms && (
+          <p className="rounded-md bg-slate-50 px-3 py-2 text-xs text-slate-600">
+            {config.terms}
+          </p>
+        )}
+
+        <div className="mt-auto space-y-2 border-t border-slate-100 pt-3">
+          <div className="text-[11px] font-medium uppercase tracking-wide text-slate-400">
             Branches
           </div>
           <div className="flex flex-wrap gap-1.5">
             {config.branches.map((b) => (
-              <Badge
+              <span
                 key={b.id}
-                variant="outline"
-                className="text-muted-foreground"
+                className="inline-flex items-center rounded-md border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] font-medium text-slate-600"
               >
                 {b.name?.trim() || "Unnamed branch"} · {b.city}
-              </Badge>
+              </span>
             ))}
           </div>
         </div>
@@ -174,30 +199,5 @@ export function RunningConfigCard({ config, isManager }: RunningConfigCardProps)
         config={config}
       />
     </>
-  );
-}
-
-function Row({
-  label,
-  value,
-  muted,
-}: {
-  label: string;
-  value: string;
-  muted?: boolean;
-}) {
-  return (
-    <div className="flex items-baseline justify-between gap-3">
-      <span className="text-muted-foreground text-xs">{label}</span>
-      <span
-        className={
-          muted
-            ? "text-muted-foreground text-right text-xs"
-            : "text-right text-sm font-medium"
-        }
-      >
-        {value}
-      </span>
-    </div>
   );
 }

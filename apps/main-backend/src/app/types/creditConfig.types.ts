@@ -78,12 +78,21 @@ export interface RunningCreditConfigMutationResponse {
   data: RunningCreditConfigGroup;
 }
 
+export interface RunningCreditConfigDeleteResponse {
+  success: true;
+  data: null;
+}
+
 export type RunningCreditConfigListApiResponse =
   | RunningCreditConfigListResponse
   | ApiErrorResponse;
 
 export type RunningCreditConfigMutationApiResponse =
   | RunningCreditConfigMutationResponse
+  | ApiErrorResponse;
+
+export type RunningCreditConfigDeleteApiResponse =
+  | RunningCreditConfigDeleteResponse
   | ApiErrorResponse;
 
 export interface FixedCreditConfigListResponse {
@@ -96,12 +105,21 @@ export interface FixedCreditConfigMutationResponse {
   data: FixedCreditConfigGroup;
 }
 
+export interface FixedCreditConfigDeleteResponse {
+  success: true;
+  data: null;
+}
+
 export type FixedCreditConfigListApiResponse =
   | FixedCreditConfigListResponse
   | ApiErrorResponse;
 
 export type FixedCreditConfigMutationApiResponse =
   | FixedCreditConfigMutationResponse
+  | ApiErrorResponse;
+
+export type FixedCreditConfigDeleteApiResponse =
+  | FixedCreditConfigDeleteResponse
   | ApiErrorResponse;
 
 export interface CustomerCreditRow {

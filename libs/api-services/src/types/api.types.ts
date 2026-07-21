@@ -1,6 +1,6 @@
 /**
  * Auto-generated API Types
- * Generated on: 2026-07-20T17:51:26.418Z
+ * Generated on: 2026-07-21T00:06:52.425Z
  * 
  * ⚠️ DO NOT EDIT MANUALLY
  * Source: apps/smartschool-api/src/app/types/
@@ -343,12 +343,21 @@ export interface RunningCreditConfigMutationResponse {
   data: RunningCreditConfigGroup;
 }
 
+export interface RunningCreditConfigDeleteResponse {
+  success: true;
+  data: null;
+}
+
 export type RunningCreditConfigListApiResponse =
   | RunningCreditConfigListResponse
   | ApiErrorResponse;
 
 export type RunningCreditConfigMutationApiResponse =
   | RunningCreditConfigMutationResponse
+  | ApiErrorResponse;
+
+export type RunningCreditConfigDeleteApiResponse =
+  | RunningCreditConfigDeleteResponse
   | ApiErrorResponse;
 
 export interface FixedCreditConfigListResponse {
@@ -361,12 +370,21 @@ export interface FixedCreditConfigMutationResponse {
   data: FixedCreditConfigGroup;
 }
 
+export interface FixedCreditConfigDeleteResponse {
+  success: true;
+  data: null;
+}
+
 export type FixedCreditConfigListApiResponse =
   | FixedCreditConfigListResponse
   | ApiErrorResponse;
 
 export type FixedCreditConfigMutationApiResponse =
   | FixedCreditConfigMutationResponse
+  | ApiErrorResponse;
+
+export type FixedCreditConfigDeleteApiResponse =
+  | FixedCreditConfigDeleteResponse
   | ApiErrorResponse;
 
 export interface CustomerCreditRow {

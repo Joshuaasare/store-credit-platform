@@ -7,11 +7,13 @@ import {
   UpdateRunningCreditConfigRequest,
   RunningCreditConfigListApiResponse,
   RunningCreditConfigMutationApiResponse,
+  RunningCreditConfigDeleteApiResponse,
   ToggleActiveRequest,
   CreateFixedCreditConfigRequest,
   UpdateFixedCreditConfigRequest,
   FixedCreditConfigListApiResponse,
   FixedCreditConfigMutationApiResponse,
+  FixedCreditConfigDeleteApiResponse,
 } from "../../schemas/creditConfig.schema";
 
 async function resolveMerchantId(
@@ -148,15 +150,15 @@ export default async function (fastify: FastifyInstance) {
 
   fastify.delete<{
     Params: { configGroupId: string };
-    Reply: RunningCreditConfigMutationApiResponse;
+    Reply: RunningCreditConfigDeleteApiResponse;
   }>("/running/:configGroupId", {
     preHandler: [requireAuth, requireRoles("manager")],
     schema: {
       response: {
-        200: RunningCreditConfigMutationApiResponse,
-        400: RunningCreditConfigMutationApiResponse,
-        401: RunningCreditConfigMutationApiResponse,
-        403: RunningCreditConfigMutationApiResponse,
+        200: RunningCreditConfigDeleteApiResponse,
+        400: RunningCreditConfigDeleteApiResponse,
+        401: RunningCreditConfigDeleteApiResponse,
+        403: RunningCreditConfigDeleteApiResponse,
       },
     },
     handler: async (request, reply) => {
@@ -173,7 +175,7 @@ export default async function (fastify: FastifyInstance) {
           merchantId,
           request.params.configGroupId,
         );
-        return { success: true, data: null as any };
+        return { success: true, data: null };
       } catch (error) {
         const message =
           error instanceof Error ? error.message : "Failed to delete running config";
@@ -209,12 +211,12 @@ export default async function (fastify: FastifyInstance) {
             error: "Forbidden: no merchant assigned to this user",
           };
         }
-        await creditConfigService.toggleRunningConfigActive(
+        const data = await creditConfigService.toggleRunningConfigActive(
           merchantId,
           request.params.configGroupId,
           request.body.is_active,
         );
-        return { success: true, data: null as any };
+        return { success: true, data };
       } catch (error) {
         const message =
           error instanceof Error ? error.message : "Failed to toggle running config";
@@ -349,15 +351,15 @@ export default async function (fastify: FastifyInstance) {
 
   fastify.delete<{
     Params: { configGroupId: string };
-    Reply: FixedCreditConfigMutationApiResponse;
+    Reply: FixedCreditConfigDeleteApiResponse;
   }>("/fixed/:configGroupId", {
     preHandler: [requireAuth, requireRoles("manager")],
     schema: {
       response: {
-        200: FixedCreditConfigMutationApiResponse,
-        400: FixedCreditConfigMutationApiResponse,
-        401: FixedCreditConfigMutationApiResponse,
-        403: FixedCreditConfigMutationApiResponse,
+        200: FixedCreditConfigDeleteApiResponse,
+        400: FixedCreditConfigDeleteApiResponse,
+        401: FixedCreditConfigDeleteApiResponse,
+        403: FixedCreditConfigDeleteApiResponse,
       },
     },
     handler: async (request, reply) => {
@@ -374,7 +376,7 @@ export default async function (fastify: FastifyInstance) {
           merchantId,
           request.params.configGroupId,
         );
-        return { success: true, data: null as any };
+        return { success: true, data: null };
       } catch (error) {
         const message =
           error instanceof Error ? error.message : "Failed to delete fixed config";
@@ -410,12 +412,12 @@ export default async function (fastify: FastifyInstance) {
             error: "Forbidden: no merchant assigned to this user",
           };
         }
-        await creditConfigService.toggleFixedConfigActive(
+        const data = await creditConfigService.toggleFixedConfigActive(
           merchantId,
           request.params.configGroupId,
           request.body.is_active,
         );
-        return { success: true, data: null as any };
+        return { success: true, data };
       } catch (error) {
         const message =
           error instanceof Error ? error.message : "Failed to toggle fixed config";
