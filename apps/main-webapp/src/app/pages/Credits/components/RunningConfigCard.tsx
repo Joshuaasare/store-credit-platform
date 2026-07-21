@@ -1,7 +1,15 @@
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { MoreVertical, Pencil, Sparkles, Trash2 } from "lucide-react";
+import {
+  ArrowLeft,
+  Info,
+  MoreVertical,
+  Pause,
+  Pencil,
+  Play,
+  Trash2,
+} from "lucide-react";
 import {
   Button,
   Card,
@@ -17,17 +25,40 @@ import {
   errorToastProperties,
   successToastProperties,
 } from "@shared/utils/misc.utils";
-import { formatGHS } from "@shared/utils/format";
+import { formatGHS, formatGHSCompact } from "@shared/utils/format";
+import { ConfirmDialog } from "../../../components/ConfirmDialog/ConfirmDialog";
+import { FlipCard } from "../../../components/FlipCard/FlipCard";
+import { RunningConfigSummary } from "./ConfigSummary";
 import { RunningConfigDialog } from "./RunningConfigDialog";
+import {
+  CARD_CLASS,
+  CARD_CLASS_PAUSED,
+  CHIP,
+  DIVIDER,
+  HERO_NUMBER,
+  HERO_NUMBER_MUTED,
+  LABEL,
+  PAUSED_PILL,
+  STATUS_DOT_ACTIVE,
+  STATUS_DOT_PAUSED,
+  STATUS_TEXT_ACTIVE,
+  STATUS_TEXT_PAUSED,
+  VALUE,
+} from "./configCardStyles";
 
 interface RunningConfigCardProps {
   config: RunningCreditConfigGroup;
   isManager: boolean;
 }
 
-export function RunningConfigCard({ config, isManager }: RunningConfigCardProps) {
+export function RunningConfigCard({
+  config,
+  isManager,
+}: RunningConfigCardProps) {
   const queryClient = useQueryClient();
   const [editOpen, setEditOpen] = useState(false);
+  const [confirmPause, setConfirmPause] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   const invalidate = () =>
     queryClient.invalidateQueries({ queryKey: ["credit-configs"] });
@@ -73,14 +104,23 @@ export function RunningConfigCard({ config, isManager }: RunningConfigCardProps)
   });
 
   const isPercentage = config.credit_type === "percentage";
-  const rewardLabel = isPercentage
-    ? `${config.percentage_credit_value ?? 0}% back`
-    : `${formatGHS(config.fixed_credit_value ?? 0)} flat`;
+  const rewardNumber = isPercentage
+    ? `${config.percentage_credit_value ?? 0}%`
+    : formatGHSCompact(config.fixed_credit_value ?? 0);
+  const caption = isPercentage ? "Cashback rate" : "Cashback amount";
+  const isActive = config.is_active;
+  const cardClass = isActive ? CARD_CLASS : CARD_CLASS_PAUSED;
+  const heroClass = isActive ? HERO_NUMBER : HERO_NUMBER_MUTED;
 
-  const windowLabel =
-    config.eligible_window == null
-      ? "No lookback"
-      : `Last ${config.eligible_window} days`;
+  let tagline: string;
+  if (config.threshold_amount == null) {
+    tagline = "On every purchase.";
+  } else if (config.eligible_window == null) {
+    tagline = `When a single purchase reaches ${formatGHS(config.threshold_amount)}.`;
+  } else {
+    tagline = `When customers spend ${formatGHS(config.threshold_amount)} in the last ${config.eligible_window} days.`;
+  }
+
   const validityLabel =
     config.credit_validity == null
       ? "Lifetime"
@@ -88,115 +128,224 @@ export function RunningConfigCard({ config, isManager }: RunningConfigCardProps)
   const scopeLabel =
     config.cumulative_scope === "per_branch" ? "Per-branch" : "Merchant-wide";
 
-  const rows = [
-    { label: "Threshold", value: formatGHS(config.threshold_amount ?? 0) },
-    { label: "Lookback", value: windowLabel },
-    { label: "Validity", value: validityLabel },
-    { label: "Scope", value: scopeLabel },
-    ...(config.maximum_allowed_credit != null
-      ? [{ label: "Max credit", value: formatGHS(config.maximum_allowed_credit) }]
-      : []),
-  ];
-
   return (
     <>
-      <Card className="group flex h-full flex-col gap-4 border-slate-200/80 bg-white p-5 shadow-none">
-        <div className="flex items-start justify-between gap-2">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="inline-flex items-center gap-1.5 rounded-md border border-indigo-100 bg-indigo-50 px-2.5 py-1 text-xs font-semibold text-indigo-700">
-              {rewardLabel}
-            </span>
-            <span className="inline-flex items-center gap-1.5 rounded-md bg-slate-50 px-2 py-1 text-[11px] font-medium text-slate-600">
-              <Sparkles className="h-3 w-3 text-indigo-500" />
-              Auto-issuing
-            </span>
-          </div>
-          {isManager && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
+      <FlipCard
+        front={(flip) => (
+          <Card className={cardClass}>
+            <div className="text-muted-foreground flex items-center justify-between text-[11px] font-medium uppercase tracking-wide">
+              <div className="flex items-center gap-2">
+                <span>{caption}</span>
+                {!isActive && (
+                  <span className={PAUSED_PILL}>
+                    <Pause className="h-2.5 w-2.5" />
+                    Paused
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center gap-0.5">
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="text-muted-foreground h-7 w-7"
+                  className="text-muted-foreground h-6 w-6"
+                  onClick={flip}
+                  title="How this campaign works"
                 >
-                  <MoreVertical className="h-3.5 w-3.5" />
+                  <Info className="h-3.5 w-3.5" />
                 </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => setEditOpen(true)}>
-                  <Pencil className="mr-2 h-4 w-4" /> Edit config
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => toggleMutation.mutate(!config.is_active)}
-                  disabled={toggleMutation.isPending}
-                >
-                  {config.is_active ? "Pause config" : "Activate config"}
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  className="text-destructive"
-                  onClick={() => deleteMutation.mutate()}
-                  disabled={deleteMutation.isPending}
-                >
-                  <Trash2 className="mr-2 h-4 w-4" /> Delete config
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
-        </div>
-
-        <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
-          <span
-            className={
-              config.is_active
-                ? "h-2 w-2 rounded-full bg-emerald-500"
-                : "h-2 w-2 rounded-full bg-slate-300"
-            }
-          />
-          <span className="text-xs font-medium text-slate-700">
-            {config.is_active ? "Active" : "Paused"}
-          </span>
-        </div>
-
-        <div className="grid grid-cols-2 gap-x-4 gap-y-3">
-          {rows.map((row) => (
-            <div key={row.label} className="space-y-0.5">
-              <div className="text-[11px] font-medium uppercase tracking-wide text-slate-400">
-                {row.label}
-              </div>
-              <div className="text-sm font-semibold text-slate-800">
-                {row.value}
+                {isManager && (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="text-muted-foreground h-6 w-6"
+                      >
+                        <MoreVertical className="h-3.5 w-3.5" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => setEditOpen(true)}>
+                        <Pencil className="mr-2 h-4 w-4" /> Edit config
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => setConfirmPause(true)}
+                        disabled={toggleMutation.isPending}
+                      >
+                        {config.is_active ? (
+                          <>
+                            <Pause className="mr-2 h-4 w-4" /> Pause config
+                          </>
+                        ) : (
+                          <>
+                            <Play className="mr-2 h-4 w-4" /> Activate config
+                          </>
+                        )}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        className="text-destructive"
+                        onClick={() => setConfirmDelete(true)}
+                        disabled={deleteMutation.isPending}
+                      >
+                        <Trash2 className="mr-2 h-4 w-4" /> Delete config
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                )}
               </div>
             </div>
-          ))}
-        </div>
 
-        {config.terms && (
-          <p className="rounded-md bg-slate-50 px-3 py-2 text-xs text-slate-600">
-            {config.terms}
-          </p>
+            <div className="mt-2 leading-none">
+              <span className={heroClass}>{rewardNumber}</span>
+            </div>
+            <p className="text-muted-foreground mt-2 text-sm">{tagline}</p>
+
+            <div className={`mt-5 pt-4 ${DIVIDER}`}>
+              <div className="text-muted-foreground flex items-center gap-2 text-xs">
+                <span
+                  className={isActive ? STATUS_DOT_ACTIVE : STATUS_DOT_PAUSED}
+                />
+                <span
+                  className={isActive ? STATUS_TEXT_ACTIVE : STATUS_TEXT_PAUSED}
+                >
+                  {isActive ? "Active" : "Paused"}
+                </span>
+                <span className="text-muted-foreground/40">·</span>
+                <span>{scopeLabel} scope</span>
+              </div>
+
+              <div className="mt-4 grid grid-cols-2 gap-x-6 gap-y-3">
+                <div>
+                  <div className={LABEL}>Credit validity</div>
+                  <div className={VALUE}>{validityLabel}</div>
+                </div>
+                {config.maximum_allowed_credit != null && (
+                  <div>
+                    <div className={LABEL}>Cap per purchase</div>
+                    <div className={VALUE}>
+                      {formatGHS(config.maximum_allowed_credit)}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="text-muted-foreground mt-auto space-y-2 pt-5 text-xs">
+              <div className={LABEL}>Active at</div>
+              <div className="flex flex-wrap gap-1.5">
+                {config.branches.map((b) => (
+                  <span key={b.id} className={CHIP}>
+                    {b.name?.trim() || "Unnamed branch"} · {b.city}
+                  </span>
+                ))}
+              </div>
+            </div>
+          </Card>
         )}
-
-        <div className="mt-auto space-y-2 border-t border-slate-100 pt-3">
-          <div className="text-[11px] font-medium uppercase tracking-wide text-slate-400">
-            Branches
-          </div>
-          <div className="flex flex-wrap gap-1.5">
-            {config.branches.map((b) => (
-              <span
-                key={b.id}
-                className="inline-flex items-center rounded-md border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] font-medium text-slate-600"
+        back={(flip) => (
+          <Card className={cardClass}>
+            <div className="text-muted-foreground flex items-center justify-between text-[11px] font-medium uppercase tracking-wide">
+              <div className="flex items-center gap-2">
+                <span>How this campaign works</span>
+                {!isActive && (
+                  <span className={PAUSED_PILL}>
+                    <Pause className="h-2.5 w-2.5" />
+                    Paused
+                  </span>
+                )}
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-muted-foreground h-6"
+                onClick={flip}
               >
-                {b.name?.trim() || "Unnamed branch"} · {b.city}
-              </span>
-            ))}
-          </div>
-        </div>
-      </Card>
+                <ArrowLeft className="h-3.5 w-3.5" />
+                Back
+              </Button>
+            </div>
+
+            <div className="mt-4">
+              <RunningConfigSummary
+                accent="amber"
+                credit_type={
+                  (config.credit_type ?? "percentage") as "percentage" | "fixed"
+                }
+                percentage_credit_value={config.percentage_credit_value}
+                fixed_credit_value={config.fixed_credit_value}
+                threshold_amount={config.threshold_amount}
+                eligible_window={config.eligible_window}
+                credit_validity={config.credit_validity}
+                maximum_allowed_credit={config.maximum_allowed_credit}
+                cumulative_scope={config.cumulative_scope}
+              />
+            </div>
+
+            {config.terms && (
+              <p className="bg-muted/40 text-muted-foreground mt-4 rounded-md px-3 py-2 text-xs">
+                {config.terms}
+              </p>
+            )}
+
+            <div className="text-muted-foreground mt-auto space-y-2 pt-5 text-xs">
+              <div className={LABEL}>Active at</div>
+              <div className="flex flex-wrap gap-1.5">
+                {config.branches.map((b) => (
+                  <span key={b.id} className={CHIP}>
+                    {b.name?.trim() || "Unnamed branch"} · {b.city}
+                  </span>
+                ))}
+              </div>
+            </div>
+          </Card>
+        )}
+      />
 
       <RunningConfigDialog
         open={editOpen}
         onOpenChange={setEditOpen}
         config={config}
+      />
+
+      <ConfirmDialog
+        open={confirmPause}
+        onOpenChange={setConfirmPause}
+        title={
+          config.is_active ? "Pause this config?" : "Activate this config?"
+        }
+        description={
+          config.is_active
+            ? "Customers will stop earning credit from this config until you reactivate it. Existing credits already issued are not affected."
+            : "Customers will start earning credit from this config again on their next qualifying purchase."
+        }
+        confirmLabel={config.is_active ? "Pause config" : "Activate config"}
+        confirmIcon={
+          config.is_active ? (
+            <Pause className="h-4 w-4" />
+          ) : (
+            <Play className="h-4 w-4" />
+          )
+        }
+        pending={toggleMutation.isPending}
+        onConfirm={() => {
+          setConfirmPause(false);
+          toggleMutation.mutate(!config.is_active);
+        }}
+      />
+
+      <ConfirmDialog
+        open={confirmDelete}
+        onOpenChange={setConfirmDelete}
+        title="Delete this config?"
+        description="This permanently removes the config from all its branches. Existing credits already issued to customers are not affected. This cannot be undone."
+        confirmLabel="Delete config"
+        confirmIcon={<Trash2 className="h-4 w-4" />}
+        destructive
+        pending={deleteMutation.isPending}
+        onConfirm={() => {
+          setConfirmDelete(false);
+          deleteMutation.mutate();
+        }}
       />
     </>
   );

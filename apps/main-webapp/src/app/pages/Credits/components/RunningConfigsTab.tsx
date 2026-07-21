@@ -35,9 +35,9 @@ export function RunningConfigsTab({ isManager }: RunningConfigsTabProps) {
       )}
 
       {query.isLoading && (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {Array.from({ length: 3 }).map((_, i) => (
-            <Skeleton key={i} className="h-56 w-full rounded-xl" />
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          {Array.from({ length: 2 }).map((_, i) => (
+            <Skeleton key={i} className="h-64 w-full rounded-xl" />
           ))}
         </div>
       )}
@@ -74,7 +74,7 @@ export function RunningConfigsTab({ isManager }: RunningConfigsTabProps) {
       )}
 
       {query.data && query.data.length > 0 && (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           {query.data.map((c) => (
             <RunningConfigCard key={c.config_group_id} config={c} isManager={isManager} />
           ))}

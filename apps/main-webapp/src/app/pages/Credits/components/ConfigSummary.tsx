@@ -20,22 +20,44 @@ interface FixedSummaryValues {
   end_date: number | null;
 }
 
+type Accent = "primary" | "indigo" | "amber";
+
+const ACCENTS: Record<Accent, { card: string; icon: string }> = {
+  primary: { card: "bg-muted/30 border-primary/20", icon: "text-primary" },
+  indigo: {
+    card: "border-indigo-100 bg-indigo-50/60 dark:border-indigo-500/30 dark:bg-indigo-500/10",
+    icon: "text-indigo-500 dark:text-indigo-400",
+  },
+  amber: {
+    card: "border-amber-100 bg-amber-50/60 dark:border-amber-500/30 dark:bg-amber-500/10",
+    icon: "text-amber-500 dark:text-amber-400",
+  },
+};
+
 function B({ children }: { children: React.ReactNode }) {
   return <strong className="font-semibold">{children}</strong>;
 }
 
-function SummaryCard({ children }: { children: React.ReactNode }) {
+function SummaryCard({
+  children,
+  accent = "primary",
+}: {
+  children: React.ReactNode;
+  accent?: Accent;
+}) {
+  const a = ACCENTS[accent];
   return (
-    <div className="bg-muted/30 border-primary/20 rounded-lg border p-3">
+    <div className={`rounded-lg border p-3 ${a.card}`}>
       <div className="flex items-start gap-2.5">
-        <Sparkles className="text-primary mt-0.5 h-4 w-4 shrink-0" />
+        <Sparkles className={`mt-0.5 h-4 w-4 shrink-0 ${a.icon}`} />
         <p className="text-sm leading-relaxed">{children}</p>
       </div>
     </div>
   );
 }
 
-export function RunningConfigSummary(v: RunningSummaryValues) {
+export function RunningConfigSummary(v: RunningSummaryValues & { accent?: Accent }) {
+  const accent = v.accent;
   let reward: React.ReactNode;
   if (v.credit_type === "percentage") {
     reward =
@@ -104,7 +126,7 @@ export function RunningConfigSummary(v: RunningSummaryValues) {
       : " Spend counts at each branch separately.";
 
   return (
-    <SummaryCard>
+    <SummaryCard accent={accent}>
       {reward}
       {trigger}. {validity}
       {cap}
@@ -113,7 +135,8 @@ export function RunningConfigSummary(v: RunningSummaryValues) {
   );
 }
 
-export function FixedConfigSummary(v: FixedSummaryValues) {
+export function FixedConfigSummary(v: FixedSummaryValues & { accent?: Accent }) {
+  const accent = v.accent;
   let reward: React.ReactNode;
   if (v.credit_type === "percentage") {
     reward =
@@ -173,7 +196,7 @@ export function FixedConfigSummary(v: FixedSummaryValues) {
   }
 
   return (
-    <SummaryCard>
+    <SummaryCard accent={accent}>
       {reward}
       {cap}. {window} Listed to staff; no credit is issued automatically.
     </SummaryCard>
