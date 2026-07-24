@@ -120,6 +120,22 @@ Type.Null()
 ]))
 })
 
+export type CreateRedemptionRequest = Static<typeof CreateRedemptionRequest>
+export const CreateRedemptionRequest = Type.Object({
+credit_id: Type.Number(),
+amount_redeemed: Type.Number()
+})
+
+export type CreditRemainingResponse = Static<typeof CreditRemainingResponse>
+export const CreditRemainingResponse = Type.Object({
+credit_id: Type.Number(),
+customer_id: Type.Number(),
+branch_id: Type.Number(),
+credit_amount: Type.Number(),
+redeemed_total: Type.Number(),
+remaining: Type.Number()
+})
+
 export type LeaderboardQuerystring = Static<typeof LeaderboardQuerystring>
 export const LeaderboardQuerystring = LeaderboardFilters
 
@@ -150,6 +166,18 @@ success: Type.Literal(true),
 data: CustomerTransactions
 })
 
+export type CreateRedemptionResponse = Static<typeof CreateRedemptionResponse>
+export const CreateRedemptionResponse = Type.Object({
+success: Type.Literal(true),
+data: CreditRemainingResponse
+})
+
+export type CreditRemainingApiResponseData = Static<typeof CreditRemainingApiResponseData>
+export const CreditRemainingApiResponseData = Type.Object({
+success: Type.Literal(true),
+data: CreditRemainingResponse
+})
+
 export type LeaderboardApiResponse = Static<typeof LeaderboardApiResponse>
 export const LeaderboardApiResponse = Type.Union([
 LeaderboardResponse,
@@ -171,5 +199,17 @@ ApiErrorResponse
 export type CreatePurchaseApiResponse = Static<typeof CreatePurchaseApiResponse>
 export const CreatePurchaseApiResponse = Type.Union([
 CreatePurchaseResponse,
+ApiErrorResponse
+])
+
+export type CreateRedemptionApiResponse = Static<typeof CreateRedemptionApiResponse>
+export const CreateRedemptionApiResponse = Type.Union([
+CreateRedemptionResponse,
+ApiErrorResponse
+])
+
+export type CreditRemainingApiResponse = Static<typeof CreditRemainingApiResponse>
+export const CreditRemainingApiResponse = Type.Union([
+CreditRemainingApiResponseData,
 ApiErrorResponse
 ])

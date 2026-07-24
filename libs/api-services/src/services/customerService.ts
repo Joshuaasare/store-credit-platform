@@ -3,10 +3,13 @@ import {
   LeaderboardQuerystring,
   TransactionsQuerystring,
   CreatePurchaseRequest,
+  CreateRedemptionRequest,
   LeaderboardApiResponse,
   LeaderboardStatsApiResponse,
   TransactionsApiResponse,
   CreatePurchaseApiResponse,
+  CreateRedemptionApiResponse,
+  CreditRemainingApiResponse,
 } from "../types/api.types.js";
 
 /**
@@ -64,6 +67,33 @@ export function createCustomerService() {
       return apiRequest<CreatePurchaseApiResponse>(
         "/customers/transactions/purchase",
         { method: "POST", body: payload },
+      );
+    },
+
+    /**
+     * POST /customers/credits/redeem — record an auto-approved redemption
+     * against a specific customer_credit row. Returns the live
+     * CreditRemainingResponse for that credit.
+     */
+    async createRedemption(
+      payload: CreateRedemptionRequest,
+    ): Promise<CreateRedemptionApiResponse> {
+      return apiRequest<CreateRedemptionApiResponse>(
+        "/customers/credits/redeem",
+        { method: "POST", body: payload },
+      );
+    },
+
+    /**
+     * GET /customers/credits/:creditId/remaining — live remaining credit
+     * snapshot (credit_amount − SUM(approved redemptions)).
+     */
+    async getCreditRemaining(
+      creditId: number,
+    ): Promise<CreditRemainingApiResponse> {
+      return apiRequest<CreditRemainingApiResponse>(
+        `/customers/credits/${encodeURIComponent(creditId)}/remaining`,
+        { method: "GET" },
       );
     },
   };

@@ -7,6 +7,11 @@ import {
   Card,
   Skeleton,
   Badge,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
   cn,
   Monogram,
 } from "@store-credit-platform/web-components";
@@ -35,6 +40,14 @@ import {
 
 const LIMIT = 20;
 
+type TypeFilter = "all" | "credit_issue" | "credit_redeem";
+
+const TYPE_FILTERS: { value: TypeFilter; label: string }[] = [
+  { value: "all", label: "All Transactions" },
+  { value: "credit_issue", label: "Credit Issued" },
+  { value: "credit_redeem", label: "Credit Redeemed" },
+];
+
 export default function CustomersTransactions() {
   const { branches } = useStoreStore();
   const [filters, setFilters] = useState<CustomersFiltersValue>(() => ({
@@ -45,6 +58,7 @@ export default function CustomersTransactions() {
     // so they appear immediately on refetch after a purchase is added.
     end: null,
   }));
+  const [typeFilter, setTypeFilter] = useState<TypeFilter>("all");
   const [addOpen, setAddOpen] = useState(false);
   const [detailRow, setDetailRow] = useState<CustomerTransactions | null>(null);
 
@@ -82,12 +96,9 @@ export default function CustomersTransactions() {
     for (const p of pages) {
       if (p.success) out.push(...p.data.rows);
     }
-    return out;
-  }, [transactionsQuery.data]);
-
-  const lastPage =
-    transactionsQuery.data?.pages?.[transactionsQuery.data.pages.length - 1];
-  const total = lastPage?.success ? lastPage.data.total : 0;
+    if (typeFilter === "all") return out;
+    return out.filter((r) => r.transaction_type === typeFilter);
+  }, [transactionsQuery.data, typeFilter]);
 
   const hasNextPage = transactionsQuery.hasNextPage;
   const isFetching = transactionsQuery.isFetching;
@@ -217,14 +228,23 @@ export default function CustomersTransactions() {
         className="animate-fade-in-up p-0 motion-reduce:animate-none"
         style={{ animationDelay: "60ms" }}
       >
-        <div className="flex items-center justify-between border-b px-4 py-3">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b px-4 py-3">
           <div className="flex items-center gap-2">
-            <h2 className="text-base font-semibold tracking-tight">
-              Transactions
-            </h2>
-            <span className="bg-muted/50 text-muted-foreground inline-flex h-5 items-center rounded-full border px-2 text-[11px] font-medium tabular-nums">
-              {total}
-            </span>
+            <Select
+              value={typeFilter}
+              onValueChange={(v) => setTypeFilter(v as TypeFilter)}
+            >
+              <SelectTrigger className="h-8 w-[180px] text-sm font-semibold tracking-tight">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {TYPE_FILTERS.map((f) => (
+                  <SelectItem key={f.value} value={f.value}>
+                    {f.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </div>
 

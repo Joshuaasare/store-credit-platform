@@ -23,7 +23,11 @@ Before writing any code, you MUST first read and analyze `database.types.ts` to 
 
 If the feature requires database changes that don't exist yet, flag this to the user and stop — you cannot proceed without the correct database schema in place.
 
-### Step 2: Create Backend Types
+### Step 2: Ask any clarifying questions
+
+Use the /grill-me and /grilling skill to ask the user any clarifying questions about the feature requirements, edge cases, or expected behavior. Ensure you have a complete understanding of the feature before proceeding to implementation.
+
+### Step 3: Create Backend Types
 
 Create `[feature].types.ts` in the backend types directory. These types should:
 
@@ -33,7 +37,7 @@ Create `[feature].types.ts` in the backend types directory. These types should:
 - Cover all CRUD operations and any custom operations needed
 - Include input validation types
 
-### Step 3: Generate Schemas
+### Step 4: Generate Schemas
 
 After creating or modifying any `.types.ts` files, run:
 
@@ -45,7 +49,7 @@ yarn generate:types
 
 Always verify the generation succeeded before proceeding. If generation fails, fix the issue in the types files and re-run.
 
-### Step 4: Implement Backend Routes
+### Step 5: Implement Backend Routes
 
 Create or update the route file in the `routes/[feature]` directory:
 
@@ -56,7 +60,7 @@ Create or update the route file in the `routes/[feature]` directory:
 - Use the types created in Step 2
 - Wire routes to the service layer
 
-### Step 5: Implement Backend Service
+### Step 6: Implement Backend Service
 
 Create or update the service file `[feature].service.ts`:
 
@@ -69,7 +73,7 @@ Create or update the service file `[feature].service.ts`:
 - Use the types created in Step 2
 - For select queries, specify the columns being fetched in queryFragments.ts and import them into the service file to ensure type safety and avoid fetching unnecessary data.
 
-### Step 6: Create Frontend API Service
+### Step 7: Create Frontend API Service
 
 Create or update the frontend service in the shared `api-services` library:
 
@@ -80,7 +84,7 @@ Create or update the frontend service in the shared `api-services` library:
 - Follow existing patterns in the api-services library
 - The frontend will import from this shared library
 
-### Step 7: Implement Frontend with React Query
+### Step 8: Implement Frontend with React Query
 
 Implement the frontend components/hooks using React Query:
 

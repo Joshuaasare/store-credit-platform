@@ -259,17 +259,17 @@ export const CustomerCreditRow = Type.Object({
 id: Type.Number(),
 customer_id: Type.Number(),
 branch_id: Type.Number(),
-credit_type: CreditTypeValues,
-credit_precentage: Type.Union([
-Type.Number(),
-Type.Null()
-]),
-max_credit_amount: Type.Union([
-Type.Number(),
-Type.Null()
-]),
+credit_amount: Type.Number(),
 expires_at: Type.Union([
 Type.Number(),
+Type.Null()
+]),
+revoked_at: Type.Union([
+Type.String(),
+Type.Null()
+]),
+revoked_by_user_id: Type.Union([
+Type.String(),
 Type.Null()
 ]),
 created_at: Type.String(),
@@ -282,3 +282,9 @@ Type.String(),
 Type.Null()
 ])
 })
+
+export type CustomerCreditWithRemaining = Static<typeof CustomerCreditWithRemaining>
+export const CustomerCreditWithRemaining = Type.Composite([CustomerCreditRow, Type.Object({
+remaining: Type.Number(),
+redeemed_total: Type.Number()
+})])

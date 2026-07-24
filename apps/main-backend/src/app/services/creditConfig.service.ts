@@ -13,6 +13,11 @@ import {
   CustomerCreditRow,
 } from "../schemas/creditConfig.schema";
 
+// The new customer_credit row stores only the calculated GHS amount plus
+// expiry/revocation metadata. We insert via `any` because the typed Insert
+// shape from database.types.ts already reflects credit_amount (no longer
+// credit_type / credit_precentage / max_credit_amount).
+
 // Migration 20260720000000 adds config_group_id (uuid), cumulative_scope
 // (enum), and merchants.credit_stacking_policy. Until that migration is
 // applied to dev Supabase and `database.types.ts` is regenerated, the typed
@@ -458,6 +463,16 @@ export const creditConfigService = new CreditConfigService();
 //     reached) the threshold counts. We never reward spend below the line.
 //   - Null threshold ⇒ 0 (every purchase qualifies); null window ⇒ no
 //     lookback (prior = 0); null cap ⇒ uncapped percentage reward.
+//
+// After the re-architecture:
+//   - Prior purchases are read from `customer_purchases` (not the dropped
+//     `customer_transactions`).
+//   - The calculated GHS amount is stored in `customer_credit.credit_amount`.
+//     We no longer denormalize credit_type / percentage / cap onto the row —
+//     those stay on the issuing running_credit_config.
+//   - Retroactivity (decision 10): the lookback includes purchases made
+//     before the config's created_at as long as they fall inside the
+//     eligible_window ending at the current purchase's transaction_date.
 
 export async function issueRunningCreditsForPurchase(
   supabase: SupabaseClient<Database>,
@@ -510,11 +525,13 @@ export async function issueRunningCreditsForPurchase(
     let priorCumulative = 0;
     if (windowDays != null) {
       const lowerBound = transactionDateEpoch - windowDays * 86400;
+      // Read prior purchases from customer_purchases. The lookback is
+      // retroactive: any purchase within the window counts, even if it
+      // predates this config's created_at (decision 10).
       let q = supabase
-        .from("customer_transactions")
+        .from("customer_purchases")
         .select("amount")
         .eq("customer_id", customerId)
-        .eq("transaction_type", "purchase")
         .is("deleted_at", null)
         .lt("transaction_date", transactionDateEpoch)
         .gte("transaction_date", lowerBound);
@@ -524,7 +541,10 @@ export async function issueRunningCreditsForPurchase(
         q = q.in("branch_id", merchantBranchIds);
       }
       const { data: txs } = await q;
-      priorCumulative = (txs ?? []).reduce((s, t) => s + Number(t.amount), 0);
+      priorCumulative = (txs ?? []).reduce(
+        (s, t) => s + Number((t as any).amount),
+        0,
+      );
     }
 
     let rewardable: number;
@@ -556,13 +576,14 @@ export async function issueRunningCreditsForPurchase(
     issued = [plans.reduce((a, b) => (b.creditValue > a.creditValue ? b : a))];
   }
 
-  const inserts = issued.map(({ config }) => ({
+  // Insert the calculated GHS amount into customer_credit.credit_amount.
+  // The new schema only stores credit_amount + expires_at (epoch) + revocation
+  // metadata; the originating config is identified by the branch_id + the
+  // merchant's running_credit_config rows.
+  const inserts = issued.map(({ config, creditValue }) => ({
     customer_id: customerId,
     branch_id: branchId,
-    credit_type: config.credit_type,
-    credit_precentage:
-      config.credit_type === "percentage" ? config.percentage_credit_value : null,
-    max_credit_amount: config.maximum_allowed_credit,
+    credit_amount: Number(creditValue),
     expires_at:
       config.credit_validity == null
         ? null

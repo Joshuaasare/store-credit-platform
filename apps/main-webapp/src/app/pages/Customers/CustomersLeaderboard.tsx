@@ -176,6 +176,18 @@ export default function CustomersLeaderboard() {
 
   return (
     <div className="space-y-6">
+      {/* Filters */}
+      <Card
+        className="animate-fade-in-up p-4 motion-reduce:animate-none"
+        style={{ animationDelay: "180ms" }}
+      >
+        <CustomersFilters
+          value={filters}
+          onChange={(next) => setFilters(next)}
+          branches={branches}
+          showSort
+        />
+      </Card>
       {/* Stats row */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <StatCard
@@ -218,20 +230,6 @@ export default function CustomersLeaderboard() {
           }
         />
       </div>
-
-      {/* Filters */}
-      <Card
-        className="animate-fade-in-up p-4 motion-reduce:animate-none"
-        style={{ animationDelay: "180ms" }}
-      >
-        <CustomersFilters
-          value={filters}
-          onChange={(next) => setFilters(next)}
-          branches={branches}
-          showSort
-        />
-      </Card>
-
       {/* Table card */}
       <Card
         className="animate-fade-in-up p-0 motion-reduce:animate-none"

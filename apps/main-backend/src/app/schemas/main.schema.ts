@@ -150,7 +150,11 @@ Type.Null()
 amount: Type.Number(),
 transaction_date: Type.Number(),
 transaction_type: TransactionTypeValues,
-created_at: Type.String()
+created_at: Type.String(),
+credit_id: Type.Optional(Type.Union([
+Type.Number(),
+Type.Null()
+]))
 })
 
 export type BaseUserProfile = Static<typeof BaseUserProfile>

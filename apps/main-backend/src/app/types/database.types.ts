@@ -93,37 +93,37 @@ export type Database = {
         Row: {
           branch_id: number
           created_at: string
-          credit_precentage: number | null
-          credit_type: Database["public"]["Enums"]["credit_type"]
+          credit_amount: number
           customer_id: number
           deleted_at: string | null
           expires_at: number | null
           id: number
-          max_credit_amount: number | null
+          revoked_at: string | null
+          revoked_by_user_id: string | null
           updated_at: string | null
         }
         Insert: {
           branch_id: number
           created_at?: string
-          credit_precentage?: number | null
-          credit_type: Database["public"]["Enums"]["credit_type"]
+          credit_amount: number
           customer_id: number
           deleted_at?: string | null
           expires_at?: number | null
           id?: number
-          max_credit_amount?: number | null
+          revoked_at?: string | null
+          revoked_by_user_id?: string | null
           updated_at?: string | null
         }
         Update: {
           branch_id?: number
           created_at?: string
-          credit_precentage?: number | null
-          credit_type?: Database["public"]["Enums"]["credit_type"]
+          credit_amount?: number
           customer_id?: number
           deleted_at?: string | null
           expires_at?: number | null
           id?: number
-          max_credit_amount?: number | null
+          revoked_at?: string | null
+          revoked_by_user_id?: string | null
           updated_at?: string | null
         }
         Relationships: [
@@ -141,49 +141,95 @@ export type Database = {
             referencedRelation: "customers"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "customer_credit_revoked_by_user_id_fkey"
+            columns: ["revoked_by_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
         ]
       }
-      customer_transactions: {
+      customer_credit_redemptions: {
+        Row: {
+          amount_redeemed: number
+          approved_at: string | null
+          approved_by_user_id: string | null
+          created_at: string
+          credit_id: number
+          deleted_at: string | null
+          id: number
+          updated_at: string | null
+        }
+        Insert: {
+          amount_redeemed: number
+          approved_at?: string | null
+          approved_by_user_id?: string | null
+          created_at?: string
+          credit_id: number
+          deleted_at?: string | null
+          id?: number
+          updated_at?: string | null
+        }
+        Update: {
+          amount_redeemed?: number
+          approved_at?: string | null
+          approved_by_user_id?: string | null
+          created_at?: string
+          credit_id?: number
+          deleted_at?: string | null
+          id?: number
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_credit_redemptions_approved_by_user_id_fkey"
+            columns: ["approved_by_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_credit_redemptions_credit_id_fkey"
+            columns: ["credit_id"]
+            isOneToOne: false
+            referencedRelation: "customer_credit"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      customer_purchases: {
         Row: {
           amount: number
           branch_id: number
           created_at: string
-          credit_generated: number | null
-          credit_redeemed: number | null
           customer_id: number
           deleted_at: string | null
           id: number
           recorded_by_user_id: string | null
           transaction_date: number
-          transaction_type: Database["public"]["Enums"]["transaction_type"]
           updated_at: string | null
         }
         Insert: {
           amount: number
           branch_id: number
           created_at?: string
-          credit_generated?: number | null
-          credit_redeemed?: number | null
           customer_id: number
           deleted_at?: string | null
           id?: number
           recorded_by_user_id?: string | null
           transaction_date: number
-          transaction_type: Database["public"]["Enums"]["transaction_type"]
           updated_at?: string | null
         }
         Update: {
           amount?: number
           branch_id?: number
           created_at?: string
-          credit_generated?: number | null
-          credit_redeemed?: number | null
           customer_id?: number
           deleted_at?: string | null
           id?: number
           recorded_by_user_id?: string | null
           transaction_date?: number
-          transaction_type?: Database["public"]["Enums"]["transaction_type"]
           updated_at?: string | null
         }
         Relationships: [

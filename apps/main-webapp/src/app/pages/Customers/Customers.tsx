@@ -1,5 +1,5 @@
 import { useLocation, useNavigate, Outlet } from "react-router-dom";
-import { Users } from "lucide-react";
+import { Receipt } from "lucide-react";
 import {
   Tabs,
   TabsList,
@@ -11,7 +11,7 @@ const TABS = [
   { value: "leaderboard", label: "Leaderboard" },
 ] as const;
 
-export default function Customers() {
+export default function Transactions() {
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -45,13 +45,13 @@ export default function Customers() {
           />
           <div className="relative flex items-start gap-4">
             <div className="from-primary to-primary/70 text-primary-foreground flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br shadow-sm">
-              <Users className="h-6 w-6 stroke-[1.75]" />
+              <Receipt className="h-6 w-6 stroke-[1.75]" />
             </div>
             <div className="space-y-1">
-              <h1 className="text-3xl font-bold tracking-tight">Customers</h1>
+              <h1 className="text-3xl font-bold tracking-tight">Transactions</h1>
               <p className="text-muted-foreground text-sm">
-                Track your top customers and every purchase, credit issue, and
-                redemption.
+                Track every purchase, credit issue, and redemption across your
+                branches.
               </p>
             </div>
           </div>

@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   Building2,
   Calendar,
@@ -21,6 +22,7 @@ import {
 } from "@shared/utils/customers.utils";
 import { formatEpochDateTime, formatGHS } from "@shared/utils/format";
 import { formatDisplayNumber, TYPE_META } from "@shared/utils/ui.utils";
+import { AddRedemptionDialog } from "./AddRedemptionDialog";
 
 interface TransactionDetailDialogProps {
   row: CustomerTransactions | null;
@@ -84,6 +86,9 @@ export function TransactionDetailDialog({
   const open = row !== null;
   const meta = row ? TYPE_META[row.transaction_type] : null;
   const displayName = row ? customerDisplayName(row) : "";
+  const [redeemOpen, setRedeemOpen] = useState(false);
+  const creditId =
+    row && row.transaction_type === "credit_issue" ? (row.credit_id ?? row.id) : null;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -130,7 +135,7 @@ export function TransactionDetailDialog({
             </div>
           </div>
 
-          {/* Amount hero readout */}
+          {/* Amount hero readout + (optional) Redeem credit action */}
           <div className="from-chart-4/10 to-card mt-5 flex items-end justify-between rounded-xl border bg-gradient-to-br p-4">
             <div>
               <div className="text-muted-foreground flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wide">
@@ -141,6 +146,20 @@ export function TransactionDetailDialog({
                 {row ? formatGHS(row.amount) : "—"}
               </div>
             </div>
+            {creditId != null && (
+              <AddRedemptionDialog
+                creditId={creditId}
+                open={redeemOpen}
+                onOpenChange={setRedeemOpen}
+              >
+                <button
+                  type="button"
+                  className="bg-primary text-primary-foreground hover:bg-primary/90 inline-flex h-9 items-center rounded-md px-3 text-sm font-medium shadow-sm"
+                >
+                  Redeem credit
+                </button>
+              </AddRedemptionDialog>
+            )}
           </div>
         </div>
 

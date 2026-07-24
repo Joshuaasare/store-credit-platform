@@ -122,15 +122,27 @@ export type FixedCreditConfigDeleteApiResponse =
   | FixedCreditConfigDeleteResponse
   | ApiErrorResponse;
 
+// A row of customer_credit. After the re-architecture, customer_credit
+// stores only the calculated GHS amount (credit_amount) plus expiry/revocation
+// metadata. The credit_type / percentage / cap that produced it live on the
+// running_credit_config that issued it; we no longer denormalize them here.
 export interface CustomerCreditRow {
   id: number;
   customer_id: number;
   branch_id: number;
-  credit_type: CreditTypeValues;
-  credit_precentage: number | null;
-  max_credit_amount: number | null;
+  credit_amount: number;
   expires_at: number | null;
+  revoked_at: string | null;
+  revoked_by_user_id: string | null;
   created_at: string;
   updated_at: string | null;
   deleted_at: string | null;
+}
+
+// Credit row augmented with the live "remaining" = credit_amount −
+// SUM(approved redemptions). Used by the redemption dialog and any
+// credit-list endpoint.
+export interface CustomerCreditWithRemaining extends CustomerCreditRow {
+  remaining: number;
+  redeemed_total: number;
 }

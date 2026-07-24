@@ -1,6 +1,6 @@
 /**
  * Auto-generated API Types
- * Generated on: 2026-07-21T00:06:52.356Z
+ * Generated on: 2026-07-23T03:45:42.517Z
  * 
  * ⚠️ DO NOT EDIT MANUALLY
  * Source: apps/smartschool-api/src/app/types/
@@ -110,6 +110,10 @@ export interface BaseCustomerTransaction {
   transaction_date: number;
   transaction_type: TransactionTypeValues;
   created_at: string;
+  
+  
+  
+  credit_id?: number | null;
 }
 
 
@@ -391,13 +395,18 @@ export interface CustomerCreditRow {
   id: number;
   customer_id: number;
   branch_id: number;
-  credit_type: CreditTypeValues;
-  credit_precentage: number | null;
-  max_credit_amount: number | null;
+  credit_amount: number;
   expires_at: number | null;
+  revoked_at: string | null;
+  revoked_by_user_id: string | null;
   created_at: string;
   updated_at: string | null;
   deleted_at: string | null;
+}
+
+export interface CustomerCreditWithRemaining extends CustomerCreditRow {
+  remaining: number;
+  redeemed_total: number;
 }
 
 export type LeaderboardSort =
@@ -470,6 +479,20 @@ export interface CreatePurchaseRequest {
   branch_id?: number | null;
 }
 
+export interface CreateRedemptionRequest {
+  credit_id: number;
+  amount_redeemed: number;
+}
+
+export interface CreditRemainingResponse {
+  credit_id: number;
+  customer_id: number;
+  branch_id: number;
+  credit_amount: number;
+  redeemed_total: number;
+  remaining: number;
+}
+
 export type LeaderboardQuerystring = LeaderboardFilters;
 
 export type TransactionsQuerystring = TransactionsFilters;
@@ -494,6 +517,16 @@ export interface CreatePurchaseResponse {
   data: CustomerTransactions;
 }
 
+export interface CreateRedemptionResponse {
+  success: true;
+  data: CreditRemainingResponse;
+}
+
+export interface CreditRemainingApiResponseData {
+  success: true;
+  data: CreditRemainingResponse;
+}
+
 export type LeaderboardApiResponse = LeaderboardResponse | ApiErrorResponse;
 export type LeaderboardStatsApiResponse =
   | LeaderboardStatsResponse
@@ -501,6 +534,12 @@ export type LeaderboardStatsApiResponse =
 export type TransactionsApiResponse = TransactionsResponse | ApiErrorResponse;
 export type CreatePurchaseApiResponse =
   | CreatePurchaseResponse
+  | ApiErrorResponse;
+export type CreateRedemptionApiResponse =
+  | CreateRedemptionResponse
+  | ApiErrorResponse;
+export type CreditRemainingApiResponse =
+  | CreditRemainingApiResponseData
   | ApiErrorResponse;
 
 export interface MerchantWithStats extends BaseMerchant {
