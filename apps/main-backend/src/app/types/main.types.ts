@@ -88,6 +88,10 @@ export interface BaseCustomerTransaction {
   transaction_date: number;
   transaction_type: TransactionTypeValues;
   created_at: string;
+  // Set for credit_issue and credit_redeem rows (the originating
+  // customer_credit.id). Null for purchase rows. Used by the frontend to
+  // open the redemption dialog against a specific credit.
+  credit_id?: number | null;
 }
 
 // Slim profile projection of users for customer / recorded-by joins.

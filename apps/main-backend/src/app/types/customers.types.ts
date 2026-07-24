@@ -76,6 +76,28 @@ export interface CreatePurchaseRequest {
   branch_id?: number | null;
 }
 
+// Records a redemption against a specific customer_credit row. The webapp
+// auto-approves on creation (approved_at = now(), approved_by_user_id = caller)
+// — the approved_at column exists so a future customer-initiated flow can
+// record pending redemptions that await manager approval.
+export interface CreateRedemptionRequest {
+  credit_id: number;
+  amount_redeemed: number;
+}
+
+// Live "remaining credit" snapshot for a single customer_credit row.
+//   remaining       = credit_amount − redeemed_total
+//   redeemed_total  = SUM(amount_redeemed) WHERE approved_at IS NOT NULL
+//                     AND deleted_at IS NULL
+export interface CreditRemainingResponse {
+  credit_id: number;
+  customer_id: number;
+  branch_id: number;
+  credit_amount: number;
+  redeemed_total: number;
+  remaining: number;
+}
+
 export type LeaderboardQuerystring = LeaderboardFilters;
 
 export type TransactionsQuerystring = TransactionsFilters;
@@ -100,6 +122,16 @@ export interface CreatePurchaseResponse {
   data: CustomerTransactions;
 }
 
+export interface CreateRedemptionResponse {
+  success: true;
+  data: CreditRemainingResponse;
+}
+
+export interface CreditRemainingApiResponseData {
+  success: true;
+  data: CreditRemainingResponse;
+}
+
 export type LeaderboardApiResponse = LeaderboardResponse | ApiErrorResponse;
 export type LeaderboardStatsApiResponse =
   | LeaderboardStatsResponse
@@ -107,4 +139,10 @@ export type LeaderboardStatsApiResponse =
 export type TransactionsApiResponse = TransactionsResponse | ApiErrorResponse;
 export type CreatePurchaseApiResponse =
   | CreatePurchaseResponse
+  | ApiErrorResponse;
+export type CreateRedemptionApiResponse =
+  | CreateRedemptionResponse
+  | ApiErrorResponse;
+export type CreditRemainingApiResponse =
+  | CreditRemainingApiResponseData
   | ApiErrorResponse;

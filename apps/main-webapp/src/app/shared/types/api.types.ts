@@ -1,6 +1,6 @@
 /**
  * Auto-generated API Types
- * Generated on: 2026-07-18T01:44:26.427Z
+ * Generated on: 2026-07-23T03:45:42.517Z
  * 
  * ⚠️ DO NOT EDIT MANUALLY
  * Source: apps/smartschool-api/src/app/types/
@@ -110,6 +110,10 @@ export interface BaseCustomerTransaction {
   transaction_date: number;
   transaction_type: TransactionTypeValues;
   created_at: string;
+  
+  
+  
+  credit_id?: number | null;
 }
 
 
@@ -265,6 +269,146 @@ export type BranchMutationApiResponse =
   | BranchMutationResponse
   | ApiErrorResponse;
 
+export type CreditTypeValues = "fixed" | "percentage";
+
+export type CumulativeScopeValues = "per_branch" | "merchant_wide";
+
+export interface RunningCreditConfigGroup {
+  config_group_id: string;
+  branches: BaseBranch[];
+  credit_type: CreditTypeValues | null;
+  credit_validity: number | null;
+  eligible_window: number | null;
+  fixed_credit_value: number | null;
+  percentage_credit_value: number | null;
+  maximum_allowed_credit: number | null;
+  threshold_amount: number | null;
+  terms: string | null;
+  cumulative_scope: CumulativeScopeValues;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string | null;
+}
+
+export interface CreateRunningCreditConfigRequest {
+  branch_ids: number[];
+  credit_type: CreditTypeValues | null;
+  credit_validity?: number | null;
+  eligible_window?: number | null;
+  fixed_credit_value?: number | null;
+  percentage_credit_value?: number | null;
+  maximum_allowed_credit?: number | null;
+  threshold_amount?: number | null;
+  terms?: string | null;
+  cumulative_scope: CumulativeScopeValues;
+}
+
+export type UpdateRunningCreditConfigRequest = CreateRunningCreditConfigRequest;
+
+export interface FixedCreditConfigGroup {
+  config_group_id: string;
+  branches: BaseBranch[];
+  credit_type: CreditTypeValues | null;
+  fixed_credit_value: number | null;
+  percentage_credit_value: number | null;
+  maximum_allowed_credit: number | null;
+  start_date: number | null;
+  end_date: number | null;
+  terms: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string | null;
+}
+
+export interface CreateFixedCreditConfigRequest {
+  branch_ids: number[];
+  credit_type: CreditTypeValues | null;
+  fixed_credit_value?: number | null;
+  percentage_credit_value?: number | null;
+  maximum_allowed_credit?: number | null;
+  start_date?: number | null;
+  end_date?: number | null;
+  terms?: string | null;
+}
+
+export type UpdateFixedCreditConfigRequest = CreateFixedCreditConfigRequest;
+
+export interface ToggleActiveRequest {
+  is_active: boolean;
+}
+
+export interface RunningCreditConfigListResponse {
+  success: true;
+  data: RunningCreditConfigGroup[];
+}
+
+export interface RunningCreditConfigMutationResponse {
+  success: true;
+  data: RunningCreditConfigGroup;
+}
+
+export interface RunningCreditConfigDeleteResponse {
+  success: true;
+  data: null;
+}
+
+export type RunningCreditConfigListApiResponse =
+  | RunningCreditConfigListResponse
+  | ApiErrorResponse;
+
+export type RunningCreditConfigMutationApiResponse =
+  | RunningCreditConfigMutationResponse
+  | ApiErrorResponse;
+
+export type RunningCreditConfigDeleteApiResponse =
+  | RunningCreditConfigDeleteResponse
+  | ApiErrorResponse;
+
+export interface FixedCreditConfigListResponse {
+  success: true;
+  data: FixedCreditConfigGroup[];
+}
+
+export interface FixedCreditConfigMutationResponse {
+  success: true;
+  data: FixedCreditConfigGroup;
+}
+
+export interface FixedCreditConfigDeleteResponse {
+  success: true;
+  data: null;
+}
+
+export type FixedCreditConfigListApiResponse =
+  | FixedCreditConfigListResponse
+  | ApiErrorResponse;
+
+export type FixedCreditConfigMutationApiResponse =
+  | FixedCreditConfigMutationResponse
+  | ApiErrorResponse;
+
+export type FixedCreditConfigDeleteApiResponse =
+  | FixedCreditConfigDeleteResponse
+  | ApiErrorResponse;
+
+export interface CustomerCreditRow {
+  id: number;
+  customer_id: number;
+  branch_id: number;
+  credit_amount: number;
+  expires_at: number | null;
+  revoked_at: string | null;
+  revoked_by_user_id: string | null;
+  created_at: string;
+  updated_at: string | null;
+  deleted_at: string | null;
+}
+
+export interface CustomerCreditWithRemaining extends CustomerCreditRow {
+  remaining: number;
+  redeemed_total: number;
+}
+
 export type LeaderboardSort =
   | "purchases"
   | "credits_issued"
@@ -335,6 +479,20 @@ export interface CreatePurchaseRequest {
   branch_id?: number | null;
 }
 
+export interface CreateRedemptionRequest {
+  credit_id: number;
+  amount_redeemed: number;
+}
+
+export interface CreditRemainingResponse {
+  credit_id: number;
+  customer_id: number;
+  branch_id: number;
+  credit_amount: number;
+  redeemed_total: number;
+  remaining: number;
+}
+
 export type LeaderboardQuerystring = LeaderboardFilters;
 
 export type TransactionsQuerystring = TransactionsFilters;
@@ -359,6 +517,16 @@ export interface CreatePurchaseResponse {
   data: CustomerTransactions;
 }
 
+export interface CreateRedemptionResponse {
+  success: true;
+  data: CreditRemainingResponse;
+}
+
+export interface CreditRemainingApiResponseData {
+  success: true;
+  data: CreditRemainingResponse;
+}
+
 export type LeaderboardApiResponse = LeaderboardResponse | ApiErrorResponse;
 export type LeaderboardStatsApiResponse =
   | LeaderboardStatsResponse
@@ -366,6 +534,12 @@ export type LeaderboardStatsApiResponse =
 export type TransactionsApiResponse = TransactionsResponse | ApiErrorResponse;
 export type CreatePurchaseApiResponse =
   | CreatePurchaseResponse
+  | ApiErrorResponse;
+export type CreateRedemptionApiResponse =
+  | CreateRedemptionResponse
+  | ApiErrorResponse;
+export type CreditRemainingApiResponse =
+  | CreditRemainingApiResponseData
   | ApiErrorResponse;
 
 export interface MerchantWithStats extends BaseMerchant {

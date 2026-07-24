@@ -83,19 +83,30 @@ export class MerchantService {
     const customerCount =
       custCountRes == null ? 0 : Number(custCountRes as unknown);
 
-    // lifetime_credit_issued — sum of credit_generated across the merchant's
-    // transactions (credit_redeem / credit_adjustment excluded from "issued").
-    const { data: issuedRow } = await supabaseAdmin
-      .from("customer_transactions")
-      .select("credit_generated")
-      .eq("branch_id.merchant_id", merchantId)
-      .is("deleted_at", null)
-      .not("credit_generated", "is", null);
+    // lifetime_credit_issued — sum of customer_credit.credit_amount across
+    // the merchant's branches. The old customer_transactions.credit_generated
+    // column is gone after the re-architecture; customer_credit now stores the
+    // calculated GHS amount directly.
+    const { data: branchIdRows } = await supabaseAdmin
+      .from("branches")
+      .select("id")
+      .eq("merchant_id", merchantId)
+      .is("deleted_at", null);
+    const merchantBranchIds = (branchIdRows ?? []).map((b) => (b as any).id);
 
-    const lifetimeCreditIssued = (issuedRow || []).reduce(
-      (sum, r) => sum + Number(r.credit_generated ?? 0),
-      0,
-    );
+    let lifetimeCreditIssued = 0;
+    if (merchantBranchIds.length > 0) {
+      const { data: issuedRows } = await supabaseAdmin
+        .from("customer_credit")
+        .select("credit_amount")
+        .in("branch_id", merchantBranchIds)
+        .is("deleted_at", null)
+        .is("revoked_at", null);
+      lifetimeCreditIssued = (issuedRows ?? []).reduce(
+        (sum, r) => sum + Number((r as any).credit_amount ?? 0),
+        0,
+      );
+    }
 
     return {
       id: merchant.id,

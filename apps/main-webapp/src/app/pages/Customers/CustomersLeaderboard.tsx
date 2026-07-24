@@ -117,7 +117,8 @@ export default function CustomersLeaderboard() {
         cell: ({ row }) => {
           const r = row.original;
           const name = r.customer_name?.trim() || "";
-          const isLinked = r.user_id != null && name && name !== "Unnamed customer";
+          const isLinked =
+            r.user_id != null && name && name !== "Unnamed customer";
           return (
             <div className="flex min-w-0 items-center gap-3">
               <Monogram
@@ -127,7 +128,9 @@ export default function CustomersLeaderboard() {
               />
               <div className="min-w-0">
                 <div className="truncate font-medium">
-                  {isLinked ? name : formatDisplayNumber(r.phone) ?? "Unnamed customer"}
+                  {isLinked
+                    ? name
+                    : (formatDisplayNumber(r.phone) ?? "Unnamed customer")}
                 </div>
                 {isLinked && r.phone && (
                   <div className="text-muted-foreground truncate text-xs">
@@ -173,6 +176,18 @@ export default function CustomersLeaderboard() {
 
   return (
     <div className="space-y-6">
+      {/* Filters */}
+      <Card
+        className="animate-fade-in-up p-4 motion-reduce:animate-none"
+        style={{ animationDelay: "180ms" }}
+      >
+        <CustomersFilters
+          value={filters}
+          onChange={(next) => setFilters(next)}
+          branches={branches}
+          showSort
+        />
+      </Card>
       {/* Stats row */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <StatCard
@@ -215,20 +230,6 @@ export default function CustomersLeaderboard() {
           }
         />
       </div>
-
-      {/* Filters */}
-      <Card
-        className="animate-fade-in-up p-4 motion-reduce:animate-none"
-        style={{ animationDelay: "180ms" }}
-      >
-        <CustomersFilters
-          value={filters}
-          onChange={(next) => setFilters(next)}
-          branches={branches}
-          showSort
-        />
-      </Card>
-
       {/* Table card */}
       <Card
         className="animate-fade-in-up p-0 motion-reduce:animate-none"
@@ -306,11 +307,18 @@ const TONE_CHIP: Record<NonNullable<StatCardProps["tone"]>, string> = {
   amber: "bg-amber-500/10 text-amber-600 dark:text-amber-400",
 };
 
-function StatCard({ label, icon, value, tone = "primary", className, style }: StatCardProps) {
+function StatCard({
+  label,
+  icon,
+  value,
+  tone = "primary",
+  className,
+  style,
+}: StatCardProps) {
   return (
     <Card
       className={cn(
-        "relative animate-fade-in-up overflow-hidden p-4 motion-reduce:animate-none",
+        "animate-fade-in-up relative overflow-hidden p-4 motion-reduce:animate-none",
         className,
       )}
       style={style}

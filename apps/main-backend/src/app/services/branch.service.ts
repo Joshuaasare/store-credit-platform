@@ -30,7 +30,6 @@ export class BranchService {
 
     const now = new Date();
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-    const monthStartMs = Math.floor(monthStart.getTime() / 1000);
 
     const results = await Promise.all(
       branches.map(async (b): Promise<BranchWithAggregates> => {
@@ -58,33 +57,90 @@ export class BranchService {
         const customerCount =
           custCountRes == null ? 0 : Number(custCountRes as unknown);
 
-        // credit_issued_this_month — sum of credit_generated this month
+        // credit_issued_this_month — sum of customer_credit.credit_amount
+        // issued this month at this branch. The old customer_transactions
+        // .credit_generated column is gone after the re-architecture.
+        const monthStartIso = monthStart.toISOString();
         const { data: issuedRows } = await supabaseAdmin
-          .from("customer_transactions")
-          .select("credit_generated")
+          .from("customer_credit")
+          .select("credit_amount, created_at")
           .eq("branch_id", b.id)
-          .gte("transaction_date", monthStartMs)
+          .gte("created_at", monthStartIso)
           .is("deleted_at", null)
-          .not("credit_generated", "is", null);
+          .is("revoked_at", null);
 
         const creditIssuedThisMonth = (issuedRows || []).reduce(
-          (sum, r) => sum + Number(r.credit_generated ?? 0),
+          (sum, r) => sum + Number((r as any).credit_amount ?? 0),
           0,
         );
 
-        // last_activity_date — max transaction_date as ISO string
-        const { data: lastRow } = await supabaseAdmin
-          .from("customer_transactions")
-          .select("transaction_date")
-          .eq("branch_id", b.id)
-          .is("deleted_at", null)
-          .order("transaction_date", { ascending: false })
-          .limit(1)
-          .maybeSingle();
+        // last_activity_date — latest of: most recent purchase (transaction_date
+        // epoch), most recent credit (created_at), most recent approved
+        // redemption (created_at). Falls back to null if no activity.
+        //
+        // Redemptions don't carry a denormalized branch_id — we scope them via
+        // the credit_id → customer_credit.branch_id join, so first fetch the
+        // branch's credit IDs, then fetch the latest approved redemption among
+        // them.
+        const [lastPurchase, lastCredit, branchCreditIds] = await Promise.all([
+          supabaseAdmin
+            .from("customer_purchases")
+            .select("transaction_date")
+            .eq("branch_id", b.id)
+            .is("deleted_at", null)
+            .order("transaction_date", { ascending: false })
+            .limit(1)
+            .maybeSingle(),
+          supabaseAdmin
+            .from("customer_credit")
+            .select("created_at")
+            .eq("branch_id", b.id)
+            .is("deleted_at", null)
+            .is("revoked_at", null)
+            .order("created_at", { ascending: false })
+            .limit(1)
+            .maybeSingle(),
+          supabaseAdmin
+            .from("customer_credit")
+            .select("id")
+            .eq("branch_id", b.id)
+            .is("deleted_at", null)
+            .is("revoked_at", null),
+        ]);
 
-        const lastActivityDate = lastRow?.transaction_date
-          ? new Date(Number(lastRow.transaction_date) * 1000).toISOString()
-          : null;
+        const branchCreditIdList = (branchCreditIds.data ?? []).map(
+          (c: any) => c.id as number,
+        );
+        let lastRedemption: { data: any | null; error: any } = {
+          data: null,
+          error: null,
+        };
+        if (branchCreditIdList.length > 0) {
+          lastRedemption = await supabaseAdmin
+            .from("customer_credit_redemptions")
+            .select("created_at")
+            .in("credit_id", branchCreditIdList)
+            .is("deleted_at", null)
+            .not("approved_at", "is", null)
+            .order("created_at", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+        }
+
+        const candidateMs: number[] = [];
+        if (lastPurchase.data?.transaction_date) {
+          candidateMs.push(Number(lastPurchase.data.transaction_date) * 1000);
+        }
+        if (lastCredit.data?.created_at) {
+          candidateMs.push(new Date(lastCredit.data.created_at).getTime());
+        }
+        if (lastRedemption.data?.created_at) {
+          candidateMs.push(new Date(lastRedemption.data.created_at).getTime());
+        }
+        const lastActivityDate =
+          candidateMs.length > 0
+            ? new Date(Math.max(...candidateMs)).toISOString()
+            : null;
 
         return {
           id: b.id,
