@@ -13,14 +13,14 @@ import { useStoreStore } from "@shared/stores/storeStore";
 export const routes = {
   MY_STORE: "/",
   CREDITS: "/credits",
-  CUSTOMERS: "/customers",
+  TRANSACTIONS: "/transactions",
   PROFILE: "/profile",
 };
 
 const navItems = [
   { title: "My Store", url: routes.MY_STORE, icon: Store },
   { title: "Credits", url: routes.CREDITS, icon: Wallet },
-  { title: "Transactions", url: routes.CUSTOMERS, icon: Receipt },
+  { title: "Transactions", url: routes.TRANSACTIONS, icon: Receipt },
   { title: "Profile", url: routes.PROFILE, icon: UserRound },
 ];
 

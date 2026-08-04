@@ -1,13 +1,9 @@
 import { createApiClient } from "./apiService.js";
 import {
   LeaderboardQuerystring,
-  TransactionsQuerystring,
-  CreatePurchaseRequest,
   CreateRedemptionRequest,
   LeaderboardApiResponse,
   LeaderboardStatsApiResponse,
-  TransactionsApiResponse,
-  CreatePurchaseApiResponse,
   CreateRedemptionApiResponse,
   CreditRemainingApiResponse,
 } from "../types/api.types.js";
@@ -47,26 +43,6 @@ export function createCustomerService() {
       return apiRequest<LeaderboardStatsApiResponse>(
         `/customers/leaderboard-stats${qs}`,
         { method: "GET" },
-      );
-    },
-
-    /** GET /customers/transactions — paginated, merchant-scoped. */
-    async getTransactions(
-      params: TransactionsQuerystring,
-    ): Promise<TransactionsApiResponse> {
-      const qs = buildQS(params as Record<string, unknown>);
-      return apiRequest<TransactionsApiResponse>(`/customers/transactions${qs}`, {
-        method: "GET",
-      });
-    },
-
-    /** POST /customers/transactions/purchase — record a purchase. */
-    async createPurchase(
-      payload: CreatePurchaseRequest,
-    ): Promise<CreatePurchaseApiResponse> {
-      return apiRequest<CreatePurchaseApiResponse>(
-        "/customers/transactions/purchase",
-        { method: "POST", body: payload },
       );
     },
 

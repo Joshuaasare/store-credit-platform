@@ -1,5 +1,5 @@
 import { Type, Static } from '@sinclair/typebox'
-import { BaseBranch, ApiErrorResponse, BaseCustomer, BaseCustomerTransaction, BaseUserProfile } from './main.schema'
+import { ApiErrorResponse } from './main.schema'
 
 
 
@@ -32,45 +32,9 @@ total_credits_redeemed: Type.Number(),
 transaction_count: Type.Number()
 })
 
-export type CustomerWithUser = Static<typeof CustomerWithUser>
-export const CustomerWithUser = Type.Composite([BaseCustomer, Type.Object({
-users: Type.Union([
-BaseUserProfile,
-Type.Null()
-])
-})])
-
-export type CustomerTransactions = Static<typeof CustomerTransactions>
-export const CustomerTransactions = Type.Composite([BaseCustomerTransaction, Type.Object({
-customer: CustomerWithUser,
-branch: BaseBranch,
-recorded_by_user: Type.Union([
-BaseUserProfile,
-Type.Null()
-])
-})])
-
 export type LeaderboardFilters = Static<typeof LeaderboardFilters>
 export const LeaderboardFilters = Type.Object({
 sort: Type.Optional(LeaderboardSort),
-branch_id: Type.Optional(Type.Union([
-Type.Number(),
-Type.Null()
-])),
-start: Type.Optional(Type.Union([
-Type.Number(),
-Type.Null()
-])),
-end: Type.Optional(Type.Union([
-Type.Number(),
-Type.Null()
-])),
-limit: Type.Optional(Type.Number()),
-offset: Type.Optional(Type.Number())
-})
-
-export type TransactionsFilters = Static<typeof TransactionsFilters>
-export const TransactionsFilters = Type.Object({
 branch_id: Type.Optional(Type.Union([
 Type.Number(),
 Type.Null()
@@ -102,24 +66,6 @@ total_purchases: Type.Number(),
 total_credits_issued: Type.Number()
 })
 
-export type TransactionsPage = Static<typeof TransactionsPage>
-export const TransactionsPage = Type.Object({
-rows: Type.Array(CustomerTransactions),
-total: Type.Number(),
-offset: Type.Number(),
-limit: Type.Number()
-})
-
-export type CreatePurchaseRequest = Static<typeof CreatePurchaseRequest>
-export const CreatePurchaseRequest = Type.Object({
-phone: Type.String(),
-amount: Type.Number(),
-branch_id: Type.Optional(Type.Union([
-Type.Number(),
-Type.Null()
-]))
-})
-
 export type CreateRedemptionRequest = Static<typeof CreateRedemptionRequest>
 export const CreateRedemptionRequest = Type.Object({
 credit_id: Type.Number(),
@@ -139,9 +85,6 @@ remaining: Type.Number()
 export type LeaderboardQuerystring = Static<typeof LeaderboardQuerystring>
 export const LeaderboardQuerystring = LeaderboardFilters
 
-export type TransactionsQuerystring = Static<typeof TransactionsQuerystring>
-export const TransactionsQuerystring = TransactionsFilters
-
 export type LeaderboardResponse = Static<typeof LeaderboardResponse>
 export const LeaderboardResponse = Type.Object({
 success: Type.Literal(true),
@@ -152,18 +95,6 @@ export type LeaderboardStatsResponse = Static<typeof LeaderboardStatsResponse>
 export const LeaderboardStatsResponse = Type.Object({
 success: Type.Literal(true),
 data: LeaderboardStats
-})
-
-export type TransactionsResponse = Static<typeof TransactionsResponse>
-export const TransactionsResponse = Type.Object({
-success: Type.Literal(true),
-data: TransactionsPage
-})
-
-export type CreatePurchaseResponse = Static<typeof CreatePurchaseResponse>
-export const CreatePurchaseResponse = Type.Object({
-success: Type.Literal(true),
-data: CustomerTransactions
 })
 
 export type CreateRedemptionResponse = Static<typeof CreateRedemptionResponse>
@@ -187,18 +118,6 @@ ApiErrorResponse
 export type LeaderboardStatsApiResponse = Static<typeof LeaderboardStatsApiResponse>
 export const LeaderboardStatsApiResponse = Type.Union([
 LeaderboardStatsResponse,
-ApiErrorResponse
-])
-
-export type TransactionsApiResponse = Static<typeof TransactionsApiResponse>
-export const TransactionsApiResponse = Type.Union([
-TransactionsResponse,
-ApiErrorResponse
-])
-
-export type CreatePurchaseApiResponse = Static<typeof CreatePurchaseApiResponse>
-export const CreatePurchaseApiResponse = Type.Union([
-CreatePurchaseResponse,
 ApiErrorResponse
 ])
 

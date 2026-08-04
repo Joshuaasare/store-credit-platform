@@ -17,13 +17,15 @@ export default function Transactions() {
 
   const activeTab = (() => {
     const segments = location.pathname.split("/").filter(Boolean);
-    // ["customers", "leaderboard"] -> "leaderboard"; default -> "transactions"
+    // ["transactions", "leaderboard"] -> "leaderboard"; default -> "transactions"
     if (segments[1] === "leaderboard") return "leaderboard";
     return "transactions";
   })();
 
   const onTabChange = (value: string) => {
-    navigate(`/customers/${value}`);
+    // "transactions" is the index route (/transactions); "leaderboard" is
+    // /transactions/leaderboard.
+    navigate(value === "transactions" ? "/transactions" : `/transactions/${value}`);
   };
 
   return (

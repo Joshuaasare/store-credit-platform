@@ -26,7 +26,7 @@ import {
 
 export type DatePreset = "this_year" | "custom" | "all";
 
-export interface CustomersFiltersValue {
+export interface TransactionsFiltersValue {
   sort?: LeaderboardSort;
   branchId: number | null;
   datePreset: DatePreset;
@@ -34,9 +34,9 @@ export interface CustomersFiltersValue {
   end: number | null;
 }
 
-interface CustomersFiltersProps {
-  value: CustomersFiltersValue;
-  onChange: (next: CustomersFiltersValue) => void;
+interface TransactionsFiltersProps {
+  value: TransactionsFiltersValue;
+  onChange: (next: TransactionsFiltersValue) => void;
   branches: BranchWithAggregates[];
   showSort?: boolean;
   rightSlot?: React.ReactNode;
@@ -88,13 +88,13 @@ function inRangeDays(visibleMonth: Date, from?: Date, to?: Date): Date[] {
   return out;
 }
 
-export function CustomersFilters({
+export function TransactionsFilters({
   value,
   onChange,
   branches,
   showSort = false,
   rightSlot,
-}: CustomersFiltersProps) {
+}: TransactionsFiltersProps) {
   const [customOpen, setCustomOpen] = useState(false);
   const [customRange, setCustomRange] = useState<DateRange | undefined>(() => ({
     from: fromEpochSeconds(value.start),

@@ -155,8 +155,10 @@ export type Database = {
           amount_redeemed: number
           approved_at: string | null
           approved_by_user_id: string | null
+          branch_id: number
           created_at: string
           credit_id: number
+          customer_id: number
           deleted_at: string | null
           id: number
           updated_at: string | null
@@ -165,8 +167,10 @@ export type Database = {
           amount_redeemed: number
           approved_at?: string | null
           approved_by_user_id?: string | null
+          branch_id: number
           created_at?: string
           credit_id: number
+          customer_id: number
           deleted_at?: string | null
           id?: number
           updated_at?: string | null
@@ -175,8 +179,10 @@ export type Database = {
           amount_redeemed?: number
           approved_at?: string | null
           approved_by_user_id?: string | null
+          branch_id?: number
           created_at?: string
           credit_id?: number
+          customer_id?: number
           deleted_at?: string | null
           id?: number
           updated_at?: string | null
@@ -190,10 +196,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "customer_credit_redemptions_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "customer_credit_redemptions_credit_id_fkey"
             columns: ["credit_id"]
             isOneToOne: false
             referencedRelation: "customer_credit"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_credit_redemptions_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
             referencedColumns: ["id"]
           },
         ]

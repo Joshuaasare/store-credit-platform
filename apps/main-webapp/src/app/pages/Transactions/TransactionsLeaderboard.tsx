@@ -17,17 +17,17 @@ import { startOfYearEpoch } from "@shared/utils/date.utils";
 import { formatGHS } from "@shared/utils/format";
 import { leaderboardInitials } from "@shared/utils/customers.utils";
 import {
-  CustomersFilters,
-  CustomersFiltersValue,
-} from "./components/CustomersFilters";
+  TransactionsFilters,
+  TransactionsFiltersValue,
+} from "./components/TransactionsFilters";
 import { formatDisplayNumber } from "@shared/utils/ui.utils";
 
 const LIMIT = 20;
 
-export default function CustomersLeaderboard() {
+export default function TransactionsLeaderboard() {
   const { branches } = useStoreStore();
 
-  const [filters, setFilters] = useState<CustomersFiltersValue>(() => ({
+  const [filters, setFilters] = useState<TransactionsFiltersValue>(() => ({
     sort: "purchases",
     branchId: null,
     datePreset: "this_year",
@@ -39,7 +39,7 @@ export default function CustomersLeaderboard() {
 
   const leaderboardQuery = useInfiniteQuery({
     queryKey: [
-      "customers",
+      "transactions",
       "leaderboard",
       {
         sort: filters.sort,
@@ -70,7 +70,7 @@ export default function CustomersLeaderboard() {
 
   const statsQuery = useQuery({
     queryKey: [
-      "customers",
+      "transactions",
       "leaderboard-stats",
       {
         branchId: filters.branchId,
@@ -181,7 +181,7 @@ export default function CustomersLeaderboard() {
         className="animate-fade-in-up p-4 motion-reduce:animate-none"
         style={{ animationDelay: "180ms" }}
       >
-        <CustomersFilters
+        <TransactionsFilters
           value={filters}
           onChange={(next) => setFilters(next)}
           branches={branches}
