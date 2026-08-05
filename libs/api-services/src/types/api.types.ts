@@ -1,6 +1,6 @@
 /**
  * Auto-generated API Types
- * Generated on: 2026-07-24T02:37:23.739Z
+ * Generated on: 2026-08-05T09:05:01.943Z
  * 
  * ⚠️ DO NOT EDIT MANUALLY
  * Source: apps/smartschool-api/src/app/types/
@@ -494,6 +494,72 @@ export type CreateRedemptionApiResponse =
 export type CreditRemainingApiResponse =
   | CreditRemainingApiResponseData
   | ApiErrorResponse;
+
+export interface CustomerListFilters {
+  
+  branch_id?: number | null;
+
+  search?: string | null;
+  limit?: number;
+  offset?: number;
+}
+
+export interface CustomerListRow {
+  customer_id: number;
+  phone: string | null;
+  user_id: string | null;
+  customer_name: string;
+  total_purchases: number;
+  available_credits: number;
+  live_credit_count: number;
+  last_activity_epoch: number | null;
+}
+
+export interface CustomerListPage {
+  rows: CustomerListRow[];
+  total: number;
+  offset: number;
+  limit: number;
+}
+
+export type CustomerListQuerystring = CustomerListFilters;
+
+export interface CustomerListResponse {
+  success: true;
+  data: CustomerListPage;
+}
+
+export interface CustomerDetailCreditRow {
+  id: number;
+  credit_amount: number;
+  redeemed_total: number;
+  remaining: number;
+  expires_at: number | null;
+  created_at: string;
+  branch_id: number;
+  branch_name: string | null;
+}
+
+export interface CustomerDetail {
+  customer_id: number;
+  phone: string | null;
+  user_id: string | null;
+  customer_name: string;
+
+  total_purchases: number;
+  available_credits: number;
+  live_credit_count: number;
+  last_activity_epoch: number | null;
+  credits: CustomerDetailCreditRow[];
+}
+
+export interface CustomerDetailResponse {
+  success: true;
+  data: CustomerDetail;
+}
+
+export type CustomerListApiResponse = CustomerListResponse | ApiErrorResponse;
+export type CustomerDetailApiResponse = CustomerDetailResponse | ApiErrorResponse;
 
 export interface MerchantWithStats extends BaseMerchant {
   branch_count: number;

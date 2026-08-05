@@ -1,13 +1,17 @@
 import { supabaseAdmin } from "../utils/supabase.client";
 import { AccessTokenPayload } from "../schemas/auth.schema";
 import {
-  LeaderboardRow,
   LeaderboardSort,
   LeaderboardFilters,
   LeaderboardPage,
   LeaderboardStats,
   CreateRedemptionRequest,
   CreditRemainingResponse,
+  CustomerListFilters,
+  CustomerListRow,
+  CustomerListPage,
+  CustomerDetail,
+  CustomerDetailCreditRow,
 } from "../schemas/customers.schema";
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -68,10 +72,9 @@ export class CustomerService {
       );
     }
 
-    const rows = (rowsResult.data ?? []) as unknown as LeaderboardRow[];
+    const rows = rowsResult.data ?? [];
 
-    const total =
-      countResult.data == null ? 0 : Number(countResult.data as unknown);
+    const total = countResult.data == null ? 0 : Number(countResult.data);
 
     return { rows, total, offset, limit };
   }
@@ -108,9 +111,8 @@ export class CustomerService {
       throw new Error(`Failed to load stats rows: ${rowsRes.error.message}`);
     }
 
-    const allRows = (rowsRes.data ?? []) as unknown as LeaderboardRow[];
-    const total_customers =
-      countRes.data == null ? 0 : Number(countRes.data as unknown);
+    const allRows = rowsRes.data ?? [];
+    const total_customers = countRes.data == null ? 0 : Number(countRes.data);
     const total_purchases = allRows.reduce(
       (s, r) => s + Number(r.total_purchases ?? 0),
       0,
@@ -121,6 +123,245 @@ export class CustomerService {
     );
 
     return { total_customers, total_purchases, total_credits_issued };
+  }
+
+  /**
+   * Customer directory list — paginated, branch-scoped, searchable via the
+   * `get_customers` RPC. The RPC attaches a `total` window-count column to
+   * every row (pre-LIMIT); we read it from the first row, or 0 when the page
+   * is empty. Search and branch scope are both applied server-side so the
+   * `total` reflects the filtered set.
+   */
+  async listCustomers(
+    merchantId: number,
+    filters: CustomerListFilters,
+  ): Promise<CustomerListPage> {
+    const limit = filters.limit ?? CustomerService.DEFAULT_LIMIT;
+    const offset = filters.offset ?? 0;
+    const search = filters.search?.trim() || null;
+
+    const { data, error } = await supabaseAdmin.rpc("get_customers", {
+      p_merchant_id: merchantId,
+      p_branch_id: filters.branch_id ?? undefined,
+      p_search: search ?? undefined,
+      p_limit: limit,
+      p_offset: offset,
+    });
+
+    if (error) {
+      throw new Error(`Failed to load customers: ${error.message}`);
+    }
+
+    const rows = data ?? [];
+    const total = rows.length > 0 ? Number(rows[0].total) : 0;
+    // Strip the `total` column from each row before returning.
+    const cleanRows: CustomerListRow[] = rows.map(
+      ({ total: _total, ...rest }) => rest,
+    );
+
+    return { rows: cleanRows, total, offset, limit };
+  }
+
+  /**
+   * Single-customer detail — merchant-wide totals + every live credit row
+   * (with per-credit redeemed_total / remaining). Service-layer (no RPC): the
+   * data volume for one customer is small enough that a couple of queries +
+   * JS aggregation is simpler than a second RPC.
+   *
+   * Throws "Customer not found" if the customer has no non-deleted purchase at
+   * any branch of the merchant (the directory scoping rule) — this also
+   * prevents a caller from probing customer_ids that belong to another
+   * merchant.
+   */
+  async getCustomerDetail(
+    merchantId: number,
+    customerId: number,
+  ): Promise<CustomerDetail> {
+    // 0. Merchant branch ids — reused for scope check + purchase filtering.
+    const { data: mbRows, error: mbErr } = await supabaseAdmin
+      .from("branches")
+      .select("id")
+      .eq("merchant_id", merchantId)
+      .is("deleted_at", null);
+    if (mbErr) {
+      throw new Error(`Failed to load merchant branches: ${mbErr.message}`);
+    }
+    const merchantBranchIds = (mbRows ?? []).map((b: any) => b.id as number);
+
+    // 1. Scope check: ≥1 non-deleted purchase at a merchant branch. This is
+    //    also the security boundary — a customer_id with no purchase at any
+    //    of this merchant's branches is treated as not found.
+    if (merchantBranchIds.length === 0) {
+      throw new Error("Customer not found");
+    }
+    const { data: scopeRow, error: scopeErr } = await supabaseAdmin
+      .from("customer_purchases")
+      .select("id")
+      .eq("customer_id", customerId)
+      .is("deleted_at", null)
+      .in("branch_id", merchantBranchIds)
+      .limit(1)
+      .maybeSingle();
+    if (scopeErr) {
+      throw new Error(`Failed to verify customer scope: ${scopeErr.message}`);
+    }
+    if (!scopeRow) {
+      throw new Error("Customer not found");
+    }
+
+    // 2. Customer + linked user profile (nested join via customers_user_id_fkey).
+    const { data: customer, error: custErr } = await supabaseAdmin
+      .from("customers")
+      .select("id, phone, user_id, users(surname, other_names)")
+      .eq("id", customerId)
+      .maybeSingle();
+    if (custErr) {
+      throw new Error(`Failed to load customer: ${custErr.message}`);
+    }
+    if (!customer) {
+      throw new Error("Customer not found");
+    }
+    const linkedUser = (customer as any).users as {
+      surname: string | null;
+      other_names: string | null;
+    } | null;
+
+    // 3. Live credit rows joined to their branch (merchant-wide).
+    const { data: creditRows, error: creditErr } = await supabaseAdmin
+      .from("customer_credit")
+      .select(
+        `id, credit_amount, expires_at, created_at, branch_id,
+         branch:branches(id, name, merchant_id)`,
+      )
+      .eq("customer_id", customerId)
+      .is("deleted_at", null)
+      .is("revoked_at", null);
+    if (creditErr) {
+      throw new Error(`Failed to load credits: ${creditErr.message}`);
+    }
+
+    const nowEpoch = Math.floor(Date.now() / 1000);
+    const merchantCredits = (creditRows ?? []).filter((row: any) => {
+      const branchMerchantId = row.branch?.merchant_id ?? null;
+      if (branchMerchantId !== merchantId) return false;
+      const expiresAt = row.expires_at;
+      return expiresAt == null || Number(expiresAt) > nowEpoch;
+    });
+
+    // 4. Approved redemptions for those credit_ids (sum per credit).
+    const creditIds = merchantCredits.map((r: any) => r.id as number);
+    const redemptionsByCredit = new Map<number, number>();
+    let lastRedemptionEpoch: number | null = null;
+    if (creditIds.length > 0) {
+      const { data: redemptionRows, error: redemptionErr } = await supabaseAdmin
+        .from("customer_credit_redemptions")
+        .select("credit_id, amount_redeemed, created_at")
+        .in("credit_id", creditIds)
+        .not("approved_at", "is", null)
+        .is("deleted_at", null);
+      if (redemptionErr) {
+        throw new Error(`Failed to load redemptions: ${redemptionErr.message}`);
+      }
+      for (const r of redemptionRows ?? []) {
+        const cid = (r as any).credit_id as number;
+        const amt = Number((r as any).amount_redeemed) || 0;
+        redemptionsByCredit.set(cid, (redemptionsByCredit.get(cid) ?? 0) + amt);
+        const created = (r as any).created_at as string | null;
+        if (created) {
+          const d = Math.floor(new Date(created).getTime() / 1000);
+          if (lastRedemptionEpoch == null || d > lastRedemptionEpoch) {
+            lastRedemptionEpoch = d;
+          }
+        }
+      }
+    }
+
+    // 5. Per-credit remaining + customer-level credit aggregates. Sort by
+    //    remaining desc so the most-relevant credits sit at the top.
+    const credits: CustomerDetailCreditRow[] = merchantCredits
+      .map((row: any) => {
+        const creditAmount = Number(row.credit_amount) || 0;
+        const redeemedTotal = redemptionsByCredit.get(row.id as number) ?? 0;
+        const remaining = Math.max(0, creditAmount - redeemedTotal);
+        return {
+          id: row.id as number,
+          credit_amount: creditAmount,
+          redeemed_total: redeemedTotal,
+          remaining,
+          expires_at: row.expires_at == null ? null : Number(row.expires_at),
+          created_at: row.created_at as string,
+          branch_id: row.branch_id as number,
+          branch_name: (row.branch?.name as string | null) ?? null,
+        };
+      })
+      .sort((a, b) => b.remaining - a.remaining);
+
+    const availableCredits = credits.reduce((s, c) => s + c.remaining, 0);
+    const liveCreditCount = credits.filter((c) => c.remaining > 0).length;
+
+    const lastCreditEpoch = merchantCredits.reduce<number | null>(
+      (max, r: any) => {
+        const created = r.created_at as string | null;
+        if (!created) return max;
+        const d = Math.floor(new Date(created).getTime() / 1000);
+        return max == null || d > max ? d : max;
+      },
+      null,
+    );
+
+    // 6. Merchant-wide purchase total + last purchase epoch.
+    const { data: purchaseRows, error: purchaseErr } = await supabaseAdmin
+      .from("customer_purchases")
+      .select("amount, transaction_date, branch_id")
+      .eq("customer_id", customerId)
+      .is("deleted_at", null);
+    if (purchaseErr) {
+      throw new Error(`Failed to load purchases: ${purchaseErr.message}`);
+    }
+    const merchantBranchSet = new Set(merchantBranchIds);
+    const merchantPurchases = (purchaseRows ?? []).filter((p: any) =>
+      merchantBranchSet.has((p as any).branch_id as number),
+    );
+    const totalPurchases = merchantPurchases.reduce(
+      (s, p: any) => s + (Number((p as any).amount) || 0),
+      0,
+    );
+    const lastPurchaseEpoch = merchantPurchases.reduce<number | null>(
+      (max, p: any) => {
+        const d = Number((p as any).transaction_date) || null;
+        if (d == null) return max;
+        return max == null || d > max ? d : max;
+      },
+      null,
+    );
+
+    const lastActivityEpoch = [
+      lastPurchaseEpoch,
+      lastCreditEpoch,
+      lastRedemptionEpoch,
+    ]
+      .filter((v): v is number => v != null)
+      .reduce<number | null>(
+        (max, v) => (max == null || v > max ? v : max),
+        null,
+      );
+
+    const surname = linkedUser?.surname ?? null;
+    const otherNames = linkedUser?.other_names ?? null;
+    const fullName = `${surname ?? ""} ${otherNames ?? ""}`.trim();
+    const customerName = fullName || "Unnamed customer";
+
+    return {
+      customer_id: customerId,
+      phone: (customer as any).phone as string | null,
+      user_id: (customer as any).user_id as string | null,
+      customer_name: customerName,
+      total_purchases: totalPurchases,
+      available_credits: availableCredits,
+      live_credit_count: liveCreditCount,
+      last_activity_epoch: lastActivityEpoch,
+      credits,
+    };
   }
 
   /**
@@ -204,7 +445,9 @@ export class CustomerService {
   async getCreditRemaining(creditId: number): Promise<CreditRemainingResponse> {
     const { data: credit, error: creditErr } = await supabaseAdmin
       .from("customer_credit")
-      .select("id, customer_id, branch_id, credit_amount, revoked_at, deleted_at")
+      .select(
+        "id, customer_id, branch_id, credit_amount, revoked_at, deleted_at",
+      )
       .eq("id", creditId)
       .maybeSingle();
 

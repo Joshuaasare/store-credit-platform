@@ -132,3 +132,113 @@ export const CreditRemainingApiResponse = Type.Union([
 CreditRemainingApiResponseData,
 ApiErrorResponse
 ])
+
+export type CustomerListFilters = Static<typeof CustomerListFilters>
+export const CustomerListFilters = Type.Object({
+branch_id: Type.Optional(Type.Union([
+Type.Number(),
+Type.Null()
+])),
+search: Type.Optional(Type.Union([
+Type.String(),
+Type.Null()
+])),
+limit: Type.Optional(Type.Number()),
+offset: Type.Optional(Type.Number())
+})
+
+export type CustomerListRow = Static<typeof CustomerListRow>
+export const CustomerListRow = Type.Object({
+customer_id: Type.Number(),
+phone: Type.Union([
+Type.String(),
+Type.Null()
+]),
+user_id: Type.Union([
+Type.String(),
+Type.Null()
+]),
+customer_name: Type.String(),
+total_purchases: Type.Number(),
+available_credits: Type.Number(),
+live_credit_count: Type.Number(),
+last_activity_epoch: Type.Union([
+Type.Number(),
+Type.Null()
+])
+})
+
+export type CustomerListPage = Static<typeof CustomerListPage>
+export const CustomerListPage = Type.Object({
+rows: Type.Array(CustomerListRow),
+total: Type.Number(),
+offset: Type.Number(),
+limit: Type.Number()
+})
+
+export type CustomerListQuerystring = Static<typeof CustomerListQuerystring>
+export const CustomerListQuerystring = CustomerListFilters
+
+export type CustomerListResponse = Static<typeof CustomerListResponse>
+export const CustomerListResponse = Type.Object({
+success: Type.Literal(true),
+data: CustomerListPage
+})
+
+export type CustomerDetailCreditRow = Static<typeof CustomerDetailCreditRow>
+export const CustomerDetailCreditRow = Type.Object({
+id: Type.Number(),
+credit_amount: Type.Number(),
+redeemed_total: Type.Number(),
+remaining: Type.Number(),
+expires_at: Type.Union([
+Type.Number(),
+Type.Null()
+]),
+created_at: Type.String(),
+branch_id: Type.Number(),
+branch_name: Type.Union([
+Type.String(),
+Type.Null()
+])
+})
+
+export type CustomerDetail = Static<typeof CustomerDetail>
+export const CustomerDetail = Type.Object({
+customer_id: Type.Number(),
+phone: Type.Union([
+Type.String(),
+Type.Null()
+]),
+user_id: Type.Union([
+Type.String(),
+Type.Null()
+]),
+customer_name: Type.String(),
+total_purchases: Type.Number(),
+available_credits: Type.Number(),
+live_credit_count: Type.Number(),
+last_activity_epoch: Type.Union([
+Type.Number(),
+Type.Null()
+]),
+credits: Type.Array(CustomerDetailCreditRow)
+})
+
+export type CustomerDetailResponse = Static<typeof CustomerDetailResponse>
+export const CustomerDetailResponse = Type.Object({
+success: Type.Literal(true),
+data: CustomerDetail
+})
+
+export type CustomerListApiResponse = Static<typeof CustomerListApiResponse>
+export const CustomerListApiResponse = Type.Union([
+CustomerListResponse,
+ApiErrorResponse
+])
+
+export type CustomerDetailApiResponse = Static<typeof CustomerDetailApiResponse>
+export const CustomerDetailApiResponse = Type.Union([
+CustomerDetailResponse,
+ApiErrorResponse
+])

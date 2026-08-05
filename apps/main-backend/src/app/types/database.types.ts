@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.5"
+    PostgrestVersion: "14.15"
   }
   graphql_public: {
     Tables: {
@@ -792,6 +792,26 @@ export type Database = {
           p_start_epoch?: number
         }
         Returns: number
+      }
+      get_customers: {
+        Args: {
+          p_branch_id?: number
+          p_limit?: number
+          p_merchant_id: number
+          p_offset?: number
+          p_search?: string
+        }
+        Returns: {
+          available_credits: number
+          customer_id: number
+          customer_name: string
+          last_activity_epoch: number
+          live_credit_count: number
+          phone: string
+          total: number
+          total_purchases: number
+          user_id: string
+        }[]
       }
       get_distinct_customer_count: {
         Args: { p_branch_id?: number; p_merchant_id: number }
