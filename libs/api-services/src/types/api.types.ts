@@ -1,6 +1,6 @@
 /**
  * Auto-generated API Types
- * Generated on: 2026-07-23T03:45:42.578Z
+ * Generated on: 2026-08-05T09:05:01.943Z
  * 
  * ⚠️ DO NOT EDIT MANUALLY
  * Source: apps/smartschool-api/src/app/types/
@@ -426,26 +426,8 @@ export interface LeaderboardRow {
   transaction_count: number;
 }
 
-export interface CustomerWithUser extends BaseCustomer {
-  users: BaseUserProfile | null;
-}
-
-export interface CustomerTransactions extends BaseCustomerTransaction {
-  customer: CustomerWithUser;
-  branch: BaseBranch;
-  recorded_by_user: BaseUserProfile | null;
-}
-
 export interface LeaderboardFilters {
   sort?: LeaderboardSort;
-  branch_id?: number | null;
-  start?: number | null;
-  end?: number | null;
-  limit?: number;
-  offset?: number;
-}
-
-export interface TransactionsFilters {
   branch_id?: number | null;
   start?: number | null;
   end?: number | null;
@@ -466,19 +448,6 @@ export interface LeaderboardStats {
   total_credits_issued: number;
 }
 
-export interface TransactionsPage {
-  rows: CustomerTransactions[];
-  total: number;
-  offset: number;
-  limit: number;
-}
-
-export interface CreatePurchaseRequest {
-  phone: string;
-  amount: number;
-  branch_id?: number | null;
-}
-
 export interface CreateRedemptionRequest {
   credit_id: number;
   amount_redeemed: number;
@@ -495,8 +464,6 @@ export interface CreditRemainingResponse {
 
 export type LeaderboardQuerystring = LeaderboardFilters;
 
-export type TransactionsQuerystring = TransactionsFilters;
-
 export interface LeaderboardResponse {
   success: true;
   data: LeaderboardPage;
@@ -505,16 +472,6 @@ export interface LeaderboardResponse {
 export interface LeaderboardStatsResponse {
   success: true;
   data: LeaderboardStats;
-}
-
-export interface TransactionsResponse {
-  success: true;
-  data: TransactionsPage;
-}
-
-export interface CreatePurchaseResponse {
-  success: true;
-  data: CustomerTransactions;
 }
 
 export interface CreateRedemptionResponse {
@@ -531,16 +488,78 @@ export type LeaderboardApiResponse = LeaderboardResponse | ApiErrorResponse;
 export type LeaderboardStatsApiResponse =
   | LeaderboardStatsResponse
   | ApiErrorResponse;
-export type TransactionsApiResponse = TransactionsResponse | ApiErrorResponse;
-export type CreatePurchaseApiResponse =
-  | CreatePurchaseResponse
-  | ApiErrorResponse;
 export type CreateRedemptionApiResponse =
   | CreateRedemptionResponse
   | ApiErrorResponse;
 export type CreditRemainingApiResponse =
   | CreditRemainingApiResponseData
   | ApiErrorResponse;
+
+export interface CustomerListFilters {
+  
+  branch_id?: number | null;
+
+  search?: string | null;
+  limit?: number;
+  offset?: number;
+}
+
+export interface CustomerListRow {
+  customer_id: number;
+  phone: string | null;
+  user_id: string | null;
+  customer_name: string;
+  total_purchases: number;
+  available_credits: number;
+  live_credit_count: number;
+  last_activity_epoch: number | null;
+}
+
+export interface CustomerListPage {
+  rows: CustomerListRow[];
+  total: number;
+  offset: number;
+  limit: number;
+}
+
+export type CustomerListQuerystring = CustomerListFilters;
+
+export interface CustomerListResponse {
+  success: true;
+  data: CustomerListPage;
+}
+
+export interface CustomerDetailCreditRow {
+  id: number;
+  credit_amount: number;
+  redeemed_total: number;
+  remaining: number;
+  expires_at: number | null;
+  created_at: string;
+  branch_id: number;
+  branch_name: string | null;
+}
+
+export interface CustomerDetail {
+  customer_id: number;
+  phone: string | null;
+  user_id: string | null;
+  customer_name: string;
+
+  total_purchases: number;
+  available_credits: number;
+  live_credit_count: number;
+  last_activity_epoch: number | null;
+  credits: CustomerDetailCreditRow[];
+}
+
+export interface CustomerDetailResponse {
+  success: true;
+  data: CustomerDetail;
+}
+
+export type CustomerListApiResponse = CustomerListResponse | ApiErrorResponse;
+export type CustomerDetailApiResponse = CustomerDetailResponse | ApiErrorResponse;
 
 export interface MerchantWithStats extends BaseMerchant {
   branch_count: number;
@@ -574,5 +593,60 @@ export type MerchantMeApiResponse = MerchantMeResponse | ApiErrorResponse;
 
 export type MerchantMutationApiResponse =
   | MerchantMutationResponse
+  | ApiErrorResponse;
+
+export interface CustomerWithUser extends BaseCustomer {
+  users: BaseUserProfile | null;
+}
+
+export interface CustomerTransactions extends BaseCustomerTransaction {
+  customer: CustomerWithUser;
+  branch: BaseBranch;
+  recorded_by_user: BaseUserProfile | null;
+}
+
+export type TransactionTypeFilter =
+  | "all"
+  | "purchase"
+  | "credit_issue"
+  | "credit_redeem";
+
+export interface TransactionsFilters {
+  type?: TransactionTypeFilter;
+  branch_id?: number | null;
+  start?: number | null;
+  end?: number | null;
+  limit?: number;
+  offset?: number;
+}
+
+export interface TransactionsPage {
+  rows: CustomerTransactions[];
+  total: number;
+  offset: number;
+  limit: number;
+}
+
+export interface CreatePurchaseRequest {
+  phone: string;
+  amount: number;
+  branch_id?: number | null;
+}
+
+export type TransactionsQuerystring = TransactionsFilters;
+
+export interface TransactionsResponse {
+  success: true;
+  data: TransactionsPage;
+}
+
+export interface CreatePurchaseResponse {
+  success: true;
+  data: CustomerTransactions;
+}
+
+export type TransactionsApiResponse = TransactionsResponse | ApiErrorResponse;
+export type CreatePurchaseApiResponse =
+  | CreatePurchaseResponse
   | ApiErrorResponse;
 

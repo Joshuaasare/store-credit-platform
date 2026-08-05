@@ -1,37 +1,30 @@
-import { FastifyBaseLogger } from "fastify";
 import { supabaseAdmin } from "../utils/supabase.client";
-import { QueryFragments } from "../constants/queryFragments";
 import { AccessTokenPayload } from "../schemas/auth.schema";
 import {
-  LeaderboardRow,
   LeaderboardSort,
   LeaderboardFilters,
-  TransactionsFilters,
   LeaderboardPage,
   LeaderboardStats,
-  TransactionsPage,
-  CreatePurchaseRequest,
   CreateRedemptionRequest,
   CreditRemainingResponse,
-  CustomerTransactions,
+  CustomerListFilters,
+  CustomerListRow,
+  CustomerListPage,
+  CustomerDetail,
+  CustomerDetailCreditRow,
 } from "../schemas/customers.schema";
-import { issueRunningCreditsForPurchase } from "./creditConfig.service";
 
 // ────────────────────────────────────────────────────────────────────────────
 // Service
 // ────────────────────────────────────────────────────────────────────────────
 
 /**
- * Customer service — leaderboard (via Postgres RPC), activity feed
- * (union of customer_purchases + customer_credit + customer_credit_redemptions),
- * purchase creation (auto-creates customer by phone), redemption recording,
+ * Customer service — leaderboard (via Postgres RPC), redemption recording,
  * and live "remaining credit" calculation.
  *
  * All reads/writes are scoped to a verified merchant_id resolved upstream
- * from the JWT. Purchases, credits, and redemptions each live in their own
- * table after the re-architecture; the activity-feed endpoint synthesizes a
- * single `CustomerTransactions`-shaped row from the union so the frontend
- * doesn't have to change its row type.
+ * from the JWT. The activity feed and purchase recording live in
+ * `transactions.service.ts` after the domain split.
  */
 export class CustomerService {
   private static readonly DEFAULT_LIMIT = 20;
@@ -79,10 +72,9 @@ export class CustomerService {
       );
     }
 
-    const rows = (rowsResult.data ?? []) as unknown as LeaderboardRow[];
+    const rows = rowsResult.data ?? [];
 
-    const total =
-      countResult.data == null ? 0 : Number(countResult.data as unknown);
+    const total = countResult.data == null ? 0 : Number(countResult.data);
 
     return { rows, total, offset, limit };
   }
@@ -119,9 +111,8 @@ export class CustomerService {
       throw new Error(`Failed to load stats rows: ${rowsRes.error.message}`);
     }
 
-    const allRows = (rowsRes.data ?? []) as unknown as LeaderboardRow[];
-    const total_customers =
-      countRes.data == null ? 0 : Number(countRes.data as unknown);
+    const allRows = rowsRes.data ?? [];
+    const total_customers = countRes.data == null ? 0 : Number(countRes.data);
     const total_purchases = allRows.reduce(
       (s, r) => s + Number(r.total_purchases ?? 0),
       0,
@@ -135,301 +126,242 @@ export class CustomerService {
   }
 
   /**
-   * Merchant-scoped activity feed, ordered by transaction_date desc.
-   * Built from a union of:
-   *   - customer_purchases   (transaction_type = "purchase")
-   *   - customer_credit      (transaction_type = "credit_issue")
-   *   - customer_credit_redemptions (transaction_type = "credit_redeem", only approved)
-   *
-   * Each row is shaped as the existing `CustomerTransactions` type so the
-   * frontend doesn't have to change. Pagination is computed against the
-   * union (the count RPCs already union across the 3 tables).
+   * Customer directory list — paginated, branch-scoped, searchable via the
+   * `get_customers` RPC. The RPC attaches a `total` window-count column to
+   * every row (pre-LIMIT); we read it from the first row, or 0 when the page
+   * is empty. Search and branch scope are both applied server-side so the
+   * `total` reflects the filtered set.
    */
-  async getTransactions(
+  async listCustomers(
     merchantId: number,
-    filters: TransactionsFilters,
-  ): Promise<TransactionsPage> {
+    filters: CustomerListFilters,
+  ): Promise<CustomerListPage> {
     const limit = filters.limit ?? CustomerService.DEFAULT_LIMIT;
     const offset = filters.offset ?? 0;
+    const search = filters.search?.trim() || null;
 
-    const { data: branchRows, error: branchError } = await supabaseAdmin
+    const { data, error } = await supabaseAdmin.rpc("get_customers", {
+      p_merchant_id: merchantId,
+      p_branch_id: filters.branch_id ?? undefined,
+      p_search: search ?? undefined,
+      p_limit: limit,
+      p_offset: offset,
+    });
+
+    if (error) {
+      throw new Error(`Failed to load customers: ${error.message}`);
+    }
+
+    const rows = data ?? [];
+    const total = rows.length > 0 ? Number(rows[0].total) : 0;
+    // Strip the `total` column from each row before returning.
+    const cleanRows: CustomerListRow[] = rows.map(
+      ({ total: _total, ...rest }) => rest,
+    );
+
+    return { rows: cleanRows, total, offset, limit };
+  }
+
+  /**
+   * Single-customer detail — merchant-wide totals + every live credit row
+   * (with per-credit redeemed_total / remaining). Service-layer (no RPC): the
+   * data volume for one customer is small enough that a couple of queries +
+   * JS aggregation is simpler than a second RPC.
+   *
+   * Throws "Customer not found" if the customer has no non-deleted purchase at
+   * any branch of the merchant (the directory scoping rule) — this also
+   * prevents a caller from probing customer_ids that belong to another
+   * merchant.
+   */
+  async getCustomerDetail(
+    merchantId: number,
+    customerId: number,
+  ): Promise<CustomerDetail> {
+    // 0. Merchant branch ids — reused for scope check + purchase filtering.
+    const { data: mbRows, error: mbErr } = await supabaseAdmin
       .from("branches")
       .select("id")
       .eq("merchant_id", merchantId)
       .is("deleted_at", null);
-
-    if (branchError) {
-      throw new Error(`Failed to resolve branches: ${branchError.message}`);
+    if (mbErr) {
+      throw new Error(`Failed to load merchant branches: ${mbErr.message}`);
     }
-    const branchIds = (branchRows ?? []).map((b) => b.id);
-    if (branchIds.length === 0) {
-      return { rows: [], total: 0, offset, limit };
+    const merchantBranchIds = (mbRows ?? []).map((b: any) => b.id as number);
+
+    // 1. Scope check: ≥1 non-deleted purchase at a merchant branch. This is
+    //    also the security boundary — a customer_id with no purchase at any
+    //    of this merchant's branches is treated as not found.
+    if (merchantBranchIds.length === 0) {
+      throw new Error("Customer not found");
     }
-
-    // Fetch the merchant's branch IDs to filter on (preserves branch filter).
-    const filteredBranchIds =
-      filters.branch_id != null && branchIds.includes(filters.branch_id)
-        ? [filters.branch_id]
-        : branchIds;
-
-    const startEpoch = filters.start ?? null;
-    const endEpoch = filters.end ?? null;
-
-    // Run purchases + credits in parallel. Redemptions are fetched in a
-    // follow-up query scoped to the credit IDs returned by the credits query
-    // (customer_credit_redemptions has no denormalized customer_id/branch_id —
-    // we reach them via credit_id → customer_credit).
-    const [purchasesRes, creditsRes] = await Promise.all([
-      supabaseAdmin
-        .from("customer_purchases")
-        .select(
-          `id, customer_id, branch_id, recorded_by_user_id, amount, transaction_date, created_at,
-           customer:customers(${QueryFragments.BASE_CUSTOMER}, users(${QueryFragments.BASE_USER_PROFILE})),
-           branch:branches(${QueryFragments.BASE_BRANCH}),
-           recorded_by_user:users(${QueryFragments.BASE_USER_PROFILE})`,
-        )
-        .in("branch_id", filteredBranchIds)
-        .is("deleted_at", null)
-        .order("transaction_date", { ascending: false }),
-      supabaseAdmin
-        .from("customer_credit")
-        .select(
-          `id, customer_id, branch_id, credit_amount, created_at,
-           customer:customers(${QueryFragments.BASE_CUSTOMER}, users(${QueryFragments.BASE_USER_PROFILE})),
-           branch:branches(${QueryFragments.BASE_BRANCH})`,
-        )
-        .in("branch_id", filteredBranchIds)
-        .is("deleted_at", null)
-        .is("revoked_at", null)
-        .order("created_at", { ascending: false }),
-    ]);
-
-    if (purchasesRes.error) {
-      throw new Error(`Failed to load purchases: ${purchasesRes.error.message}`);
+    const { data: scopeRow, error: scopeErr } = await supabaseAdmin
+      .from("customer_purchases")
+      .select("id")
+      .eq("customer_id", customerId)
+      .is("deleted_at", null)
+      .in("branch_id", merchantBranchIds)
+      .limit(1)
+      .maybeSingle();
+    if (scopeErr) {
+      throw new Error(`Failed to verify customer scope: ${scopeErr.message}`);
     }
-    if (creditsRes.error) {
-      throw new Error(`Failed to load credits: ${creditsRes.error.message}`);
+    if (!scopeRow) {
+      throw new Error("Customer not found");
     }
 
-    // Fetch approved redemptions for the credits we just loaded. The redemption
-    // table has no denormalized customer_id / branch_id — we reach them via
-    // credit_id → customer_credit.
-    const creditIds = ((creditsRes.data ?? []) as any[]).map((c) => c.id);
-    let redemptionsRes: { data: any[] | null; error: any } = {
-      data: [],
-      error: null,
-    };
+    // 2. Customer + linked user profile (nested join via customers_user_id_fkey).
+    const { data: customer, error: custErr } = await supabaseAdmin
+      .from("customers")
+      .select("id, phone, user_id, users(surname, other_names)")
+      .eq("id", customerId)
+      .maybeSingle();
+    if (custErr) {
+      throw new Error(`Failed to load customer: ${custErr.message}`);
+    }
+    if (!customer) {
+      throw new Error("Customer not found");
+    }
+    const linkedUser = (customer as any).users as {
+      surname: string | null;
+      other_names: string | null;
+    } | null;
+
+    // 3. Live credit rows joined to their branch (merchant-wide).
+    const { data: creditRows, error: creditErr } = await supabaseAdmin
+      .from("customer_credit")
+      .select(
+        `id, credit_amount, expires_at, created_at, branch_id,
+         branch:branches(id, name, merchant_id)`,
+      )
+      .eq("customer_id", customerId)
+      .is("deleted_at", null)
+      .is("revoked_at", null);
+    if (creditErr) {
+      throw new Error(`Failed to load credits: ${creditErr.message}`);
+    }
+
+    const nowEpoch = Math.floor(Date.now() / 1000);
+    const merchantCredits = (creditRows ?? []).filter((row: any) => {
+      const branchMerchantId = row.branch?.merchant_id ?? null;
+      if (branchMerchantId !== merchantId) return false;
+      const expiresAt = row.expires_at;
+      return expiresAt == null || Number(expiresAt) > nowEpoch;
+    });
+
+    // 4. Approved redemptions for those credit_ids (sum per credit).
+    const creditIds = merchantCredits.map((r: any) => r.id as number);
+    const redemptionsByCredit = new Map<number, number>();
+    let lastRedemptionEpoch: number | null = null;
     if (creditIds.length > 0) {
-      redemptionsRes = await supabaseAdmin
+      const { data: redemptionRows, error: redemptionErr } = await supabaseAdmin
         .from("customer_credit_redemptions")
-        .select(
-          `id, credit_id, amount_redeemed, approved_at, approved_by_user_id, created_at,
-           credit:customer_credit(id, customer_id, branch_id,
-             customer:customers(${QueryFragments.BASE_CUSTOMER}, users(${QueryFragments.BASE_USER_PROFILE})),
-             branch:branches(${QueryFragments.BASE_BRANCH})),
-           approved_by_user:users(${QueryFragments.BASE_USER_PROFILE})`,
-        )
+        .select("credit_id, amount_redeemed, created_at")
         .in("credit_id", creditIds)
-        .is("deleted_at", null)
         .not("approved_at", "is", null)
-        .order("created_at", { ascending: false });
+        .is("deleted_at", null);
+      if (redemptionErr) {
+        throw new Error(`Failed to load redemptions: ${redemptionErr.message}`);
+      }
+      for (const r of redemptionRows ?? []) {
+        const cid = (r as any).credit_id as number;
+        const amt = Number((r as any).amount_redeemed) || 0;
+        redemptionsByCredit.set(cid, (redemptionsByCredit.get(cid) ?? 0) + amt);
+        const created = (r as any).created_at as string | null;
+        if (created) {
+          const d = Math.floor(new Date(created).getTime() / 1000);
+          if (lastRedemptionEpoch == null || d > lastRedemptionEpoch) {
+            lastRedemptionEpoch = d;
+          }
+        }
+      }
     }
-    if (redemptionsRes.error) {
-      throw new Error(
-        `Failed to load redemptions: ${redemptionsRes.error.message}`,
+
+    // 5. Per-credit remaining + customer-level credit aggregates. Sort by
+    //    remaining desc so the most-relevant credits sit at the top.
+    const credits: CustomerDetailCreditRow[] = merchantCredits
+      .map((row: any) => {
+        const creditAmount = Number(row.credit_amount) || 0;
+        const redeemedTotal = redemptionsByCredit.get(row.id as number) ?? 0;
+        const remaining = Math.max(0, creditAmount - redeemedTotal);
+        return {
+          id: row.id as number,
+          credit_amount: creditAmount,
+          redeemed_total: redeemedTotal,
+          remaining,
+          expires_at: row.expires_at == null ? null : Number(row.expires_at),
+          created_at: row.created_at as string,
+          branch_id: row.branch_id as number,
+          branch_name: (row.branch?.name as string | null) ?? null,
+        };
+      })
+      .sort((a, b) => b.remaining - a.remaining);
+
+    const availableCredits = credits.reduce((s, c) => s + c.remaining, 0);
+    const liveCreditCount = credits.filter((c) => c.remaining > 0).length;
+
+    const lastCreditEpoch = merchantCredits.reduce<number | null>(
+      (max, r: any) => {
+        const created = r.created_at as string | null;
+        if (!created) return max;
+        const d = Math.floor(new Date(created).getTime() / 1000);
+        return max == null || d > max ? d : max;
+      },
+      null,
+    );
+
+    // 6. Merchant-wide purchase total + last purchase epoch.
+    const { data: purchaseRows, error: purchaseErr } = await supabaseAdmin
+      .from("customer_purchases")
+      .select("amount, transaction_date, branch_id")
+      .eq("customer_id", customerId)
+      .is("deleted_at", null);
+    if (purchaseErr) {
+      throw new Error(`Failed to load purchases: ${purchaseErr.message}`);
+    }
+    const merchantBranchSet = new Set(merchantBranchIds);
+    const merchantPurchases = (purchaseRows ?? []).filter((p: any) =>
+      merchantBranchSet.has((p as any).branch_id as number),
+    );
+    const totalPurchases = merchantPurchases.reduce(
+      (s, p: any) => s + (Number((p as any).amount) || 0),
+      0,
+    );
+    const lastPurchaseEpoch = merchantPurchases.reduce<number | null>(
+      (max, p: any) => {
+        const d = Number((p as any).transaction_date) || null;
+        if (d == null) return max;
+        return max == null || d > max ? d : max;
+      },
+      null,
+    );
+
+    const lastActivityEpoch = [
+      lastPurchaseEpoch,
+      lastCreditEpoch,
+      lastRedemptionEpoch,
+    ]
+      .filter((v): v is number => v != null)
+      .reduce<number | null>(
+        (max, v) => (max == null || v > max ? v : max),
+        null,
       );
-    }
 
-    type UnionRow = {
-      id: number;
-      customer_id: number;
-      branch_id: number;
-      recorded_by_user_id: string | null;
-      amount: number;
-      transaction_date: number;
-      transaction_type: "purchase" | "credit_issue" | "credit_redeem";
-      created_at: string;
-      credit_id: number | null;
-      customer: any;
-      branch: any;
-      recorded_by_user: any;
-    };
-
-    const unioned: UnionRow[] = [];
-
-    for (const r of (purchasesRes.data ?? []) as any[]) {
-      const td = Number(r.transaction_date);
-      if (startEpoch != null && td < startEpoch) continue;
-      if (endEpoch != null && td > endEpoch) continue;
-      unioned.push({
-        id: r.id,
-        customer_id: r.customer_id,
-        branch_id: r.branch_id,
-        recorded_by_user_id: r.recorded_by_user_id,
-        amount: Number(r.amount),
-        transaction_date: td,
-        transaction_type: "purchase",
-        created_at: r.created_at,
-        credit_id: null,
-        customer: r.customer,
-        branch: r.branch,
-        recorded_by_user: r.recorded_by_user,
-      });
-    }
-
-    for (const r of (creditsRes.data ?? []) as any[]) {
-      const td = Math.floor(new Date(r.created_at).getTime() / 1000);
-      if (startEpoch != null && td < startEpoch) continue;
-      if (endEpoch != null && td > endEpoch) continue;
-      unioned.push({
-        id: r.id,
-        customer_id: r.customer_id,
-        branch_id: r.branch_id,
-        recorded_by_user_id: null,
-        amount: Number(r.credit_amount),
-        transaction_date: td,
-        transaction_type: "credit_issue",
-        created_at: r.created_at,
-        credit_id: r.id,
-        customer: r.customer,
-        branch: r.branch,
-        recorded_by_user: null,
-      });
-    }
-
-    for (const r of (redemptionsRes.data ?? []) as any[]) {
-      const td = Math.floor(new Date(r.created_at).getTime() / 1000);
-      if (startEpoch != null && td < startEpoch) continue;
-      if (endEpoch != null && td > endEpoch) continue;
-      const credit = (r.credit ?? null) as any;
-      unioned.push({
-        id: r.id,
-        customer_id: credit?.customer_id,
-        branch_id: credit?.branch_id,
-        recorded_by_user_id: r.approved_by_user_id ?? null,
-        amount: Number(r.amount_redeemed),
-        transaction_date: td,
-        transaction_type: "credit_redeem",
-        created_at: r.created_at,
-        credit_id: r.credit_id,
-        customer: credit?.customer,
-        branch: credit?.branch,
-        recorded_by_user: r.approved_by_user ?? null,
-      });
-    }
-
-    unioned.sort((a, b) => b.transaction_date - a.transaction_date);
-
-    const total = unioned.length;
-    const pageRows = unioned.slice(offset, offset + limit);
+    const surname = linkedUser?.surname ?? null;
+    const otherNames = linkedUser?.other_names ?? null;
+    const fullName = `${surname ?? ""} ${otherNames ?? ""}`.trim();
+    const customerName = fullName || "Unnamed customer";
 
     return {
-      rows: pageRows as unknown as CustomerTransactions[],
-      total,
-      offset,
-      limit,
+      customer_id: customerId,
+      phone: (customer as any).phone as string | null,
+      user_id: (customer as any).user_id as string | null,
+      customer_name: customerName,
+      total_purchases: totalPurchases,
+      available_credits: availableCredits,
+      live_credit_count: liveCreditCount,
+      last_activity_epoch: lastActivityEpoch,
+      credits,
     };
-  }
-
-  /**
-   * Record a purchase in `customer_purchases` and auto-issue any matching
-   * running credit configs. Auto-creates the customer (by phone) if missing.
-   * Branch resolution order: explicit `payload.branch_id` (must belong to the
-   * caller's merchant), then the caller's JWT `branch_id`. Credit-issuance
-   * failures are logged but never fail the purchase — the purchase row is the
-   * source of truth.
-   *
-   * Returns the purchase row shaped as the existing `CustomerTransactions`
-   * type so the frontend can drop it straight into the activity feed.
-   */
-  async createPurchase(
-    user: AccessTokenPayload,
-    payload: CreatePurchaseRequest,
-    merchantId: number,
-    log?: FastifyBaseLogger,
-  ): Promise<CustomerTransactions> {
-    const branchId = payload.branch_id ?? user.branch_id;
-    if (branchId == null) {
-      throw new Error("Caller has no assigned branch");
-    }
-
-    const phone = payload.phone.trim();
-
-    // 1. Lookup existing customer by phone (deleted_at IS NULL).
-    const { data: existing } = await supabaseAdmin
-      .from("customers")
-      .select(QueryFragments.BASE_CUSTOMER)
-      .eq("phone", phone)
-      .is("deleted_at", null)
-      .maybeSingle();
-
-    let customerId: number;
-    if (existing) {
-      customerId = existing.id;
-    } else {
-      const { data: created, error: createErr } = await supabaseAdmin
-        .from("customers")
-        .insert({ phone })
-        .select(QueryFragments.BASE_CUSTOMER)
-        .single();
-      if (createErr || !created) {
-        throw new Error(
-          `Failed to create customer: ${createErr?.message ?? "unknown"}`,
-        );
-      }
-      customerId = created.id;
-    }
-
-    // 2. Insert the purchase row.
-    const nowEpoch = Math.floor(Date.now() / 1000);
-    const { data: txRow, error: txErr } = await supabaseAdmin
-      .from("customer_purchases")
-      .insert({
-        customer_id: customerId,
-        branch_id: branchId,
-        recorded_by_user_id: user.sub,
-        amount: payload.amount,
-        transaction_date: nowEpoch,
-      })
-      .select(
-        `id, customer_id, branch_id, recorded_by_user_id, amount, transaction_date, created_at,
-         customer:customers(${QueryFragments.BASE_CUSTOMER}, users(${QueryFragments.BASE_USER_PROFILE})),
-         branch:branches(${QueryFragments.BASE_BRANCH}),
-         recorded_by_user:users(${QueryFragments.BASE_USER_PROFILE})`,
-      )
-      .single();
-
-    if (txErr || !txRow) {
-      throw new Error(
-        `Failed to record purchase: ${txErr?.message ?? "unknown"}`,
-      );
-    }
-
-    // Non-fatal: auto-issue running credits. The purchase row is the source of
-    // truth; any issuance error is logged and swallowed.
-    try {
-      await issueRunningCreditsForPurchase(
-        supabaseAdmin,
-        merchantId,
-        customerId,
-        branchId,
-        payload.amount,
-        nowEpoch,
-      );
-    } catch (err) {
-      if (log) log.error(err, "issueRunningCreditsForPurchase failed (non-fatal)");
-      else console.error("issueRunningCreditsForPurchase failed (non-fatal)", err);
-    }
-
-    // Reshape to the existing CustomerTransactions shape so the frontend stays
-    // unchanged. transaction_type is synthesized as "purchase"; credit_id is
-    // null because purchases don't reference a customer_credit row.
-    const synthesized = {
-      ...((txRow as any) as object),
-      transaction_type: "purchase" as const,
-      credit_id: null,
-    };
-    return synthesized as unknown as CustomerTransactions;
   }
 
   /**
@@ -513,7 +445,9 @@ export class CustomerService {
   async getCreditRemaining(creditId: number): Promise<CreditRemainingResponse> {
     const { data: credit, error: creditErr } = await supabaseAdmin
       .from("customer_credit")
-      .select("id, customer_id, branch_id, credit_amount, revoked_at, deleted_at")
+      .select(
+        "id, customer_id, branch_id, credit_amount, revoked_at, deleted_at",
+      )
       .eq("id", creditId)
       .maybeSingle();
 

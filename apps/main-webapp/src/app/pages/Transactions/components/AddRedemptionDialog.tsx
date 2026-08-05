@@ -102,7 +102,10 @@ export function AddRedemptionDialog({
     },
     onSuccess: () => {
       toast.success("Redemption recorded", successToastProperties);
-      void queryClient.invalidateQueries({ queryKey: ["customers"] });
+      // A redemption appears in the transactions feed as a credit_redeem row,
+      // so invalidate the feed. The per-credit remaining query is keyed by
+      // creditId and will refetch on next dialog open.
+      void queryClient.invalidateQueries({ queryKey: ["transactions"] });
       onOpenChange?.(false);
     },
     onError: (err) => {

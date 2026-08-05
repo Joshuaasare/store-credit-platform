@@ -1,4 +1,4 @@
-import { CustomerTransactions, LeaderboardRow } from "@shared/types/api.types";
+import { CustomerTransactions, LeaderboardRow, CustomerListRow } from "@shared/types/api.types";
 
 /**
  * Display name for a customer transactions row.
@@ -40,11 +40,14 @@ export function customerInitials(r: CustomerTransactions): string {
 }
 
 /**
- * Same as `customerInitials` but for leaderboard rows, which resolve the
- * display name server-side (`customer_name` is "Unnamed customer" when
- * unlinked). `user_id == null` flags the unlinked case.
+ * Initials for a server-resolved customer row (leaderboard or directory).
+ * The row carries `customer_name` ("Unnamed customer" when unlinked) and a
+ * `user_id` that is null for unlinked customers. Shared by LeaderboardRow
+ * and CustomerListRow — both satisfy the structural identity shape.
  */
-export function leaderboardInitials(r: LeaderboardRow): string {
+export function customerRowInitials(
+  r: { user_id: string | null; customer_name: string; phone: string | null },
+): string {
   if (r.user_id != null) {
     const name = r.customer_name?.trim() ?? "";
     if (name && name !== "Unnamed customer") {
@@ -58,4 +61,14 @@ export function leaderboardInitials(r: LeaderboardRow): string {
   const phone = r.phone?.replace(/\D/g, "") ?? "";
   if (phone.length >= 2) return phone.slice(-2);
   return "?";
+}
+
+/** Back-compat alias — callers on the leaderboard page still use this name. */
+export function leaderboardInitials(r: LeaderboardRow): string {
+  return customerRowInitials(r);
+}
+
+/** Initials for a customer directory row. */
+export function customerDirectoryInitials(r: CustomerListRow): string {
+  return customerRowInitials(r);
 }

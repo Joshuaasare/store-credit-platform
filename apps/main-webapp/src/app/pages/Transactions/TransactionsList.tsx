@@ -17,9 +17,12 @@ import {
 } from "@store-credit-platform/web-components";
 import { DataTable } from "../../components/DataTable/DataTable";
 import InfiniteScroll from "../../components/InfiniteScroll/InfiniteScroll";
-import { customerService } from "@store-credit-platform/api-services";
+import { transactionService } from "@store-credit-platform/api-services";
 import { useStoreStore } from "@shared/stores/storeStore";
-import { CustomerTransactions } from "@shared/types/api.types";
+import {
+  CustomerTransactions,
+  TransactionTypeFilter,
+} from "@shared/types/api.types";
 import { startOfYearEpoch } from "@shared/utils/date.utils";
 import { formatEpochDate, formatGHS } from "@shared/utils/format";
 import {
@@ -27,9 +30,9 @@ import {
   customerInitials,
 } from "@shared/utils/customers.utils";
 import {
-  CustomersFilters,
-  CustomersFiltersValue,
-} from "./components/CustomersFilters";
+  TransactionsFilters,
+  TransactionsFiltersValue,
+} from "./components/TransactionsFilters";
 import { AddPurchaseDialog } from "./components/AddPurchaseDialog";
 import { TransactionDetailDialog } from "./components/TransactionDetailDialog";
 import {
@@ -40,17 +43,40 @@ import {
 
 const LIMIT = 20;
 
-type TypeFilter = "all" | "credit_issue" | "credit_redeem";
-
-const TYPE_FILTERS: { value: TypeFilter; label: string }[] = [
+const TYPE_FILTERS: { value: TransactionTypeFilter; label: string }[] = [
   { value: "all", label: "All Transactions" },
+  { value: "purchase", label: "Purchases" },
   { value: "credit_issue", label: "Credit Issued" },
   { value: "credit_redeem", label: "Credit Redeemed" },
 ];
 
-export default function CustomersTransactions() {
+// Empty-state copy adapts to the active filter. Credit-only filters hide the
+// "record a new purchase" CTA since purchases don't directly produce those.
+const EMPTY_COPY: Record<
+  TransactionTypeFilter,
+  { title: string; hint?: string }
+> = {
+  all: {
+    title: "No transactions in this window",
+    hint: "Try a different date range or branch filter, or record a new purchase.",
+  },
+  purchase: {
+    title: "No purchases in this window",
+    hint: "Try a different date range or branch filter, or record a new purchase.",
+  },
+  credit_issue: {
+    title: "No credit issued in this window",
+    hint: "Credit is issued automatically when a purchase triggers a running promo. Try a different date range or branch filter.",
+  },
+  credit_redeem: {
+    title: "No credit redeemed in this window",
+    hint: "Redemptions appear here once a customer's credit is redeemed. Try a different date range or branch filter.",
+  },
+};
+
+export default function TransactionsList() {
   const { branches } = useStoreStore();
-  const [filters, setFilters] = useState<CustomersFiltersValue>(() => ({
+  const [filters, setFilters] = useState<TransactionsFiltersValue>(() => ({
     branchId: null,
     datePreset: "this_year",
     start: startOfYearEpoch(),
@@ -58,15 +84,16 @@ export default function CustomersTransactions() {
     // so they appear immediately on refetch after a purchase is added.
     end: null,
   }));
-  const [typeFilter, setTypeFilter] = useState<TypeFilter>("all");
+  const [typeFilter, setTypeFilter] = useState<TransactionTypeFilter>("all");
   const [addOpen, setAddOpen] = useState(false);
   const [detailRow, setDetailRow] = useState<CustomerTransactions | null>(null);
 
   const transactionsQuery = useInfiniteQuery({
     queryKey: [
-      "customers",
       "transactions",
+      "list",
       {
+        type: typeFilter,
         branchId: filters.branchId,
         start: filters.start,
         end: filters.end,
@@ -74,7 +101,8 @@ export default function CustomersTransactions() {
     ],
     queryFn: ({ pageParam }) => {
       const offset = (pageParam as number) ?? 0;
-      return customerService.getTransactions({
+      return transactionService.getTransactions({
+        type: typeFilter,
         branch_id: filters.branchId ?? undefined,
         start: filters.start ?? undefined,
         end: filters.end ?? undefined,
@@ -96,9 +124,12 @@ export default function CustomersTransactions() {
     for (const p of pages) {
       if (p.success) out.push(...p.data.rows);
     }
-    if (typeFilter === "all") return out;
-    return out.filter((r) => r.transaction_type === typeFilter);
-  }, [transactionsQuery.data, typeFilter]);
+    return out;
+  }, [transactionsQuery.data]);
+
+  const lastPage =
+    transactionsQuery.data?.pages?.[transactionsQuery.data.pages.length - 1];
+  const total = lastPage?.success ? lastPage.data.total : 0;
 
   const hasNextPage = transactionsQuery.hasNextPage;
   const isFetching = transactionsQuery.isFetching;
@@ -198,6 +229,8 @@ export default function CustomersTransactions() {
     [],
   );
 
+  const emptyCopy = EMPTY_COPY[typeFilter];
+
   return (
     <div className="space-y-6">
       {/* Filters bar + Add a purchase */}
@@ -205,7 +238,7 @@ export default function CustomersTransactions() {
         className="animate-fade-in-up p-4 motion-reduce:animate-none"
         style={{ animationDelay: "0ms" }}
       >
-        <CustomersFilters
+        <TransactionsFilters
           value={filters}
           onChange={(next) => setFilters(next)}
           branches={branches}
@@ -232,7 +265,7 @@ export default function CustomersTransactions() {
           <div className="flex items-center gap-2">
             <Select
               value={typeFilter}
-              onValueChange={(v) => setTypeFilter(v as TypeFilter)}
+              onValueChange={(v) => setTypeFilter(v as TransactionTypeFilter)}
             >
               <SelectTrigger className="h-8 w-[180px] text-sm font-semibold tracking-tight">
                 <SelectValue />
@@ -245,6 +278,9 @@ export default function CustomersTransactions() {
                 ))}
               </SelectContent>
             </Select>
+            <span className="bg-muted/50 text-muted-foreground inline-flex h-5 items-center rounded-full border px-2 text-[11px] font-medium tabular-nums">
+              {total}
+            </span>
           </div>
         </div>
 
@@ -279,13 +315,12 @@ export default function CustomersTransactions() {
               ) : (
                 <div className="flex flex-col items-center justify-center gap-2 py-12 text-center">
                   <Receipt className="text-muted-foreground h-8 w-8" />
-                  <p className="text-sm font-medium">
-                    No transactions in this window
-                  </p>
-                  <p className="text-muted-foreground text-xs">
-                    Try a different date range or branch filter, or record a new
-                    purchase.
-                  </p>
+                  <p className="text-sm font-medium">{emptyCopy.title}</p>
+                  {emptyCopy.hint && (
+                    <p className="text-muted-foreground text-xs">
+                      {emptyCopy.hint}
+                    </p>
+                  )}
                 </div>
               )
             }

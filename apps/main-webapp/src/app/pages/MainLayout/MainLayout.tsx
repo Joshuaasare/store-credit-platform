@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Menu, Store, Wallet, UserRound, X, Receipt } from "lucide-react";
+import { Menu, Store, Wallet, UserRound, X, Receipt, Users } from "lucide-react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import {
   cn,
@@ -13,6 +13,7 @@ import { useStoreStore } from "@shared/stores/storeStore";
 export const routes = {
   MY_STORE: "/",
   CREDITS: "/credits",
+  TRANSACTIONS: "/transactions",
   CUSTOMERS: "/customers",
   PROFILE: "/profile",
 };
@@ -20,7 +21,8 @@ export const routes = {
 const navItems = [
   { title: "My Store", url: routes.MY_STORE, icon: Store },
   { title: "Credits", url: routes.CREDITS, icon: Wallet },
-  { title: "Transactions", url: routes.CUSTOMERS, icon: Receipt },
+  { title: "Transactions", url: routes.TRANSACTIONS, icon: Receipt },
+  { title: "Customers", url: routes.CUSTOMERS, icon: Users },
   { title: "Profile", url: routes.PROFILE, icon: UserRound },
 ];
 

@@ -337,8 +337,153 @@ as $$
 $$;
 
 -- ──────────────────────────────────────────────────────────────────────────
--- 11. Grants
+-- 11. Customers list RPC
+-- ──────────────────────────────────────────────────────────────────────────
+-- Paginated, searchable customer directory for the /customers page.
+-- Scoping: a customer appears iff they have ≥1 non-deleted purchase at a
+-- merchant branch (filtered to p_branch_id when provided). Search is a
+-- substring match on surname, other_names, or customer phone — applied
+-- AFTER scoping so search never leaks customers outside the branch/merchant
+-- scope.
+--
+-- Per-customer aggregates (all scoped to the same branch filter):
+--   total_purchases     = SUM(customer_purchases.amount)
+--   available_credits   = SUM(GREATEST(0, credit_amount − approved redemptions))
+--                         over LIVE credits (non-deleted, non-revoked,
+--                         non-expired). Per-credit remaining is clamped at 0
+--                         so an over-redeemed credit can't subtract from the
+--                         total.
+--   live_credit_count   = COUNT of live credits with remaining > 0
+--   last_activity_epoch = GREATEST across purchase.transaction_date,
+--                         credit.created_at, redemption.created_at
+--   total               = window count of matched customers (pre-LIMIT) for
+--                         pagination — read from the first row, 0 if empty.
+create or replace function public.get_customers(
+  p_merchant_id  bigint,
+  p_branch_id    bigint default null,
+  p_search       text   default null,
+  p_limit        int    default 20,
+  p_offset       int    default 0
+)
+returns table (
+  customer_id          bigint,
+  phone                text,
+  user_id              uuid,
+  customer_name        text,
+  total_purchases      numeric,
+  available_credits    numeric,
+  live_credit_count    bigint,
+  last_activity_epoch  bigint,
+  total                bigint
+)
+language sql
+stable
+as $$
+  with merchant_branches as (
+    select id from public.branches
+    where merchant_id = p_merchant_id and deleted_at is null
+      and (p_branch_id is null or id = p_branch_id)
+  ),
+  scoped_customers as (
+    select distinct p.customer_id
+    from public.customer_purchases p
+    join merchant_branches mb on mb.id = p.branch_id
+    where p.deleted_at is null
+  ),
+  matched_customers as (
+    select c.id as customer_id,
+           c.phone,
+           c.user_id,
+           coalesce(
+             nullif(trim(coalesce(u.surname, '') || ' ' || coalesce(u.other_names, '')), ''),
+             'Unnamed customer'
+           ) as customer_name
+    from scoped_customers sc
+    join public.customers c on c.id = sc.customer_id
+    left join public.users  u on u.id = c.user_id
+    where p_search is null
+       or c.phone ilike '%' || p_search || '%'
+       or u.surname ilike '%' || p_search || '%'
+       or coalesce(u.other_names, '') ilike '%' || p_search || '%'
+  ),
+  purchase_agg as (
+    select p.customer_id,
+           coalesce(sum(p.amount), 0) as total_purchases,
+           max(p.transaction_date)    as last_purchase_epoch
+    from public.customer_purchases p
+    join merchant_branches mb on mb.id = p.branch_id
+    where p.deleted_at is null
+    group by p.customer_id
+  ),
+  redemption_per_credit as (
+    select r.credit_id,
+           coalesce(sum(r.amount_redeemed), 0) as redeemed_total
+    from public.customer_credit_redemptions r
+    where r.deleted_at is null and r.approved_at is not null
+    group by r.credit_id
+  ),
+  credit_agg as (
+    select c.customer_id,
+           coalesce(
+             sum(greatest(0, c.credit_amount - coalesce(rpc.redeemed_total, 0))),
+             0
+           ) as available_credits,
+           count(*) filter (
+             where greatest(0, c.credit_amount - coalesce(rpc.redeemed_total, 0)) > 0
+           )::bigint as live_credit_count,
+           max(extract(epoch from c.created_at)::bigint) as last_credit_epoch
+    from public.customer_credit c
+    join merchant_branches mb on mb.id = c.branch_id
+    left join redemption_per_credit rpc on rpc.credit_id = c.id
+    where c.deleted_at is null
+      and c.revoked_at is null
+      and (c.expires_at is null
+           or c.expires_at > extract(epoch from now())::bigint)
+    group by c.customer_id
+  ),
+  redemption_agg as (
+    select c.customer_id,
+           max(extract(epoch from r.created_at)::bigint) as last_redemption_epoch
+    from public.customer_credit_redemptions r
+    join public.customer_credit c on c.id = r.credit_id
+    join merchant_branches mb on mb.id = c.branch_id
+    where r.deleted_at is null and r.approved_at is not null
+      and c.deleted_at is null and c.revoked_at is null
+    group by c.customer_id
+  )
+  select
+    mc.customer_id,
+    mc.phone,
+    mc.user_id,
+    mc.customer_name,
+    coalesce(pa.total_purchases, 0)   as total_purchases,
+    coalesce(ca.available_credits, 0) as available_credits,
+    coalesce(ca.live_credit_count, 0) as live_credit_count,
+    greatest(
+      pa.last_purchase_epoch,
+      ca.last_credit_epoch,
+      ra.last_redemption_epoch
+    )                                 as last_activity_epoch,
+    count(*) over()                   as total
+  from matched_customers mc
+  left join purchase_agg   pa on pa.customer_id = mc.customer_id
+  left join credit_agg     ca on ca.customer_id = mc.customer_id
+  left join redemption_agg ra on ra.customer_id = mc.customer_id
+  order by
+    greatest(
+      pa.last_purchase_epoch,
+      ca.last_credit_epoch,
+      ra.last_redemption_epoch
+    ) desc nulls last,
+    mc.customer_id asc
+  limit p_limit
+  offset p_offset;
+$$;
+
+-- ──────────────────────────────────────────────────────────────────────────
+-- 12. Grants
 -- ──────────────────────────────────────────────────────────────────────────
 grant execute on function public.get_customer_leaderboard(bigint, bigint, text, bigint, bigint, int, int) to authenticated, service_role;
 grant execute on function public.get_customer_leaderboard_count(bigint, bigint, bigint, bigint) to authenticated, service_role;
 grant execute on function public.get_distinct_customer_count(bigint, bigint) to authenticated, service_role;
+grant execute on function public.get_customers(bigint, bigint, text, int, int) to authenticated, service_role;

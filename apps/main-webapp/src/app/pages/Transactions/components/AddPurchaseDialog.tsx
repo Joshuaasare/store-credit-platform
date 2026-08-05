@@ -21,7 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@store-credit-platform/web-components";
-import { customerService } from "@store-credit-platform/api-services";
+import { transactionService } from "@store-credit-platform/api-services";
 import { useStoreStore } from "@shared/stores/storeStore";
 import { useAuthStore } from "@shared/stores/authStore";
 import { PhoneInput } from "../../../components/PhoneInput/PhoneInput";
@@ -85,7 +85,7 @@ export function AddPurchaseDialog({
 
   const mutation = useMutation({
     mutationFn: async (values: PurchaseFormValues) => {
-      const res = await customerService.createPurchase({
+      const res = await transactionService.createPurchase({
         phone: values.phone,
         amount: values.amount,
         branch_id: values.branchId,
@@ -95,7 +95,7 @@ export function AddPurchaseDialog({
     },
     onSuccess: () => {
       toast.success("Purchase recorded", successToastProperties);
-      void queryClient.invalidateQueries({ queryKey: ["customers"] });
+      void queryClient.invalidateQueries({ queryKey: ["transactions"] });
       onOpenChange?.(false);
     },
     onError: (err) => {

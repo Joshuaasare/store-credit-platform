@@ -1,15 +1,14 @@
 import { createApiClient } from "./apiService.js";
 import {
   LeaderboardQuerystring,
-  TransactionsQuerystring,
-  CreatePurchaseRequest,
   CreateRedemptionRequest,
   LeaderboardApiResponse,
   LeaderboardStatsApiResponse,
-  TransactionsApiResponse,
-  CreatePurchaseApiResponse,
   CreateRedemptionApiResponse,
   CreditRemainingApiResponse,
+  CustomerListQuerystring,
+  CustomerListApiResponse,
+  CustomerDetailApiResponse,
 } from "../types/api.types.js";
 
 /**
@@ -29,6 +28,29 @@ export function createCustomerService() {
   }
 
   return {
+    /** GET /customers — paginated, searchable customer directory. */
+    async listCustomers(
+      params: CustomerListQuerystring,
+    ): Promise<CustomerListApiResponse> {
+      const qs = buildQS(params as Record<string, unknown>);
+      return apiRequest<CustomerListApiResponse>(`/customers${qs}`, {
+        method: "GET",
+      });
+    },
+
+    /**
+     * GET /customers/:customerId — single-customer detail with merchant-wide
+     * totals + every live credit row (per-credit remaining / expiry).
+     */
+    async getCustomerDetail(
+      customerId: number,
+    ): Promise<CustomerDetailApiResponse> {
+      return apiRequest<CustomerDetailApiResponse>(
+        `/customers/${encodeURIComponent(customerId)}`,
+        { method: "GET" },
+      );
+    },
+
     /** GET /customers/leaderboard — paginated, sorted, merchant-scoped. */
     async getLeaderboard(
       params: LeaderboardQuerystring,
@@ -47,26 +69,6 @@ export function createCustomerService() {
       return apiRequest<LeaderboardStatsApiResponse>(
         `/customers/leaderboard-stats${qs}`,
         { method: "GET" },
-      );
-    },
-
-    /** GET /customers/transactions — paginated, merchant-scoped. */
-    async getTransactions(
-      params: TransactionsQuerystring,
-    ): Promise<TransactionsApiResponse> {
-      const qs = buildQS(params as Record<string, unknown>);
-      return apiRequest<TransactionsApiResponse>(`/customers/transactions${qs}`, {
-        method: "GET",
-      });
-    },
-
-    /** POST /customers/transactions/purchase — record a purchase. */
-    async createPurchase(
-      payload: CreatePurchaseRequest,
-    ): Promise<CreatePurchaseApiResponse> {
-      return apiRequest<CreatePurchaseApiResponse>(
-        "/customers/transactions/purchase",
-        { method: "POST", body: payload },
       );
     },
 
