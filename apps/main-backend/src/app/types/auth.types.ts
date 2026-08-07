@@ -1,4 +1,4 @@
-import { BaseUserRole } from "./main.types";
+import { StaffRoleValues } from "./main.types";
 
 export interface SendOtpRequest {
   phone: string;
@@ -12,7 +12,7 @@ export interface VerifyOtpRequest {
 export interface AccessTokenPayload {
   sub: string;
   phone: string | null;
-  roles: string[];
+  role: StaffRoleValues | null;
   merchant_id: number | null;
   branch_id: number | null;
   iat: number;
@@ -29,7 +29,7 @@ export interface AuthUser {
   surname: string;
   other_names: string | null;
   access_granted: boolean;
-  roles: BaseUserRole[];
+  role: StaffRoleValues | null;
   merchant_id: number | null;
   branch_id: number | null;
 }
@@ -99,5 +99,9 @@ export type VerifyOtpApiResponse = VerifyOtpResponse | AuthErrorResponse;
 export type RefreshTokenApiResponse = RefreshTokenResponse | AuthErrorResponse;
 export type LogoutApiResponse = LogoutResponse | AuthErrorResponse;
 export type SessionListApiResponse = SessionListResponse | AuthErrorResponse;
-export type SessionRevokeApiResponse = SessionRevokeResponse | AuthErrorResponse;
-export type GetCurrentUserApiResponse = GetCurrentUserResponse | AuthErrorResponse;
+export type SessionRevokeApiResponse =
+  | SessionRevokeResponse
+  | AuthErrorResponse;
+export type GetCurrentUserApiResponse =
+  | GetCurrentUserResponse
+  | AuthErrorResponse;

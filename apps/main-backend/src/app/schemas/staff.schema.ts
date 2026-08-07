@@ -1,42 +1,13 @@
 import { Type, Static } from '@sinclair/typebox'
-import { UserRoleValues, ApiErrorResponse } from './main.schema'
+import { StaffRoleValues, BaseBranch, ApiErrorResponse, BaseUserProfile, BaseStaff } from './main.schema'
 
 
 
-export type StaffRole = Static<typeof StaffRole>
-export const StaffRole = UserRoleValues
-
-export type StaffUser = Static<typeof StaffUser>
-export const StaffUser = Type.Object({
-id: Type.String(),
-phone: Type.String(),
-surname: Type.String(),
-other_names: Type.Union([
-Type.String(),
-Type.Null()
-]),
-access_granted: Type.Boolean(),
-role: StaffRole,
-branch_id: Type.Number(),
-branch_name: Type.Union([
-Type.String(),
-Type.Null()
-]),
-address: Type.Union([
-Type.String(),
-Type.Null()
-]),
-notes: Type.Union([
-Type.String(),
-Type.Null()
-]),
-last_login_at: Type.Union([
-Type.String(),
-Type.Null()
-]),
-created_at: Type.String(),
-is_self: Type.Boolean()
-})
+export type Staff = Static<typeof Staff>
+export const Staff = Type.Composite([BaseStaff, Type.Object({
+user: BaseUserProfile,
+branch: BaseBranch
+})])
 
 export type StaffListFilters = Static<typeof StaffListFilters>
 export const StaffListFilters = Type.Object({
@@ -49,7 +20,7 @@ Type.Number(),
 Type.Null()
 ])),
 role: Type.Optional(Type.Union([
-StaffRole,
+StaffRoleValues,
 Type.Null()
 ])),
 include_disabled: Type.Optional(Type.Union([
@@ -62,7 +33,7 @@ offset: Type.Optional(Type.Number())
 
 export type StaffListPage = Static<typeof StaffListPage>
 export const StaffListPage = Type.Object({
-rows: Type.Array(StaffUser),
+rows: Type.Array(Staff),
 total: Type.Number(),
 offset: Type.Number(),
 limit: Type.Number()
@@ -79,7 +50,7 @@ other_names: Type.Optional(Type.Union([
 Type.String(),
 Type.Null()
 ])),
-role: StaffRole,
+role: StaffRoleValues,
 branch_id: Type.Number(),
 access_granted: Type.Optional(Type.Boolean()),
 address: Type.Optional(Type.Union([
@@ -100,7 +71,10 @@ other_names: Type.Optional(Type.Union([
 Type.String(),
 Type.Null()
 ])),
-role: Type.Optional(StaffRole),
+role: Type.Optional(Type.Union([
+StaffRoleValues,
+Type.Null()
+])),
 branch_id: Type.Optional(Type.Number()),
 access_granted: Type.Optional(Type.Boolean()),
 address: Type.Optional(Type.Union([
@@ -127,7 +101,7 @@ data: StaffListPage
 export type StaffMutationResponse = Static<typeof StaffMutationResponse>
 export const StaffMutationResponse = Type.Object({
 success: Type.Literal(true),
-data: StaffUser
+data: Staff
 })
 
 export type StaffDeleteResponse = Static<typeof StaffDeleteResponse>

@@ -1,5 +1,6 @@
 import { supabaseAdmin } from "../utils/supabase.client";
 import { AccessTokenPayload } from "../schemas/auth.schema";
+import { QueryFragments } from "../constants/queryFragments";
 import {
   LeaderboardSort,
   LeaderboardFilters,
@@ -13,6 +14,7 @@ import {
   CustomerDetail,
   CustomerDetailCreditRow,
 } from "../schemas/customers.schema";
+import { BaseUserProfile } from "../schemas/main.schema";
 
 // ────────────────────────────────────────────────────────────────────────────
 // Service
@@ -127,10 +129,16 @@ export class CustomerService {
 
   /**
    * Customer directory list — paginated, branch-scoped, searchable via the
-   * `get_customers` RPC. The RPC attaches a `total` window-count column to
-   * every row (pre-LIMIT); we read it from the first row, or 0 when the page
-   * is empty. Search and branch scope are both applied server-side so the
-   * `total` reflects the filtered set.
+   * `get_customers` RPC. The RPC returns flat columns + a `total` window-count
+   * column on every row (pre-LIMIT); we read it from the first row, or 0 when
+   * the page is empty. Search and branch scope are both applied server-side so
+   * the `total` reflects the filtered set.
+   *
+   * The linked user profile is nested service-side: the page is already
+   * paginated (≤limit rows), so we collect the non-null user_ids and do one
+   * `users` select by `id in (...)` using BASE_USER_PROFILE, then attach
+   * `user: BaseUserProfile | null` per row. This keeps the column set driven
+   * by the fragment rather than hand-copying fields in the RPC.
    */
   async listCustomers(
     merchantId: number,
@@ -152,14 +160,47 @@ export class CustomerService {
       throw new Error(`Failed to load customers: ${error.message}`);
     }
 
-    const rows = data ?? [];
-    const total = rows.length > 0 ? Number(rows[0].total) : 0;
-    // Strip the `total` column from each row before returning.
-    const cleanRows: CustomerListRow[] = rows.map(
-      ({ total: _total, ...rest }) => rest,
-    );
+    const rpcRows = (data ?? []) as Array<{
+      customer_id: number;
+      phone: string | null;
+      user_id: string | null;
+      customer_name: string;
+      total_purchases: number;
+      available_credits: number;
+      live_credit_count: number;
+      last_activity_epoch: number | null;
+      total: number;
+    }>;
+    const total = rpcRows.length > 0 ? Number(rpcRows[0].total) : 0;
 
-    return { rows: cleanRows, total, offset, limit };
+    // Fetch linked user profiles for this page in one query.
+    const userIds = rpcRows
+      .map((r) => r.user_id)
+      .filter((id): id is string => id != null);
+    const usersById = new Map<string, BaseUserProfile>();
+    if (userIds.length > 0) {
+      const { data: userRows } = await supabaseAdmin
+        .from("users")
+        .select(QueryFragments.BASE_USER_PROFILE)
+        .in("id", userIds);
+      for (const u of (userRows ?? []) as unknown as BaseUserProfile[]) {
+        usersById.set(u.id, u);
+      }
+    }
+
+    const rows: CustomerListRow[] = rpcRows.map((r) => ({
+      customer_id: r.customer_id,
+      user_id: r.user_id,
+      phone: r.phone,
+      user: r.user_id != null ? (usersById.get(r.user_id) ?? null) : null,
+      customer_name: r.customer_name,
+      total_purchases: Number(r.total_purchases ?? 0),
+      available_credits: Number(r.available_credits ?? 0),
+      live_credit_count: Number(r.live_credit_count ?? 0),
+      last_activity_epoch: r.last_activity_epoch,
+    }));
+
+    return { rows, total, offset, limit };
   }
 
   /**
@@ -186,7 +227,9 @@ export class CustomerService {
     if (mbErr) {
       throw new Error(`Failed to load merchant branches: ${mbErr.message}`);
     }
-    const merchantBranchIds = (mbRows ?? []).map((b: any) => b.id as number);
+    const merchantBranchIds = (mbRows ?? []).map(
+      (b: { id: number }) => b.id,
+    );
 
     // 1. Scope check: ≥1 non-deleted purchase at a merchant branch. This is
     //    also the security boundary — a customer_id with no purchase at any
@@ -209,10 +252,10 @@ export class CustomerService {
       throw new Error("Customer not found");
     }
 
-    // 2. Customer + linked user profile (nested join via customers_user_id_fkey).
+    // 2. Customer row + linked user profile (nested via BASE_USER_PROFILE).
     const { data: customer, error: custErr } = await supabaseAdmin
       .from("customers")
-      .select("id, phone, user_id, users(surname, other_names)")
+      .select(`id, phone, user_id, users(${QueryFragments.BASE_USER_PROFILE})`)
       .eq("id", customerId)
       .maybeSingle();
     if (custErr) {
@@ -221,17 +264,17 @@ export class CustomerService {
     if (!customer) {
       throw new Error("Customer not found");
     }
-    const linkedUser = (customer as any).users as {
-      surname: string | null;
-      other_names: string | null;
-    } | null;
+    const linkedUser = (customer as unknown as {
+      users: BaseUserProfile | null;
+    }).users;
 
-    // 3. Live credit rows joined to their branch (merchant-wide).
+    // 3. Live credit rows joined to their branch (merchant-wide). Use the
+    //    BASE_CUSTOMER_CREDIT + BASE_BRANCH fragments so column additions
+    //    auto-propagate; the merchant_id on branch is used for scoping.
     const { data: creditRows, error: creditErr } = await supabaseAdmin
       .from("customer_credit")
       .select(
-        `id, credit_amount, expires_at, created_at, branch_id,
-         branch:branches(id, name, merchant_id)`,
+        `${QueryFragments.BASE_CUSTOMER_CREDIT},branch:branches(${QueryFragments.BASE_BRANCH})`,
       )
       .eq("customer_id", customerId)
       .is("deleted_at", null)
@@ -241,7 +284,13 @@ export class CustomerService {
     }
 
     const nowEpoch = Math.floor(Date.now() / 1000);
-    const merchantCredits = (creditRows ?? []).filter((row: any) => {
+    const merchantCredits = ((creditRows ?? []) as unknown as Array<
+      CustomerDetailCreditRow & {
+        branch: { merchant_id: number };
+        expires_at: number | null;
+        created_at: string;
+      }
+    >).filter((row) => {
       const branchMerchantId = row.branch?.merchant_id ?? null;
       if (branchMerchantId !== merchantId) return false;
       const expiresAt = row.expires_at;
@@ -249,7 +298,7 @@ export class CustomerService {
     });
 
     // 4. Approved redemptions for those credit_ids (sum per credit).
-    const creditIds = merchantCredits.map((r: any) => r.id as number);
+    const creditIds = merchantCredits.map((r) => r.id);
     const redemptionsByCredit = new Map<number, number>();
     let lastRedemptionEpoch: number | null = null;
     if (creditIds.length > 0) {
@@ -262,13 +311,16 @@ export class CustomerService {
       if (redemptionErr) {
         throw new Error(`Failed to load redemptions: ${redemptionErr.message}`);
       }
-      for (const r of redemptionRows ?? []) {
-        const cid = (r as any).credit_id as number;
-        const amt = Number((r as any).amount_redeemed) || 0;
+      for (const r of (redemptionRows ?? []) as Array<{
+        credit_id: number;
+        amount_redeemed: number;
+        created_at: string | null;
+      }>) {
+        const cid = r.credit_id;
+        const amt = Number(r.amount_redeemed) || 0;
         redemptionsByCredit.set(cid, (redemptionsByCredit.get(cid) ?? 0) + amt);
-        const created = (r as any).created_at as string | null;
-        if (created) {
-          const d = Math.floor(new Date(created).getTime() / 1000);
+        if (r.created_at) {
+          const d = Math.floor(new Date(r.created_at).getTime() / 1000);
           if (lastRedemptionEpoch == null || d > lastRedemptionEpoch) {
             lastRedemptionEpoch = d;
           }
@@ -277,21 +329,20 @@ export class CustomerService {
     }
 
     // 5. Per-credit remaining + customer-level credit aggregates. Sort by
-    //    remaining desc so the most-relevant credits sit at the top.
+    //    remaining desc so the most-relevant credits sit at the top. The
+    //    composed row already carries the BASE_CUSTOMER_CREDIT + branch
+    //    columns; we just attach the live aggregates.
     const credits: CustomerDetailCreditRow[] = merchantCredits
-      .map((row: any) => {
+      .map((row) => {
         const creditAmount = Number(row.credit_amount) || 0;
-        const redeemedTotal = redemptionsByCredit.get(row.id as number) ?? 0;
+        const redeemedTotal = redemptionsByCredit.get(row.id) ?? 0;
         const remaining = Math.max(0, creditAmount - redeemedTotal);
+        const { branch: _branch, ...baseCredit } = row;
         return {
-          id: row.id as number,
-          credit_amount: creditAmount,
+          ...baseCredit,
           redeemed_total: redeemedTotal,
           remaining,
-          expires_at: row.expires_at == null ? null : Number(row.expires_at),
-          created_at: row.created_at as string,
-          branch_id: row.branch_id as number,
-          branch_name: (row.branch?.name as string | null) ?? null,
+          branch: row.branch,
         };
       })
       .sort((a, b) => b.remaining - a.remaining);
@@ -300,8 +351,8 @@ export class CustomerService {
     const liveCreditCount = credits.filter((c) => c.remaining > 0).length;
 
     const lastCreditEpoch = merchantCredits.reduce<number | null>(
-      (max, r: any) => {
-        const created = r.created_at as string | null;
+      (max, r) => {
+        const created = r.created_at;
         if (!created) return max;
         const d = Math.floor(new Date(created).getTime() / 1000);
         return max == null || d > max ? d : max;
@@ -319,16 +370,17 @@ export class CustomerService {
       throw new Error(`Failed to load purchases: ${purchaseErr.message}`);
     }
     const merchantBranchSet = new Set(merchantBranchIds);
-    const merchantPurchases = (purchaseRows ?? []).filter((p: any) =>
-      merchantBranchSet.has((p as any).branch_id as number),
+    const merchantPurchases = (purchaseRows ?? []).filter((p) =>
+      merchantBranchSet.has((p as { branch_id: number }).branch_id),
     );
     const totalPurchases = merchantPurchases.reduce(
-      (s, p: any) => s + (Number((p as any).amount) || 0),
+      (s, p) => s + (Number((p as { amount: number }).amount) || 0),
       0,
     );
     const lastPurchaseEpoch = merchantPurchases.reduce<number | null>(
-      (max, p: any) => {
-        const d = Number((p as any).transaction_date) || null;
+      (max, p) => {
+        const d =
+          Number((p as { transaction_date: number }).transaction_date) || null;
         if (d == null) return max;
         return max == null || d > max ? d : max;
       },
@@ -353,8 +405,9 @@ export class CustomerService {
 
     return {
       customer_id: customerId,
-      phone: (customer as any).phone as string | null,
-      user_id: (customer as any).user_id as string | null,
+      phone: (customer as { phone: string | null }).phone,
+      user_id: (customer as { user_id: string | null }).user_id,
+      user: linkedUser,
       customer_name: customerName,
       total_purchases: totalPurchases,
       available_credits: availableCredits,
@@ -407,7 +460,11 @@ export class CustomerService {
     if (credit.revoked_at) {
       throw new Error("Credit has been revoked");
     }
-    const branchMerchantId = (credit.branch as any)?.merchant_id ?? null;
+    const branchMerchantId = (
+      credit as unknown as {
+        branch: { merchant_id: number } | null;
+      }
+    ).branch?.merchant_id ?? null;
     if (branchMerchantId !== merchantId) {
       throw new Error("Credit does not belong to your merchant");
     }
@@ -424,10 +481,12 @@ export class CustomerService {
       .from("customer_credit_redemptions")
       .insert({
         credit_id: payload.credit_id,
+        customer_id: credit.customer_id,
+        branch_id: credit.branch_id,
         amount_redeemed: payload.amount_redeemed,
         approved_at: nowIso,
         approved_by_user_id: user.sub,
-      } as any);
+      });
 
     if (insertErr) {
       throw new Error(`Failed to record redemption: ${insertErr.message}`);
@@ -470,16 +529,16 @@ export class CustomerService {
     }
 
     const redeemedTotal = (sumRow ?? []).reduce(
-      (s, r) => s + Number((r as any).amount_redeemed),
+      (s, r) => s + Number((r as { amount_redeemed: number }).amount_redeemed),
       0,
     );
-    const creditAmount = Number((credit as any).credit_amount);
+    const creditAmount = Number(credit.credit_amount);
     const remaining = Math.max(0, creditAmount - redeemedTotal);
 
     return {
       credit_id: creditId,
-      customer_id: (credit as any).customer_id,
-      branch_id: (credit as any).branch_id,
+      customer_id: credit.customer_id,
+      branch_id: credit.branch_id,
       credit_amount: creditAmount,
       redeemed_total: redeemedTotal,
       remaining,

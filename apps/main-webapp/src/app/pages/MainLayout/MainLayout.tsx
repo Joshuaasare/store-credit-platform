@@ -18,7 +18,7 @@ import {
 import { useTheme } from "../../shared/providers/ThemeProvider";
 import { ThemeToggle } from "../../components/ThemeToggle/ThemeToggle";
 import { useStoreStore } from "@shared/stores/storeStore";
-import { UserRoleValues } from "@shared/types/api.types";
+import { StaffRoleValues } from "@shared/types/api.types";
 import {
   isActionOrRoutePermitted,
   RoleRestriction,
@@ -30,7 +30,7 @@ export type MenuItem = {
   url: string;
   icon?: any;
   items?: MenuItem[];
-  permissions?: UserRoleValues[];
+  permissions?: StaffRoleValues[];
   roleRestrictions?: RoleRestriction[];
 };
 
@@ -56,7 +56,12 @@ const navItems: MenuItem[] = [
     icon: Wallet,
     permissions: ["manager"],
   },
-  { title: "Transactions", url: routes.TRANSACTIONS, icon: Receipt },
+  {
+    title: "Transactions",
+    url: routes.TRANSACTIONS,
+    icon: Receipt,
+    permissions: ["cashier", "manager"],
+  },
   {
     title: "Customers",
     url: routes.CUSTOMERS,
@@ -80,7 +85,6 @@ export default function MainLayout() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const { user } = useAuthStore();
   const ensureStoreLoaded = useStoreStore((s) => s.ensureStoreLoaded);
-  const roles = user?.roles.map((role) => role.role);
 
   // Bootstrap shared store data once per authenticated session so every
   // child route (My Store, Customers, etc.) sees populated merchant + branches
@@ -136,7 +140,7 @@ export default function MainLayout() {
     const isActive = index === activeIndex;
     const Icon = item.icon;
     return (
-      isActionOrRoutePermitted(roles, item.permissions) && (
+      isActionOrRoutePermitted(user?.role, item.permissions) && (
         <button
           key={item.url}
           onClick={() => navigate(item.url)}
@@ -273,9 +277,9 @@ export default function MainLayout() {
           {navItems.map((item, index) => {
             const isActive = index === activeIndex;
             const Icon = item.icon;
-            // Permission-gated, same as the mobile nav — desktop used to
-            // bypass this and render every item unconditionally.
-            if (!isActionOrRoutePermitted(roles, item.permissions)) return null;
+
+            if (!isActionOrRoutePermitted(user?.role, item.permissions))
+              return null;
             return (
               <button
                 key={item.url}

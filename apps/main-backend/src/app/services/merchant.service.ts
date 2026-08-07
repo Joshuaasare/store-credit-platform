@@ -45,7 +45,7 @@ export class MerchantService {
   ): Promise<MerchantWithStats | null> {
     const { data: merchant, error } = await supabaseAdmin
       .from("merchants")
-      .select(QueryFragments.BASE_MERCHART)
+      .select(QueryFragments.BASE_MERCHANT)
       .eq("id", merchantId)
       .is("deleted_at", null)
       .maybeSingle();
@@ -71,17 +71,18 @@ export class MerchantService {
 
     // customer_count — distinct customers who have transacted across this
     // merchant's branches (server-side aggregate via RPC).
-    const { data: custCountRes, error: custCountErr } =
-      await supabaseAdmin.rpc("get_distinct_customer_count", {
+    const { data: custCountRes, error: custCountErr } = await supabaseAdmin.rpc(
+      "get_distinct_customer_count",
+      {
         p_merchant_id: merchantId,
-      });
+      },
+    );
     if (custCountErr) {
       throw new Error(
         `Failed to load merchant customer count: ${custCountErr.message}`,
       );
     }
-    const customerCount =
-      custCountRes == null ? 0 : Number(custCountRes as unknown);
+    const customerCount = custCountRes == null ? 0 : Number(custCountRes);
 
     // lifetime_credit_issued — sum of customer_credit.credit_amount across
     // the merchant's branches. The old customer_transactions.credit_generated
@@ -109,15 +110,7 @@ export class MerchantService {
     }
 
     return {
-      id: merchant.id,
-      name: merchant.name,
-      phone: merchant.phone,
-      country_code: merchant.country_code,
-      slug: merchant.slug,
-      logo_url: merchant.logo_url,
-      cover_photo_url: merchant.cover_photo_url,
-      is_active: merchant.is_active,
-      created_at: merchant.created_at,
+      ...merchant,
       branch_count: branchCount ?? 0,
       staff_count: staffCount ?? 0,
       customer_count: customerCount ?? 0,

@@ -1,4 +1,4 @@
-import { ApiErrorResponse } from "./main.types";
+import { ApiErrorResponse, BaseBranch, BaseCustomerCredit, BaseUserProfile } from "./main.types";
 
 export type LeaderboardSort =
   | "purchases"
@@ -112,11 +112,16 @@ export interface CustomerListFilters {
 }
 
 // Row shape returned by the get_customers RPC (minus the pagination `total`
-// column, which is extracted into CustomerListPage.total).
+// column, which is extracted into CustomerListPage.total). The linked user's
+// profile is nested as `user: BaseUserProfile | null` (null for walk-in
+// customers with no user account). `phone` and `user_id` stay top-level for
+// back-compat with customerRowInitials — `phone` is the customer's phone
+// (customers.phone), distinct from `user.phone` (users.phone).
 export interface CustomerListRow {
   customer_id: number;
-  phone: string | null;
   user_id: string | null;
+  phone: string | null;
+  user: BaseUserProfile | null;
   customer_name: string;
   total_purchases: number;
   available_credits: number;
@@ -138,24 +143,23 @@ export interface CustomerListResponse {
   data: CustomerListPage;
 }
 
-// A single live credit row on the detail page. `remaining` is clamped at 0
-// per credit; fully-redeemed credits (remaining = 0) are still listed but
-// rendered greyed. `expires_at` is Unix epoch seconds; null = lifetime.
-export interface CustomerDetailCreditRow {
-  id: number;
-  credit_amount: number;
+// A single live credit row on the detail page. Extends BaseCustomerCredit
+// (auto-propagates column changes via BASE_CUSTOMER_CREDIT) + adds the live
+// `remaining` / `redeemed_total` aggregates and the nested `branch: BaseBranch`
+// (replaces the denormalized `branch_name`). `remaining` is clamped at 0 per
+// credit; fully-redeemed credits (remaining = 0) are still listed but rendered
+// greyed. `expires_at` is Unix epoch seconds; null = lifetime.
+export interface CustomerDetailCreditRow extends BaseCustomerCredit {
   redeemed_total: number;
   remaining: number;
-  expires_at: number | null;
-  created_at: string;
-  branch_id: number;
-  branch_name: string | null;
+  branch: BaseBranch;
 }
 
 export interface CustomerDetail {
   customer_id: number;
-  phone: string | null;
   user_id: string | null;
+  phone: string | null;
+  user: BaseUserProfile | null;
   customer_name: string;
   // Merchant-wide totals for this customer (NOT branch-scoped — the detail
   // page shows the full picture across every branch of the merchant).

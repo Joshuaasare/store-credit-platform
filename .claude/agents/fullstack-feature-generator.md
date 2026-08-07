@@ -76,6 +76,7 @@ Create or update the service file `[feature].service.ts`:
   - ✅ `.eq("roles.role", filters.role)` / `.or("user.surname.ilike.%x%,user.phone.ilike.%x%")` / `.is("user.deleted_at", null)`
   - ❌ `.eq("role", filters.role, { referencedTable: "staff_user_roles" })` cast to `as any`
   - Same for builder returns: if the inferred type is correct, `const { data } = await query` is enough — no `as { data: any[] | null; ... }` chain.
+- **Return the nested join shape, not a flat response type**: when a service reads joined data, define the returned type as a composition of the base row types (e.g. `type Staff = { ...BaseStaff fields, user: BaseUserProfile; branch: BaseBranch }`) and return that directly — do NOT map each row into a flat feature-specific type (`StaffUser`, `CustomerRow`) with fields copied by hand. Reason: a flat type freezes the column set at write time and drifts from the schema on every column add/remove; the nested shape auto-propagates changes via the `QueryFragments` constant + the inferred row type. Derived fields the DB can't provide (e.g. `is_self` = `user.id === jwt.sub`) belong on the frontend, not synthesized server-side. Sensitive fields are still excludable via a trimmed fragment (e.g. `BASE_USER_PROFILE` omits `otp`) or a bare inline list when the fragment would leak sensitive columns.
 - See the `supabase-query-conventions` skill for the canonical patterns.
 
 ### Step 7: Create Frontend API Service

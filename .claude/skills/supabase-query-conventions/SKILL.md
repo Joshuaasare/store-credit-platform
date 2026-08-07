@@ -107,8 +107,77 @@ If the inferred type is already correct (the typical case with `select` returnin
 const { data } = await (query as any) as { data: any[] | null; ... };
 ```
 
+## Rule 3 — Return the nested join shape; don't flatten into a custom response type
+
+When a service reads joined data, return the **nested shape that came out of the query** — do not map it into a flat, feature-specific type (`StaffUser`, `CustomerRow`, `MerchantDetail`, etc.). Define a domain type that composes the existing base types from `database.types.ts` (or QueryFragments-aligned local types) and let the `select(...)` string + the inferred row type drive the contract.
+
+**Why:** A flat resolved type freezes the column set at write time. When a column is added to `users` (and to `BASE_USER_PROFILE`), every flat type that copied `phone, surname, ...` by hand has to be chased down and updated — and so does every consumer. If the service returns the nested shape, the new column flows through automatically: the `select` string picks it up via the fragment, the inferred row type carries it, and every frontend consumer that already reads `row.user.X` sees it for free. The flat-type pattern is how schemas drift out of sync with the API contract.
+
+**Apply:**
+
+- Define the returned type as a composition of the base row types, e.g.:
+  ```ts
+  // ✅ Composed from base types — auto-tracks schema changes
+  export type Staff = {
+    id: number;
+    user_id: string;
+    branch_id: number;
+    role: StaffRole | null;
+    address: string | null;
+    notes: string | null;
+    created_at: string;
+    updated_at: string | null;
+    deleted_at: string | null;
+    user: BaseUserProfile;   // mirrors BASE_USER_PROFILE
+    branch: BaseBranch;     // mirrors BASE_BRANCH
+  };
+  ```
+- The `select(...)` string should use the same `QueryFragments.*` constants the type mirrors, so the column set and the type stay in lockstep.
+- Sensitive fields are still excludable: use a fragment that omits them (e.g. `BASE_USER_PROFILE` excludes `otp` / `otp_expires_at`), or write a bare inline list when the fragment would leak sensitive columns. The composed type uses the same trimmed base type.
+- Derived fields that the DB can't provide (e.g. `is_self` — comparing `user.id` to the JWT `sub`) belong on the **frontend**, not synthesized server-side into the flat type. The backend returns the raw nested row; the frontend computes `row.user.id === currentUser.id`.
+- For list endpoints, the page wrapper is fine — but the row type is the composed type, not a flat one:
+  ```ts
+  // ✅
+  export type StaffListPage = { rows: Staff[]; total: number; offset: number; limit: number };
+  ```
+- For single-row fetches, return `Staff | null` directly — no flat `StaffUser` type.
+
+**Anti-pattern (do not do this):**
+
+```ts
+// ❌ Flat type — freezes the column set, drifts from schema on every change
+export interface StaffUser {
+  id: string;            // copied from users.id
+  phone: string;         // copied from users.phone
+  surname: string;       // copied from users.surname
+  other_names: string | null;
+  access_granted: boolean;
+  role: StaffRole;
+  branch_id: number;
+  branch_name: string | null;  // flattened from branches.name
+  address: string | null;
+  notes: string | null;
+  last_login_at: string | null;
+  created_at: string;
+  is_self: boolean;     // derived server-side — should be frontend
+}
+
+// ❌ Service maps each row into the flat type
+const rows = data.map((row) => ({
+  id: row.user.id,
+  phone: row.user.phone,
+  surname: row.user.surname ?? "",
+  branch_name: row.branch?.name ?? null,
+  is_self: row.user.id === manager.sub,
+  // ... 10 more fields copied by hand
+}));
+```
+
+Every field copied by hand is a future drift bug. The composed `Staff` type above carries all of `BASE_USER_PROFILE` and `BASE_BRANCH` for free.
+
 ## When to run this skill
 
 - Before writing any new `supabaseAdmin.from(...).select(...)` call.
 - Before approving a PR that touches any service file under `apps/main-backend/src/app/services/`.
 - When a `yarn generate:types` cycle finishes and a service that previously cast to `any` can now drop the cast — go back and clean it up.
+- When reviewing a service that maps query rows into a flat response type — flag it and propose the composed nested type instead.

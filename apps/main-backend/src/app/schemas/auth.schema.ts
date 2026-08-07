@@ -1,5 +1,5 @@
 import { Type, Static } from '@sinclair/typebox'
-import { BaseUserRole } from './main.schema'
+import { StaffRoleValues } from './main.schema'
 
 
 
@@ -21,7 +21,10 @@ phone: Type.Union([
 Type.String(),
 Type.Null()
 ]),
-roles: Type.Array(Type.String()),
+role: Type.Union([
+StaffRoleValues,
+Type.Null()
+]),
 merchant_id: Type.Union([
 Type.Number(),
 Type.Null()
@@ -51,7 +54,10 @@ Type.String(),
 Type.Null()
 ]),
 access_granted: Type.Boolean(),
-roles: Type.Array(BaseUserRole),
+role: Type.Union([
+StaffRoleValues,
+Type.Null()
+]),
 merchant_id: Type.Union([
 Type.Number(),
 Type.Null()

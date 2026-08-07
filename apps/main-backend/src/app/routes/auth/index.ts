@@ -166,7 +166,7 @@ export default async function (fastify: FastifyInstance) {
         const accessToken = await TokenService.signAccessToken(
           user.id,
           user.phone,
-          user.roles.map((r) => r.role),
+          user.role ?? null,
           user.merchant_id,
           user.branch_id,
         );

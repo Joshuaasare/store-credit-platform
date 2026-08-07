@@ -1,23 +1,8 @@
-export type UserRoleValues = "manager" | "cashier";
+export type StaffRoleValues = "manager" | "cashier";
 
-export type BaseUserRole = {
-  created_at: string | null;
-  id: number;
-  role: UserRoleValues;
-  updated_at: string | null;
-  user_id: string;
-  assigned_by_user_id: string;
-};
+export type CreditTypeValues = "fixed" | "percentage";
 
-export interface UserWithRoles {
-  id: string;
-  email: string;
-  phone: string | null;
-  surname: string;
-  other_names: string | null;
-  access_granted: boolean;
-  roles: BaseUserRole[];
-}
+export type CumulativeScopeValues = "per_branch" | "merchant_wide";
 
 // SMS Message Types
 export type SendSMSMessageParams = {
@@ -105,5 +90,69 @@ export interface BaseUserProfile {
   access_granted: boolean;
   last_login_at: string | null;
   created_at: string;
+  deleted_at: string | null;
+}
+
+// Base row types mirroring QueryFragments.* constants. Composed types in
+// feature *.types.ts files extend these + add nested joins (user, branch)
+// so a column added to a fragment + base type auto-propagates everywhere.
+export interface BaseStaff {
+  id: number;
+  user_id: string;
+  branch_id: number;
+  role: StaffRoleValues | null;
+  address: string | null;
+  notes: string | null;
+  created_at: string;
+  updated_at: string | null;
+  deleted_at: string | null;
+}
+
+export interface BaseCustomerCredit {
+  id: number;
+  customer_id: number;
+  branch_id: number;
+  credit_amount: number;
+  expires_at: number | null;
+  revoked_at: string | null;
+  revoked_by_user_id: string | null;
+  created_at: string;
+  updated_at: string | null;
+  deleted_at: string | null;
+}
+
+export interface BaseRunningCreditConfig {
+  id: number;
+  config_group_id: string;
+  branch_id: number;
+  credit_type: CreditTypeValues | null;
+  credit_validity: number | null;
+  eligible_window: number | null;
+  fixed_credit_value: number | null;
+  percentage_credit_value: number | null;
+  maximum_allowed_credit: number | null;
+  threshold_amount: number | null;
+  terms: string | null;
+  cumulative_scope: CumulativeScopeValues;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string | null;
+  deleted_at: string | null;
+}
+
+export interface BaseFixedCreditConfig {
+  id: number;
+  config_group_id: string;
+  branch_id: number;
+  credit_type: CreditTypeValues | null;
+  fixed_credit_value: number | null;
+  percentage_credit_value: number | null;
+  maximum_allowed_credit: number | null;
+  start_date: number | null;
+  end_date: number | null;
+  terms: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string | null;
   deleted_at: string | null;
 }

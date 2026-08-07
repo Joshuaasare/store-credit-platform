@@ -3,6 +3,7 @@ import { SupabaseClient } from "@supabase/supabase-js";
 import { supabaseAdmin } from "../utils/supabase.client";
 import { Database } from "../types/database.types";
 import { QueryFragments } from "../constants/queryFragments";
+import { BaseCustomerCredit } from "../schemas/main.schema";
 import {
   CreateRunningCreditConfigRequest,
   UpdateRunningCreditConfigRequest,
@@ -10,7 +11,6 @@ import {
   CreateFixedCreditConfigRequest,
   UpdateFixedCreditConfigRequest,
   FixedCreditConfigGroup,
-  CustomerCreditRow,
 } from "../schemas/creditConfig.schema";
 
 // The new customer_credit row stores only the calculated GHS amount plus
@@ -33,15 +33,9 @@ type FixedConfigRow = Database["public"]["Tables"]["fixed_credit_config"]["Row"]
   branch: Database["public"]["Tables"]["branches"]["Row"];
 };
 
-const RUNNING_CONFIG_COLUMNS = `id, config_group_id, branch_id, credit_type, credit_validity,
-  eligible_window, fixed_credit_value, percentage_credit_value, maximum_allowed_credit,
-  threshold_amount, terms, cumulative_scope, is_active, created_at, updated_at,
-  branch:branches(${QueryFragments.BASE_BRANCH})`;
+const RUNNING_CONFIG_COLUMNS = `${QueryFragments.BASE_RUNNING_CREDIT_CONFIG},branch:branches(${QueryFragments.BASE_BRANCH})`;
 
-const FIXED_CONFIG_COLUMNS = `id, config_group_id, branch_id, credit_type,
-  fixed_credit_value, percentage_credit_value, maximum_allowed_credit,
-  start_date, end_date, terms, is_active, created_at, updated_at,
-  branch:branches(${QueryFragments.BASE_BRANCH})`;
+const FIXED_CONFIG_COLUMNS = `${QueryFragments.BASE_FIXED_CREDIT_CONFIG},branch:branches(${QueryFragments.BASE_BRANCH})`;
 
 function groupRunningRows(rows: RunningConfigRow[]): RunningCreditConfigGroup[] {
   const map = new Map<string, RunningConfigRow>();
@@ -481,7 +475,7 @@ export async function issueRunningCreditsForPurchase(
   branchId: number,
   purchaseAmount: number,
   transactionDateEpoch: number,
-): Promise<CustomerCreditRow[]> {
+): Promise<BaseCustomerCredit[]> {
   if (!(purchaseAmount > 0)) return [];
 
   const { data: merchant } = await supabase
@@ -495,10 +489,7 @@ export async function issueRunningCreditsForPurchase(
   const { data: configs } = await supabase
     .from("running_credit_config")
     .select(
-      `id, config_group_id, branch_id, credit_type, credit_validity, eligible_window,
-       fixed_credit_value, percentage_credit_value, maximum_allowed_credit,
-       threshold_amount, cumulative_scope,
-       branch:branches(id, deleted_at)`,
+      `${QueryFragments.BASE_RUNNING_CREDIT_CONFIG},branch:branches(id,deleted_at)`,
     )
     .eq("branch_id", branchId)
     .eq("is_active", true)
@@ -595,5 +586,5 @@ export async function issueRunningCreditsForPurchase(
     .insert(inserts as any[])
     .select("*");
   if (error) throw new Error(`credit insert failed: ${error.message}`);
-  return (inserted ?? []) as unknown as CustomerCreditRow[];
+  return (inserted ?? []) as unknown as BaseCustomerCredit[];
 }

@@ -1,33 +1,31 @@
-import { UserRoleValues } from "@shared/types/api.types";
+import { StaffRoleValues } from "@shared/types/api.types";
 
 export type RoleRestriction<T = undefined> = {
-  role: UserRoleValues;
+  role: StaffRoleValues;
   restrictionfn: (data?: T) => boolean;
 };
 
 export const isActionOrRoutePermitted = (
-  userRoles?: UserRoleValues[],
-  allowedRoles?: UserRoleValues[],
+  userRole?: StaffRoleValues | null,
+  allowedRoles?: StaffRoleValues[],
   roleRestrictions?: RoleRestriction[],
 ): boolean | undefined => {
   if (!allowedRoles || allowedRoles.length === 0) {
     return true;
   }
 
-  return userRoles?.some((role) => {
-    const matchingRole = allowedRoles.find(
-      (allowedRole) => allowedRole === role,
-    );
-    const matchingRoleRestriction = roleRestrictions?.find(
-      (r) => r.role === role,
-    );
+  const matchingRole = allowedRoles.find(
+    (allowedRole) => allowedRole === userRole,
+  );
+  const matchingRoleRestriction = roleRestrictions?.find(
+    (r) => r.role === userRole,
+  );
 
-    if (matchingRole && matchingRoleRestriction) {
-      return matchingRoleRestriction.restrictionfn();
-    }
+  if (matchingRole && matchingRoleRestriction) {
+    return matchingRoleRestriction.restrictionfn();
+  }
 
-    return !!matchingRole;
-  });
+  return !!matchingRole;
 };
 
 /**
@@ -44,7 +42,7 @@ export const ACTION_PERMISSIONS = {
   "user.create": ["manager"],
   "user.update": ["manager"],
   "user.delete": ["manager"],
-} as const satisfies Record<string, UserRoleValues[]>;
+} as const satisfies Record<string, StaffRoleValues[]>;
 
 /**
  * Gets the required permissions for a specific action ID.
@@ -60,17 +58,17 @@ export const getAllowedPermissions = (
  * Checks if a user has permission to perform a specific action.
  */
 export const hasActionPermission = (
-  userPermissions: UserRoleValues[] | undefined,
+  userRole: StaffRoleValues | undefined,
   actionId: keyof typeof ACTION_PERMISSIONS,
 ): boolean | undefined => {
   const allowedPermissions = getAllowedPermissions(actionId);
-  return isActionOrRoutePermitted(userPermissions, allowedPermissions);
+  return isActionOrRoutePermitted(userRole, allowedPermissions);
 };
 
 export const getRestrictedOptions = <T>(
   options: T[],
-  allowedRoles: UserRoleValues[],
-  userRoles: UserRoleValues[] | undefined,
+  allowedRoles: StaffRoleValues[],
+  userRoles: StaffRoleValues[] | undefined,
   roleRestrictions?: RoleRestriction<T>[],
 ) => {
   return options.filter((option) => {

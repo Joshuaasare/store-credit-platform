@@ -1,6 +1,6 @@
 /**
  * Auto-generated API Types
- * Generated on: 2026-08-06T10:52:46.604Z
+ * Generated on: 2026-08-07T04:57:29.819Z
  * 
  * ⚠️ DO NOT EDIT MANUALLY
  * Source: apps/smartschool-api/src/app/types/
@@ -20,26 +20,11 @@
 // ========================================
 // SHARED TYPES (from main.types.ts)
 // ========================================
-export type UserRoleValues = "manager" | "cashier";
+export type StaffRoleValues = "manager" | "cashier";
 
-export type BaseUserRole = {
-  created_at: string | null;
-  id: number;
-  role: UserRoleValues;
-  updated_at: string | null;
-  user_id: string;
-  assigned_by_user_id: string;
-};
+export type CreditTypeValues = "fixed" | "percentage";
 
-export interface UserWithRoles {
-  id: string;
-  email: string;
-  phone: string | null;
-  surname: string;
-  other_names: string | null;
-  access_granted: boolean;
-  roles: BaseUserRole[];
-}
+export type CumulativeScopeValues = "per_branch" | "merchant_wide";
 
 
 export type SendSMSMessageParams = {
@@ -124,6 +109,74 @@ export interface BaseUserProfile {
   surname: string;
   other_names: string | null;
   phone: string;
+  access_granted: boolean;
+  last_login_at: string | null;
+  created_at: string;
+  deleted_at: string | null;
+}
+
+
+
+
+export interface BaseStaff {
+  id: number;
+  user_id: string;
+  branch_id: number;
+  role: StaffRoleValues | null;
+  address: string | null;
+  notes: string | null;
+  created_at: string;
+  updated_at: string | null;
+  deleted_at: string | null;
+}
+
+export interface BaseCustomerCredit {
+  id: number;
+  customer_id: number;
+  branch_id: number;
+  credit_amount: number;
+  expires_at: number | null;
+  revoked_at: string | null;
+  revoked_by_user_id: string | null;
+  created_at: string;
+  updated_at: string | null;
+  deleted_at: string | null;
+}
+
+export interface BaseRunningCreditConfig {
+  id: number;
+  config_group_id: string;
+  branch_id: number;
+  credit_type: CreditTypeValues | null;
+  credit_validity: number | null;
+  eligible_window: number | null;
+  fixed_credit_value: number | null;
+  percentage_credit_value: number | null;
+  maximum_allowed_credit: number | null;
+  threshold_amount: number | null;
+  terms: string | null;
+  cumulative_scope: CumulativeScopeValues;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string | null;
+  deleted_at: string | null;
+}
+
+export interface BaseFixedCreditConfig {
+  id: number;
+  config_group_id: string;
+  branch_id: number;
+  credit_type: CreditTypeValues | null;
+  fixed_credit_value: number | null;
+  percentage_credit_value: number | null;
+  maximum_allowed_credit: number | null;
+  start_date: number | null;
+  end_date: number | null;
+  terms: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string | null;
+  deleted_at: string | null;
 }
 
 // ========================================
@@ -141,7 +194,7 @@ export interface VerifyOtpRequest {
 export interface AccessTokenPayload {
   sub: string;
   phone: string | null;
-  roles: string[];
+  role: StaffRoleValues | null;
   merchant_id: number | null;
   branch_id: number | null;
   iat: number;
@@ -158,7 +211,7 @@ export interface AuthUser {
   surname: string;
   other_names: string | null;
   access_granted: boolean;
-  roles: BaseUserRole[];
+  role: StaffRoleValues | null;
   merchant_id: number | null;
   branch_id: number | null;
 }
@@ -228,8 +281,12 @@ export type VerifyOtpApiResponse = VerifyOtpResponse | AuthErrorResponse;
 export type RefreshTokenApiResponse = RefreshTokenResponse | AuthErrorResponse;
 export type LogoutApiResponse = LogoutResponse | AuthErrorResponse;
 export type SessionListApiResponse = SessionListResponse | AuthErrorResponse;
-export type SessionRevokeApiResponse = SessionRevokeResponse | AuthErrorResponse;
-export type GetCurrentUserApiResponse = GetCurrentUserResponse | AuthErrorResponse;
+export type SessionRevokeApiResponse =
+  | SessionRevokeResponse
+  | AuthErrorResponse;
+export type GetCurrentUserApiResponse =
+  | GetCurrentUserResponse
+  | AuthErrorResponse;
 
 export interface BranchWithAggregates extends BaseBranch {
   staff_count: number;
@@ -268,10 +325,6 @@ export type BranchListApiResponse = BranchListResponse | ApiErrorResponse;
 export type BranchMutationApiResponse =
   | BranchMutationResponse
   | ApiErrorResponse;
-
-export type CreditTypeValues = "fixed" | "percentage";
-
-export type CumulativeScopeValues = "per_branch" | "merchant_wide";
 
 export interface RunningCreditConfigGroup {
   config_group_id: string;
@@ -391,20 +444,7 @@ export type FixedCreditConfigDeleteApiResponse =
   | FixedCreditConfigDeleteResponse
   | ApiErrorResponse;
 
-export interface CustomerCreditRow {
-  id: number;
-  customer_id: number;
-  branch_id: number;
-  credit_amount: number;
-  expires_at: number | null;
-  revoked_at: string | null;
-  revoked_by_user_id: string | null;
-  created_at: string;
-  updated_at: string | null;
-  deleted_at: string | null;
-}
-
-export interface CustomerCreditWithRemaining extends CustomerCreditRow {
+export interface CustomerCreditWithRemaining extends BaseCustomerCredit {
   remaining: number;
   redeemed_total: number;
 }
@@ -506,8 +546,9 @@ export interface CustomerListFilters {
 
 export interface CustomerListRow {
   customer_id: number;
-  phone: string | null;
   user_id: string | null;
+  phone: string | null;
+  user: BaseUserProfile | null;
   customer_name: string;
   total_purchases: number;
   available_credits: number;
@@ -529,21 +570,17 @@ export interface CustomerListResponse {
   data: CustomerListPage;
 }
 
-export interface CustomerDetailCreditRow {
-  id: number;
-  credit_amount: number;
+export interface CustomerDetailCreditRow extends BaseCustomerCredit {
   redeemed_total: number;
   remaining: number;
-  expires_at: number | null;
-  created_at: string;
-  branch_id: number;
-  branch_name: string | null;
+  branch: BaseBranch;
 }
 
 export interface CustomerDetail {
   customer_id: number;
-  phone: string | null;
   user_id: string | null;
+  phone: string | null;
+  user: BaseUserProfile | null;
   customer_name: string;
 
   total_purchases: number;
@@ -595,23 +632,9 @@ export type MerchantMutationApiResponse =
   | MerchantMutationResponse
   | ApiErrorResponse;
 
-export type StaffRole = UserRoleValues;
-
-export interface StaffUser {
-  id: string;
-  phone: string;
-  surname: string;
-  other_names: string | null;
-  access_granted: boolean;
-  role: StaffRole;
-  branch_id: number;
-  branch_name: string | null;
-  address: string | null;
-  notes: string | null;
-  last_login_at: string | null;
-  created_at: string;
-
-  is_self: boolean;
+export interface Staff extends BaseStaff {
+  user: BaseUserProfile;
+  branch: BaseBranch;
 }
 
 export interface StaffListFilters {
@@ -620,7 +643,7 @@ export interface StaffListFilters {
   
   branch_id?: number | null;
   
-  role?: StaffRole | null;
+  role?: StaffRoleValues | null;
 
   include_disabled?: boolean | null;
   limit?: number;
@@ -628,7 +651,7 @@ export interface StaffListFilters {
 }
 
 export interface StaffListPage {
-  rows: StaffUser[];
+  rows: Staff[];
   total: number;
   offset: number;
   limit: number;
@@ -640,7 +663,7 @@ export interface CreateStaffRequest {
   phone: string;
   surname: string;
   other_names?: string | null;
-  role: StaffRole;
+  role: StaffRoleValues;
   branch_id: number;
   access_granted?: boolean;
   address?: string | null;
@@ -651,7 +674,7 @@ export interface UpdateStaffRequest {
   phone?: string;
   surname?: string;
   other_names?: string | null;
-  role?: StaffRole;
+  role?: StaffRoleValues | null;
   branch_id?: number;
   access_granted?: boolean;
   address?: string | null;
@@ -669,7 +692,7 @@ export interface StaffListResponse {
 
 export interface StaffMutationResponse {
   success: true;
-  data: StaffUser;
+  data: Staff;
 }
 
 export interface StaffDeleteResponse {

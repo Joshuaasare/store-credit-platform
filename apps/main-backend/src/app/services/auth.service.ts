@@ -182,18 +182,7 @@ export class AuthService {
       surname: user.surname,
       other_names: user.other_names,
       access_granted: user.access_granted,
-      roles: staffAssignment?.role
-        ? [
-            {
-              id: staffAssignment.staff_id,
-              role: staffAssignment.role,
-              user_id: user.id,
-              assigned_by_user_id: "",
-              created_at: staffAssignment.created_at,
-              updated_at: staffAssignment.updated_at,
-            },
-          ]
-        : [],
+      role: staffAssignment?.role ?? null,
       merchant_id: staffAssignment?.merchant_id ?? null,
       branch_id: staffAssignment?.branch_id ?? null,
     };
@@ -202,7 +191,7 @@ export class AuthService {
     const accessToken = await TokenService.signAccessToken(
       user.id,
       user.phone,
-      authUserResponse.roles.map((r) => r.role),
+      authUserResponse.role ?? "",
       authUserResponse.merchant_id,
       authUserResponse.branch_id,
     );
@@ -280,18 +269,7 @@ export class AuthService {
       surname: user.surname,
       other_names: user.other_names,
       access_granted: user.access_granted,
-      roles: staffAssignment?.role
-        ? [
-            {
-              id: staffAssignment.staff_id,
-              role: staffAssignment.role,
-              user_id: user.id,
-              assigned_by_user_id: "",
-              created_at: staffAssignment.created_at,
-              updated_at: staffAssignment.updated_at,
-            },
-          ]
-        : [],
+      role: staffAssignment?.role ?? null,
       merchant_id: staffAssignment?.merchant_id ?? null,
       branch_id: staffAssignment?.branch_id ?? null,
     };
@@ -321,18 +299,7 @@ export class AuthService {
       surname: user.surname,
       other_names: user.other_names,
       access_granted: user.access_granted,
-      roles: staffAssignment?.role
-        ? [
-            {
-              id: staffAssignment.staff_id,
-              role: staffAssignment.role,
-              user_id: user.id,
-              assigned_by_user_id: "",
-              created_at: staffAssignment.created_at,
-              updated_at: staffAssignment.updated_at,
-            },
-          ]
-        : [],
+      role: staffAssignment?.role ?? null,
       merchant_id: staffAssignment?.merchant_id ?? null,
       branch_id: staffAssignment?.branch_id ?? null,
     };
@@ -340,7 +307,7 @@ export class AuthService {
     const accessToken = await TokenService.signAccessToken(
       user.id,
       user.phone,
-      authUserResponse.roles.map((r) => r.role),
+      authUserResponse.role ?? "",
       authUserResponse.merchant_id,
       authUserResponse.branch_id,
     );
@@ -397,9 +364,7 @@ export class AuthService {
    * Returns null if the user has no staff row (e.g. unassigned admin).
    * Picks the first active staff row ordered by id for determinism.
    */
-  private async resolveStaffAssignment(
-    userId: string,
-  ): Promise<{
+  private async resolveStaffAssignment(userId: string): Promise<{
     staff_id: number;
     role: Database["public"]["Enums"]["role"];
     merchant_id: number;
@@ -409,9 +374,7 @@ export class AuthService {
   } | null> {
     const { data: staff } = await supabaseAdmin
       .from("staff")
-      .select(
-        `id, role, created_at, updated_at, branches(id, merchants(id))`,
-      )
+      .select(`id, role, created_at, updated_at, branches(id, merchants(id))`)
       .eq("user_id", userId)
       .is("deleted_at", null)
       .not("role", "is", null)

@@ -66,7 +66,7 @@ export function requireRoles(...allowedRoles: string[]) {
       });
     }
 
-    const hasRole = user.roles.some((role) => allowedRoles.includes(role));
+    const hasRole = allowedRoles.includes(user.role ?? "");
     if (!hasRole) {
       return reply.code(403).send({
         success: false,

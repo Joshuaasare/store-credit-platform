@@ -45,7 +45,11 @@ export class TokenService {
    * Generate a cryptographically secure opaque refresh token.
    * Returns the raw token, its SHA-256 hash, and a JTI (UUID).
    */
-  static generateOpaqueToken(): { token: string; tokenHash: string; jti: string } {
+  static generateOpaqueToken(): {
+    token: string;
+    tokenHash: string;
+    jti: string;
+  } {
     const token = crypto.randomBytes(32).toString("base64url");
     const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
     const jti = crypto.randomUUID();
@@ -73,7 +77,7 @@ export class TokenService {
   static async signAccessToken(
     userId: string,
     phone: string | null,
-    roles: string[],
+    role: string | null,
     merchantId: number | null = null,
     branchId: number | null = null,
   ): Promise<string> {
@@ -83,7 +87,7 @@ export class TokenService {
     const jwt = await new SignJWT({
       sub: userId,
       phone,
-      roles,
+      role,
       merchant_id: merchantId,
       branch_id: branchId,
       jti,
@@ -129,17 +133,19 @@ export class TokenService {
     );
     const issuedAt = new Date().toISOString();
 
-    const { error } = await (supabaseAdmin as any).from("refresh_tokens").insert({
-      jti,
-      user_id: userId,
-      token_hash: tokenHash,
-      family_id: familyId,
-      device_fingerprint: deviceFingerprint,
-      ip_address: ipAddress || null,
-      issued_at: issuedAt,
-      expires_at: expiresAt.toISOString(),
-      parent_jti: parentJti || null,
-    });
+    const { error } = await (supabaseAdmin as any)
+      .from("refresh_tokens")
+      .insert({
+        jti,
+        user_id: userId,
+        token_hash: tokenHash,
+        family_id: familyId,
+        device_fingerprint: deviceFingerprint,
+        ip_address: ipAddress || null,
+        issued_at: issuedAt,
+        expires_at: expiresAt.toISOString(),
+        parent_jti: parentJti || null,
+      });
 
     if (error) {
       throw new Error(`Failed to store refresh token: ${error.message}`);
@@ -205,7 +211,12 @@ export class TokenService {
   static async rotateRefreshToken(
     oldTokenHash: string,
     deviceFingerprint: string,
-  ): Promise<{ token: string; tokenHash: string; familyId: string; userId: string }> {
+  ): Promise<{
+    token: string;
+    tokenHash: string;
+    familyId: string;
+    userId: string;
+  }> {
     const existing = await this.findRefreshToken(oldTokenHash);
 
     if (!existing) {
@@ -242,7 +253,12 @@ export class TokenService {
     // Mark old token as replaced
     await this.markTokenAsReplaced(existing.jti, jti);
 
-    return { token, tokenHash, familyId: existing.family_id, userId: existing.user_id };
+    return {
+      token,
+      tokenHash,
+      familyId: existing.family_id,
+      userId: existing.user_id,
+    };
   }
 
   /**
@@ -328,7 +344,9 @@ export class TokenService {
   > {
     const { data, error } = await (supabaseAdmin as any)
       .from("refresh_tokens")
-      .select("jti, token_hash, device_fingerprint, created_at, expires_at, revoked_at")
+      .select(
+        "jti, token_hash, device_fingerprint, created_at, expires_at, revoked_at",
+      )
       .eq("user_id", userId)
       .gt("expires_at", new Date().toISOString())
       .order("created_at", { ascending: false });

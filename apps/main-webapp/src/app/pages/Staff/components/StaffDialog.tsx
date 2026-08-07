@@ -27,7 +27,7 @@ import { CountryCode } from "@shared/utils/countries";
 import { staffService } from "@store-credit-platform/api-services";
 import { isApiError } from "@shared/utils/api.utils";
 import { useStoreStore } from "@shared/stores/storeStore";
-import { StaffUser } from "@shared/types/api.types";
+import type { Staff } from "@shared/types/api.types";
 import {
   errorToastProperties,
   successToastProperties,
@@ -50,7 +50,8 @@ const staffSchema = z.object({
 type StaffFormValues = z.infer<typeof staffSchema>;
 
 interface StaffDialogProps {
-  staff?: StaffUser;
+  staff?: Staff;
+  currentUserId?: string | null;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
   onSaved?: () => void;
@@ -58,11 +59,13 @@ interface StaffDialogProps {
 
 export function StaffDialog({
   staff,
+  currentUserId,
   open,
   onOpenChange,
   onSaved,
 }: StaffDialogProps) {
   const isEdit = !!staff;
+  const isSelf = isEdit && staff?.user.id != null && staff.user.id === currentUserId;
   const { branches } = useStoreStore();
 
   const {
@@ -90,12 +93,12 @@ export function StaffDialog({
   useEffect(() => {
     if (!open) return;
     reset({
-      phone: staff?.phone ?? "",
-      surname: staff?.surname ?? "",
-      other_names: staff?.other_names ?? "",
+      phone: staff?.user.phone ?? "",
+      surname: staff?.user.surname ?? "",
+      other_names: staff?.user.other_names ?? "",
       role: (staff?.role as "manager" | "cashier") ?? "cashier",
       branch_id: staff?.branch_id ?? (branches[0]?.id ?? 0),
-      access_granted: staff?.access_granted ?? true,
+      access_granted: staff?.user.access_granted ?? true,
       address: staff?.address ?? "",
       notes: staff?.notes ?? "",
     });
@@ -118,7 +121,7 @@ export function StaffDialog({
     };
     try {
       if (isEdit && staff) {
-        const res = await staffService.updateStaff(staff.id, payload);
+        const res = await staffService.updateStaff(staff.user.id, payload);
         if (isApiError(res)) throw new Error(res.error);
         toast.success("Staff member updated", successToastProperties);
       } else {
@@ -187,6 +190,7 @@ export function StaffDialog({
               <Label>Role *</Label>
               <Select
                 value={watchedRole}
+                disabled={isSelf}
                 onValueChange={(v) =>
                   setValue("role", v as "manager" | "cashier", {
                     shouldValidate: true,
@@ -203,6 +207,11 @@ export function StaffDialog({
               </Select>
               {errors.role && (
                 <p className="text-destructive text-xs">{errors.role.message}</p>
+              )}
+              {isSelf && (
+                <p className="text-muted-foreground text-xs">
+                  You can't change your own role.
+                </p>
               )}
             </div>
 
@@ -256,12 +265,15 @@ export function StaffDialog({
             <div className="space-y-0.5">
               <Label htmlFor="staff-access">Access granted</Label>
               <p className="text-muted-foreground text-xs">
-                When off, the staff member cannot log in.
+                {isSelf
+                  ? "You can't change your own access."
+                  : "When off, the staff member cannot log in."}
               </p>
             </div>
             <Switch
               id="staff-access"
               checked={watchedAccess}
+              disabled={isSelf}
               onCheckedChange={(checked) =>
                 setValue("access_granted", checked, { shouldValidate: true })
               }

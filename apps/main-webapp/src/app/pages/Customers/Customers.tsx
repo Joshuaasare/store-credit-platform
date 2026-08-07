@@ -132,28 +132,6 @@ export default function Customers() {
           style={{ animationDelay: "60ms" }}
         >
           <div className="flex flex-wrap items-end gap-3">
-            <div className="space-y-1.5">
-              <Label className="text-muted-foreground text-xs">Branch</Label>
-              <Select
-                value={branchId == null ? "all" : String(branchId)}
-                onValueChange={(v) =>
-                  setBranchId(v === "all" ? null : Number(v))
-                }
-              >
-                <SelectTrigger className="h-9 w-[200px]">
-                  <SelectValue placeholder="All branches" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All branches</SelectItem>
-                  {branches.map((b) => (
-                    <SelectItem key={b.id} value={String(b.id)}>
-                      {b.name?.trim() || "Unnamed branch"}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
             <div className="min-w-[220px] flex-1 space-y-1.5">
               <Label className="text-muted-foreground text-xs">
                 Search by name or phone
@@ -178,6 +156,28 @@ export default function Customers() {
                   </button>
                 )}
               </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-muted-foreground text-xs">Branch</Label>
+              <Select
+                value={branchId == null ? "all" : String(branchId)}
+                onValueChange={(v) =>
+                  setBranchId(v === "all" ? null : Number(v))
+                }
+              >
+                <SelectTrigger className="h-9 w-[200px]">
+                  <SelectValue placeholder="All branches" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All branches</SelectItem>
+                  {branches.map((b) => (
+                    <SelectItem key={b.id} value={String(b.id)}>
+                      {b.name?.trim() || "Unnamed branch"}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="text-muted-foreground ml-auto self-end text-xs tabular-nums">

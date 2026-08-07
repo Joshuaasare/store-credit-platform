@@ -8,11 +8,11 @@ import {
   DialogFooter,
   Button,
 } from "@store-credit-platform/web-components";
-import { StaffUser } from "@shared/types/api.types";
+import type { Staff } from "@shared/types/api.types";
 import { staffDisplayName } from "@shared/utils/staff.utils";
 
 interface DeleteStaffDialogProps {
-  staff: StaffUser | null;
+  staff: Staff | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onConfirm: () => void;

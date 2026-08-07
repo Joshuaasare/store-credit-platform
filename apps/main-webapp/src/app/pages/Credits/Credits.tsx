@@ -26,7 +26,7 @@ export default function CreditsPage() {
     void ensureStoreLoaded();
   }, [ensureStoreLoaded]);
 
-  const isManager = (user?.roles ?? []).some((r) => r.role === "manager");
+  const isManager = user?.role === "manager";
 
   return (
     <div className="relative min-h-screen px-4 py-6 md:px-8 md:py-10">

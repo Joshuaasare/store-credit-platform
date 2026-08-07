@@ -1,44 +1,23 @@
 import { Type, Static } from '@sinclair/typebox'
 
 
-export type UserRoleValues = Static<typeof UserRoleValues>
-export const UserRoleValues = Type.Union([
+export type StaffRoleValues = Static<typeof StaffRoleValues>
+export const StaffRoleValues = Type.Union([
 Type.Literal("manager"),
 Type.Literal("cashier")
 ])
 
-export type BaseUserRole = Static<typeof BaseUserRole>
-export const BaseUserRole = Type.Object({
-created_at: Type.Union([
-Type.String(),
-Type.Null()
-]),
-id: Type.Number(),
-role: UserRoleValues,
-updated_at: Type.Union([
-Type.String(),
-Type.Null()
-]),
-user_id: Type.String(),
-assigned_by_user_id: Type.String()
-})
+export type CreditTypeValues = Static<typeof CreditTypeValues>
+export const CreditTypeValues = Type.Union([
+Type.Literal("fixed"),
+Type.Literal("percentage")
+])
 
-export type UserWithRoles = Static<typeof UserWithRoles>
-export const UserWithRoles = Type.Object({
-id: Type.String(),
-email: Type.String(),
-phone: Type.Union([
-Type.String(),
-Type.Null()
-]),
-surname: Type.String(),
-other_names: Type.Union([
-Type.String(),
-Type.Null()
-]),
-access_granted: Type.Boolean(),
-roles: Type.Array(BaseUserRole)
-})
+export type CumulativeScopeValues = Static<typeof CumulativeScopeValues>
+export const CumulativeScopeValues = Type.Union([
+Type.Literal("per_branch"),
+Type.Literal("merchant_wide")
+])
 
 export type SendSMSMessageParams = Static<typeof SendSMSMessageParams>
 export const SendSMSMessageParams = Type.Object({
@@ -165,5 +144,167 @@ other_names: Type.Union([
 Type.String(),
 Type.Null()
 ]),
-phone: Type.String()
+phone: Type.String(),
+access_granted: Type.Boolean(),
+last_login_at: Type.Union([
+Type.String(),
+Type.Null()
+]),
+created_at: Type.String(),
+deleted_at: Type.Union([
+Type.String(),
+Type.Null()
+])
+})
+
+export type BaseStaff = Static<typeof BaseStaff>
+export const BaseStaff = Type.Object({
+id: Type.Number(),
+user_id: Type.String(),
+branch_id: Type.Number(),
+role: Type.Union([
+StaffRoleValues,
+Type.Null()
+]),
+address: Type.Union([
+Type.String(),
+Type.Null()
+]),
+notes: Type.Union([
+Type.String(),
+Type.Null()
+]),
+created_at: Type.String(),
+updated_at: Type.Union([
+Type.String(),
+Type.Null()
+]),
+deleted_at: Type.Union([
+Type.String(),
+Type.Null()
+])
+})
+
+export type BaseCustomerCredit = Static<typeof BaseCustomerCredit>
+export const BaseCustomerCredit = Type.Object({
+id: Type.Number(),
+customer_id: Type.Number(),
+branch_id: Type.Number(),
+credit_amount: Type.Number(),
+expires_at: Type.Union([
+Type.Number(),
+Type.Null()
+]),
+revoked_at: Type.Union([
+Type.String(),
+Type.Null()
+]),
+revoked_by_user_id: Type.Union([
+Type.String(),
+Type.Null()
+]),
+created_at: Type.String(),
+updated_at: Type.Union([
+Type.String(),
+Type.Null()
+]),
+deleted_at: Type.Union([
+Type.String(),
+Type.Null()
+])
+})
+
+export type BaseRunningCreditConfig = Static<typeof BaseRunningCreditConfig>
+export const BaseRunningCreditConfig = Type.Object({
+id: Type.Number(),
+config_group_id: Type.String(),
+branch_id: Type.Number(),
+credit_type: Type.Union([
+CreditTypeValues,
+Type.Null()
+]),
+credit_validity: Type.Union([
+Type.Number(),
+Type.Null()
+]),
+eligible_window: Type.Union([
+Type.Number(),
+Type.Null()
+]),
+fixed_credit_value: Type.Union([
+Type.Number(),
+Type.Null()
+]),
+percentage_credit_value: Type.Union([
+Type.Number(),
+Type.Null()
+]),
+maximum_allowed_credit: Type.Union([
+Type.Number(),
+Type.Null()
+]),
+threshold_amount: Type.Union([
+Type.Number(),
+Type.Null()
+]),
+terms: Type.Union([
+Type.String(),
+Type.Null()
+]),
+cumulative_scope: CumulativeScopeValues,
+is_active: Type.Boolean(),
+created_at: Type.String(),
+updated_at: Type.Union([
+Type.String(),
+Type.Null()
+]),
+deleted_at: Type.Union([
+Type.String(),
+Type.Null()
+])
+})
+
+export type BaseFixedCreditConfig = Static<typeof BaseFixedCreditConfig>
+export const BaseFixedCreditConfig = Type.Object({
+id: Type.Number(),
+config_group_id: Type.String(),
+branch_id: Type.Number(),
+credit_type: Type.Union([
+CreditTypeValues,
+Type.Null()
+]),
+fixed_credit_value: Type.Union([
+Type.Number(),
+Type.Null()
+]),
+percentage_credit_value: Type.Union([
+Type.Number(),
+Type.Null()
+]),
+maximum_allowed_credit: Type.Union([
+Type.Number(),
+Type.Null()
+]),
+start_date: Type.Union([
+Type.Number(),
+Type.Null()
+]),
+end_date: Type.Union([
+Type.Number(),
+Type.Null()
+]),
+terms: Type.Union([
+Type.String(),
+Type.Null()
+]),
+is_active: Type.Boolean(),
+created_at: Type.String(),
+updated_at: Type.Union([
+Type.String(),
+Type.Null()
+]),
+deleted_at: Type.Union([
+Type.String(),
+Type.Null()
+])
 })

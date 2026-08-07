@@ -44,6 +44,7 @@ This repo uses the Type-First Workflow: `apps/main-backend/src/app/types/*.types
   - ✅ `.eq("roles.role", filters.role)` / `.or("user.surname.ilike.%x%,user.phone.ilike.%x%")` / `.is("user.deleted_at", null)`
   - ❌ `.eq("role", filters.role, { referencedTable: "staff_user_roles" })` cast to `as any`
   - Same for builder returns: if the inferred type is correct, `const { data } = await query` is enough — no `as { data: any[] | null; ... }` chain.
+- **Flat response types that copy fields out of joined rows** — flag. When a service reads joined data, it should return the nested join shape (composed from base row types like `BaseUserProfile`, `BaseBranch`), not map each row into a flat feature-specific type (`StaffUser`, `CustomerRow`, etc.) with fields copied by hand. Reason: a flat type freezes the column set at write time; when a column is added to the source table + its `QueryFragments` constant, every flat type that copied the fields has to be chased down and updated, and so does every consumer. The nested shape auto-propagates the new column via the fragment + inferred row type. Derived fields the DB can't provide (e.g. `is_self` = `user.id === jwt.sub`) belong on the frontend, not synthesized server-side. Sensitive fields are still excludable via a trimmed fragment (e.g. `BASE_USER_PROFILE` omits `otp`). See the `supabase-query-conventions` skill Rule 3.
 
 See the `supabase-query-conventions` skill for the canonical patterns.
 

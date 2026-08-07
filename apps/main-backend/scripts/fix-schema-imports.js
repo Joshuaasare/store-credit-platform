@@ -43,21 +43,16 @@ for (const schemaFile of schemaFiles) {
   // Check which schemas from main.schema.ts are used in this file
   const usedSchemas = exportedSchemas.filter((schemaName) => {
     // Look for the schema being used but not defined in this file
-    // Updated regex to detect:
-    // 1. Type.Array(SchemaName)
-    // 2. Type.Optional(SchemaName)
-    // 3. Type.Intersect([SchemaName
-    // 4. Type.Union([SchemaName
-    // 5. Direct usage: SchemaName, or SchemaName)
-    // 6. data: SchemaName
-    // 7. Type.Index(SchemaName,
-    // 8. = SchemaName
+    // The negative lookahead (?![A-Za-z0-9_]) after each schemaName prevents
+    // false positives where one type name is a prefix of another (e.g.
+    // BaseCustomer matching inside BaseCustomerCredit).
+    const wb = "(?![A-Za-z0-9_])";
     const usagePattern = new RegExp(
-      `(Type\\.Array\\(${schemaName}\\)|Type\\.Optional\\(${schemaName}\\)|Type\\.Union\\(\\[\\s*${schemaName}|Type\\.Intersect\\(\\[\\s*${schemaName}|Type\\.Composite\\(\\[\\s*${schemaName}|:\\s*${schemaName}\\s*[,\\}\\)]|data:\\s*${schemaName}\\s*[,\\}]|Type\\.Index\\(${schemaName},|=\\s*${schemaName}\\s*($|;|\\n)|[,\\[]\\s*${schemaName}\\s*[,\\])])`,
+      `(Type\\.Array\\(${schemaName}${wb}\\)|Type\\.Optional\\(${schemaName}${wb}\\)|Type\\.Union\\(\\[\\s*${schemaName}${wb}|Type\\.Intersect\\(\\[\\s*${schemaName}${wb}|Type\\.Composite\\(\\[\\s*${schemaName}${wb}|:\\s*${schemaName}${wb}\\s*[,\\}\\)]|data:\\s*${schemaName}${wb}\\s*[,\\}]|Type\\.Index\\(${schemaName}${wb},|=\\s*${schemaName}${wb}\\s*($|;|\\n)|[,\\[]\\s*${schemaName}${wb}\\s*[,\\])])`,
       "g",
     );
     const definitionPattern = new RegExp(
-      `export (type|const) ${schemaName} =`,
+      `export (type|const) ${schemaName}${wb} =`,
       "g",
     );
 

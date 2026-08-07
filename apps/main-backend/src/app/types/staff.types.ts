@@ -1,4 +1,10 @@
-import { ApiErrorResponse, UserRoleValues } from "./main.types";
+import {
+  ApiErrorResponse,
+  BaseBranch,
+  BaseStaff,
+  BaseUserProfile,
+  StaffRoleValues,
+} from "./main.types";
 
 // ────────────────────────────────────────────────────────────────────────────
 // Staff management (/staff) — list + create + edit + delete + access toggle
@@ -9,6 +15,12 @@ import { ApiErrorResponse, UserRoleValues } from "./main.types";
 // scoped: a user is visible to a manager iff the user has a non-deleted
 // `staff` row at one of the manager's branches.
 //
+// The returned shape is the nested join: `Staff extends BaseStaff` with
+// `user: BaseUserProfile` and `branch: BaseBranch` joined. A column added to
+// BASE_USER_PROFILE or BASE_BRANCH auto-propagates here and to every consumer.
+// `is_self` is NOT synthesized server-side — the frontend computes
+// `row.user.id === currentUserId` itself.
+//
 // Soft delete: `deleteStaff` tombstones the `users` row + every linked
 // `staff` row. A tombstoned user is blocked at verifyOtp (deleted_at IS NULL
 // check) and is hidden from the directory by default. Re-adding the same
@@ -16,24 +28,11 @@ import { ApiErrorResponse, UserRoleValues } from "./main.types";
 // refreshes profile fields) and creates a fresh `staff` row — old
 // tombstoned staff rows stay tombstoned for audit history.
 
-export type StaffRole = UserRoleValues;
-
-export interface StaffUser {
-  id: string;
-  phone: string;
-  surname: string;
-  other_names: string | null;
-  access_granted: boolean;
-  role: StaffRole;
-  branch_id: number;
-  branch_name: string | null;
-  address: string | null;
-  notes: string | null;
-  last_login_at: string | null;
-  created_at: string;
-  // True when this row is the calling manager — surfaced so the UI can hide
-  // self-destructive actions (delete / role change / access toggle).
-  is_self: boolean;
+// Composed nested shape — mirrors the `select(...)` join. `role` is non-null
+// on the directory path (rows with null role are filtered out server-side).
+export interface Staff extends BaseStaff {
+  user: BaseUserProfile;
+  branch: BaseBranch;
 }
 
 export interface StaffListFilters {
@@ -42,7 +41,7 @@ export interface StaffListFilters {
   // Limit to a specific branch of the merchant. null = all branches.
   branch_id?: number | null;
   // Filter by role. null = all roles.
-  role?: StaffRole | null;
+  role?: StaffRoleValues | null;
   // Include soft-deleted / disabled users in the result set. Default false
   // (excludes both deleted and disabled). When true, the directory returns
   // disabled users too (deleted users stay hidden — they're tombstoned).
@@ -52,7 +51,7 @@ export interface StaffListFilters {
 }
 
 export interface StaffListPage {
-  rows: StaffUser[];
+  rows: Staff[];
   total: number;
   offset: number;
   limit: number;
@@ -64,7 +63,7 @@ export interface CreateStaffRequest {
   phone: string;
   surname: string;
   other_names?: string | null;
-  role: StaffRole;
+  role: StaffRoleValues;
   branch_id: number;
   access_granted?: boolean;
   address?: string | null;
@@ -78,7 +77,7 @@ export interface UpdateStaffRequest {
   phone?: string;
   surname?: string;
   other_names?: string | null;
-  role?: StaffRole;
+  role?: StaffRoleValues | null;
   branch_id?: number;
   access_granted?: boolean;
   address?: string | null;
@@ -96,7 +95,7 @@ export interface StaffListResponse {
 
 export interface StaffMutationResponse {
   success: true;
-  data: StaffUser;
+  data: Staff;
 }
 
 export interface StaffDeleteResponse {

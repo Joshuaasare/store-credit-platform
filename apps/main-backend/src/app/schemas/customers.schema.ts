@@ -1,5 +1,5 @@
 import { Type, Static } from '@sinclair/typebox'
-import { ApiErrorResponse } from './main.schema'
+import { BaseBranch, ApiErrorResponse, BaseUserProfile, BaseCustomerCredit } from './main.schema'
 
 
 
@@ -150,12 +150,16 @@ offset: Type.Optional(Type.Number())
 export type CustomerListRow = Static<typeof CustomerListRow>
 export const CustomerListRow = Type.Object({
 customer_id: Type.Number(),
+user_id: Type.Union([
+Type.String(),
+Type.Null()
+]),
 phone: Type.Union([
 Type.String(),
 Type.Null()
 ]),
-user_id: Type.Union([
-Type.String(),
+user: Type.Union([
+BaseUserProfile,
 Type.Null()
 ]),
 customer_name: Type.String(),
@@ -186,32 +190,25 @@ data: CustomerListPage
 })
 
 export type CustomerDetailCreditRow = Static<typeof CustomerDetailCreditRow>
-export const CustomerDetailCreditRow = Type.Object({
-id: Type.Number(),
-credit_amount: Type.Number(),
+export const CustomerDetailCreditRow = Type.Composite([BaseCustomerCredit, Type.Object({
 redeemed_total: Type.Number(),
 remaining: Type.Number(),
-expires_at: Type.Union([
-Type.Number(),
-Type.Null()
-]),
-created_at: Type.String(),
-branch_id: Type.Number(),
-branch_name: Type.Union([
-Type.String(),
-Type.Null()
-])
-})
+branch: BaseBranch
+})])
 
 export type CustomerDetail = Static<typeof CustomerDetail>
 export const CustomerDetail = Type.Object({
 customer_id: Type.Number(),
+user_id: Type.Union([
+Type.String(),
+Type.Null()
+]),
 phone: Type.Union([
 Type.String(),
 Type.Null()
 ]),
-user_id: Type.Union([
-Type.String(),
+user: Type.Union([
+BaseUserProfile,
 Type.Null()
 ]),
 customer_name: Type.String(),

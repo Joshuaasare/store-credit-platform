@@ -97,7 +97,7 @@ export function CustomerDetailCreditCard({
         </span>
         <span className="inline-flex items-center gap-1">
           <MapPin className="h-3 w-3" />
-          {row.branch_name?.trim() || `Branch #${row.branch_id}`}
+          {row.branch.name?.trim() || `Branch #${row.branch_id}`}
         </span>
       </div>
     </Card>

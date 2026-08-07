@@ -33,7 +33,7 @@ import { staffService } from "@store-credit-platform/api-services";
 import { isApiError } from "@shared/utils/api.utils";
 import { useStoreStore } from "@shared/stores/storeStore";
 import { useAuthStore } from "@shared/stores/authStore";
-import { StaffUser } from "@shared/types/api.types";
+import type { Staff } from "@shared/types/api.types";
 import { formatDisplayNumber } from "@shared/utils/ui.utils";
 import { formatIsoDate } from "@shared/utils/format";
 import {
@@ -59,8 +59,8 @@ export default function Staff() {
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
   const [addOpen, setAddOpen] = useState(false);
-  const [editing, setEditing] = useState<StaffUser | null>(null);
-  const [deleting, setDeleting] = useState<StaffUser | null>(null);
+  const [editing, setEditing] = useState<Staff | null>(null);
+  const [deleting, setDeleting] = useState<Staff | null>(null);
 
   const debouncedSetSearch = useRef(
     debounce(SEARCH_DEBOUNCE_MS, (val: string) => setSearch(val)),
@@ -103,8 +103,8 @@ export default function Staff() {
   };
 
   const accessMutation = useMutation({
-    mutationFn: async ({ s, next }: { s: StaffUser; next: boolean }) => {
-      const res = await staffService.setStaffAccess(s.id, { access_granted: next });
+    mutationFn: async ({ s, next }: { s: Staff; next: boolean }) => {
+      const res = await staffService.setStaffAccess(s.user.id, { access_granted: next });
       if (isApiError(res)) throw new Error(res.error);
       return res.data;
     },
@@ -124,8 +124,8 @@ export default function Staff() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: async (s: StaffUser) => {
-      const res = await staffService.deleteStaff(s.id);
+    mutationFn: async (s: Staff) => {
+      const res = await staffService.deleteStaff(s.user.id);
       if (isApiError(res)) throw new Error(res.error);
       return res.data;
     },
@@ -180,6 +180,32 @@ export default function Staff() {
           style={{ animationDelay: "60ms" }}
         >
           <div className="flex flex-wrap items-end gap-3">
+            <div className="min-w-[220px] flex-1 space-y-1.5">
+              <Label className="text-muted-foreground text-xs">
+                Search by name or phone
+              </Label>
+              <div className="relative">
+                <Search className="text-muted-foreground pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" />
+                <Input
+                  type="text"
+                  value={searchInput}
+                  onChange={(e) => onSearchChange(e.target.value)}
+                  placeholder="e.g. Joshua or 024…"
+                  className="pl-9 pr-9"
+                />
+                {searchInput && (
+                  <button
+                    type="button"
+                    onClick={clearSearch}
+                    aria-label="Clear search"
+                    className="text-muted-foreground hover:text-foreground absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 transition-colors"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
+            </div>
+
             <div className="space-y-1.5">
               <Label className="text-muted-foreground text-xs">Branch</Label>
               <Select
@@ -219,32 +245,6 @@ export default function Staff() {
                   <SelectItem value="cashier">Cashiers</SelectItem>
                 </SelectContent>
               </Select>
-            </div>
-
-            <div className="min-w-[220px] flex-1 space-y-1.5">
-              <Label className="text-muted-foreground text-xs">
-                Search by name or phone
-              </Label>
-              <div className="relative">
-                <Search className="text-muted-foreground pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" />
-                <Input
-                  type="text"
-                  value={searchInput}
-                  onChange={(e) => onSearchChange(e.target.value)}
-                  placeholder="e.g. Joshua or 024…"
-                  className="pl-9 pr-9"
-                />
-                {searchInput && (
-                  <button
-                    type="button"
-                    onClick={clearSearch}
-                    aria-label="Clear search"
-                    className="text-muted-foreground hover:text-foreground absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 transition-colors"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                )}
-              </div>
             </div>
 
             <div className="text-muted-foreground ml-auto self-end text-xs tabular-nums">
@@ -314,6 +314,7 @@ export default function Staff() {
 
       {/* Create dialog */}
       <StaffDialog
+        currentUserId={user?.id ?? null}
         open={addOpen}
         onOpenChange={setAddOpen}
         onSaved={() => {
@@ -325,6 +326,7 @@ export default function Staff() {
       {/* Edit dialog */}
       <StaffDialog
         staff={editing ?? undefined}
+        currentUserId={user?.id ?? null}
         open={editing != null}
         onOpenChange={(open) => {
           if (!open) setEditing(null);
@@ -352,7 +354,7 @@ export default function Staff() {
 }
 
 interface StaffRowProps {
-  s: StaffUser;
+  s: Staff;
   selfId: string | null;
   onEdit: () => void;
   onDelete: () => void;
@@ -368,8 +370,8 @@ function StaffRow({
   onToggleAccess,
   pendingAccess,
 }: StaffRowProps) {
-  const isSelf = selfId != null && s.id === selfId;
-  const enabled = s.access_granted;
+  const isSelf = selfId != null && s.user.id === selfId;
+  const enabled = s.user.access_granted;
 
   return (
     <TableRow className={cn(!enabled && "opacity-60")}>
@@ -377,7 +379,7 @@ function StaffRow({
         <div className="flex items-center gap-3">
           <Monogram
             text={staffInitials(s)}
-            seed={s.id}
+            seed={s.user.id}
             size="sm"
           />
           <div className="min-w-0 space-y-0.5">
@@ -392,7 +394,7 @@ function StaffRow({
               )}
             </div>
             <div className="text-muted-foreground truncate text-xs tabular-nums">
-              {formatDisplayNumber(s.phone) ?? s.phone}
+              {formatDisplayNumber(s.user.phone) ?? s.user.phone}
             </div>
           </div>
         </div>
@@ -402,14 +404,14 @@ function StaffRow({
       </TableCell>
       <TableCell>
         <span className="text-sm">
-          {s.branch_name?.trim() || `Branch #${s.branch_id}`}
+          {s.branch.name?.trim() || `Branch #${s.branch_id}`}
         </span>
       </TableCell>
       <TableCell>
         <StatusBadge enabled={enabled} />
       </TableCell>
       <TableCell className="text-muted-foreground text-xs tabular-nums">
-        {formatIsoDate(s.last_login_at)}
+        {formatIsoDate(s.user.last_login_at)}
       </TableCell>
       <TableCell className="text-right">
         <DropdownMenu>
@@ -460,7 +462,7 @@ function StaffRow({
   );
 }
 
-function RoleBadge({ role }: { role: StaffUser["role"] }) {
+function RoleBadge({ role }: { role: Staff["role"] }) {
   if (role === "manager") {
     return (
       <Badge className="border-primary/30 bg-primary/10 text-primary">
