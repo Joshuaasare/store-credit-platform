@@ -102,4 +102,8 @@ export interface BaseUserProfile {
   surname: string;
   other_names: string | null;
   phone: string;
+  access_granted: boolean;
+  last_login_at: string | null;
+  created_at: string;
+  deleted_at: string | null;
 }

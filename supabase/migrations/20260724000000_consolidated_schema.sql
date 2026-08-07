@@ -150,6 +150,25 @@ create index if not exists idx_customer_credit_customer_branch
   on public.customer_credit (customer_id, branch_id)
   where deleted_at is null;
 
+-- Staff directory hot path: users → staff → branches join, filtered by
+-- merchant via branches.merchant_id and limited to live (non-deleted) rows.
+create index if not exists idx_staff_user_branch
+  on public.staff (user_id, branch_id)
+  where deleted_at is null;
+
+-- Single-role-per-staff model: the role lives directly on the staff row
+-- (replaces the older staff_user_roles join table — that table is kept for
+-- now but no longer written to). Nullable so a staff row can exist briefly
+-- without a role; service code treats null as "no live role".
+alter table public.staff
+  add column if not exists role public.role;
+
+-- Hot path: list staff filtered by role within a merchant + last-manager
+-- guard (counts managers scoped to the merchant's branches).
+create index if not exists idx_staff_role
+  on public.staff (role)
+  where deleted_at is null;
+
 -- ──────────────────────────────────────────────────────────────────────────
 -- 9. Leaderboard RPCs
 -- ──────────────────────────────────────────────────────────────────────────

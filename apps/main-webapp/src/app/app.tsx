@@ -14,6 +14,7 @@ import TransactionsLeaderboard from "./pages/Transactions/TransactionsLeaderboar
 import TransactionsList from "./pages/Transactions/TransactionsList";
 import Customers from "./pages/Customers/Customers";
 import CustomerDetail from "./pages/Customers/CustomerDetail";
+import Staff from "./pages/Staff/Staff";
 
 export function App() {
   const initialize = useAuthStore((state) => state.initialize);
@@ -38,6 +39,7 @@ export function App() {
             </Route>
             <Route path="/customers" element={<Customers />} />
             <Route path="/customers/:customerId" element={<CustomerDetail />} />
+            <Route path="/staff" element={<Staff />} />
             <Route path="/dashboard" element={<Navigate to="/" replace />} />
           </Route>
         </Route>

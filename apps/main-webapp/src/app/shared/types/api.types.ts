@@ -1,6 +1,6 @@
 /**
  * Auto-generated API Types
- * Generated on: 2026-08-05T09:05:01.884Z
+ * Generated on: 2026-08-06T10:52:46.532Z
  * 
  * ⚠️ DO NOT EDIT MANUALLY
  * Source: apps/smartschool-api/src/app/types/
@@ -594,6 +594,93 @@ export type MerchantMeApiResponse = MerchantMeResponse | ApiErrorResponse;
 export type MerchantMutationApiResponse =
   | MerchantMutationResponse
   | ApiErrorResponse;
+
+export type StaffRole = UserRoleValues;
+
+export interface StaffUser {
+  id: string;
+  phone: string;
+  surname: string;
+  other_names: string | null;
+  access_granted: boolean;
+  role: StaffRole;
+  branch_id: number;
+  branch_name: string | null;
+  address: string | null;
+  notes: string | null;
+  last_login_at: string | null;
+  created_at: string;
+
+  is_self: boolean;
+}
+
+export interface StaffListFilters {
+  
+  search?: string | null;
+  
+  branch_id?: number | null;
+  
+  role?: StaffRole | null;
+
+  include_disabled?: boolean | null;
+  limit?: number;
+  offset?: number;
+}
+
+export interface StaffListPage {
+  rows: StaffUser[];
+  total: number;
+  offset: number;
+  limit: number;
+}
+
+export type StaffListQuerystring = StaffListFilters;
+
+export interface CreateStaffRequest {
+  phone: string;
+  surname: string;
+  other_names?: string | null;
+  role: StaffRole;
+  branch_id: number;
+  access_granted?: boolean;
+  address?: string | null;
+  notes?: string | null;
+}
+
+export interface UpdateStaffRequest {
+  phone?: string;
+  surname?: string;
+  other_names?: string | null;
+  role?: StaffRole;
+  branch_id?: number;
+  access_granted?: boolean;
+  address?: string | null;
+  notes?: string | null;
+}
+
+export interface SetStaffAccessRequest {
+  access_granted: boolean;
+}
+
+export interface StaffListResponse {
+  success: true;
+  data: StaffListPage;
+}
+
+export interface StaffMutationResponse {
+  success: true;
+  data: StaffUser;
+}
+
+export interface StaffDeleteResponse {
+  success: true;
+  data: { id: string };
+}
+
+export type StaffListApiResponse = StaffListResponse | ApiErrorResponse;
+export type StaffMutationApiResponse = StaffMutationResponse | ApiErrorResponse;
+export type StaffAccessApiResponse = StaffMutationApiResponse;
+export type StaffDeleteApiResponse = StaffDeleteResponse | ApiErrorResponse;
 
 export interface CustomerWithUser extends BaseCustomer {
   users: BaseUserProfile | null;

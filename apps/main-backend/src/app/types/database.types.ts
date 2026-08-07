@@ -624,6 +624,7 @@ export type Database = {
           deleted_at: string | null
           id: number
           notes: string | null
+          role: Database["public"]["Enums"]["role"] | null
           updated_at: string | null
           user_id: string
         }
@@ -634,6 +635,7 @@ export type Database = {
           deleted_at?: string | null
           id?: number
           notes?: string | null
+          role?: Database["public"]["Enums"]["role"] | null
           updated_at?: string | null
           user_id: string
         }
@@ -644,6 +646,7 @@ export type Database = {
           deleted_at?: string | null
           id?: number
           notes?: string | null
+          role?: Database["public"]["Enums"]["role"] | null
           updated_at?: string | null
           user_id?: string
         }
@@ -657,51 +660,6 @@ export type Database = {
           },
           {
             foreignKeyName: "staff_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      staff_user_roles: {
-        Row: {
-          assigned_by_user_id: string
-          created_at: string
-          deleted_at: string | null
-          id: number
-          role: Database["public"]["Enums"]["role"]
-          updated_at: string | null
-          user_id: string
-        }
-        Insert: {
-          assigned_by_user_id: string
-          created_at?: string
-          deleted_at?: string | null
-          id?: number
-          role: Database["public"]["Enums"]["role"]
-          updated_at?: string | null
-          user_id: string
-        }
-        Update: {
-          assigned_by_user_id?: string
-          created_at?: string
-          deleted_at?: string | null
-          id?: number
-          role?: Database["public"]["Enums"]["role"]
-          updated_at?: string | null
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "staff_user_roles_assigned_by_user_id_fkey"
-            columns: ["assigned_by_user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "staff_user_roles_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "users"

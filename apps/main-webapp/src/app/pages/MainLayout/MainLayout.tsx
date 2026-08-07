@@ -1,5 +1,14 @@
 import { useEffect, useState } from "react";
-import { Menu, Store, Wallet, UserRound, X, Receipt, Users } from "lucide-react";
+import {
+  Menu,
+  Store,
+  Wallet,
+  UserRound,
+  X,
+  Receipt,
+  Users,
+  UserCog,
+} from "lucide-react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import {
   cn,
@@ -9,20 +18,57 @@ import {
 import { useTheme } from "../../shared/providers/ThemeProvider";
 import { ThemeToggle } from "../../components/ThemeToggle/ThemeToggle";
 import { useStoreStore } from "@shared/stores/storeStore";
+import { UserRoleValues } from "@shared/types/api.types";
+import {
+  isActionOrRoutePermitted,
+  RoleRestriction,
+} from "@shared/utils/permissions.utils";
+import { useAuthStore } from "@shared/stores/authStore";
+
+export type MenuItem = {
+  title: string;
+  url: string;
+  icon?: any;
+  items?: MenuItem[];
+  permissions?: UserRoleValues[];
+  roleRestrictions?: RoleRestriction[];
+};
 
 export const routes = {
   MY_STORE: "/",
   CREDITS: "/credits",
   TRANSACTIONS: "/transactions",
   CUSTOMERS: "/customers",
+  STAFF: "/staff",
   PROFILE: "/profile",
 };
 
-const navItems = [
-  { title: "My Store", url: routes.MY_STORE, icon: Store },
-  { title: "Credits", url: routes.CREDITS, icon: Wallet },
+const navItems: MenuItem[] = [
+  {
+    title: "My Store",
+    url: routes.MY_STORE,
+    icon: Store,
+    permissions: ["manager"],
+  },
+  {
+    title: "Credits",
+    url: routes.CREDITS,
+    icon: Wallet,
+    permissions: ["manager"],
+  },
   { title: "Transactions", url: routes.TRANSACTIONS, icon: Receipt },
-  { title: "Customers", url: routes.CUSTOMERS, icon: Users },
+  {
+    title: "Customers",
+    url: routes.CUSTOMERS,
+    icon: Users,
+    permissions: ["manager"],
+  },
+  {
+    title: "Staff",
+    url: routes.STAFF,
+    icon: UserCog,
+    permissions: ["manager"],
+  },
   { title: "Profile", url: routes.PROFILE, icon: UserRound },
 ];
 
@@ -32,7 +78,9 @@ export default function MainLayout() {
   const isMobile = useIsMobile();
   const { theme } = useTheme();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const { user } = useAuthStore();
   const ensureStoreLoaded = useStoreStore((s) => s.ensureStoreLoaded);
+  const roles = user?.roles.map((role) => role.role);
 
   // Bootstrap shared store data once per authenticated session so every
   // child route (My Store, Customers, etc.) sees populated merchant + branches
@@ -84,17 +132,65 @@ export default function MainLayout() {
       : "shadow-[0_8px_30px_rgba(0,0,0,0.45)]",
   );
 
+  const renderRoute = (item: MenuItem, index: number) => {
+    const isActive = index === activeIndex;
+    const Icon = item.icon;
+    return (
+      isActionOrRoutePermitted(roles, item.permissions) && (
+        <button
+          key={item.url}
+          onClick={() => navigate(item.url)}
+          className={cn(
+            "relative flex w-full items-center gap-3 rounded-xl outline-none",
+            "px-2 py-2.5",
+            "cursor-pointer transition-colors duration-200",
+            "focus-visible:ring-2",
+            isActive
+              ? "text-primary"
+              : "text-muted-foreground hover:text-foreground",
+          )}
+          aria-current={isActive ? "page" : undefined}
+        >
+          {/* Active left-edge indicator */}
+          {isActive && (
+            <span
+              className={cn(
+                "absolute left-0 top-1/2 h-6 w-[3px] -translate-y-1/2 rounded-r-full transition-all duration-300",
+                "bg-primary",
+              )}
+            />
+          )}
+
+          <span
+            className={cn(
+              "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition-all duration-300",
+              isActive
+                ? "from-primary/20 to-primary/5 text-primary ring-primary/20 bg-gradient-to-br ring-1"
+                : "bg-muted/60 text-muted-foreground",
+            )}
+          >
+            <Icon
+              className={cn(
+                "h-[18px] w-[18px] transition-all duration-300",
+                isActive ? "scale-110 stroke-[2.5]" : "stroke-[1.5]",
+              )}
+            />
+          </span>
+
+          <span className="whitespace-nowrap text-sm font-medium tracking-wide">
+            {item.title}
+          </span>
+        </button>
+      )
+    );
+  };
+
   return (
     <div className="relative flex min-h-screen flex-col">
       <Toaster richColors position="top-right" />
       <ThemeToggle />
 
-      <main
-        className={cn(
-          "text-foreground flex-1",
-          isMobile && "pt-20",
-        )}
-      >
+      <main className={cn("text-foreground flex-1", isMobile && "pt-20")}>
         <Outlet />
       </main>
 
@@ -150,56 +246,7 @@ export default function MainLayout() {
               aria-hidden
               className="bg-primary/10 pointer-events-none absolute -left-8 -top-8 h-20 w-20 rounded-full blur-2xl"
             />
-            {navItems.map((item, index) => {
-              const isActive = index === activeIndex;
-              const Icon = item.icon;
-              return (
-                <button
-                  key={item.url}
-                  onClick={() => navigate(item.url)}
-                  className={cn(
-                    "relative flex w-full items-center gap-3 rounded-xl outline-none",
-                    "px-2 py-2.5",
-                    "cursor-pointer transition-colors duration-200",
-                    "focus-visible:ring-2",
-                    isActive
-                      ? "text-primary"
-                      : "text-muted-foreground hover:text-foreground",
-                  )}
-                  aria-current={isActive ? "page" : undefined}
-                >
-                  {/* Active left-edge indicator */}
-                  {isActive && (
-                    <span
-                      className={cn(
-                        "absolute left-0 top-1/2 h-6 w-[3px] -translate-y-1/2 rounded-r-full transition-all duration-300",
-                        "bg-primary",
-                      )}
-                    />
-                  )}
-
-                  <span
-                    className={cn(
-                      "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition-all duration-300",
-                      isActive
-                        ? "from-primary/20 to-primary/5 text-primary ring-primary/20 bg-gradient-to-br ring-1"
-                        : "bg-muted/60 text-muted-foreground",
-                    )}
-                  >
-                    <Icon
-                      className={cn(
-                        "h-[18px] w-[18px] transition-all duration-300",
-                        isActive ? "scale-110 stroke-[2.5]" : "stroke-[1.5]",
-                      )}
-                    />
-                  </span>
-
-                  <span className="whitespace-nowrap text-sm font-medium tracking-wide">
-                    {item.title}
-                  </span>
-                </button>
-              );
-            })}
+            {navItems.map((item, index) => renderRoute(item, index))}
           </nav>
         </>
       ) : (
@@ -226,12 +273,15 @@ export default function MainLayout() {
           {navItems.map((item, index) => {
             const isActive = index === activeIndex;
             const Icon = item.icon;
+            // Permission-gated, same as the mobile nav — desktop used to
+            // bypass this and render every item unconditionally.
+            if (!isActionOrRoutePermitted(roles, item.permissions)) return null;
             return (
               <button
                 key={item.url}
                 onClick={() => navigate(item.url)}
                 className={cn(
-                  "relative flex w-full items-center gap-3 rounded-xl outline-none",
+                  "group/item relative flex w-full items-center gap-3 rounded-xl outline-none",
                   "px-2 py-2.5",
                   "cursor-pointer transition-colors duration-200",
                   "focus-visible:ring-2",
@@ -257,7 +307,7 @@ export default function MainLayout() {
                     "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition-all duration-300",
                     isActive
                       ? "from-primary/20 to-primary/5 text-primary ring-primary/20 bg-gradient-to-br ring-1"
-                      : "bg-muted/60 text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary",
+                      : "bg-muted/60 text-muted-foreground group-hover/nav:bg-primary/10 group-hover/nav:text-primary",
                   )}
                 >
                   <Icon

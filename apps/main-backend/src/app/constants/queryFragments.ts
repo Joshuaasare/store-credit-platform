@@ -1,7 +1,5 @@
 export const QueryFragments = {
-  BASE_USER_ROLE: `id,created_at,role,updated_at,user_id,
-  assigned_by_user_id`,
-  BASE_USER: `id, email, phone, surname, other_names, 
+  BASE_USER: `id, email, phone, surname, other_names,
   access_granted, otp, otp_expires_at`,
   BASE_MERCHART: `id, name, phone, country_code, slug, 
   is_active,created_at, credit_pool_used, credit_pool_limit, 
@@ -11,5 +9,8 @@ export const QueryFragments = {
   BASE_CUSTOMER: `id, phone, unique_id, user_id, created_at, deleted_at`,
   BASE_CUSTOMER_TRANSACTION: `id, customer_id, branch_id, 
   recorded_by_user_id, amount, transaction_date, transaction_type, created_at`,
-  BASE_USER_PROFILE: `id, surname, other_names, phone`,
+  BASE_USER_PROFILE: `id, surname, other_names, phone,access_granted,
+  last_login_at,created_at,deleted_at`,
+  BASE_STAFF: `id,user_id,branch_id,role,address,notes,created_at,
+  updated_at,deleted_at`,
 } as const;

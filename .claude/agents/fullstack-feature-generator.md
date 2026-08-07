@@ -71,7 +71,12 @@ Create or update the service file `[feature].service.ts`:
 - Include proper error handling
 - Follow existing project patterns for service architecture
 - Use the types created in Step 2
-- For select queries, specify the columns being fetched in queryFragments.ts and import them into the service file to ensure type safety and avoid fetching unnecessary data.
+- **QueryFragments reuse**: for any `select(...)` string longer than 3 columns, interpolate constants from `apps/main-backend/src/app/constants/queryFragments.ts` (`BASE_STAFF`, `BASE_USER_PROFILE`, `BASE_BRANCH`, `BASE_USER_ROLE`, etc.) — including inside embedded-resource parentheses (e.g. `` `branch:branches!inner(${QueryFragments.BASE_BRANCH})` ``). Only write a bare inline column list when (a) ≤3 columns, or (b) deliberately excluding sensitive fields like `otp` / `otp_expires_at` / `password_hash`. Never inline a >3-column list by hand — it duplicates the schema and breaks when columns are renamed.
+- **No `any` / `as` casts on Supabase builders or results**: the generated `database.types.ts` is the source of truth — let TS infer. For nested filters, the generated types do NOT expose the `referencedTable` overload on `.eq()` / `.is()` / `.or()`, but they DO support the dotted-foreign-column syntax — use that instead:
+  - ✅ `.eq("roles.role", filters.role)` / `.or("user.surname.ilike.%x%,user.phone.ilike.%x%")` / `.is("user.deleted_at", null)`
+  - ❌ `.eq("role", filters.role, { referencedTable: "staff_user_roles" })` cast to `as any`
+  - Same for builder returns: if the inferred type is correct, `const { data } = await query` is enough — no `as { data: any[] | null; ... }` chain.
+- See the `supabase-query-conventions` skill for the canonical patterns.
 
 ### Step 7: Create Frontend API Service
 

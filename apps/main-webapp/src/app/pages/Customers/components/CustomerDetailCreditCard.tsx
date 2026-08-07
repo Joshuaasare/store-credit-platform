@@ -1,20 +1,10 @@
 import { CalendarClock, Clock, MapPin } from "lucide-react";
 import { Card, Badge, cn } from "@store-credit-platform/web-components";
 import { CustomerDetailCreditRow } from "@shared/types/api.types";
-import { formatEpochDate, formatGHS } from "@shared/utils/format";
+import { formatEpochDate, formatGHS, formatIsoDate } from "@shared/utils/format";
 
 interface CustomerDetailCreditCardProps {
   row: CustomerDetailCreditRow;
-}
-
-function formatIsoDate(iso: string): string {
-  const d = new Date(iso);
-  if (isNaN(d.getTime())) return "—";
-  return d.toLocaleDateString(undefined, {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
 }
 
 /**

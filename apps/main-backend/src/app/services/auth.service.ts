@@ -14,6 +14,7 @@ import {
   AuthUser,
 } from "../schemas/auth.schema";
 import { QueryFragments } from "../constants/queryFragments";
+import { Database } from "../types/database.types";
 import { TokenService } from "./token.service";
 import { RateLimitService } from "./rateLimit.service";
 
@@ -169,14 +170,9 @@ export class AuthService {
       throw new Error("Invalid or expired OTP.");
     }
 
-    // Fetch user roles from staff_user_roles
-    const { data: roles } = await supabaseAdmin
-      .from("staff_user_roles")
-      .select(`id, role, created_at, updated_at, user_id, assigned_by_user_id`)
-      .eq("user_id", user.id)
-      .is("deleted_at", null);
-
-    // Resolve merchant_id / primary branch_id via staff → branches → merchants
+    // Resolve merchant_id / primary branch_id / role via staff → branches →
+    // merchants. Single role lives on staff.role (replaces the older
+    // staff_user_roles join table).
     const staffAssignment = await this.resolveStaffAssignment(user.id);
 
     const authUserResponse: AuthUser = {
@@ -186,15 +182,18 @@ export class AuthService {
       surname: user.surname,
       other_names: user.other_names,
       access_granted: user.access_granted,
-      roles:
-        roles?.map((r) => ({
-          id: r.id,
-          role: r.role,
-          user_id: r.user_id,
-          assigned_by_user_id: r.assigned_by_user_id,
-          created_at: r.created_at,
-          updated_at: r.updated_at,
-        })) || [],
+      roles: staffAssignment?.role
+        ? [
+            {
+              id: staffAssignment.staff_id,
+              role: staffAssignment.role,
+              user_id: user.id,
+              assigned_by_user_id: "",
+              created_at: staffAssignment.created_at,
+              updated_at: staffAssignment.updated_at,
+            },
+          ]
+        : [],
       merchant_id: staffAssignment?.merchant_id ?? null,
       branch_id: staffAssignment?.branch_id ?? null,
     };
@@ -229,11 +228,17 @@ export class AuthService {
       clientIp,
     );
 
-    // Clear OTP after successful login
+    // Clear OTP after successful login and stamp last_login_at (surfaced on
+    // the Staff directory as "Last active").
     deleteOtp(normalizedPhone);
     await supabaseAdmin
       .from("users")
-      .update({ otp: null, otp_expires_at: null, otp_attempts: 0 })
+      .update({
+        otp: null,
+        otp_expires_at: null,
+        otp_attempts: 0,
+        last_login_at: new Date().toISOString(),
+      })
       .eq("id", user.id);
 
     const nowSeconds = Math.floor(Date.now() / 1000);
@@ -264,13 +269,8 @@ export class AuthService {
       throw new Error("User not found");
     }
 
-    const { data: roles } = await supabaseAdmin
-      .from("staff_user_roles")
-      .select(`id, role, created_at, updated_at, user_id, assigned_by_user_id`)
-      .eq("user_id", user.id)
-      .is("deleted_at", null);
-
-    // Resolve merchant_id / primary branch_id for AuthUser
+    // Resolve merchant_id / primary branch_id / role via staff → branches →
+    // merchants. Single role lives on staff.role.
     const staffAssignment = await this.resolveStaffAssignment(user.id);
 
     return {
@@ -280,15 +280,18 @@ export class AuthService {
       surname: user.surname,
       other_names: user.other_names,
       access_granted: user.access_granted,
-      roles:
-        roles?.map((r) => ({
-          id: r.id,
-          role: r.role,
-          user_id: r.user_id,
-          assigned_by_user_id: r.assigned_by_user_id,
-          created_at: r.created_at,
-          updated_at: r.updated_at,
-        })) || [],
+      roles: staffAssignment?.role
+        ? [
+            {
+              id: staffAssignment.staff_id,
+              role: staffAssignment.role,
+              user_id: user.id,
+              assigned_by_user_id: "",
+              created_at: staffAssignment.created_at,
+              updated_at: staffAssignment.updated_at,
+            },
+          ]
+        : [],
       merchant_id: staffAssignment?.merchant_id ?? null,
       branch_id: staffAssignment?.branch_id ?? null,
     };
@@ -309,12 +312,6 @@ export class AuthService {
     token_type: string;
     user: AuthUser;
   }> {
-    const { data: roles } = await supabaseAdmin
-      .from("staff_user_roles")
-      .select(`id, role, created_at, updated_at, user_id, assigned_by_user_id`)
-      .eq("user_id", user.id)
-      .is("deleted_at", null);
-
     const staffAssignment = await this.resolveStaffAssignment(user.id);
 
     const authUserResponse: AuthUser = {
@@ -324,15 +321,18 @@ export class AuthService {
       surname: user.surname,
       other_names: user.other_names,
       access_granted: user.access_granted,
-      roles:
-        roles?.map((r) => ({
-          id: r.id,
-          role: r.role,
-          user_id: r.user_id,
-          assigned_by_user_id: r.assigned_by_user_id,
-          created_at: r.created_at,
-          updated_at: r.updated_at,
-        })) || [],
+      roles: staffAssignment?.role
+        ? [
+            {
+              id: staffAssignment.staff_id,
+              role: staffAssignment.role,
+              user_id: user.id,
+              assigned_by_user_id: "",
+              created_at: staffAssignment.created_at,
+              updated_at: staffAssignment.updated_at,
+            },
+          ]
+        : [],
       merchant_id: staffAssignment?.merchant_id ?? null,
       branch_id: staffAssignment?.branch_id ?? null,
     };
@@ -399,12 +399,22 @@ export class AuthService {
    */
   private async resolveStaffAssignment(
     userId: string,
-  ): Promise<{ merchant_id: number; branch_id: number } | null> {
+  ): Promise<{
+    staff_id: number;
+    role: Database["public"]["Enums"]["role"];
+    merchant_id: number;
+    branch_id: number;
+    created_at: string;
+    updated_at: string | null;
+  } | null> {
     const { data: staff } = await supabaseAdmin
       .from("staff")
-      .select(`id,branches(id,merchants(id))`)
+      .select(
+        `id, role, created_at, updated_at, branches(id, merchants(id))`,
+      )
       .eq("user_id", userId)
       .is("deleted_at", null)
+      .not("role", "is", null)
       .order("id", { ascending: true })
       .limit(1)
       .maybeSingle();
@@ -412,10 +422,14 @@ export class AuthService {
     if (!staff) return null;
     const branch = staff?.branches;
     const merchant = branch?.merchants;
-    if (!branch?.id || !merchant?.id) return null;
+    if (!branch?.id || !merchant?.id || staff.role == null) return null;
     return {
+      staff_id: Number(staff.id),
+      role: staff.role,
       merchant_id: Number(merchant.id),
       branch_id: Number(branch.id),
+      created_at: staff.created_at,
+      updated_at: staff.updated_at,
     };
   }
 }
