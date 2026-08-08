@@ -1,6 +1,6 @@
 /**
  * Auto-generated API Types
- * Generated on: 2026-08-07T04:57:29.752Z
+ * Generated on: 2026-08-08T10:43:37.331Z
  * 
  * ⚠️ DO NOT EDIT MANUALLY
  * Source: apps/smartschool-api/src/app/types/
@@ -82,6 +82,8 @@ export interface BaseCustomer {
   phone: string | null;
   unique_id: string | null;
   user_id: string | null;
+  surname: string | null;
+  other_names: string | null;
   created_at: string;
   deleted_at: string | null;
 }
@@ -90,7 +92,7 @@ export interface BaseCustomerTransaction {
   id: number;
   customer_id: number;
   branch_id: number;
-  recorded_by_user_id: string | null;
+  recorded_by_staff_id: number | null;
   amount: number;
   transaction_date: number;
   transaction_type: TransactionTypeValues;
@@ -104,12 +106,13 @@ export interface BaseCustomerTransaction {
 
 
 
+
+
+
+
 export interface BaseUserProfile {
   id: string;
-  surname: string;
-  other_names: string | null;
   phone: string;
-  access_granted: boolean;
   last_login_at: string | null;
   created_at: string;
   deleted_at: string | null;
@@ -123,6 +126,9 @@ export interface BaseStaff {
   user_id: string;
   branch_id: number;
   role: StaffRoleValues | null;
+  surname: string | null;
+  other_names: string | null;
+  access_granted: boolean;
   address: string | null;
   notes: string | null;
   created_at: string;
@@ -197,6 +203,7 @@ export interface AccessTokenPayload {
   role: StaffRoleValues | null;
   merchant_id: number | null;
   branch_id: number | null;
+  staff_id: number | null;
   iat: number;
   exp: number;
   iss: string;
@@ -208,7 +215,8 @@ export interface AuthUser {
   id: string;
   email: string;
   phone: string | null;
-  surname: string;
+
+  surname: string | null;
   other_names: string | null;
   access_granted: boolean;
   role: StaffRoleValues | null;
@@ -712,7 +720,8 @@ export interface CustomerWithUser extends BaseCustomer {
 export interface CustomerTransactions extends BaseCustomerTransaction {
   customer: CustomerWithUser;
   branch: BaseBranch;
-  recorded_by_user: BaseUserProfile | null;
+  recorded_by_staff: BaseStaff | null;
+  approved_by_staff: BaseStaff | null;
 }
 
 export type TransactionTypeFilter =

@@ -10,6 +10,7 @@ import {
 } from "../schemas/staff.schema";
 import { QueryFragments } from "../constants/queryFragments";
 import { splitSearchTerm } from "../utils/misc.utils";
+import { normalizePhone } from "../utils/phone.utils";
 
 export class StaffService {
   private static readonly DEFAULT_LIMIT = 50;
@@ -51,9 +52,7 @@ export class StaffService {
     if (search) {
       const termParts = splitSearchTerm(search);
       for (const part of termParts) {
-        query = query.or(
-          `user.surname.ilike.%${part}%,user.other_names.ilike.%${part}%,user.phone.ilike.%${part}%`,
-        );
+        query = query.or(`surname.ilike.%${part}%,other_names.ilike.%${part}%`);
       }
     }
 
@@ -88,7 +87,7 @@ export class StaffService {
     const merchantId = await this.resolveMerchantId(manager);
     await this.assertBranchOwned(payload.branch_id, merchantId);
 
-    const phone = payload.phone.trim();
+    const phone = normalizePhone(payload.phone);
     const accessGranted = payload.access_granted ?? true;
 
     // 1. Look up existing users by phone (live OR soft-deleted).
@@ -101,21 +100,21 @@ export class StaffService {
       throw new Error(`Failed to check existing phone: ${existErr.message}`);
     }
 
-    if (existing && existing.deleted_at !== null) {
-      if (existing.deleted_at == null) {
-        throw new Error("A staff member with this phone already exists");
-      }
+    if (existing && existing.deleted_at === null) {
+      // A live user already has this phone — refuse so we don't create a
+      // duplicate staff row for the same user.
+      throw new Error("A staff member with this phone already exists");
     }
 
+    // existing && existing.deleted_at != null  → auto-restore path (upsert
+    // below clears deleted_at and refreshes profile fields).
+    // existing == null                          → fresh insert.
     const newUserId = existing?.id ?? randomUUID();
 
     const { error: createUserErr } = await supabaseAdmin.from("users").upsert(
       {
         id: newUserId,
         phone,
-        surname: payload.surname,
-        other_names: payload.other_names ?? null,
-        access_granted: accessGranted,
         deleted_at: null,
         updated_at: new Date().toISOString(),
       },
@@ -126,12 +125,16 @@ export class StaffService {
       throw new Error(`Failed to create user: ${createUserErr.message}`);
     }
 
-    // 2. Insert staff row with the role carried directly on the row (the
-    //    old tombstoned staff rows stay tombstoned).
+    // 2. Insert staff row with the role + name + access carried directly on
+    //    the row (the old tombstoned staff rows stay tombstoned). Names +
+    //    access_granted live on staff, not users.
     const { error: staffInsertErr } = await supabaseAdmin.from("staff").insert({
       user_id: newUserId,
       branch_id: payload.branch_id,
       role: payload.role,
+      surname: payload.surname,
+      other_names: payload.other_names ?? null,
+      access_granted: accessGranted,
       address: payload.address ?? null,
       notes: payload.notes ?? null,
     });
@@ -157,14 +160,23 @@ export class StaffService {
   ): Promise<Staff> {
     const merchantId = await this.resolveMerchantId(manager);
     const current = await this.fetchStaffUser(manager, userId);
+    const {
+      role,
+      access_granted,
+      branch_id,
+      surname,
+      other_names,
+      address,
+      notes,
+      phone,
+    } = payload;
     if (!current) {
       throw new Error("Staff member not found");
     }
 
-    const roleChanging = payload.role != null && payload.role !== current.role;
+    const roleChanging = !!role && role !== current.role;
     const accessChanging =
-      payload.access_granted != null &&
-      payload.access_granted !== current.user.access_granted;
+      !!access_granted && access_granted !== current.access_granted;
 
     // Self-protection: cannot change own role or own access.
     if (userId === manager.sub && (roleChanging || accessChanging)) {
@@ -174,24 +186,25 @@ export class StaffService {
     // Last-manager guard: demoting or disabling the only active manager.
     if (
       current.role === "manager" &&
-      current.user.access_granted &&
-      ((roleChanging && payload.role !== "manager") ||
+      current.access_granted &&
+      ((roleChanging && role !== "manager") ||
         (accessChanging && payload.access_granted === false))
     ) {
       await this.assertNotLastManager(merchantId, userId);
     }
 
     // Branch ownership when branch changes.
-    if (payload.branch_id != null && payload.branch_id !== current.branch_id) {
-      await this.assertBranchOwned(payload.branch_id, merchantId);
+    if (branch_id != null && branch_id !== current.branch_id) {
+      await this.assertBranchOwned(branch_id, merchantId);
     }
 
     // Phone uniqueness check when phone changes.
-    if (payload.phone != null && payload.phone !== current.user.phone) {
+    const normalizedPhone = phone ? normalizePhone(phone) : null;
+    if (normalizedPhone != null && normalizedPhone !== current.user.phone) {
       const { data: conflict } = await supabaseAdmin
         .from("users")
         .select("id")
-        .eq("phone", payload.phone.trim())
+        .eq("phone", normalizedPhone)
         .neq("id", userId)
         .is("deleted_at", null)
         .maybeSingle();
@@ -200,16 +213,11 @@ export class StaffService {
       }
     }
 
-    // 1. Update users row.
+    // 1. Update users row (phone only — names + access live on staff).
     const userUpdate: Record<string, unknown> = {
       updated_at: new Date().toISOString(),
     };
-    if (payload.surname != null) userUpdate.surname = payload.surname;
-    if (payload.other_names !== undefined)
-      userUpdate.other_names = payload.other_names;
-    if (payload.phone != null) userUpdate.phone = payload.phone.trim();
-    if (payload.access_granted != null)
-      userUpdate.access_granted = payload.access_granted;
+    if (normalizedPhone != null) userUpdate.phone = normalizedPhone;
     const { error: userErr } = await supabaseAdmin
       .from("users")
       .update(userUpdate)
@@ -219,12 +227,15 @@ export class StaffService {
       throw new Error(`Failed to update user: ${userErr.message}`);
     }
 
-    // 2. Update staff row when branch / role / address / notes change.
+    // 2. Update staff row when branch / role / name / access / address / notes change.
     const staffUpdate: Record<string, unknown> = {};
-    if (payload.branch_id != null) staffUpdate.branch_id = payload.branch_id;
-    if (roleChanging) staffUpdate.role = payload.role;
-    if (payload.address !== undefined) staffUpdate.address = payload.address;
-    if (payload.notes !== undefined) staffUpdate.notes = payload.notes;
+    if (branch_id != null) staffUpdate.branch_id = branch_id;
+    if (roleChanging) staffUpdate.role = role;
+    if (access_granted != null) staffUpdate.access_granted = access_granted;
+    if (surname != null) staffUpdate.surname = surname;
+    if (other_names !== undefined) staffUpdate.other_names = other_names;
+    if (address !== undefined) staffUpdate.address = address;
+    if (notes !== undefined) staffUpdate.notes = notes;
     if (Object.keys(staffUpdate).length > 0) {
       staffUpdate.updated_at = new Date().toISOString();
       const { error: staffErr } = await supabaseAdmin
@@ -277,7 +288,7 @@ export class StaffService {
     }
 
     // Last-manager guard.
-    if (current.role === "manager" && current.user.access_granted) {
+    if (current.role === "manager" && current.access_granted) {
       await this.assertNotLastManager(merchantId, userId);
     }
 
@@ -359,12 +370,12 @@ export class StaffService {
   /**
    * Count active managers in the merchant excluding the target user — a single
    * joined query: `staff` inner-joined to `branches` (merchant scope) and
-   * `users` (live + access granted), filtered to `role = 'manager'`. If the
-   * count is 0, the target is the last manager and the operation is blocked.
+   * `users` (live), filtered to `role = 'manager'` + `access_granted = true`
+   * (access lives on staff now, not users). If the count is 0, the target is
+   * the last manager and the operation is blocked.
    *
-   * Dotted-column filters (`user.access_granted`, `user.deleted_at`,
-   * `branch.merchant_id`) infers natively — no `as any` per the
-   * supabase-query-conventions skill.
+   * Dotted-column filters (`user.deleted_at`, `branch.merchant_id`) infer
+   * natively — no `as any` per the supabase-query-conventions skill.
    */
   private async assertNotLastManager(
     merchantId: number,
@@ -376,7 +387,7 @@ export class StaffService {
       .eq("role", "manager")
       .neq("user_id", userId)
       .is("deleted_at", null)
-      .eq("user.access_granted", true)
+      .eq("access_granted", true)
       .is("user.deleted_at", null)
       .eq("branch.merchant_id", merchantId)
       .is("branch.deleted_at", null);

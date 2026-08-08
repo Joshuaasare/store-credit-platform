@@ -1,18 +1,17 @@
-import { useMemo, useRef, useState, useEffect } from "react";
+import { useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { UserCog, Search, X, MoreHorizontal, Pencil, Trash2, ShieldCheck, ShieldOff } from "lucide-react";
+import {
+  UserCog,
+  MoreHorizontal,
+  Pencil,
+  Trash2,
+  ShieldCheck,
+  ShieldOff,
+} from "lucide-react";
 import { toast } from "sonner";
-import { debounce } from "throttle-debounce";
 import {
   Card,
   Skeleton,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-  Label,
-  Input,
   Badge,
   Button,
   Monogram,
@@ -36,54 +35,48 @@ import { useAuthStore } from "@shared/stores/authStore";
 import type { Staff } from "@shared/types/api.types";
 import { formatDisplayNumber } from "@shared/utils/ui.utils";
 import { formatIsoDate } from "@shared/utils/format";
-import {
-  staffDisplayName,
-  staffInitials,
-} from "@shared/utils/staff.utils";
+import { staffDisplayName, staffInitials } from "@shared/utils/staff.utils";
 import {
   errorToastProperties,
+  isEmpty,
   successToastProperties,
 } from "@shared/utils/misc.utils";
 import { StaffDialog } from "./components/StaffDialog";
 import { DeleteStaffDialog } from "./components/DeleteStaffDialog";
-
-const SEARCH_DEBOUNCE_MS = 300;
+import SearchInput from "../../components/SearchInput/SearchInput";
+import useDebounce from "@shared/hooks/useDebounce";
+import { FilterBar } from "../../components/FilterBar/FilterBar";
+import { allBranchOption, roleOptions } from "@shared/utils/options.utils";
 
 export default function Staff() {
   const { branches } = useStoreStore();
   const user = useAuthStore((s) => s.user);
   const queryClient = useQueryClient();
-
   const [branchId, setBranchId] = useState<number | null>(null);
-  const [roleFilter, setRoleFilter] = useState<"all" | "manager" | "cashier">("all");
+  const [roleFilter, setRoleFilter] = useState<"all" | "manager" | "cashier">(
+    "all",
+  );
   const [searchInput, setSearchInput] = useState("");
-  const [search, setSearch] = useState("");
   const [addOpen, setAddOpen] = useState(false);
   const [editing, setEditing] = useState<Staff | null>(null);
   const [deleting, setDeleting] = useState<Staff | null>(null);
-
-  const debouncedSetSearch = useRef(
-    debounce(SEARCH_DEBOUNCE_MS, (val: string) => setSearch(val)),
-  ).current;
-  useEffect(() => () => debouncedSetSearch.cancel(), [debouncedSetSearch]);
-
-  const onSearchChange = (val: string) => {
-    setSearchInput(val);
-    debouncedSetSearch(val);
-  };
-  const clearSearch = () => {
-    setSearchInput("");
-    setSearch("");
-    debouncedSetSearch.cancel();
-  };
+  const debouncedSearchQuery = useDebounce(searchInput, 300);
 
   const staffQuery = useQuery({
-    queryKey: ["staff", "list", { branchId, role: roleFilter, search: search.trim() || null }],
+    queryKey: [
+      "staff",
+      "list",
+      {
+        branchId,
+        role: roleFilter,
+        search: debouncedSearchQuery.trim() || null,
+      },
+    ],
     queryFn: async () => {
       const res = await staffService.listStaff({
         branch_id: branchId ?? undefined,
         role: roleFilter === "all" ? undefined : roleFilter,
-        search: search.trim() || undefined,
+        search: debouncedSearchQuery.trim() || undefined,
         limit: 200,
         offset: 0,
       });
@@ -104,7 +97,9 @@ export default function Staff() {
 
   const accessMutation = useMutation({
     mutationFn: async ({ s, next }: { s: Staff; next: boolean }) => {
-      const res = await staffService.setStaffAccess(s.user.id, { access_granted: next });
+      const res = await staffService.setStaffAccess(s.user.id, {
+        access_granted: next,
+      });
       if (isApiError(res)) throw new Error(res.error);
       return res.data;
     },
@@ -144,6 +139,48 @@ export default function Staff() {
 
   const visibleRows = useMemo(() => rows, [rows]);
 
+  const renderFilters = () => {
+    return (
+      <FilterBar
+        onFilterChange={(filter: string, v: string | string[]) => {
+          if (filter === "branch-filter") {
+            setBranchId(v === "all" ? null : Number(v));
+          }
+
+          if (filter === "role-filter") {
+            setRoleFilter(v as "all" | "manager" | "cashier");
+          }
+        }}
+        filters={[
+          {
+            type: "select",
+            label: "Branch",
+            placeholder: "Filter by Branch",
+            id: "branch-filter",
+            disabled: !isEmpty(searchInput),
+            value: branchId == null ? "all" : String(branchId),
+            options: [allBranchOption].concat(
+              branches.map((branch) => ({
+                label: branch.name ?? "",
+                value: branch.id.toString(),
+              })),
+            ),
+          },
+
+          {
+            type: "select",
+            label: "Role",
+            placeholder: "Filter by Role",
+            id: "role-filter",
+            value: roleFilter,
+            disabled: !isEmpty(searchInput),
+            options: roleOptions,
+          },
+        ]}
+      />
+    );
+  };
+
   return (
     <div className="relative min-h-screen px-4 py-6 md:px-8 md:py-10">
       <div
@@ -181,71 +218,16 @@ export default function Staff() {
         >
           <div className="flex flex-wrap items-end gap-3">
             <div className="min-w-[220px] flex-1 space-y-1.5">
-              <Label className="text-muted-foreground text-xs">
-                Search by name or phone
-              </Label>
               <div className="relative">
-                <Search className="text-muted-foreground pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" />
-                <Input
-                  type="text"
-                  value={searchInput}
-                  onChange={(e) => onSearchChange(e.target.value)}
-                  placeholder="e.g. Joshua or 024…"
-                  className="pl-9 pr-9"
+                <SearchInput
+                  searchPlaceholder="Search staff"
+                  searchQuery={searchInput}
+                  onSearch={setSearchInput}
                 />
-                {searchInput && (
-                  <button
-                    type="button"
-                    onClick={clearSearch}
-                    aria-label="Clear search"
-                    className="text-muted-foreground hover:text-foreground absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 transition-colors"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                )}
               </div>
             </div>
 
-            <div className="space-y-1.5">
-              <Label className="text-muted-foreground text-xs">Branch</Label>
-              <Select
-                value={branchId == null ? "all" : String(branchId)}
-                onValueChange={(v) =>
-                  setBranchId(v === "all" ? null : Number(v))
-                }
-              >
-                <SelectTrigger className="h-9 w-[200px]">
-                  <SelectValue placeholder="All branches" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All branches</SelectItem>
-                  {branches.map((b) => (
-                    <SelectItem key={b.id} value={String(b.id)}>
-                      {b.name?.trim() || "Unnamed branch"}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-1.5">
-              <Label className="text-muted-foreground text-xs">Role</Label>
-              <Select
-                value={roleFilter}
-                onValueChange={(v) =>
-                  setRoleFilter(v as "all" | "manager" | "cashier")
-                }
-              >
-                <SelectTrigger className="h-9 w-[140px]">
-                  <SelectValue placeholder="All roles" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All roles</SelectItem>
-                  <SelectItem value="manager">Managers</SelectItem>
-                  <SelectItem value="cashier">Cashiers</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            {renderFilters()}
 
             <div className="text-muted-foreground ml-auto self-end text-xs tabular-nums">
               {staffQuery.isPending ? "—" : `${total} staff`}
@@ -268,14 +250,14 @@ export default function Staff() {
             <div className="flex flex-col items-center justify-center gap-2 px-6 py-16 text-center">
               <UserCog className="text-muted-foreground h-8 w-8" />
               <p className="text-sm font-medium">
-                {search.trim()
-                  ? `No staff match "${search.trim()}"`
+                {debouncedSearchQuery.trim()
+                  ? `No staff match "${debouncedSearchQuery.trim()}"`
                   : branchId == null && roleFilter === "all"
                     ? "No staff yet"
                     : "No staff match these filters"}
               </p>
               <p className="text-muted-foreground text-xs">
-                {search.trim()
+                {debouncedSearchQuery.trim()
                   ? "Try a different name or phone, or clear the filters."
                   : "Add your first staff member to start assigning roles and branches."}
               </p>
@@ -371,17 +353,13 @@ function StaffRow({
   pendingAccess,
 }: StaffRowProps) {
   const isSelf = selfId != null && s.user.id === selfId;
-  const enabled = s.user.access_granted;
+  const enabled = s.access_granted;
 
   return (
     <TableRow className={cn(!enabled && "opacity-60")}>
       <TableCell>
         <div className="flex items-center gap-3">
-          <Monogram
-            text={staffInitials(s)}
-            seed={s.user.id}
-            size="sm"
-          />
+          <Monogram text={staffInitials(s)} seed={s.user.id} size="md" />
           <div className="min-w-0 space-y-0.5">
             <div className="flex items-center gap-1.5">
               <span className="truncate text-sm font-medium">

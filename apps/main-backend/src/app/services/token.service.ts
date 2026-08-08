@@ -80,6 +80,7 @@ export class TokenService {
     role: string | null,
     merchantId: number | null = null,
     branchId: number | null = null,
+    staffId: number | null = null,
   ): Promise<string> {
     const now = Math.floor(Date.now() / 1000);
     const jti = crypto.randomUUID();
@@ -90,6 +91,7 @@ export class TokenService {
       role,
       merchant_id: merchantId,
       branch_id: branchId,
+      staff_id: staffId,
       jti,
     })
       .setProtectedHeader({ alg: "HS256" })

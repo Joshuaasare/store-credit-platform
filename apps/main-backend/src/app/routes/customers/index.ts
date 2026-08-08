@@ -216,7 +216,7 @@ export default async function (fastify: FastifyInstance) {
   /**
    * POST /customers/credits/redeem
    * Records an approved redemption against a specific customer_credit row.
-   * Auto-approves (approved_at = now(), approved_by_user_id = caller) since
+   * Auto-approves (approved_at = now(), approved_by_staff_id = caller) since
    * redemptions recorded from the webapp are immediate; the approved_at
    * column exists for a future customer-initiated approval flow. Validates
    * merchant scope and that the amount does not exceed remaining credit.

@@ -253,9 +253,11 @@ export class CustomerService {
     }
 
     // 2. Customer row + linked user profile (nested via BASE_USER_PROFILE).
+    //    Names live on the customer row (surname / other_names); the user
+    //    join carries phone / access / last_login only.
     const { data: customer, error: custErr } = await supabaseAdmin
       .from("customers")
-      .select(`id, phone, user_id, users(${QueryFragments.BASE_USER_PROFILE})`)
+      .select(`id, phone, user_id, surname, other_names, users(${QueryFragments.BASE_USER_PROFILE})`)
       .eq("id", customerId)
       .maybeSingle();
     if (custErr) {
@@ -398,8 +400,8 @@ export class CustomerService {
         null,
       );
 
-    const surname = linkedUser?.surname ?? null;
-    const otherNames = linkedUser?.other_names ?? null;
+    const surname = (customer as { surname: string | null }).surname ?? null;
+    const otherNames = (customer as { other_names: string | null }).other_names ?? null;
     const fullName = `${surname ?? ""} ${otherNames ?? ""}`.trim();
     const customerName = fullName || "Unnamed customer";
 
@@ -419,7 +421,7 @@ export class CustomerService {
 
   /**
    * Record a redemption against a specific customer_credit row. Auto-approves
-   * (approved_at = now(), approved_by_user_id = caller) — the approved_at
+   * (approved_at = now(), approved_by_staff_id = caller) — the approved_at
    * column exists so a future customer-initiated flow can record pending
    * redemptions that await manager approval.
    *
@@ -485,7 +487,7 @@ export class CustomerService {
         branch_id: credit.branch_id,
         amount_redeemed: payload.amount_redeemed,
         approved_at: nowIso,
-        approved_by_user_id: user.sub,
+        approved_by_staff_id: user.staff_id ?? null,
       });
 
     if (insertErr) {

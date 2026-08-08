@@ -60,6 +60,8 @@ export interface BaseCustomer {
   phone: string | null;
   unique_id: string | null;
   user_id: string | null;
+  surname: string | null;
+  other_names: string | null;
   created_at: string;
   deleted_at: string | null;
 }
@@ -68,7 +70,7 @@ export interface BaseCustomerTransaction {
   id: number;
   customer_id: number;
   branch_id: number;
-  recorded_by_user_id: string | null;
+  recorded_by_staff_id: number | null;
   amount: number;
   transaction_date: number;
   transaction_type: TransactionTypeValues;
@@ -80,14 +82,15 @@ export interface BaseCustomerTransaction {
 }
 
 // Slim profile projection of users for customer / recorded-by joins.
-// Deliberately excludes otp / otp_expires_at / access_granted from BASE_USER
-// so those sensitive fields are not shipped over the transactions API.
+// Deliberately excludes otp / otp_expires_at from BASE_USER so those
+// sensitive fields are not shipped over the transactions API.
+// NOTE: names (surname / other_names) AND access_granted live on `staff` /
+// `customers`, NOT on `users` — a user is a phone-based OTP login identity.
+// Reads that need a display name or access flag join through to the staff /
+// customer row.
 export interface BaseUserProfile {
   id: string;
-  surname: string;
-  other_names: string | null;
   phone: string;
-  access_granted: boolean;
   last_login_at: string | null;
   created_at: string;
   deleted_at: string | null;
@@ -101,6 +104,9 @@ export interface BaseStaff {
   user_id: string;
   branch_id: number;
   role: StaffRoleValues | null;
+  surname: string | null;
+  other_names: string | null;
+  access_granted: boolean;
   address: string | null;
   notes: string | null;
   created_at: string;

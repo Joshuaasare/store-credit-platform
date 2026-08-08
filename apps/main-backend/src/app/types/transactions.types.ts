@@ -2,6 +2,7 @@ import {
   ApiErrorResponse,
   BaseCustomer,
   BaseCustomerTransaction,
+  BaseStaff,
   BaseUserProfile,
   BaseBranch,
 } from "./main.types";
@@ -13,7 +14,8 @@ export interface CustomerWithUser extends BaseCustomer {
 export interface CustomerTransactions extends BaseCustomerTransaction {
   customer: CustomerWithUser;
   branch: BaseBranch;
-  recorded_by_user: BaseUserProfile | null;
+  recorded_by_staff: BaseStaff | null;
+  approved_by_staff: BaseStaff | null;
 }
 
 // Server-side filter on the activity feed. "all" returns the full union;

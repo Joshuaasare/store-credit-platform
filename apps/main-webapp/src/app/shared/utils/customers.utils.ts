@@ -3,27 +3,30 @@ import { CustomerTransactions, LeaderboardRow, CustomerListRow } from "@shared/t
 /**
  * Display name for a customer transactions row.
  *
- * Returns `users.surname + " " + users.other_names` when the customer is
- * linked to a user (i.e. has logged into the mobile app), otherwise an empty
- * string — callers render "Unnamed customer" themselves when this is empty.
+ * Names live on the customer row directly (`surname` / `other_names`), not on
+ * the linked user. Returns the trimmed `surname + " " + other_names`, or an
+ * empty string when both are empty — callers render "Unnamed customer"
+ * themselves when this is empty.
  */
 export function customerDisplayName(r: CustomerTransactions): string {
-  const u = r.customer?.users;
-  if (!u) return "";
-  const name = `${u.surname}${u.other_names ? " " + u.other_names : ""}`.trim();
+  const c = r.customer;
+  if (!c) return "";
+  const surname = c.surname ?? "";
+  const otherNames = c.other_names ?? "";
+  const name = `${surname}${otherNames ? " " + otherNames : ""}`.trim();
   return name || "";
 }
 
 /**
  * 1-2 char initials for a Monogram avatar.
  *
- * Linked customer (has `users`): first letter of first word + first letter of
- * last word from the display name (e.g. "Joshua Asare" → "JA"); single-word
- * names take the first two chars (e.g. "Kojo" → "KO").
+ * Named customer: first letter of first word + first letter of last word from
+ * the display name (e.g. "Joshua Asare" → "JA"); single-word names take the
+ * first two chars (e.g. "Kojo" → "KO").
  *
- * Unlinked customer (no `users`): last 2 digits of the phone, so two
- * anonymous customers with different phones still get distinct monograms.
- * Returns "?" if neither is available.
+ * Unnamed customer: last 2 digits of the phone, so two anonymous customers
+ * with different phones still get distinct monograms. Returns "?" if neither
+ * is available.
  */
 export function customerInitials(r: CustomerTransactions): string {
   const name = customerDisplayName(r);

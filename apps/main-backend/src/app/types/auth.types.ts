@@ -15,6 +15,7 @@ export interface AccessTokenPayload {
   role: StaffRoleValues | null;
   merchant_id: number | null;
   branch_id: number | null;
+  staff_id: number | null;
   iat: number;
   exp: number;
   iss: string;
@@ -26,7 +27,10 @@ export interface AuthUser {
   id: string;
   email: string;
   phone: string | null;
-  surname: string;
+  // Names live on `staff` (or `customers`), not on `users`. Resolved via the
+  // staff assignment; null when the user has no staff row (e.g. a customer
+  // logging in — out of scope for this flow today).
+  surname: string | null;
   other_names: string | null;
   access_granted: boolean;
   role: StaffRoleValues | null;

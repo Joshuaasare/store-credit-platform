@@ -8,6 +8,7 @@ import {
   deleteOtp,
   incrementAttempts,
 } from "../utils/otp.store";
+import { normalizePhone } from "../utils/phone.utils";
 import {
   SendOtpRequest,
   VerifyOtpRequest,
@@ -31,7 +32,7 @@ export class AuthService {
     clientIp?: string,
   ): Promise<{ message: string }> {
     const { phone } = data;
-    const normalizedPhone = this.normalizePhone(phone);
+    const normalizedPhone = normalizePhone(phone);
 
     // Rate limiting
     const rateLimit = RateLimitService.checkOtpSendLimits(
@@ -101,7 +102,7 @@ export class AuthService {
     user: AuthUser;
   }> {
     const { phone, otp } = data;
-    const normalizedPhone = this.normalizePhone(phone);
+    const normalizedPhone = normalizePhone(phone);
 
     // DEV bypass — delete before production
     if (
@@ -157,10 +158,6 @@ export class AuthService {
       throw new Error("User not found.");
     }
 
-    if (!user.access_granted) {
-      throw new Error("Access denied. Please contact your administrator.");
-    }
-
     // Also verify against DB-stored OTP (defense in depth)
     if (
       user.otp !== otpEntry.otpHash ||
@@ -172,19 +169,24 @@ export class AuthService {
 
     // Resolve merchant_id / primary branch_id / role via staff → branches →
     // merchants. Single role lives on staff.role (replaces the older
-    // staff_user_roles join table).
+    // staff_user_roles join table). Names + access_granted also live on the
+    // staff row — a user with no live staff row has no access.
     const staffAssignment = await this.resolveStaffAssignment(user.id);
+
+    if (!staffAssignment || !staffAssignment.access_granted) {
+      throw new Error("Access denied. Please contact your administrator.");
+    }
 
     const authUserResponse: AuthUser = {
       id: user.id,
       email: user.email || "",
       phone: user.phone,
-      surname: user.surname,
-      other_names: user.other_names,
-      access_granted: user.access_granted,
-      role: staffAssignment?.role ?? null,
-      merchant_id: staffAssignment?.merchant_id ?? null,
-      branch_id: staffAssignment?.branch_id ?? null,
+      surname: staffAssignment.surname,
+      other_names: staffAssignment.other_names,
+      access_granted: staffAssignment.access_granted,
+      role: staffAssignment.role,
+      merchant_id: staffAssignment.merchant_id,
+      branch_id: staffAssignment.branch_id,
     };
 
     // Issue custom JWT access token
@@ -194,6 +196,7 @@ export class AuthService {
       authUserResponse.role ?? "",
       authUserResponse.merchant_id,
       authUserResponse.branch_id,
+      staffAssignment.staff_id,
     );
 
     // Generate and store refresh token
@@ -266,9 +269,9 @@ export class AuthService {
       id: user.id,
       email: user.email || "",
       phone: user.phone,
-      surname: user.surname,
-      other_names: user.other_names,
-      access_granted: user.access_granted,
+      surname: staffAssignment?.surname ?? null,
+      other_names: staffAssignment?.other_names ?? null,
+      access_granted: staffAssignment?.access_granted ?? false,
       role: staffAssignment?.role ?? null,
       merchant_id: staffAssignment?.merchant_id ?? null,
       branch_id: staffAssignment?.branch_id ?? null,
@@ -296,9 +299,9 @@ export class AuthService {
       id: user.id,
       email: user.email || "",
       phone: user.phone,
-      surname: user.surname,
-      other_names: user.other_names,
-      access_granted: user.access_granted,
+      surname: staffAssignment?.surname ?? null,
+      other_names: staffAssignment?.other_names ?? null,
+      access_granted: staffAssignment?.access_granted ?? false,
       role: staffAssignment?.role ?? null,
       merchant_id: staffAssignment?.merchant_id ?? null,
       branch_id: staffAssignment?.branch_id ?? null,
@@ -310,6 +313,7 @@ export class AuthService {
       authUserResponse.role ?? "",
       authUserResponse.merchant_id,
       authUserResponse.branch_id,
+      staffAssignment?.staff_id ?? null,
     );
 
     const deviceFingerprint = TokenService.computeDeviceFingerprint(
@@ -346,35 +350,26 @@ export class AuthService {
   }
 
   /**
-   * Normalize Ghana phone numbers to E.164 format.
-   */
-  private normalizePhone(phone: string): string {
-    let cleaned = phone.replace(/\s/g, "").replace(/-/g, "");
-    if (cleaned.startsWith("0")) {
-      cleaned = "+233" + cleaned.slice(1);
-    }
-    if (!cleaned.startsWith("+")) {
-      cleaned = "+" + cleaned;
-    }
-    return cleaned;
-  }
-
-  /**
    * Resolve a user's primary merchant_id and branch_id via the staff table.
    * Returns null if the user has no staff row (e.g. unassigned admin).
-   * Picks the first active staff row ordered by id for determinism.
+   * Picks the first active staff row ordered by id for determinism. Also
+   * carries surname / other_names / access_granted — all live on `staff`,
+   * not `users`.
    */
   private async resolveStaffAssignment(userId: string): Promise<{
     staff_id: number;
     role: Database["public"]["Enums"]["role"];
     merchant_id: number;
     branch_id: number;
+    surname: string | null;
+    other_names: string | null;
+    access_granted: boolean;
     created_at: string;
     updated_at: string | null;
   } | null> {
     const { data: staff } = await supabaseAdmin
       .from("staff")
-      .select(`id, role, created_at, updated_at, branches(id, merchants(id))`)
+      .select(`id, role, surname, other_names, access_granted, created_at, updated_at, branches(id, merchants(id))`)
       .eq("user_id", userId)
       .is("deleted_at", null)
       .not("role", "is", null)
@@ -391,6 +386,9 @@ export class AuthService {
       role: staff.role,
       merchant_id: Number(merchant.id),
       branch_id: Number(branch.id),
+      surname: staff.surname ?? null,
+      other_names: staff.other_names ?? null,
+      access_granted: staff.access_granted ?? true,
       created_at: staff.created_at,
       updated_at: staff.updated_at,
     };

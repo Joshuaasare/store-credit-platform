@@ -33,6 +33,10 @@ branch_id: Type.Union([
 Type.Number(),
 Type.Null()
 ]),
+staff_id: Type.Union([
+Type.Number(),
+Type.Null()
+]),
 iat: Type.Number(),
 exp: Type.Number(),
 iss: Type.String(),
@@ -48,7 +52,10 @@ phone: Type.Union([
 Type.String(),
 Type.Null()
 ]),
-surname: Type.String(),
+surname: Type.Union([
+Type.String(),
+Type.Null()
+]),
 other_names: Type.Union([
 Type.String(),
 Type.Null()

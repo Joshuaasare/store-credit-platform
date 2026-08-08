@@ -94,11 +94,11 @@ export function StaffDialog({
     if (!open) return;
     reset({
       phone: staff?.user.phone ?? "",
-      surname: staff?.user.surname ?? "",
-      other_names: staff?.user.other_names ?? "",
+      surname: staff?.surname ?? "",
+      other_names: staff?.other_names ?? "",
       role: (staff?.role as "manager" | "cashier") ?? "cashier",
       branch_id: staff?.branch_id ?? (branches[0]?.id ?? 0),
-      access_granted: staff?.user.access_granted ?? true,
+      access_granted: staff?.access_granted ?? true,
       address: staff?.address ?? "",
       notes: staff?.notes ?? "",
     });

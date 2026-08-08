@@ -110,6 +110,14 @@ user_id: Type.Union([
 Type.String(),
 Type.Null()
 ]),
+surname: Type.Union([
+Type.String(),
+Type.Null()
+]),
+other_names: Type.Union([
+Type.String(),
+Type.Null()
+]),
 created_at: Type.String(),
 deleted_at: Type.Union([
 Type.String(),
@@ -122,8 +130,8 @@ export const BaseCustomerTransaction = Type.Object({
 id: Type.Number(),
 customer_id: Type.Number(),
 branch_id: Type.Number(),
-recorded_by_user_id: Type.Union([
-Type.String(),
+recorded_by_staff_id: Type.Union([
+Type.Number(),
 Type.Null()
 ]),
 amount: Type.Number(),
@@ -139,13 +147,7 @@ Type.Null()
 export type BaseUserProfile = Static<typeof BaseUserProfile>
 export const BaseUserProfile = Type.Object({
 id: Type.String(),
-surname: Type.String(),
-other_names: Type.Union([
-Type.String(),
-Type.Null()
-]),
 phone: Type.String(),
-access_granted: Type.Boolean(),
 last_login_at: Type.Union([
 Type.String(),
 Type.Null()
@@ -166,6 +168,15 @@ role: Type.Union([
 StaffRoleValues,
 Type.Null()
 ]),
+surname: Type.Union([
+Type.String(),
+Type.Null()
+]),
+other_names: Type.Union([
+Type.String(),
+Type.Null()
+]),
+access_granted: Type.Boolean(),
 address: Type.Union([
 Type.String(),
 Type.Null()

@@ -40,7 +40,7 @@ export interface LeaderboardStats {
 }
 
 // Records a redemption against a specific customer_credit row. The webapp
-// auto-approves on creation (approved_at = now(), approved_by_user_id = caller)
+// auto-approves on creation (approved_at = now(), approved_by_staff_id = caller)
 // — the approved_at column exists so a future customer-initiated flow can
 // record pending redemptions that await manager approval.
 export interface CreateRedemptionRequest {
