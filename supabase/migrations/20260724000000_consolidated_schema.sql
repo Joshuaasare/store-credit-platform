@@ -150,6 +150,139 @@ create index if not exists idx_customer_credit_customer_branch
   on public.customer_credit (customer_id, branch_id)
   where deleted_at is null;
 
+-- Staff directory hot path: users → staff → branches join, filtered by
+-- merchant via branches.merchant_id and limited to live (non-deleted) rows.
+create index if not exists idx_staff_user_branch
+  on public.staff (user_id, branch_id)
+  where deleted_at is null;
+
+-- Single-role-per-staff model: the role lives directly on the staff row
+-- (replaces the older staff_user_roles join table — that table is kept for
+-- now but no longer written to). Nullable so a staff row can exist briefly
+-- without a role; service code treats null as "no live role".
+alter table public.staff
+  add column if not exists role public.role;
+
+-- Hot path: list staff filtered by role within a merchant + last-manager
+-- guard (counts managers scoped to the merchant's branches).
+create index if not exists idx_staff_role
+  on public.staff (role)
+  where deleted_at is null;
+
+-- ──────────────────────────────────────────────────────────────────────────
+-- 8b. Name + access_granted columns live on staff / customers, NOT on users
+-- ──────────────────────────────────────────────────────────────────────────
+-- `users` is a phone-based OTP login identity — it carries no name and no
+-- access flag. A user's name is defined by their staff row (merchants'
+-- employees) OR their customer row (walk-in / app customers). The
+-- access_granted kill-switch also lives on `staff` (a staff member's access
+-- is per-assignment, not per-login-identity). Both `staff` and `customers`
+-- get their own `surname` + `other_names` columns; `staff` gets
+-- `access_granted`; the legacy `users.surname` / `users.other_names` /
+-- `users.access_granted` columns are dropped (data should be backfilled onto
+-- the matching staff / customers rows before re-applying this section).
+alter table public.staff
+  add column if not exists surname text,
+  add column if not exists other_names text,
+  add column if not exists access_granted boolean not null default true;
+
+alter table public.customers
+  add column if not exists surname text,
+  add column if not exists other_names text;
+
+alter table public.users
+  drop column if exists surname,
+  drop column if exists other_names,
+  drop column if exists access_granted;
+
+-- ──────────────────────────────────────────────────────────────────────────
+-- 8c. recorded_by_staff_id / approved_by_staff_id FKs → staff
+-- ──────────────────────────────────────────────────────────────────────────
+-- customer_purchases and customer_credit_redemptions previously recorded the
+-- acting cashier via a users FK (`recorded_by_user_id` / `approved_by_user_id`).
+-- Names live on `staff` now, so the FK must point at `staff.id` directly — this
+-- lets the activity feed join `staff(surname, other_names)` for the "Recorded
+-- by" / "Approved by" columns without going through `users`.
+--
+-- Idempotent rename: if the *_user_id column still exists, drop its FK, copy
+-- the values into a new `*_staff_id bigint` column, drop the old column, and
+-- add the staff FK. If the rename has already been applied, the old column no
+-- longer exists so the `information_schema` guard skips the block. The
+-- `customer_credit_redemptions` table also gets a `recorded_by_staff_id`
+-- column (for pending redemptions awaiting approval — the recording cashier is
+-- distinct from the approving manager).
+do $$
+begin
+  -- customer_purchases: recorded_by_user_id → recorded_by_staff_id
+  if exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public' and table_name = 'customer_purchases'
+      and column_name = 'recorded_by_user_id'
+  ) then
+    alter table public.customer_purchases drop constraint if exists customer_purchases_recorded_by_user_id_fkey;
+    alter table public.customer_purchases add column if not exists recorded_by_staff_id bigint;
+    update public.customer_purchases cp
+      set recorded_by_staff_id = s.id
+      from public.staff s
+      where cp.recorded_by_user_id = s.user_id;
+    alter table public.customer_purchases drop column if exists recorded_by_user_id;
+  end if;
+  if not exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public' and table_name = 'customer_purchases'
+      and column_name = 'recorded_by_staff_id'
+  ) then
+    alter table public.customer_purchases add column recorded_by_staff_id bigint;
+  end if;
+  alter table public.customer_purchases
+    drop constraint if exists customer_purchases_recorded_by_staff_id_fkey;
+  alter table public.customer_purchases
+    add constraint customer_purchases_recorded_by_staff_id_fkey
+    foreign key (recorded_by_staff_id) references public.staff(id) on delete set null;
+
+  -- customer_credit_redemptions: approved_by_user_id → approved_by_staff_id
+  if exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public' and table_name = 'customer_credit_redemptions'
+      and column_name = 'approved_by_user_id'
+  ) then
+    alter table public.customer_credit_redemptions drop constraint if exists customer_credit_redemptions_approved_by_user_id_fkey;
+    alter table public.customer_credit_redemptions add column if not exists approved_by_staff_id bigint;
+    update public.customer_credit_redemptions r
+      set approved_by_staff_id = s.id
+      from public.staff s
+      where r.approved_by_user_id = s.user_id;
+    alter table public.customer_credit_redemptions drop column if exists approved_by_user_id;
+  end if;
+  if not exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public' and table_name = 'customer_credit_redemptions'
+      and column_name = 'approved_by_staff_id'
+  ) then
+    alter table public.customer_credit_redemptions add column approved_by_staff_id bigint;
+  end if;
+  alter table public.customer_credit_redemptions
+    drop constraint if exists customer_credit_redemptions_approved_by_staff_id_fkey;
+  alter table public.customer_credit_redemptions
+    add constraint customer_credit_redemptions_approved_by_staff_id_fkey
+    foreign key (approved_by_staff_id) references public.staff(id) on delete set null;
+
+  -- customer_credit_redemptions: recorded_by_staff_id (new — recording cashier
+  -- distinct from approving manager; null on existing rows).
+  if not exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public' and table_name = 'customer_credit_redemptions'
+      and column_name = 'recorded_by_staff_id'
+  ) then
+    alter table public.customer_credit_redemptions add column recorded_by_staff_id bigint;
+  end if;
+  alter table public.customer_credit_redemptions
+    drop constraint if exists customer_credit_redemptions_recorded_by_staff_id_fkey;
+  alter table public.customer_credit_redemptions
+    add constraint customer_credit_redemptions_recorded_by_staff_id_fkey
+    foreign key (recorded_by_staff_id) references public.staff(id) on delete set null;
+end $$;
+
 -- ──────────────────────────────────────────────────────────────────────────
 -- 9. Leaderboard RPCs
 -- ──────────────────────────────────────────────────────────────────────────
@@ -244,7 +377,7 @@ as $$
     c.id          as customer_id,
     c.phone       as phone,
     c.user_id     as user_id,
-    coalesce(nullif(trim(coalesce(u.surname, '') || ' ' || coalesce(u.other_names, '')), ''), 'Unnamed customer') as customer_name,
+    coalesce(nullif(trim(coalesce(c.surname, '') || ' ' || coalesce(c.other_names, '')), ''), 'Unnamed customer') as customer_name,
     bp.branch_id as branch_id,
     a.total_purchases        as total_purchases,
     a.total_credits_issued   as total_credits_issued,
@@ -252,7 +385,6 @@ as $$
     a.transaction_count      as transaction_count
   from agg a
   left join public.customers c on c.id = a.customer_id
-  left join public.users     u on u.id = c.user_id
   left join branch_pick      bp on bp.customer_id = a.customer_id
   order by
     case
@@ -395,16 +527,15 @@ as $$
            c.phone,
            c.user_id,
            coalesce(
-             nullif(trim(coalesce(u.surname, '') || ' ' || coalesce(u.other_names, '')), ''),
+             nullif(trim(coalesce(c.surname, '') || ' ' || coalesce(c.other_names, '')), ''),
              'Unnamed customer'
            ) as customer_name
     from scoped_customers sc
     join public.customers c on c.id = sc.customer_id
-    left join public.users  u on u.id = c.user_id
     where p_search is null
        or c.phone ilike '%' || p_search || '%'
-       or u.surname ilike '%' || p_search || '%'
-       or coalesce(u.other_names, '') ilike '%' || p_search || '%'
+       or c.surname ilike '%' || p_search || '%'
+       or coalesce(c.other_names, '') ilike '%' || p_search || '%'
   ),
   purchase_agg as (
     select p.customer_id,

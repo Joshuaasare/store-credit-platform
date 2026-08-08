@@ -154,45 +154,48 @@ export type Database = {
         Row: {
           amount_redeemed: number
           approved_at: string | null
-          approved_by_user_id: string | null
+          approved_by_staff_id: number | null
           branch_id: number
           created_at: string
           credit_id: number
           customer_id: number
           deleted_at: string | null
           id: number
+          recorded_by_staff_id: number | null
           updated_at: string | null
         }
         Insert: {
           amount_redeemed: number
           approved_at?: string | null
-          approved_by_user_id?: string | null
+          approved_by_staff_id?: number | null
           branch_id: number
           created_at?: string
           credit_id: number
           customer_id: number
           deleted_at?: string | null
           id?: number
+          recorded_by_staff_id?: number | null
           updated_at?: string | null
         }
         Update: {
           amount_redeemed?: number
           approved_at?: string | null
-          approved_by_user_id?: string | null
+          approved_by_staff_id?: number | null
           branch_id?: number
           created_at?: string
           credit_id?: number
           customer_id?: number
           deleted_at?: string | null
           id?: number
+          recorded_by_staff_id?: number | null
           updated_at?: string | null
         }
         Relationships: [
           {
-            foreignKeyName: "customer_credit_redemptions_approved_by_user_id_fkey"
-            columns: ["approved_by_user_id"]
+            foreignKeyName: "customer_credit_redemptions_approved_by_staff_id_fkey"
+            columns: ["approved_by_staff_id"]
             isOneToOne: false
-            referencedRelation: "users"
+            referencedRelation: "staff"
             referencedColumns: ["id"]
           },
           {
@@ -216,6 +219,13 @@ export type Database = {
             referencedRelation: "customers"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "customer_credit_redemptions_recorded_by_staff_id_fkey"
+            columns: ["recorded_by_staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
         ]
       }
       customer_purchases: {
@@ -226,7 +236,7 @@ export type Database = {
           customer_id: number
           deleted_at: string | null
           id: number
-          recorded_by_user_id: string | null
+          recorded_by_staff_id: number | null
           transaction_date: number
           updated_at: string | null
         }
@@ -237,7 +247,7 @@ export type Database = {
           customer_id: number
           deleted_at?: string | null
           id?: number
-          recorded_by_user_id?: string | null
+          recorded_by_staff_id?: number | null
           transaction_date: number
           updated_at?: string | null
         }
@@ -248,11 +258,18 @@ export type Database = {
           customer_id?: number
           deleted_at?: string | null
           id?: number
-          recorded_by_user_id?: string | null
+          recorded_by_staff_id?: number | null
           transaction_date?: number
           updated_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "customer_purchases_recorded_by_staff_id_fkey"
+            columns: ["recorded_by_staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "customer_transactions_branch_id_fkey"
             columns: ["branch_id"]
@@ -267,39 +284,41 @@ export type Database = {
             referencedRelation: "customers"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "customer_transactions_recorded_by_user_id_fkey"
-            columns: ["recorded_by_user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
         ]
       }
       customers: {
         Row: {
+          avatar_url: string | null
           created_at: string
           deleted_at: string | null
           id: number
+          other_names: string | null
           phone: string | null
+          surname: string | null
           unique_id: string | null
           updated_at: string | null
           user_id: string | null
         }
         Insert: {
+          avatar_url?: string | null
           created_at?: string
           deleted_at?: string | null
           id?: number
+          other_names?: string | null
           phone?: string | null
+          surname?: string | null
           unique_id?: string | null
           updated_at?: string | null
           user_id?: string | null
         }
         Update: {
+          avatar_url?: string | null
           created_at?: string
           deleted_at?: string | null
           id?: number
+          other_names?: string | null
           phone?: string | null
+          surname?: string | null
           unique_id?: string | null
           updated_at?: string | null
           user_id?: string | null
@@ -618,32 +637,44 @@ export type Database = {
       }
       staff: {
         Row: {
+          access_granted: boolean
           address: string | null
           branch_id: number
           created_at: string
           deleted_at: string | null
           id: number
           notes: string | null
+          other_names: string | null
+          role: Database["public"]["Enums"]["role"] | null
+          surname: string | null
           updated_at: string | null
           user_id: string
         }
         Insert: {
+          access_granted?: boolean
           address?: string | null
           branch_id: number
           created_at?: string
           deleted_at?: string | null
           id?: number
           notes?: string | null
+          other_names?: string | null
+          role?: Database["public"]["Enums"]["role"] | null
+          surname?: string | null
           updated_at?: string | null
           user_id: string
         }
         Update: {
+          access_granted?: boolean
           address?: string | null
           branch_id?: number
           created_at?: string
           deleted_at?: string | null
           id?: number
           notes?: string | null
+          other_names?: string | null
+          role?: Database["public"]["Enums"]["role"] | null
+          surname?: string | null
           updated_at?: string | null
           user_id?: string
         }
@@ -664,95 +695,41 @@ export type Database = {
           },
         ]
       }
-      staff_user_roles: {
-        Row: {
-          assigned_by_user_id: string
-          created_at: string
-          deleted_at: string | null
-          id: number
-          role: Database["public"]["Enums"]["role"]
-          updated_at: string | null
-          user_id: string
-        }
-        Insert: {
-          assigned_by_user_id: string
-          created_at?: string
-          deleted_at?: string | null
-          id?: number
-          role: Database["public"]["Enums"]["role"]
-          updated_at?: string | null
-          user_id: string
-        }
-        Update: {
-          assigned_by_user_id?: string
-          created_at?: string
-          deleted_at?: string | null
-          id?: number
-          role?: Database["public"]["Enums"]["role"]
-          updated_at?: string | null
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "staff_user_roles_assigned_by_user_id_fkey"
-            columns: ["assigned_by_user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "staff_user_roles_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "users"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       users: {
         Row: {
-          access_granted: boolean
           created_at: string
           deleted_at: string | null
           email: string | null
           id: string
           last_login_at: string | null
-          other_names: string | null
           otp: string | null
           otp_attempts: number | null
           otp_expires_at: string | null
           phone: string
-          surname: string
           updated_at: string | null
         }
         Insert: {
-          access_granted?: boolean
           created_at?: string
           deleted_at?: string | null
           email?: string | null
           id: string
           last_login_at?: string | null
-          other_names?: string | null
           otp?: string | null
           otp_attempts?: number | null
           otp_expires_at?: string | null
           phone: string
-          surname: string
           updated_at?: string | null
         }
         Update: {
-          access_granted?: boolean
           created_at?: string
           deleted_at?: string | null
           email?: string | null
           id?: string
           last_login_at?: string | null
-          other_names?: string | null
           otp?: string | null
           otp_attempts?: number | null
           otp_expires_at?: string | null
           phone?: string
-          surname?: string
           updated_at?: string | null
         }
         Relationships: []

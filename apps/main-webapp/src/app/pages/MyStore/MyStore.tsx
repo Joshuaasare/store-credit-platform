@@ -16,7 +16,7 @@ export default function MyStorePage() {
     void fetchStore();
   }, [fetchStore]);
 
-  const isManager = (user?.roles ?? []).some((r) => r.role === "manager");
+  const isManager = user?.role === "manager";
   const cashierBranchId = user?.branch_id ?? null;
   const visibleBranches = isManager
     ? branches
@@ -30,7 +30,9 @@ export default function MyStorePage() {
     return (
       <div className="flex min-h-screen items-center justify-center px-4">
         <Card className="max-w-md p-6 text-center">
-          <h2 className="text-lg font-semibold">Couldn&rsquo;t load your store</h2>
+          <h2 className="text-lg font-semibold">
+            Couldn&rsquo;t load your store
+          </h2>
           <p className="text-muted-foreground mt-2 text-sm">{error}</p>
           <Button
             className="mt-4"
@@ -50,7 +52,8 @@ export default function MyStorePage() {
         <Card className="max-w-md p-6 text-center">
           <h2 className="text-lg font-semibold">No store assigned</h2>
           <p className="text-muted-foreground mt-2 text-sm">
-            We couldn&rsquo;t find your store. Contact your admin to be assigned.
+            We couldn&rsquo;t find your store. Contact your admin to be
+            assigned.
           </p>
         </Card>
       </div>
@@ -62,7 +65,7 @@ export default function MyStorePage() {
       {/* subtle page-top gradient anchor */}
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-x-0 top-0 h-64 bg-gradient-to-b from-primary/5 to-transparent"
+        className="from-primary/5 pointer-events-none absolute inset-x-0 top-0 h-64 bg-gradient-to-b to-transparent"
       />
       <div className="relative mx-auto max-w-7xl space-y-8">
         <StoreHero merchant={merchant} isManager={isManager} />

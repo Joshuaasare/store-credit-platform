@@ -22,6 +22,7 @@ import {
 } from "@shared/utils/customers.utils";
 import { formatEpochDateTime, formatGHS } from "@shared/utils/format";
 import { formatDisplayNumber, TYPE_META } from "@shared/utils/ui.utils";
+import { staffDisplayName } from "@shared/utils/staff.utils";
 import { AddRedemptionDialog } from "./AddRedemptionDialog";
 
 interface TransactionDetailDialogProps {
@@ -75,7 +76,12 @@ const DETAIL_FIELDS: {
     key: "recorded_by",
     label: "Recorded by",
     icon: UserRound,
-    value: (r) => r.recorded_by_user?.surname?.trim() || "—",
+    value: (r) =>
+      r.recorded_by_staff
+        ? staffDisplayName(r.recorded_by_staff)
+        : r.approved_by_staff
+          ? staffDisplayName(r.approved_by_staff)
+          : "—",
   },
 ];
 

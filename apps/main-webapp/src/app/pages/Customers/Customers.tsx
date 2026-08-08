@@ -1,17 +1,14 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import { useInfiniteQuery } from "@tanstack/react-query";
-import { Users, Search, X } from "lucide-react";
-import { debounce } from "throttle-debounce";
+import { Funnel, Users } from "lucide-react";
 import {
   Card,
   Skeleton,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-  Label,
-  Input,
+  useIsMobile,
+  Button,
+  Dialog,
+  DialogContent,
+  DialogHeader,
 } from "@store-credit-platform/web-components";
 import InfiniteScroll from "../../components/InfiniteScroll/InfiniteScroll";
 import { customerService } from "@store-credit-platform/api-services";
@@ -19,53 +16,38 @@ import { useStoreStore } from "@shared/stores/storeStore";
 import { useAuthStore } from "@shared/stores/authStore";
 import { CustomerListRow } from "@shared/types/api.types";
 import { CustomerCard } from "./components/CustomerCard";
+import useDebounce from "@shared/hooks/useDebounce";
+import SearchInput from "../../components/SearchInput/SearchInput";
+import { FilterBar } from "../../components/FilterBar/FilterBar";
+import { isEmpty } from "@shared/utils/misc.utils";
+import { allBranchOption } from "@shared/utils/options.utils";
 
 const LIMIT = 20;
-const SEARCH_DEBOUNCE_MS = 300;
 
 export default function Customers() {
   const { branches } = useStoreStore();
   const user = useAuthStore((s) => s.user);
   const userBranchId = user?.branch_id ?? null;
-
   // Branch scope: defaults to the caller's branch (null when they have none
   // or when "All branches" is chosen). `null` = merchant-wide.
   const [branchId, setBranchId] = useState<number | null>(userBranchId);
-  // Controlled input value — updates immediately for a snappy field.
   const [searchInput, setSearchInput] = useState("");
-  // Debounced value — drives the query key so we don't fire a request per
-  // keystroke.
-  const [search, setSearch] = useState("");
-
-  // Stable debounced setter: created once, reads the latest input via the
-  // closure arg. `debounce` from throttle-debounce returns a cancellable fn.
-  const debouncedSetSearch = useRef(
-    debounce(SEARCH_DEBOUNCE_MS, (val: string) => setSearch(val)),
-  ).current;
-  useEffect(() => () => debouncedSetSearch.cancel(), [debouncedSetSearch]);
-
-  const onSearchChange = (val: string) => {
-    setSearchInput(val);
-    debouncedSetSearch(val);
-  };
-
-  const clearSearch = () => {
-    setSearchInput("");
-    setSearch("");
-    debouncedSetSearch.cancel();
-  };
+  const debouncedSearchQuery = useDebounce(searchInput, 300);
+  const trimmedSearch = debouncedSearchQuery.trim();
+  const isMobile = useIsMobile();
+  const [mode, setMode] = useState<"filter">();
 
   const customersQuery = useInfiniteQuery({
     queryKey: [
       "customers",
       "list",
-      { branchId, search: search.trim() || null },
+      { branchId, search: trimmedSearch || null },
     ],
     queryFn: ({ pageParam }) => {
       const offset = (pageParam as number) ?? 0;
       return customerService.listCustomers({
         branch_id: branchId ?? undefined,
-        search: search.trim() || undefined,
+        search: trimmedSearch || undefined,
         limit: LIMIT,
         offset,
       });
@@ -93,7 +75,37 @@ export default function Customers() {
 
   const hasNextPage = customersQuery.hasNextPage;
   const isFetching = customersQuery.isFetching;
-  const trimmedSearch = search.trim();
+
+  const onClose = () => {
+    setMode(undefined);
+  };
+
+  const renderFilters = () => {
+    return (
+      <FilterBar
+        onFilterChange={(filter: string, v: string | string[]) => {
+          if (filter === "branch-filter") {
+            setBranchId(v === "all" ? null : Number(v));
+          }
+        }}
+        filters={[
+          {
+            type: "select",
+            label: "Branch",
+            placeholder: "Filter by Branch",
+            id: "branch-filter",
+            disabled: !isEmpty(searchInput),
+            options: [allBranchOption].concat(
+              branches.map((branch) => ({
+                label: branch.name ?? "",
+                value: branch.id.toString(),
+              })),
+            ),
+          },
+        ]}
+      />
+    );
+  };
 
   return (
     <div className="relative min-h-screen px-4 py-6 md:px-8 md:py-10">
@@ -119,8 +131,8 @@ export default function Customers() {
             <div className="space-y-1">
               <h1 className="text-3xl font-bold tracking-tight">Customers</h1>
               <p className="text-muted-foreground text-sm">
-                Every customer who has made a purchase at your store, their total
-                spend, and the credit they have available.
+                Every customer who has made a purchase at your store, their
+                total spend, and the credit they have available.
               </p>
             </div>
           </div>
@@ -132,53 +144,27 @@ export default function Customers() {
           style={{ animationDelay: "60ms" }}
         >
           <div className="flex flex-wrap items-end gap-3">
-            <div className="space-y-1.5">
-              <Label className="text-muted-foreground text-xs">Branch</Label>
-              <Select
-                value={branchId == null ? "all" : String(branchId)}
-                onValueChange={(v) =>
-                  setBranchId(v === "all" ? null : Number(v))
-                }
-              >
-                <SelectTrigger className="h-9 w-[200px]">
-                  <SelectValue placeholder="All branches" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All branches</SelectItem>
-                  {branches.map((b) => (
-                    <SelectItem key={b.id} value={String(b.id)}>
-                      {b.name?.trim() || "Unnamed branch"}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
             <div className="min-w-[220px] flex-1 space-y-1.5">
-              <Label className="text-muted-foreground text-xs">
-                Search by name or phone
-              </Label>
               <div className="relative">
-                <Search className="text-muted-foreground pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" />
-                <Input
-                  type="text"
-                  value={searchInput}
-                  onChange={(e) => onSearchChange(e.target.value)}
-                  placeholder="e.g. Joshua or 024…"
-                  className="pl-9 pr-9"
+                <SearchInput
+                  searchPlaceholder="Search staff"
+                  searchQuery={searchInput}
+                  onSearch={setSearchInput}
                 />
-                {searchInput && (
-                  <button
-                    type="button"
-                    onClick={clearSearch}
-                    aria-label="Clear search"
-                    className="text-muted-foreground hover:text-foreground absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 transition-colors"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                )}
               </div>
             </div>
+
+            {!isMobile && renderFilters()}
+            {isMobile && (
+              <Button
+                variant="outline"
+                className="relative rounded-sm p-2"
+                onClick={() => setMode("filter")}
+              >
+                <Funnel />
+                <span className="bg-primary absolute right-1 top-1 h-2 w-2 rounded-full" />
+              </Button>
+            )}
 
             <div className="text-muted-foreground ml-auto self-end text-xs tabular-nums">
               {customersQuery.isPending ? "—" : `${total} customers`}
@@ -238,6 +224,17 @@ export default function Customers() {
           )}
         </div>
       </div>
+
+      {mode === "filter" && isMobile && (
+        <Dialog open={mode === "filter" && isMobile} onOpenChange={onClose}>
+          <DialogContent>
+            <DialogHeader>
+              <h2 className="text-left">Filters</h2>
+            </DialogHeader>
+            {renderFilters()}
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 }

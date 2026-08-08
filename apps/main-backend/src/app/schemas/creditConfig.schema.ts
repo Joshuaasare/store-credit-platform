@@ -1,19 +1,7 @@
 import { Type, Static } from '@sinclair/typebox'
-import { BaseBranch, ApiErrorResponse } from './main.schema'
+import { CreditTypeValues, CumulativeScopeValues, BaseBranch, ApiErrorResponse, BaseCustomerCredit } from './main.schema'
 
 
-
-export type CreditTypeValues = Static<typeof CreditTypeValues>
-export const CreditTypeValues = Type.Union([
-Type.Literal("fixed"),
-Type.Literal("percentage")
-])
-
-export type CumulativeScopeValues = Static<typeof CumulativeScopeValues>
-export const CumulativeScopeValues = Type.Union([
-Type.Literal("per_branch"),
-Type.Literal("merchant_wide")
-])
 
 export type RunningCreditConfigGroup = Static<typeof RunningCreditConfigGroup>
 export const RunningCreditConfigGroup = Type.Object({
@@ -254,37 +242,8 @@ FixedCreditConfigDeleteResponse,
 ApiErrorResponse
 ])
 
-export type CustomerCreditRow = Static<typeof CustomerCreditRow>
-export const CustomerCreditRow = Type.Object({
-id: Type.Number(),
-customer_id: Type.Number(),
-branch_id: Type.Number(),
-credit_amount: Type.Number(),
-expires_at: Type.Union([
-Type.Number(),
-Type.Null()
-]),
-revoked_at: Type.Union([
-Type.String(),
-Type.Null()
-]),
-revoked_by_user_id: Type.Union([
-Type.String(),
-Type.Null()
-]),
-created_at: Type.String(),
-updated_at: Type.Union([
-Type.String(),
-Type.Null()
-]),
-deleted_at: Type.Union([
-Type.String(),
-Type.Null()
-])
-})
-
 export type CustomerCreditWithRemaining = Static<typeof CustomerCreditWithRemaining>
-export const CustomerCreditWithRemaining = Type.Composite([CustomerCreditRow, Type.Object({
+export const CustomerCreditWithRemaining = Type.Composite([BaseCustomerCredit, Type.Object({
 remaining: Type.Number(),
 redeemed_total: Type.Number()
 })])

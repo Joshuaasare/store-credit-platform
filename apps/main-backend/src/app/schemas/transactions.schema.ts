@@ -1,5 +1,5 @@
 import { Type, Static } from '@sinclair/typebox'
-import { BaseBranch, ApiErrorResponse, BaseCustomer, BaseCustomerTransaction, BaseUserProfile } from './main.schema'
+import { BaseBranch, ApiErrorResponse, BaseCustomer, BaseCustomerTransaction, BaseUserProfile, BaseStaff } from './main.schema'
 
 
 
@@ -15,8 +15,12 @@ export type CustomerTransactions = Static<typeof CustomerTransactions>
 export const CustomerTransactions = Type.Composite([BaseCustomerTransaction, Type.Object({
 customer: CustomerWithUser,
 branch: BaseBranch,
-recorded_by_user: Type.Union([
-BaseUserProfile,
+recorded_by_staff: Type.Union([
+BaseStaff,
+Type.Null()
+]),
+approved_by_staff: Type.Union([
+BaseStaff,
 Type.Null()
 ])
 })])

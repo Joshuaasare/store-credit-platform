@@ -67,3 +67,19 @@ export function formatEpochDateTime(epochSeconds: number): string {
     minute: "2-digit",
   });
 }
+
+/**
+ * Format an ISO 8601 timestamp (the format Postgres timestamptz serializes
+ * to) as a readable date string. Returns "—" for null/undefined. Used for
+ * columns like `users.last_login_at` that are NOT stored as epoch seconds.
+ */
+export function formatIsoDate(iso: string | null | undefined): string {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "—";
+  return d.toLocaleDateString(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
+}

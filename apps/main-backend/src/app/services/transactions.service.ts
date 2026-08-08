@@ -10,6 +10,7 @@ import {
   TransactionTypeFilter,
 } from "../schemas/transactions.schema";
 import { issueRunningCreditsForPurchase } from "./creditConfig.service";
+import { normalizePhone } from "../utils/phone.utils";
 
 // ────────────────────────────────────────────────────────────────────────────
 // Service
@@ -89,10 +90,10 @@ export class TransactionService {
         ? supabaseAdmin
             .from("customer_purchases")
             .select(
-              `id, customer_id, branch_id, recorded_by_user_id, amount, transaction_date, created_at,
+              `id, customer_id, branch_id, recorded_by_staff_id, amount, transaction_date, created_at,
                customer:customers(${QueryFragments.BASE_CUSTOMER}, users(${QueryFragments.BASE_USER_PROFILE})),
                branch:branches(${QueryFragments.BASE_BRANCH}),
-               recorded_by_user:users(${QueryFragments.BASE_USER_PROFILE})`,
+               recorded_by_staff:staff(${QueryFragments.BASE_STAFF})`,
             )
             .in("branch_id", filteredBranchIds)
             .is("deleted_at", null)
@@ -132,11 +133,11 @@ export class TransactionService {
       redemptionsRes = await supabaseAdmin
         .from("customer_credit_redemptions")
         .select(
-          `id, credit_id, amount_redeemed, approved_at, approved_by_user_id, created_at,
+          `id, credit_id, amount_redeemed, approved_at, approved_by_staff_id, recorded_by_staff_id, created_at,
            credit:customer_credit(id, customer_id, branch_id,
              customer:customers(${QueryFragments.BASE_CUSTOMER}, users(${QueryFragments.BASE_USER_PROFILE})),
              branch:branches(${QueryFragments.BASE_BRANCH})),
-           approved_by_user:users(${QueryFragments.BASE_USER_PROFILE})`,
+           approved_by_staff:staff!approved_by_staff_id(${QueryFragments.BASE_STAFF})`,
         )
         .in("credit_id", creditIds)
         .is("deleted_at", null)
@@ -153,7 +154,7 @@ export class TransactionService {
       id: number;
       customer_id: number;
       branch_id: number;
-      recorded_by_user_id: string | null;
+      recorded_by_staff_id: number | null;
       amount: number;
       transaction_date: number;
       transaction_type: "purchase" | "credit_issue" | "credit_redeem";
@@ -161,7 +162,8 @@ export class TransactionService {
       credit_id: number | null;
       customer: any;
       branch: any;
-      recorded_by_user: any;
+      recorded_by_staff: any;
+      approved_by_staff: any;
     };
 
     const unioned: UnionRow[] = [];
@@ -175,7 +177,7 @@ export class TransactionService {
           id: r.id,
           customer_id: r.customer_id,
           branch_id: r.branch_id,
-          recorded_by_user_id: r.recorded_by_user_id,
+          recorded_by_staff_id: r.recorded_by_staff_id ?? null,
           amount: Number(r.amount),
           transaction_date: td,
           transaction_type: "purchase",
@@ -183,7 +185,8 @@ export class TransactionService {
           credit_id: null,
           customer: r.customer,
           branch: r.branch,
-          recorded_by_user: r.recorded_by_user,
+          recorded_by_staff: r.recorded_by_staff ?? null,
+          approved_by_staff: null,
         });
       }
     }
@@ -197,7 +200,7 @@ export class TransactionService {
           id: r.id,
           customer_id: r.customer_id,
           branch_id: r.branch_id,
-          recorded_by_user_id: null,
+          recorded_by_staff_id: null,
           amount: Number(r.credit_amount),
           transaction_date: td,
           transaction_type: "credit_issue",
@@ -205,7 +208,8 @@ export class TransactionService {
           credit_id: r.id,
           customer: r.customer,
           branch: r.branch,
-          recorded_by_user: null,
+          recorded_by_staff: null,
+          approved_by_staff: null,
         });
       }
     }
@@ -220,7 +224,7 @@ export class TransactionService {
           id: r.id,
           customer_id: credit?.customer_id,
           branch_id: credit?.branch_id,
-          recorded_by_user_id: r.approved_by_user_id ?? null,
+          recorded_by_staff_id: r.recorded_by_staff_id ?? null,
           amount: Number(r.amount_redeemed),
           transaction_date: td,
           transaction_type: "credit_redeem",
@@ -228,7 +232,8 @@ export class TransactionService {
           credit_id: r.credit_id,
           customer: credit?.customer,
           branch: credit?.branch,
-          recorded_by_user: r.approved_by_user ?? null,
+          recorded_by_staff: null,
+          approved_by_staff: r.approved_by_staff ?? null,
         });
       }
     }
@@ -268,7 +273,7 @@ export class TransactionService {
       throw new Error("Caller has no assigned branch");
     }
 
-    const phone = payload.phone.trim();
+    const phone = normalizePhone(payload.phone);
 
     // 1. Lookup existing customer by phone (deleted_at IS NULL).
     const { data: existing } = await supabaseAdmin
@@ -302,15 +307,15 @@ export class TransactionService {
       .insert({
         customer_id: customerId,
         branch_id: branchId,
-        recorded_by_user_id: user.sub,
+        recorded_by_staff_id: user.staff_id ?? null,
         amount: payload.amount,
         transaction_date: nowEpoch,
       })
       .select(
-        `id, customer_id, branch_id, recorded_by_user_id, amount, transaction_date, created_at,
+        `id, customer_id, branch_id, recorded_by_staff_id, amount, transaction_date, created_at,
          customer:customers(${QueryFragments.BASE_CUSTOMER}, users(${QueryFragments.BASE_USER_PROFILE})),
          branch:branches(${QueryFragments.BASE_BRANCH}),
-         recorded_by_user:users(${QueryFragments.BASE_USER_PROFILE})`,
+         recorded_by_staff:staff(${QueryFragments.BASE_STAFF})`,
       )
       .single();
 

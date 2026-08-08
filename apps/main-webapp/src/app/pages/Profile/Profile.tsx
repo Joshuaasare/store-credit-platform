@@ -28,10 +28,7 @@ export default function ProfilePage() {
             <Row label="Other names" value={user?.other_names ?? "—"} />
             <Row label="Email" value={user?.email ?? "—"} />
             <Row label="Phone" value={user?.phone ?? "—"} />
-            <Row
-              label="Roles"
-              value={user?.roles.map((r) => r.role).join(", ") || "None"}
-            />
+            <Row label="Roles" value={user?.role ?? "None"} />
             <Row
               label="Access"
               value={user?.access_granted ? "Granted" : "Denied"}
@@ -45,7 +42,7 @@ export default function ProfilePage() {
 
 function Row({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex items-start justify-between gap-4 border-b last:border-0 pb-2 last:pb-0">
+    <div className="flex items-start justify-between gap-4 border-b pb-2 last:border-0 last:pb-0">
       <span className="text-muted-foreground">{label}</span>
       <span className="font-medium">{value}</span>
     </div>

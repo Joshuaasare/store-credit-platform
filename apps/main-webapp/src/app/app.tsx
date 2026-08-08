@@ -3,8 +3,6 @@ import { Routes, Route, Navigate } from "react-router-dom";
 import { ThemeProvider } from "./shared/providers/ThemeProvider";
 import { useAuthStore } from "@shared/stores/authStore";
 import ProtectedRoute from "./components/ProtectedRoute/ProtectedRoute";
-import Login from "./pages/Auth/Login";
-import VerifyOtp from "./pages/Auth/VerifyOTP";
 import Credits from "./pages/Credits/Credits";
 import MyStore from "./pages/MyStore/MyStore";
 import MainLayout from "./pages/MainLayout/MainLayout";
@@ -14,6 +12,9 @@ import TransactionsLeaderboard from "./pages/Transactions/TransactionsLeaderboar
 import TransactionsList from "./pages/Transactions/TransactionsList";
 import Customers from "./pages/Customers/Customers";
 import CustomerDetail from "./pages/Customers/CustomerDetail";
+import Staff from "./pages/Staff/Staff";
+import VerifyOtp from "./pages/auth/VerifyOTP";
+import Login from "./pages/auth/Login";
 
 export function App() {
   const initialize = useAuthStore((state) => state.initialize);
@@ -38,6 +39,7 @@ export function App() {
             </Route>
             <Route path="/customers" element={<Customers />} />
             <Route path="/customers/:customerId" element={<CustomerDetail />} />
+            <Route path="/staff" element={<Staff />} />
             <Route path="/dashboard" element={<Navigate to="/" replace />} />
           </Route>
         </Route>

@@ -143,15 +143,7 @@ export class BranchService {
             : null;
 
         return {
-          id: b.id,
-          merchant_id: b.merchant_id,
-          name: b.name,
-          phone: b.phone,
-          address: b.address,
-          city: b.city,
-          country_code: b.country_code,
-          is_active: b.is_active,
-          created_at: b.created_at,
+          ...b,
           staff_count: staffCount ?? 0,
           customer_count: customerCount ?? 0,
           credit_issued_this_month: creditIssuedThisMonth,
@@ -191,15 +183,7 @@ export class BranchService {
     }
 
     return {
-      id: branch.id,
-      merchant_id: branch.merchant_id,
-      name: branch.name,
-      phone: branch.phone,
-      address: branch.address,
-      city: branch.city,
-      country_code: branch.country_code,
-      is_active: branch.is_active,
-      created_at: branch.created_at,
+      ...branch,
       staff_count: 0,
       customer_count: 0,
       credit_issued_this_month: 0,

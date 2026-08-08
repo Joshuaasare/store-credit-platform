@@ -29,6 +29,7 @@ import {
   customerDisplayName,
   customerInitials,
 } from "@shared/utils/customers.utils";
+import { staffDisplayName } from "@shared/utils/staff.utils";
 import {
   TransactionsFilters,
   TransactionsFiltersValue,
@@ -219,11 +220,15 @@ export default function TransactionsList() {
       {
         id: "recorded_by",
         header: "Recorded by",
-        cell: ({ row }) => (
-          <span className="text-muted-foreground text-sm">
-            {row.original.recorded_by_user?.surname?.trim() || "—"}
-          </span>
-        ),
+        cell: ({ row }) => {
+          const r = row.original;
+          const staff = r.recorded_by_staff ?? r.approved_by_staff;
+          return (
+            <span className="text-muted-foreground text-sm">
+              {staff ? staffDisplayName(staff) : "—"}
+            </span>
+          );
+        },
       },
     ],
     [],
