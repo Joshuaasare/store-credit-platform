@@ -19,6 +19,9 @@
     },
     {
       "path": "./libs/api-services"
+    },
+    {
+      "path": "./apps/customer-app"
     }
   ]
 }
