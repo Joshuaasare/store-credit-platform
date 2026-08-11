@@ -132,6 +132,26 @@ create index if not exists idx_customer_credit_redemptions_credit_approved
   where approved_at is not null and deleted_at is null;
 
 -- ──────────────────────────────────────────────────────────────────────────
+-- 7b. customer_credit_redemptions: rejected_at + manager-approval workflow
+-- ──────────────────────────────────────────────────────────────────────────
+-- `rejected_at` is the distinct "rejected" terminal state — null = not
+-- rejected. The three redemption states are derived from approved_at /
+-- rejected_at (no status enum):
+--   Pending  → approved_at IS NULL AND rejected_at IS NULL
+--   Approved → approved_at IS NOT NULL
+--   Rejected → rejected_at IS NOT NULL (implies approved_at IS NULL)
+-- approved_at and rejected_at are mutually exclusive (enforced in the service
+-- layer). The merchant-side approval queue filters by these states, so the
+-- credit_id index below covers the rejected-at filtering path analogous to
+-- the approved-at index above.
+alter table public.customer_credit_redemptions
+  add column if not exists rejected_at timestamptz;
+
+create index if not exists idx_customer_credit_redemptions_credit_rejected
+  on public.customer_credit_redemptions (credit_id)
+  where rejected_at is not null and deleted_at is null;
+
+-- ──────────────────────────────────────────────────────────────────────────
 -- 8. Hot-path indexes for the new transactional tables
 -- ──────────────────────────────────────────────────────────────────────────
 -- Cumulative-spend lookback (running-config threshold check):

@@ -1,6 +1,6 @@
 /**
  * Auto-generated API Types
- * Generated on: 2026-08-08T10:43:37.397Z
+ * Generated on: 2026-08-10T19:15:57.243Z
  * 
  * ⚠️ DO NOT EDIT MANUALLY
  * Source: apps/smartschool-api/src/app/types/
@@ -144,6 +144,32 @@ export interface BaseCustomerCredit {
   expires_at: number | null;
   revoked_at: string | null;
   revoked_by_user_id: string | null;
+  created_at: string;
+  updated_at: string | null;
+  deleted_at: string | null;
+}
+
+
+
+
+
+
+
+
+
+
+
+
+export interface BaseCustomerCreditRedemption {
+  id: number;
+  credit_id: number;
+  customer_id: number;
+  branch_id: number;
+  amount_redeemed: number;
+  approved_at: string | null;
+  approved_by_staff_id: number | null;
+  recorded_by_staff_id: number | null;
+  rejected_at: string | null;
   created_at: string;
   updated_at: string | null;
   deleted_at: string | null;
@@ -496,20 +522,6 @@ export interface LeaderboardStats {
   total_credits_issued: number;
 }
 
-export interface CreateRedemptionRequest {
-  credit_id: number;
-  amount_redeemed: number;
-}
-
-export interface CreditRemainingResponse {
-  credit_id: number;
-  customer_id: number;
-  branch_id: number;
-  credit_amount: number;
-  redeemed_total: number;
-  remaining: number;
-}
-
 export type LeaderboardQuerystring = LeaderboardFilters;
 
 export interface LeaderboardResponse {
@@ -522,25 +534,9 @@ export interface LeaderboardStatsResponse {
   data: LeaderboardStats;
 }
 
-export interface CreateRedemptionResponse {
-  success: true;
-  data: CreditRemainingResponse;
-}
-
-export interface CreditRemainingApiResponseData {
-  success: true;
-  data: CreditRemainingResponse;
-}
-
 export type LeaderboardApiResponse = LeaderboardResponse | ApiErrorResponse;
 export type LeaderboardStatsApiResponse =
   | LeaderboardStatsResponse
-  | ApiErrorResponse;
-export type CreateRedemptionApiResponse =
-  | CreateRedemptionResponse
-  | ApiErrorResponse;
-export type CreditRemainingApiResponse =
-  | CreditRemainingApiResponseData
   | ApiErrorResponse;
 
 export interface CustomerListFilters {
@@ -638,6 +634,51 @@ export type MerchantMeApiResponse = MerchantMeResponse | ApiErrorResponse;
 
 export type MerchantMutationApiResponse =
   | MerchantMutationResponse
+  | ApiErrorResponse;
+
+export type RedemptionStatus = "pending" | "approved" | "rejected";
+
+export interface RedemptionCustomer extends BaseCustomer {
+  users: BaseUserProfile | null;
+}
+
+export interface RedemptionRow extends BaseCustomerCreditRedemption {
+  customer: RedemptionCustomer | null;
+  branch: BaseBranch | null;
+  credit: BaseCustomerCredit | null;
+  remaining: number;
+}
+
+export interface RedemptionsFilters {
+  
+  status: RedemptionStatus;
+  branch_id?: number | null;
+  limit?: number;
+  offset?: number;
+}
+
+export interface RedemptionsPage {
+  rows: RedemptionRow[];
+  total: number;
+  offset: number;
+  limit: number;
+}
+
+export type RedemptionsQuerystring = RedemptionsFilters;
+
+export interface RedemptionsResponse {
+  success: true;
+  data: RedemptionsPage;
+}
+
+export interface RedemptionMutationResponse {
+  success: true;
+  data: RedemptionRow;
+}
+
+export type RedemptionsApiResponse = RedemptionsResponse | ApiErrorResponse;
+export type RedemptionMutationApiResponse =
+  | RedemptionMutationResponse
   | ApiErrorResponse;
 
 export interface Staff extends BaseStaff {

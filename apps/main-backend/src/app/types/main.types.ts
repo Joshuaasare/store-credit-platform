@@ -127,6 +127,32 @@ export interface BaseCustomerCredit {
   deleted_at: string | null;
 }
 
+// Base row type for customer_credit_redemptions. Mirrors the
+// BASE_CUSTOMER_CREDIT_REDEMPTION query fragment. The three redemption states
+// are derived from approved_at / rejected_at (no status enum):
+//   Pending  → approved_at IS NULL AND rejected_at IS NULL
+//   Approved → approved_at IS NOT NULL
+//   Rejected → rejected_at IS NOT NULL (implies approved_at IS NULL)
+// approved_at and rejected_at are mutually exclusive (enforced in the service
+// layer). `recorded_by_staff_id` is the cashier/manager who recorded the row
+// (historic — the cashier-initiated creation flow is being removed); the future
+// customer-app initiation channel will leave it null. `approved_by_staff_id`
+// is the manager who approved the redemption.
+export interface BaseCustomerCreditRedemption {
+  id: number;
+  credit_id: number;
+  customer_id: number;
+  branch_id: number;
+  amount_redeemed: number;
+  approved_at: string | null;
+  approved_by_staff_id: number | null;
+  recorded_by_staff_id: number | null;
+  rejected_at: string | null;
+  created_at: string;
+  updated_at: string | null;
+  deleted_at: string | null;
+}
+
 export interface BaseRunningCreditConfig {
   id: number;
   config_group_id: string;

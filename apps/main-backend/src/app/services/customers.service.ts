@@ -1,13 +1,10 @@
 import { supabaseAdmin } from "../utils/supabase.client";
-import { AccessTokenPayload } from "../schemas/auth.schema";
 import { QueryFragments } from "../constants/queryFragments";
 import {
   LeaderboardSort,
   LeaderboardFilters,
   LeaderboardPage,
   LeaderboardStats,
-  CreateRedemptionRequest,
-  CreditRemainingResponse,
   CustomerListFilters,
   CustomerListRow,
   CustomerListPage,
@@ -416,134 +413,6 @@ export class CustomerService {
       live_credit_count: liveCreditCount,
       last_activity_epoch: lastActivityEpoch,
       credits,
-    };
-  }
-
-  /**
-   * Record a redemption against a specific customer_credit row. Auto-approves
-   * (approved_at = now(), approved_by_staff_id = caller) — the approved_at
-   * column exists so a future customer-initiated flow can record pending
-   * redemptions that await manager approval.
-   *
-   * Validates:
-   *   - The credit exists, is not deleted, and is not revoked.
-   *   - The credit's customer belongs to the caller's merchant (via the
-   *     credit.branch_id → branches.merchant_id join).
-   *   - The redemption amount does not exceed `remaining` (credit_amount −
-   *     SUM(approved redemptions)).
-   *
-   * Returns the live CreditRemainingResponse for that credit.
-   */
-  async createRedemption(
-    user: AccessTokenPayload,
-    payload: CreateRedemptionRequest,
-    merchantId: number,
-  ): Promise<CreditRemainingResponse> {
-    if (!(payload.amount_redeemed > 0)) {
-      throw new Error("Redemption amount must be greater than zero");
-    }
-
-    // Fetch the credit row joined to its branch for merchant scoping.
-    const { data: credit, error: creditErr } = await supabaseAdmin
-      .from("customer_credit")
-      .select(
-        `id, customer_id, branch_id, credit_amount, expires_at, revoked_at, deleted_at,
-         branch:branches(id, merchant_id)`,
-      )
-      .eq("id", payload.credit_id)
-      .maybeSingle();
-
-    if (creditErr) {
-      throw new Error(`Failed to load credit: ${creditErr.message}`);
-    }
-    if (!credit || credit.deleted_at) {
-      throw new Error("Credit not found");
-    }
-    if (credit.revoked_at) {
-      throw new Error("Credit has been revoked");
-    }
-    const branchMerchantId = (
-      credit as unknown as {
-        branch: { merchant_id: number } | null;
-      }
-    ).branch?.merchant_id ?? null;
-    if (branchMerchantId !== merchantId) {
-      throw new Error("Credit does not belong to your merchant");
-    }
-
-    const remaining = await this.getCreditRemaining(payload.credit_id);
-    if (payload.amount_redeemed > remaining.remaining) {
-      throw new Error(
-        `Redemption exceeds remaining credit (remaining: ${remaining.remaining})`,
-      );
-    }
-
-    const nowIso = new Date().toISOString();
-    const { error: insertErr } = await supabaseAdmin
-      .from("customer_credit_redemptions")
-      .insert({
-        credit_id: payload.credit_id,
-        customer_id: credit.customer_id,
-        branch_id: credit.branch_id,
-        amount_redeemed: payload.amount_redeemed,
-        approved_at: nowIso,
-        approved_by_staff_id: user.staff_id ?? null,
-      });
-
-    if (insertErr) {
-      throw new Error(`Failed to record redemption: ${insertErr.message}`);
-    }
-
-    // Re-fetch remaining after the insert so the caller gets the live snapshot.
-    return this.getCreditRemaining(payload.credit_id);
-  }
-
-  /**
-   * Compute `remaining = credit_amount − SUM(approved redemptions)` for a
-   * single customer_credit row. Throws if the credit is missing or revoked.
-   * Returned `redeemed_total` is the sum of approved, non-deleted redemptions.
-   */
-  async getCreditRemaining(creditId: number): Promise<CreditRemainingResponse> {
-    const { data: credit, error: creditErr } = await supabaseAdmin
-      .from("customer_credit")
-      .select(
-        "id, customer_id, branch_id, credit_amount, revoked_at, deleted_at",
-      )
-      .eq("id", creditId)
-      .maybeSingle();
-
-    if (creditErr) {
-      throw new Error(`Failed to load credit: ${creditErr.message}`);
-    }
-    if (!credit || credit.deleted_at) {
-      throw new Error("Credit not found");
-    }
-
-    const { data: sumRow, error: sumErr } = await supabaseAdmin
-      .from("customer_credit_redemptions")
-      .select("amount_redeemed")
-      .eq("credit_id", creditId)
-      .not("approved_at", "is", null)
-      .is("deleted_at", null);
-
-    if (sumErr) {
-      throw new Error(`Failed to load redemptions: ${sumErr.message}`);
-    }
-
-    const redeemedTotal = (sumRow ?? []).reduce(
-      (s, r) => s + Number((r as { amount_redeemed: number }).amount_redeemed),
-      0,
-    );
-    const creditAmount = Number(credit.credit_amount);
-    const remaining = Math.max(0, creditAmount - redeemedTotal);
-
-    return {
-      credit_id: creditId,
-      customer_id: credit.customer_id,
-      branch_id: credit.branch_id,
-      credit_amount: creditAmount,
-      redeemed_total: redeemedTotal,
-      remaining,
     };
   }
 }

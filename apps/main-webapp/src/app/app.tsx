@@ -12,6 +12,7 @@ import TransactionsLeaderboard from "./pages/Transactions/TransactionsLeaderboar
 import TransactionsList from "./pages/Transactions/TransactionsList";
 import Customers from "./pages/Customers/Customers";
 import CustomerDetail from "./pages/Customers/CustomerDetail";
+import Redemptions from "./pages/Redemptions/Redemptions";
 import Staff from "./pages/Staff/Staff";
 import VerifyOtp from "./pages/auth/VerifyOTP";
 import Login from "./pages/auth/Login";
@@ -39,6 +40,7 @@ export function App() {
             </Route>
             <Route path="/customers" element={<Customers />} />
             <Route path="/customers/:customerId" element={<CustomerDetail />} />
+            <Route path="/redemptions" element={<Redemptions />} />
             <Route path="/staff" element={<Staff />} />
             <Route path="/dashboard" element={<Navigate to="/" replace />} />
           </Route>
