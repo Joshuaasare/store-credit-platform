@@ -162,6 +162,7 @@ export type Database = {
           deleted_at: string | null
           id: number
           recorded_by_staff_id: number | null
+          rejected_at: string | null
           updated_at: string | null
         }
         Insert: {
@@ -175,6 +176,7 @@ export type Database = {
           deleted_at?: string | null
           id?: number
           recorded_by_staff_id?: number | null
+          rejected_at?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -188,6 +190,7 @@ export type Database = {
           deleted_at?: string | null
           id?: number
           recorded_by_staff_id?: number | null
+          rejected_at?: string | null
           updated_at?: string | null
         }
         Relationships: [

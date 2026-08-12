@@ -7,6 +7,7 @@ export * from "./services/customerService.js";
 export * from "./services/staffService.js";
 export * from "./services/transactionService.js";
 export * from "./services/creditConfigService.js";
+export * from "./services/redemptionService.js";
 export * from "./services/storageService.js";
 export * from "./services/accessTokenStorage.js";
 export * from "./types/api.types.js";
