@@ -5,12 +5,18 @@ import { AccessTokenPayload } from "../types/auth.types";
 
 const ACCESS_TOKEN_SECRET = process.env.ACCESS_TOKEN_SECRET;
 const REFRESH_TOKEN_SECRET = process.env.REFRESH_TOKEN_SECRET;
+const PENDING_TOKEN_SECRET =
+  process.env.PENDING_TOKEN_SECRET || REFRESH_TOKEN_SECRET || "";
 const ACCESS_TOKEN_TTL_MINUTES = parseInt(
   process.env.ACCESS_TOKEN_TTL_MINUTES || "15",
   10,
 );
 const REFRESH_TOKEN_TTL_DAYS = parseInt(
   process.env.REFRESH_TOKEN_TTL_DAYS || "7",
+  10,
+);
+const PENDING_TOKEN_TTL_MINUTES = parseInt(
+  process.env.PENDING_TOKEN_TTL_MINUTES || "5",
   10,
 );
 const TOKEN_ISSUER = process.env.TOKEN_ISSUER || "storecredit-api";
@@ -23,6 +29,12 @@ if (!ACCESS_TOKEN_SECRET || !REFRESH_TOKEN_SECRET) {
 }
 
 const accessTokenKey = new TextEncoder().encode(ACCESS_TOKEN_SECRET);
+// Dedicated pending-token key. Falls back to REFRESH_TOKEN_SECRET so dev
+// environments without PENDING_TOKEN_SECRET still work, but production should
+// set a distinct secret so a pending (registration) token can never be
+// mistaken for an access token — the `purpose: "customer_register"` claim is
+// the secondary guard.
+const pendingTokenKey = new TextEncoder().encode(PENDING_TOKEN_SECRET);
 
 export interface RefreshTokenRecord {
   jti: string;
@@ -73,6 +85,10 @@ export class TokenService {
 
   /**
    * Sign a short-lived JWT access token.
+   *
+   * `customerId` is null for staff logins and set to the `customers.id` for
+   * customer-app logins. Handlers assert `request.user.customer_id != null`
+   * to gate customer-only endpoints — no `persona` claim.
    */
   static async signAccessToken(
     userId: string,
@@ -81,6 +97,7 @@ export class TokenService {
     merchantId: number | null = null,
     branchId: number | null = null,
     staffId: number | null = null,
+    customerId: number | null = null,
   ): Promise<string> {
     const now = Math.floor(Date.now() / 1000);
     const jti = crypto.randomUUID();
@@ -92,6 +109,7 @@ export class TokenService {
       merchant_id: merchantId,
       branch_id: branchId,
       staff_id: staffId,
+      customer_id: customerId,
       jti,
     })
       .setProtectedHeader({ alg: "HS256" })
@@ -116,6 +134,55 @@ export class TokenService {
     });
 
     return payload as unknown as AccessTokenPayload;
+  }
+
+  /**
+   * Sign a 5-minute pending registration token. Stateless — no DB row, no
+   * in-memory store. Carries the verified phone (post-OTP) and a `purpose`
+   * claim so it can't be mistaken for an access token. The `/register`
+   * endpoint verifies this to authorize creating the `users` + `customers`
+   * rows without a separate pre-lookup. Replay-safe via natural idempotency:
+   * a replayed register finds a `users` row already exists and errors
+   * "already registered".
+   */
+  static async signPendingToken(phone: string): Promise<string> {
+    const now = Math.floor(Date.now() / 1000);
+    const jti = crypto.randomUUID();
+
+    return new SignJWT({
+      phone,
+      purpose: "customer_register",
+      jti,
+    })
+      .setProtectedHeader({ alg: "HS256" })
+      .setIssuedAt(now)
+      .setExpirationTime(`${PENDING_TOKEN_TTL_MINUTES}m`)
+      .setIssuer(TOKEN_ISSUER)
+      .setAudience(TOKEN_AUDIENCE)
+      .sign(pendingTokenKey);
+  }
+
+  /**
+   * Verify a pending registration token. Returns the verified phone on
+   * success, or null if the token is invalid, expired, or not a
+   * customer_register pending token.
+   */
+  static async verifyPendingToken(
+    token: string,
+  ): Promise<{ phone: string } | null> {
+    try {
+      const { payload } = await jwtVerify(token, pendingTokenKey, {
+        issuer: TOKEN_ISSUER,
+        audience: TOKEN_AUDIENCE,
+        clockTolerance: 5,
+      });
+      if (payload.purpose !== "customer_register" || !payload.phone) {
+        return null;
+      }
+      return { phone: payload.phone as string };
+    } catch {
+      return null;
+    }
   }
 
   /**

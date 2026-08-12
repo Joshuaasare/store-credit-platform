@@ -125,6 +125,24 @@ Type.Null()
 ])
 })
 
+export type CustomerAuthUser = Static<typeof CustomerAuthUser>
+export const CustomerAuthUser = Type.Object({
+id: Type.String(),
+phone: Type.Union([
+Type.String(),
+Type.Null()
+]),
+customer_id: Type.Number(),
+surname: Type.Union([
+Type.String(),
+Type.Null()
+]),
+other_names: Type.Union([
+Type.String(),
+Type.Null()
+])
+})
+
 export type BaseCustomerTransaction = Static<typeof BaseCustomerTransaction>
 export const BaseCustomerTransaction = Type.Object({
 id: Type.Number(),

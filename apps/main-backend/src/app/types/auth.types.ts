@@ -1,4 +1,4 @@
-import { StaffRoleValues } from "./main.types";
+import { StaffRoleValues, CustomerAuthUser } from "./main.types";
 
 export interface SendOtpRequest {
   phone: string;
@@ -16,6 +16,7 @@ export interface AccessTokenPayload {
   merchant_id: number | null;
   branch_id: number | null;
   staff_id: number | null;
+  customer_id: number | null;
   iat: number;
   exp: number;
   iss: string;
@@ -108,4 +109,115 @@ export type SessionRevokeApiResponse =
   | AuthErrorResponse;
 export type GetCurrentUserApiResponse =
   | GetCurrentUserResponse
+  | AuthErrorResponse;
+
+// ========================================
+// Customer App Auth (phone-based, no staff gate)
+// ========================================
+//
+// Separate namespace from staff auth (`/api/customer-auth/*`). Reuses the
+// underlying primitives (otp.store, normalizePhone, MessagingService,
+// PasswordService, RateLimitService, TokenService) but NOT the staff-gated
+// service logic — a customer has no `staff` row and must NOT be rejected by
+// `resolveStaffAssignment`. See docs/plans/customer_app_auth_feature.md.
+
+export interface CustomerOtpSendRequest {
+  phone: string;
+}
+
+export interface CustomerOtpVerifyRequest {
+  phone: string;
+  otp: string;
+}
+
+export interface CustomerRegisterRequest {
+  pending_token: string;
+  surname: string;
+  other_names: string;
+}
+
+export interface CustomerRefreshRequest {
+  refresh_token: string;
+}
+
+export interface CustomerSession {
+  access_token: string;
+  refresh_token: string;
+  expires_in: number;
+  expires_at: number;
+  token_type: string;
+  user: CustomerAuthUser;
+}
+
+export interface CustomerOtpSendResponse {
+  success: true;
+  message: string;
+}
+
+export interface CustomerLoggedInResponse {
+  success: true;
+  message: string;
+  data: {
+    status: "logged_in";
+    access_token: string;
+    refresh_token: string;
+    expires_in: number;
+    expires_at: number;
+    token_type: string;
+    user: CustomerAuthUser;
+  };
+}
+
+export interface CustomerNeedsProfileResponse {
+  success: true;
+  message: string;
+  data: {
+    status: "needs_profile";
+    pending_token: string;
+  };
+}
+
+export type CustomerOtpVerifyResponse =
+  | CustomerLoggedInResponse
+  | CustomerNeedsProfileResponse;
+
+export interface CustomerRegisterResponse {
+  success: true;
+  message: string;
+  data: CustomerSession;
+}
+
+export interface CustomerRefreshResponse {
+  success: true;
+  message: string;
+  data: CustomerSession;
+}
+
+export interface CustomerLogoutResponse {
+  success: true;
+  message: string;
+}
+
+export interface CustomerGetCurrentUserResponse {
+  success: true;
+  data: CustomerAuthUser;
+}
+
+export type CustomerOtpSendApiResponse =
+  | CustomerOtpSendResponse
+  | AuthErrorResponse;
+export type CustomerOtpVerifyApiResponse =
+  | CustomerOtpVerifyResponse
+  | AuthErrorResponse;
+export type CustomerRegisterApiResponse =
+  | CustomerRegisterResponse
+  | AuthErrorResponse;
+export type CustomerRefreshApiResponse =
+  | CustomerRefreshResponse
+  | AuthErrorResponse;
+export type CustomerLogoutApiResponse =
+  | CustomerLogoutResponse
+  | AuthErrorResponse;
+export type CustomerGetCurrentUserApiResponse =
+  | CustomerGetCurrentUserResponse
   | AuthErrorResponse;

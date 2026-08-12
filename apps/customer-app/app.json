@@ -1,0 +1,42 @@
+{
+  "expo": {
+    "name": "CustomerApp",
+    "slug": "@store-credit-platform/customer-app",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "@store-credit-platform/customer-app",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.joshuaasare.-store-credit-platform-customer-app"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#ffffff"
+      },
+      "edgeToEdgeEnabled": true
+    },
+    "web": {
+      "bundler": "metro"
+    },
+    "plugins": [
+      [
+        "expo-splash-screen",
+        {
+          "imageWidth": 200,
+          "resizeMode": "contain",
+          "backgroundColor": "#ffffff"
+        }
+      ],
+      "expo-secure-store",
+      "expo-font"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": ""
+      },
+      "apiBaseUrl": ""
+    }
+  }
+}
