@@ -225,6 +225,40 @@ Type.Null()
 ])
 })
 
+export type BaseCustomerCreditRedemption = Static<typeof BaseCustomerCreditRedemption>
+export const BaseCustomerCreditRedemption = Type.Object({
+id: Type.Number(),
+credit_id: Type.Number(),
+customer_id: Type.Number(),
+branch_id: Type.Number(),
+amount_redeemed: Type.Number(),
+approved_at: Type.Union([
+Type.String(),
+Type.Null()
+]),
+approved_by_staff_id: Type.Union([
+Type.Number(),
+Type.Null()
+]),
+recorded_by_staff_id: Type.Union([
+Type.Number(),
+Type.Null()
+]),
+rejected_at: Type.Union([
+Type.String(),
+Type.Null()
+]),
+created_at: Type.String(),
+updated_at: Type.Union([
+Type.String(),
+Type.Null()
+]),
+deleted_at: Type.Union([
+Type.String(),
+Type.Null()
+])
+})
+
 export type BaseRunningCreditConfig = Static<typeof BaseRunningCreditConfig>
 export const BaseRunningCreditConfig = Type.Object({
 id: Type.Number(),

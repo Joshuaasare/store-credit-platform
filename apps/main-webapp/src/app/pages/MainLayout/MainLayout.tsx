@@ -8,6 +8,7 @@ import {
   Receipt,
   Users,
   UserCog,
+  Ticket,
 } from "lucide-react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import {
@@ -39,6 +40,7 @@ export const routes = {
   CREDITS: "/credits",
   TRANSACTIONS: "/transactions",
   CUSTOMERS: "/customers",
+  REDEMPTIONS: "/redemptions",
   STAFF: "/staff",
   PROFILE: "/profile",
 };
@@ -66,6 +68,12 @@ const navItems: MenuItem[] = [
     title: "Customers",
     url: routes.CUSTOMERS,
     icon: Users,
+    permissions: ["manager"],
+  },
+  {
+    title: "Redemptions",
+    url: routes.REDEMPTIONS,
+    icon: Ticket,
     permissions: ["manager"],
   },
   {
