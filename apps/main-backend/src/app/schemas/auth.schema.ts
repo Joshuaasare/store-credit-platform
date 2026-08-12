@@ -1,5 +1,5 @@
 import { Type, Static } from '@sinclair/typebox'
-import { StaffRoleValues } from './main.schema'
+import { StaffRoleValues, CustomerAuthUser } from './main.schema'
 
 
 
@@ -34,6 +34,10 @@ Type.Number(),
 Type.Null()
 ]),
 staff_id: Type.Union([
+Type.Number(),
+Type.Null()
+]),
+customer_id: Type.Union([
 Type.Number(),
 Type.Null()
 ]),
@@ -190,5 +194,137 @@ AuthErrorResponse
 export type GetCurrentUserApiResponse = Static<typeof GetCurrentUserApiResponse>
 export const GetCurrentUserApiResponse = Type.Union([
 GetCurrentUserResponse,
+AuthErrorResponse
+])
+
+export type CustomerOtpSendRequest = Static<typeof CustomerOtpSendRequest>
+export const CustomerOtpSendRequest = Type.Object({
+phone: Type.String()
+})
+
+export type CustomerOtpVerifyRequest = Static<typeof CustomerOtpVerifyRequest>
+export const CustomerOtpVerifyRequest = Type.Object({
+phone: Type.String(),
+otp: Type.String()
+})
+
+export type CustomerRegisterRequest = Static<typeof CustomerRegisterRequest>
+export const CustomerRegisterRequest = Type.Object({
+pending_token: Type.String(),
+surname: Type.String(),
+other_names: Type.String()
+})
+
+export type CustomerRefreshRequest = Static<typeof CustomerRefreshRequest>
+export const CustomerRefreshRequest = Type.Object({
+refresh_token: Type.String()
+})
+
+export type CustomerSession = Static<typeof CustomerSession>
+export const CustomerSession = Type.Object({
+access_token: Type.String(),
+refresh_token: Type.String(),
+expires_in: Type.Number(),
+expires_at: Type.Number(),
+token_type: Type.String(),
+user: CustomerAuthUser
+})
+
+export type CustomerOtpSendResponse = Static<typeof CustomerOtpSendResponse>
+export const CustomerOtpSendResponse = Type.Object({
+success: Type.Literal(true),
+message: Type.String()
+})
+
+export type CustomerLoggedInResponse = Static<typeof CustomerLoggedInResponse>
+export const CustomerLoggedInResponse = Type.Object({
+success: Type.Literal(true),
+message: Type.String(),
+data: Type.Object({
+status: Type.Literal("logged_in"),
+access_token: Type.String(),
+refresh_token: Type.String(),
+expires_in: Type.Number(),
+expires_at: Type.Number(),
+token_type: Type.String(),
+user: CustomerAuthUser
+})
+})
+
+export type CustomerNeedsProfileResponse = Static<typeof CustomerNeedsProfileResponse>
+export const CustomerNeedsProfileResponse = Type.Object({
+success: Type.Literal(true),
+message: Type.String(),
+data: Type.Object({
+status: Type.Literal("needs_profile"),
+pending_token: Type.String()
+})
+})
+
+export type CustomerOtpVerifyResponse = Static<typeof CustomerOtpVerifyResponse>
+export const CustomerOtpVerifyResponse = Type.Union([
+CustomerLoggedInResponse,
+CustomerNeedsProfileResponse
+])
+
+export type CustomerRegisterResponse = Static<typeof CustomerRegisterResponse>
+export const CustomerRegisterResponse = Type.Object({
+success: Type.Literal(true),
+message: Type.String(),
+data: CustomerSession
+})
+
+export type CustomerRefreshResponse = Static<typeof CustomerRefreshResponse>
+export const CustomerRefreshResponse = Type.Object({
+success: Type.Literal(true),
+message: Type.String(),
+data: CustomerSession
+})
+
+export type CustomerLogoutResponse = Static<typeof CustomerLogoutResponse>
+export const CustomerLogoutResponse = Type.Object({
+success: Type.Literal(true),
+message: Type.String()
+})
+
+export type CustomerGetCurrentUserResponse = Static<typeof CustomerGetCurrentUserResponse>
+export const CustomerGetCurrentUserResponse = Type.Object({
+success: Type.Literal(true),
+data: CustomerAuthUser
+})
+
+export type CustomerOtpSendApiResponse = Static<typeof CustomerOtpSendApiResponse>
+export const CustomerOtpSendApiResponse = Type.Union([
+CustomerOtpSendResponse,
+AuthErrorResponse
+])
+
+export type CustomerOtpVerifyApiResponse = Static<typeof CustomerOtpVerifyApiResponse>
+export const CustomerOtpVerifyApiResponse = Type.Union([
+CustomerOtpVerifyResponse,
+AuthErrorResponse
+])
+
+export type CustomerRegisterApiResponse = Static<typeof CustomerRegisterApiResponse>
+export const CustomerRegisterApiResponse = Type.Union([
+CustomerRegisterResponse,
+AuthErrorResponse
+])
+
+export type CustomerRefreshApiResponse = Static<typeof CustomerRefreshApiResponse>
+export const CustomerRefreshApiResponse = Type.Union([
+CustomerRefreshResponse,
+AuthErrorResponse
+])
+
+export type CustomerLogoutApiResponse = Static<typeof CustomerLogoutApiResponse>
+export const CustomerLogoutApiResponse = Type.Union([
+CustomerLogoutResponse,
+AuthErrorResponse
+])
+
+export type CustomerGetCurrentUserApiResponse = Static<typeof CustomerGetCurrentUserApiResponse>
+export const CustomerGetCurrentUserApiResponse = Type.Union([
+CustomerGetCurrentUserResponse,
 AuthErrorResponse
 ])

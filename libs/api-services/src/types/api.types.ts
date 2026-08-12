@@ -1,6 +1,6 @@
 /**
  * Auto-generated API Types
- * Generated on: 2026-08-08T10:43:37.397Z
+ * Generated on: 2026-08-11T14:03:04.034Z
  * 
  * ⚠️ DO NOT EDIT MANUALLY
  * Source: apps/smartschool-api/src/app/types/
@@ -86,6 +86,19 @@ export interface BaseCustomer {
   other_names: string | null;
   created_at: string;
   deleted_at: string | null;
+}
+
+
+
+
+
+
+export interface CustomerAuthUser {
+  id: string;
+  phone: string | null;
+  customer_id: number;
+  surname: string | null;
+  other_names: string | null;
 }
 
 export interface BaseCustomerTransaction {
@@ -204,6 +217,7 @@ export interface AccessTokenPayload {
   merchant_id: number | null;
   branch_id: number | null;
   staff_id: number | null;
+  customer_id: number | null;
   iat: number;
   exp: number;
   iss: string;
@@ -294,6 +308,107 @@ export type SessionRevokeApiResponse =
   | AuthErrorResponse;
 export type GetCurrentUserApiResponse =
   | GetCurrentUserResponse
+  | AuthErrorResponse;
+
+export interface CustomerOtpSendRequest {
+  phone: string;
+}
+
+export interface CustomerOtpVerifyRequest {
+  phone: string;
+  otp: string;
+}
+
+export interface CustomerRegisterRequest {
+  pending_token: string;
+  surname: string;
+  other_names: string;
+}
+
+export interface CustomerRefreshRequest {
+  refresh_token: string;
+}
+
+export interface CustomerSession {
+  access_token: string;
+  refresh_token: string;
+  expires_in: number;
+  expires_at: number;
+  token_type: string;
+  user: CustomerAuthUser;
+}
+
+export interface CustomerOtpSendResponse {
+  success: true;
+  message: string;
+}
+
+export interface CustomerLoggedInResponse {
+  success: true;
+  message: string;
+  data: {
+    status: "logged_in";
+    access_token: string;
+    refresh_token: string;
+    expires_in: number;
+    expires_at: number;
+    token_type: string;
+    user: CustomerAuthUser;
+  };
+}
+
+export interface CustomerNeedsProfileResponse {
+  success: true;
+  message: string;
+  data: {
+    status: "needs_profile";
+    pending_token: string;
+  };
+}
+
+export type CustomerOtpVerifyResponse =
+  | CustomerLoggedInResponse
+  | CustomerNeedsProfileResponse;
+
+export interface CustomerRegisterResponse {
+  success: true;
+  message: string;
+  data: CustomerSession;
+}
+
+export interface CustomerRefreshResponse {
+  success: true;
+  message: string;
+  data: CustomerSession;
+}
+
+export interface CustomerLogoutResponse {
+  success: true;
+  message: string;
+}
+
+export interface CustomerGetCurrentUserResponse {
+  success: true;
+  data: CustomerAuthUser;
+}
+
+export type CustomerOtpSendApiResponse =
+  | CustomerOtpSendResponse
+  | AuthErrorResponse;
+export type CustomerOtpVerifyApiResponse =
+  | CustomerOtpVerifyResponse
+  | AuthErrorResponse;
+export type CustomerRegisterApiResponse =
+  | CustomerRegisterResponse
+  | AuthErrorResponse;
+export type CustomerRefreshApiResponse =
+  | CustomerRefreshResponse
+  | AuthErrorResponse;
+export type CustomerLogoutApiResponse =
+  | CustomerLogoutResponse
+  | AuthErrorResponse;
+export type CustomerGetCurrentUserApiResponse =
+  | CustomerGetCurrentUserResponse
   | AuthErrorResponse;
 
 export interface BranchWithAggregates extends BaseBranch {
@@ -456,6 +571,30 @@ export interface CustomerCreditWithRemaining extends BaseCustomerCredit {
   remaining: number;
   redeemed_total: number;
 }
+
+export type CustomerOtpVerifyServiceResponse = {
+  status: "logged_in";
+  access_token: string;
+  refresh_token: string;
+  expires_in: number;
+  expires_at: number;
+  token_type: string;
+  user: CustomerAuthUser;
+} | {
+  status: "needs_profile";
+  pending_token: string;
+};
+
+export type CustomerRegisterServiceResponse = {
+  access_token: string;
+  refresh_token: string;
+  expires_in: number;
+  expires_at: number;
+  token_type: string;
+  user: CustomerAuthUser;
+};
+
+export type CustomerRefreshServiceResponse = CustomerRegisterServiceResponse;
 
 export type LeaderboardSort =
   | "purchases"

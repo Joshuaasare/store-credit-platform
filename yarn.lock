@@ -2865,6 +2865,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@expo-google-fonts/inter@npm:^0.4.2":
+  version: 0.4.2
+  resolution: "@expo-google-fonts/inter@npm:0.4.2"
+  checksum: 10c0/a88e6d1321584055d2fa265861795d55ec04b64d9726ecb60fd11a970252d23a1fd8c1febab7b587eb8ec699071d35c38c591625e44a2826c1e0e18bb1aa1946
+  languageName: node
+  linkType: hard
+
 "@expo/cli@npm:55.0.21":
   version: 55.0.21
   resolution: "@expo/cli@npm:55.0.21"
@@ -3731,6 +3738,17 @@ __metadata:
   version: 9.3.2
   resolution: "@expo/sudo-prompt@npm:9.3.2"
   checksum: 10c0/032652bf1c3f326c9c194f336de5821b9ece9d48b22e3e277950d939fcd728c85459680a9771705904d375f128221cca2e1e91c5d7a85cf3c07fe6f88c361e9d
+  languageName: node
+  linkType: hard
+
+"@expo/vector-icons@npm:^14.1.0":
+  version: 14.1.0
+  resolution: "@expo/vector-icons@npm:14.1.0"
+  peerDependencies:
+    expo-font: "*"
+    react: "*"
+    react-native: "*"
+  checksum: 10c0/f1dcea2c43c0808f48d1953395c6f8025ae5e811648e86b79158492c9ef8af7a40781e42844dfb1434242a08fcf6ab14886825eb2c79bad2a792aebd1eb5077c
   languageName: node
   linkType: hard
 
@@ -8164,6 +8182,23 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@react-navigation/bottom-tabs@npm:^7.4.16":
+  version: 7.18.16
+  resolution: "@react-navigation/bottom-tabs@npm:7.18.16"
+  dependencies:
+    "@react-navigation/elements": "npm:^2.9.38"
+    color: "npm:^4.2.3"
+    sf-symbols-typescript: "npm:^2.1.0"
+  peerDependencies:
+    "@react-navigation/native": ^7.3.16
+    react: ">= 18.2.0"
+    react-native: "*"
+    react-native-safe-area-context: ">= 4.0.0"
+    react-native-screens: ">= 4.0.0"
+  checksum: 10c0/868ee3fa4353c85da1f32f1c10ffab8b94cff92fd664476e96c10e26d3d2df4a5e238bf3fc463e7f77ff1d895dc68e226b5af325bf22aaeea057365eb42139ca
+  languageName: node
+  linkType: hard
+
 "@react-navigation/core@npm:^7.21.12":
   version: 7.21.12
   resolution: "@react-navigation/core@npm:7.21.12"
@@ -8219,6 +8254,24 @@ __metadata:
     "@react-native-masked-view/masked-view":
       optional: true
   checksum: 10c0/8aad1be751f0d4071205ce905f8e6794d9467cae83f4102a622949ec43b79d367825cfe81da20294d5c1a707d91b8128eed8b6b320a4ad93c88db28fbeb5e560
+  languageName: node
+  linkType: hard
+
+"@react-navigation/native-stack@npm:^7.18.8":
+  version: 7.18.8
+  resolution: "@react-navigation/native-stack@npm:7.18.8"
+  dependencies:
+    "@react-navigation/elements": "npm:^2.9.38"
+    color: "npm:^4.2.3"
+    sf-symbols-typescript: "npm:^2.1.0"
+    warn-once: "npm:^0.1.1"
+  peerDependencies:
+    "@react-navigation/native": ^7.3.16
+    react: ">= 18.2.0"
+    react-native: "*"
+    react-native-safe-area-context: ">= 4.0.0"
+    react-native-screens: ">= 4.0.0"
+  checksum: 10c0/f9265453b752fd5e620d51268a9480133c56a8d11f95d125bb1c18c65de78bc6a6289e144ef634649bd61ee9a8d394e4ac6b12292603d5d8a9cf655b19e69179
   languageName: node
   linkType: hard
 
@@ -9230,15 +9283,22 @@ __metadata:
   resolution: "@store-credit-platform/customer-app@workspace:apps/customer-app"
   dependencies:
     "@expo/metro-config": "npm:~55.0.0"
+    "@expo/vector-icons": "npm:^14.1.0"
     "@hookform/resolvers": "npm:^5.2.2"
     "@react-native-async-storage/async-storage": "npm:2.2.0"
+    "@react-navigation/bottom-tabs": "npm:^7.4.16"
     "@react-navigation/drawer": "npm:^7.9.8"
     "@react-navigation/native": "npm:^7.2.2"
+    "@react-navigation/native-stack": "npm:^7.18.8"
     "@supabase/supabase-js": "npm:^2.75.0"
     "@tanstack/react-query": "npm:^5.90.21"
     "@testing-library/react-native": "npm:^13.3.3"
     expo: "npm:~55.0.0"
+    expo-blur: "npm:~55.0.16"
     expo-dev-client: "npm:~55.0.18"
+    expo-font: "npm:~55.0.8"
+    expo-linear-gradient: "npm:~55.0.16"
+    expo-secure-store: "npm:~55.0.16"
     expo-splash-screen: "npm:~31.0.13"
     expo-sqlite: "npm:^55.0.16"
     expo-status-bar: "npm:~3.0.9"
@@ -9258,6 +9318,7 @@ __metadata:
     react-native-web: "npm:*"
     react-native-worklets: "npm:^0.10.0"
     zod: "npm:^4.3.6"
+    zustand: "npm:^5.0.14"
   languageName: unknown
   linkType: soft
 
@@ -9296,6 +9357,7 @@ __metadata:
     "@eslint/compat": "npm:^1.1.1"
     "@eslint/eslintrc": "npm:^2.1.1"
     "@eslint/js": "npm:^9.8.0"
+    "@expo-google-fonts/inter": "npm:^0.4.2"
     "@expo/cli": "npm:~54.0.16"
     "@expo/metro-config": "npm:~54.0.9"
     "@expo/metro-runtime": "npm:~6.1.2"
@@ -16419,6 +16481,17 @@ __metadata:
   languageName: node
   linkType: hard
 
+"expo-blur@npm:~55.0.16":
+  version: 55.0.16
+  resolution: "expo-blur@npm:55.0.16"
+  peerDependencies:
+    expo: "*"
+    react: "*"
+    react-native: "*"
+  checksum: 10c0/77761092034c696e1509cee90be00f467c08880073c62592d5a597bbf51ac16198a429359678f167f279281bf8490d9f2ebda8933bf4d10e878629a3dac8b9b9
+  languageName: node
+  linkType: hard
+
 "expo-constants@npm:~55.0.11":
   version: 55.0.11
   resolution: "expo-constants@npm:55.0.11"
@@ -16503,6 +16576,19 @@ __metadata:
   languageName: node
   linkType: hard
 
+"expo-font@npm:~55.0.8":
+  version: 55.0.8
+  resolution: "expo-font@npm:55.0.8"
+  dependencies:
+    fontfaceobserver: "npm:^2.1.0"
+  peerDependencies:
+    expo: "*"
+    react: "*"
+    react-native: "*"
+  checksum: 10c0/561c5c6a3661b0103fd010ee36867bc6d4ea8dbd9771a899d62bcd16f7d27af587034971a080ad4e7d42e1bbb5f6f18ad8ed715bcd11b04e6acbb3ba19a128bc
+  languageName: node
+  linkType: hard
+
 "expo-json-utils@npm:~55.0.2":
   version: 55.0.2
   resolution: "expo-json-utils@npm:55.0.2"
@@ -16517,6 +16603,17 @@ __metadata:
     expo: "*"
     react: "*"
   checksum: 10c0/8152872627c7ce014ce056281f274609ba74dc63f3742c0b97251addb29c09268deb982054a37e6e87dc691d7e4f610c733bdd95b797940869649442b79aae32
+  languageName: node
+  linkType: hard
+
+"expo-linear-gradient@npm:~55.0.16":
+  version: 55.0.16
+  resolution: "expo-linear-gradient@npm:55.0.16"
+  peerDependencies:
+    expo: "*"
+    react: "*"
+    react-native: "*"
+  checksum: 10c0/778c50cde2acce3c0bb94d848219a4e66875c2a97222d1fc47f3c8b508a867ae0a24ccbb21c8b670b6038d12148f56e7e189a4033d117a2cd75ae0f0166a507a
   languageName: node
   linkType: hard
 
@@ -16554,6 +16651,15 @@ __metadata:
     react: "*"
     react-native: "*"
   checksum: 10c0/98c8f7fae8e7767927986a055eccfadeee86347bc74ebdc911c274c9a3c2433cf322f5f7115c5f09f6884ea68656ebdaaf3010a9c1f202470685dc47a18576a3
+  languageName: node
+  linkType: hard
+
+"expo-secure-store@npm:~55.0.16":
+  version: 55.0.16
+  resolution: "expo-secure-store@npm:55.0.16"
+  peerDependencies:
+    expo: "*"
+  checksum: 10c0/ceb910923f0161b18dfaf47547b96124aecb8d5ce11d43ad459b8b91cfaa832d17f3563524accf62c825010ddc21c32c89b2ead7df6bc80e611530c4ff64c0bc
   languageName: node
   linkType: hard
 
@@ -25792,6 +25898,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"sf-symbols-typescript@npm:^2.1.0":
+  version: 2.2.0
+  resolution: "sf-symbols-typescript@npm:2.2.0"
+  checksum: 10c0/3f3bbf33aaad19e619d6f169899b39e9fe9c5fd21f0d6d511100e36887606ad349109ddc6ff82933f2b8cbf437dd7105c2ae6b0059b291dc47f143b30c2074cc
+  languageName: node
+  linkType: hard
+
 "shebang-command@npm:^2.0.0":
   version: 2.0.0
   resolution: "shebang-command@npm:2.0.0"
@@ -28307,7 +28420,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"warn-once@npm:0.1.1, warn-once@npm:^0.1.0":
+"warn-once@npm:0.1.1, warn-once@npm:^0.1.0, warn-once@npm:^0.1.1":
   version: 0.1.1
   resolution: "warn-once@npm:0.1.1"
   checksum: 10c0/f531e7b2382124f51e6d8f97b8c865246db8ab6ff4e53257a2d274e0f02b97d7201eb35db481843dc155815e154ad7afb53b01c4d4db15fb5aa073562496aff7
@@ -28947,6 +29060,27 @@ __metadata:
   version: 4.4.3
   resolution: "zod@npm:4.4.3"
   checksum: 10c0/7ea31b558e88f9faf44f31dd185e2e1cbf51fed3081787fb96cc2534749b50c0acfc6da7f0922a7353ed092dd358c7d50c28ea96c94d04af64191bd33152eca3
+  languageName: node
+  linkType: hard
+
+"zustand@npm:^5.0.14":
+  version: 5.0.14
+  resolution: "zustand@npm:5.0.14"
+  peerDependencies:
+    "@types/react": ">=18.0.0"
+    immer: ">=9.0.6"
+    react: ">=18.0.0"
+    use-sync-external-store: ">=1.2.0"
+  peerDependenciesMeta:
+    "@types/react":
+      optional: true
+    immer:
+      optional: true
+    react:
+      optional: true
+    use-sync-external-store:
+      optional: true
+  checksum: 10c0/89de0c8119f1e0861b2f896a0b4df0d67994a373ecee02628d4e7b97cee1885207f646917d3ede395c3a5083316d48846855cfbc84aced7cd23a6db3238930a8
   languageName: node
   linkType: hard
 

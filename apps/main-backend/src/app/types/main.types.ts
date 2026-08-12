@@ -66,6 +66,19 @@ export interface BaseCustomer {
   deleted_at: string | null;
 }
 
+// Customer-app auth identity — the user-facing projection returned by the
+// `/api/customer-auth/*` endpoints. Lives here (not in auth.types.ts) so both
+// auth.types.ts and customer-auth.types.ts can import it without the typegen
+// stripping the cross-file reference. `id` is the `users.id` (uuid); the
+// numeric `customer_id` is the linked `customers.id`.
+export interface CustomerAuthUser {
+  id: string;
+  phone: string | null;
+  customer_id: number;
+  surname: string | null;
+  other_names: string | null;
+}
+
 export interface BaseCustomerTransaction {
   id: number;
   customer_id: number;
