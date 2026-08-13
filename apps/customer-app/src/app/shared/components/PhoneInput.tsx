@@ -16,7 +16,8 @@ import {
   defaultCountry,
   formatPhoneWithCountry,
   parsePhoneNumber,
-} from "../utils/countries";
+} from "../../utils/countries";
+import { useThemeTokens } from "../../theme/ThemeContext";
 
 /**
  * Flag emoji don't render on Android (the system font lacks the
@@ -41,12 +42,14 @@ interface PhoneInputProps {
  * caller stores the full international format (no `+`), the component
  * internally splits it into country + local number for display.
  */
-export function PhoneInput({
+export default function PhoneInput({
   value,
   onChange,
   placeholder = "24 444 4444",
   defaultCountryCode = CountryCode.GH,
 }: PhoneInputProps) {
+  const theme = useThemeTokens();
+
   const initial = useMemo(() => {
     if (!value) {
       return {
@@ -104,7 +107,15 @@ export function PhoneInput({
     <View style={styles.container}>
       <View style={styles.row}>
         <Pressable
-          style={styles.countryButton}
+          style={[
+            styles.countryButton,
+            {
+              backgroundColor: theme.colors.surfaceInput,
+              borderColor: theme.colors.surfaceBorder,
+              borderTopLeftRadius: theme.radii.md,
+              borderBottomLeftRadius: theme.radii.md,
+            },
+          ]}
           onPress={() => setPickerOpen(true)}
         >
           <Image
@@ -112,18 +123,40 @@ export function PhoneInput({
             style={styles.flag}
             resizeMode="cover"
           />
-          <Text style={styles.dialCode}>+{selectedCountry.dialCode}</Text>
-          <Text style={styles.chevron}>▾</Text>
+          <Text
+            style={[
+              styles.dialCode,
+              {
+                color: theme.colors.text,
+                fontFamily: theme.typography.fontFamilyMedium,
+              },
+            ]}
+          >
+            +{selectedCountry.dialCode}
+          </Text>
+          <Text style={[styles.chevron, { color: theme.colors.textMuted }]}>
+            ▾
+          </Text>
         </Pressable>
         <TextInput
           value={localNumber}
           onChangeText={handleLocalChange}
           placeholder={placeholder}
-          placeholderTextColor="rgba(255,255,255,0.5)"
+          placeholderTextColor={theme.colors.textPlaceholder}
           keyboardType="phone-pad"
           autoCapitalize="none"
           autoCorrect={false}
-          style={styles.input}
+          style={[
+            styles.input,
+            {
+              backgroundColor: theme.colors.surfaceInput,
+              borderColor: theme.colors.surfaceBorder,
+              borderTopRightRadius: theme.radii.md,
+              borderBottomRightRadius: theme.radii.md,
+              color: theme.colors.text,
+              fontFamily: theme.typography.fontFamilyRegular,
+            },
+          ]}
         />
       </View>
 
@@ -134,14 +167,41 @@ export function PhoneInput({
         onRequestClose={() => setPickerOpen(false)}
       >
         <Pressable style={styles.overlay} onPress={() => setPickerOpen(false)}>
-          <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation()}>
-            <Text style={styles.sheetTitle}>Select country</Text>
+          <Pressable
+            style={[
+              styles.sheet,
+              {
+                backgroundColor: theme.colors.sheet,
+                borderTopLeftRadius: theme.radii.xl,
+                borderTopRightRadius: theme.radii.xl,
+              },
+            ]}
+            onPress={(e) => e.stopPropagation()}
+          >
+            <Text
+              style={[
+                styles.sheetTitle,
+                {
+                  color: theme.colors.sheetText,
+                  fontFamily: theme.typography.fontFamilySemiBold,
+                },
+              ]}
+            >
+              Select country
+            </Text>
             <TextInput
               value={query}
               onChangeText={setQuery}
               placeholder="Search country or dial code"
-              placeholderTextColor="rgba(0,0,0,0.4)"
-              style={styles.search}
+              placeholderTextColor={theme.colors.textPlaceholder}
+              style={[
+                styles.search,
+                {
+                  backgroundColor: theme.colors.sheetInput,
+                  color: theme.colors.sheetText,
+                  fontFamily: theme.typography.fontFamilyRegular,
+                },
+              ]}
               autoFocus
             />
             <FlatList
@@ -157,11 +217,38 @@ export function PhoneInput({
                     style={styles.optionFlag}
                     resizeMode="cover"
                   />
-                  <Text style={styles.optionName}>{item.name}</Text>
-                  <Text style={styles.optionDial}>+{item.dialCode}</Text>
+                  <Text
+                    style={[
+                      styles.optionName,
+                      {
+                        color: theme.colors.sheetText,
+                        fontFamily: theme.typography.fontFamilyRegular,
+                      },
+                    ]}
+                  >
+                    {item.name}
+                  </Text>
+                  <Text
+                    style={[
+                      styles.optionDial,
+                      {
+                        color: theme.colors.sheetTextMuted,
+                        fontFamily: theme.typography.fontFamilyMedium,
+                      },
+                    ]}
+                  >
+                    +{item.dialCode}
+                  </Text>
                 </Pressable>
               )}
-              ItemSeparatorComponent={() => <View style={styles.separator} />}
+              ItemSeparatorComponent={() => (
+                <View
+                  style={[
+                    styles.separator,
+                    { backgroundColor: theme.colors.sheetSeparator },
+                  ]}
+                />
+              )}
             />
           </Pressable>
         </Pressable>
@@ -169,20 +256,6 @@ export function PhoneInput({
     </View>
   );
 }
-
-const countryButtonBase = {
-  flexDirection: "row" as const,
-  alignItems: "center" as const,
-  gap: 6,
-  height: 56,
-  paddingHorizontal: 12,
-  backgroundColor: "rgba(255,255,255,0.06)",
-  borderTopLeftRadius: 12,
-  borderBottomLeftRadius: 12,
-  borderColor: "rgba(255,255,255,0.18)",
-  borderWidth: 1,
-  borderRightWidth: 0,
-};
 
 const styles = StyleSheet.create({
   container: {
@@ -192,36 +265,35 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     width: "100%",
   },
-  countryButton: countryButtonBase,
+  countryButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    height: 56,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderRightWidth: 0,
+  },
   flag: {
     width: 22,
     height: 16,
     borderRadius: 2,
   },
   dialCode: {
-    color: "#ffffff",
     fontSize: 15,
-    fontFamily: "Inter_500Medium",
   },
   chevron: {
-    color: "rgba(255,255,255,0.6)",
     fontSize: 10,
     marginLeft: 2,
   },
   input: {
     flex: 1,
-    backgroundColor: "rgba(255,255,255,0.06)",
-    borderColor: "rgba(255,255,255,0.18)",
     borderWidth: 1,
     borderTopLeftRadius: 0,
     borderBottomLeftRadius: 0,
-    borderTopRightRadius: 12,
-    borderBottomRightRadius: 12,
     paddingHorizontal: 16,
     height: 56,
-    color: "#ffffff",
     fontSize: 16,
-    fontFamily: "Inter_400Regular",
   },
   overlay: {
     flex: 1,
@@ -229,28 +301,20 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(0,0,0,0.5)",
   },
   sheet: {
-    backgroundColor: "#ffffff",
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
     paddingHorizontal: 16,
     paddingTop: 16,
     paddingBottom: 32,
     maxHeight: "80%",
   },
   sheetTitle: {
-    color: "#0f172a",
     fontSize: 18,
-    fontFamily: "Inter_600SemiBold",
     marginBottom: 12,
   },
   search: {
-    backgroundColor: "#f1f5f9",
     borderRadius: 10,
     paddingHorizontal: 14,
     height: 44,
-    color: "#0f172a",
     fontSize: 15,
-    fontFamily: "Inter_400Regular",
     marginBottom: 8,
   },
   option: {
@@ -267,18 +331,13 @@ const styles = StyleSheet.create({
   },
   optionName: {
     flex: 1,
-    color: "#0f172a",
     fontSize: 15,
-    fontFamily: "Inter_400Regular",
   },
   optionDial: {
-    color: "#64748b",
     fontSize: 14,
-    fontFamily: "Inter_500Medium",
   },
   separator: {
     height: 1,
-    backgroundColor: "#e2e8f0",
     marginHorizontal: 4,
   },
 });

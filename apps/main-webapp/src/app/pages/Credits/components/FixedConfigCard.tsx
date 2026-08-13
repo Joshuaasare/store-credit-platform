@@ -25,9 +25,13 @@ import {
   errorToastProperties,
   successToastProperties,
 } from "@shared/utils/misc.utils";
-import { formatEpochDate, formatGHS, formatGHSCompact } from "@shared/utils/format";
-import { ConfirmDialog } from "../../../components/ConfirmDialog/ConfirmDialog";
-import { FlipCard } from "../../../components/FlipCard/FlipCard";
+import {
+  formatEpochDate,
+  formatGHS,
+  formatGHSCompact,
+} from "@shared/utils/format";
+import { ConfirmDialog } from "@shared/components/ConfirmDialog/ConfirmDialog";
+import { FlipCard } from "@shared/components/FlipCard/FlipCard";
 import { FixedConfigSummary } from "./ConfigSummary";
 import { FixedConfigDialog } from "./FixedConfigDialog";
 import {
@@ -104,7 +108,9 @@ export function FixedConfigCard({ config, isManager }: FixedConfigCardProps) {
   const rewardNumber = isPercentage
     ? `${config.percentage_credit_value ?? 0}%`
     : formatGHSCompact(config.fixed_credit_value ?? 0);
-  const caption = isPercentage ? "Promo cashback rate" : "Promo cashback amount";
+  const caption = isPercentage
+    ? "Promo cashback rate"
+    : "Promo cashback amount";
 
   const start = config.start_date;
   const end = config.end_date;
@@ -129,9 +135,7 @@ export function FixedConfigCard({ config, isManager }: FixedConfigCardProps) {
     : config.is_active
       ? "Scheduled"
       : "Paused";
-  const statusColor = activeRightNow
-    ? STATUS_DOT_ACTIVE
-    : STATUS_DOT_PAUSED;
+  const statusColor = activeRightNow ? STATUS_DOT_ACTIVE : STATUS_DOT_PAUSED;
 
   const isActive = config.is_active;
   const cardClass = isActive ? CARD_CLASS : CARD_CLASS_PAUSED;
@@ -213,9 +217,7 @@ export function FixedConfigCard({ config, isManager }: FixedConfigCardProps) {
               <div className="text-muted-foreground flex items-center gap-2 text-xs">
                 <span className={statusColor} />
                 <span
-                  className={
-                    isActive ? STATUS_TEXT_ACTIVE : STATUS_TEXT_PAUSED
-                  }
+                  className={isActive ? STATUS_TEXT_ACTIVE : STATUS_TEXT_PAUSED}
                 >
                   {statusLabel}
                 </span>
@@ -276,7 +278,9 @@ export function FixedConfigCard({ config, isManager }: FixedConfigCardProps) {
             <div className="mt-4">
               <FixedConfigSummary
                 accent="amber"
-                credit_type={(config.credit_type ?? "percentage") as "percentage" | "fixed"}
+                credit_type={
+                  (config.credit_type ?? "percentage") as "percentage" | "fixed"
+                }
                 percentage_credit_value={config.percentage_credit_value}
                 fixed_credit_value={config.fixed_credit_value}
                 maximum_allowed_credit={config.maximum_allowed_credit}

@@ -1,6 +1,6 @@
 /**
  * Auto-generated API Types
- * Generated on: 2026-08-12T05:02:21.234Z
+ * Generated on: 2026-08-13T04:02:08.801Z
  * 
  * ⚠️ DO NOT EDIT MANUALLY
  * Source: apps/smartschool-api/src/app/types/
@@ -621,6 +621,80 @@ export type CustomerRegisterServiceResponse = {
 };
 
 export type CustomerRefreshServiceResponse = CustomerRegisterServiceResponse;
+
+export type CustomerActivityKind = "credit_issued" | "credit_redeemed";
+
+export interface CustomerActivityIssued {
+  kind: "credit_issued";
+  id: number;
+  amount: number;
+  merchant: BaseMerchant;
+  branch: BaseBranch;
+  created_at: string;
+  credit_id: number;
+}
+
+export interface CustomerActivityRedeemed {
+  kind: "credit_redeemed";
+  id: number;
+  amount: number;
+  merchant: BaseMerchant;
+  branch: BaseBranch;
+  created_at: string;
+  credit_id: number;
+
+  purchase_id: number | null;
+}
+
+export type CustomerActivity =
+  | CustomerActivityIssued
+  | CustomerActivityRedeemed;
+
+export interface CustomerActivitiesPage {
+  items: CustomerActivity[];
+
+  nextCursor: number | null;
+}
+
+export interface CustomerActivitiesResponse {
+  success: true;
+  data: CustomerActivitiesPage;
+}
+
+export type CustomerActivitiesApiResponse =
+  | CustomerActivitiesResponse
+  | ApiErrorResponse;
+
+export type CustomerCreditStatus = "live" | "expired" | "revoked";
+
+export type CustomerCreditType = "running" | "fixed" | null;
+
+export interface CustomerCreditWithBranch extends BaseCustomerCredit {
+
+  branch: BaseBranch & { merchant: BaseMerchant };
+
+  redeemed_total: number;
+
+  remaining: number;
+  
+  status: CustomerCreditStatus;
+  
+  credit_type: CustomerCreditType;
+}
+
+export interface CustomerCredits {
+  live: CustomerCreditWithBranch[];
+  expired: CustomerCreditWithBranch[];
+}
+
+export interface CustomerCreditsResponse {
+  success: true;
+  data: CustomerCredits;
+}
+
+export type CustomerCreditsApiResponse =
+  | CustomerCreditsResponse
+  | ApiErrorResponse;
 
 export type LeaderboardSort =
   | "purchases"

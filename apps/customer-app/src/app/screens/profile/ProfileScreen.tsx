@@ -1,11 +1,13 @@
 import { StyleSheet, Text, View } from "react-native";
-import { ScreenBackground } from "../../components/ScreenBackground";
-import { GlassCard } from "../../components/GlassCard";
-import { PrimaryButton } from "../../components/PrimaryButton";
-import { GlassTransition } from "../../components/GlassTransition";
+import ScreenBackground from "../../shared/components/ScreenBackground";
+import GlassCard from "../../shared/components/GlassCard";
+import PrimaryButton from "../../shared/components/PrimaryButton";
+import GlassTransition from "../../shared/components/GlassTransition";
 import { useAuthStore } from "../../store/useAuthStore";
+import { useThemeTokens } from "../../theme/ThemeContext";
 
 export function ProfileScreen() {
+  const theme = useThemeTokens();
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
 
@@ -17,13 +19,44 @@ export function ProfileScreen() {
     <ScreenBackground>
       <GlassTransition>
         <View style={styles.container}>
-          <Text style={styles.title}>Profile</Text>
+          <Text
+            style={[
+              styles.title,
+              {
+                color: theme.colors.text,
+                fontFamily: theme.typography.fontFamilyBold,
+              },
+            ]}
+          >
+            Profile
+          </Text>
           <GlassCard style={styles.card}>
-            <Text style={styles.name}>{name}</Text>
-            <Text style={styles.phone}>{user?.phone ?? "—"}</Text>
+            <Text
+              style={[
+                styles.name,
+                {
+                  color: theme.colors.text,
+                  fontFamily: theme.typography.fontFamilySemiBold,
+                },
+              ]}
+            >
+              {name}
+            </Text>
+            <Text
+              style={[
+                styles.phone,
+                {
+                  color: theme.colors.textSecondary,
+                  fontFamily: theme.typography.fontFamilyRegular,
+                },
+              ]}
+            >
+              {user?.phone ?? "—"}
+            </Text>
             <PrimaryButton
               title="Log out"
               onPress={logout}
+              fullWidth
               style={styles.button}
             />
           </GlassCard>
@@ -39,9 +72,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   title: {
-    color: "#ffffff",
     fontSize: 28,
-    fontFamily: "Inter_700Bold",
     textAlign: "center",
     marginBottom: 24,
   },
@@ -49,15 +80,11 @@ const styles = StyleSheet.create({
     marginHorizontal: 0,
   },
   name: {
-    color: "#ffffff",
     fontSize: 20,
-    fontFamily: "Inter_600SemiBold",
     marginBottom: 4,
   },
   phone: {
-    color: "rgba(255,255,255,0.7)",
     fontSize: 15,
-    fontFamily: "Inter_400Regular",
     marginBottom: 24,
   },
   button: {

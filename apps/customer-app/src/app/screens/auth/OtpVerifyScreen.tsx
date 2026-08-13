@@ -1,12 +1,13 @@
 import { useMemo, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { ScreenBackground } from "../../components/ScreenBackground";
-import { GlassCard } from "../../components/GlassCard";
-import { GlassInput } from "../../components/GlassInput";
-import { PrimaryButton } from "../../components/PrimaryButton";
+import ScreenBackground from "../../shared/components/ScreenBackground";
+import GlassCard from "../../shared/components/GlassCard";
+import GlassInput from "../../shared/components/GlassInput";
+import PrimaryButton from "../../shared/components/PrimaryButton";
 import { customerAuthService } from "../../api/client";
 import { useAuthStore } from "../../store/useAuthStore";
+import { useThemeTokens } from "../../theme/ThemeContext";
 import { parsePhoneNumber } from "../../utils/countries";
 import type { AuthStackParamList } from "../../navigation/RootNavigator";
 
@@ -22,6 +23,7 @@ function formatPhoneForDisplay(phone: string): string {
 }
 
 export function OtpVerifyScreen({ route, navigation }: Props) {
+  const theme = useThemeTokens();
   const { phone } = route.params;
   const displayPhone = useMemo(() => formatPhoneForDisplay(phone), [phone]);
   const [otp, setOtp] = useState("");
@@ -65,12 +67,40 @@ export function OtpVerifyScreen({ route, navigation }: Props) {
   return (
     <ScreenBackground>
       <View style={styles.container}>
-        <Text style={styles.title}>Enter your code</Text>
-        <Text style={styles.subtitle}>
+        <Text
+          style={[
+            styles.title,
+            {
+              color: theme.colors.text,
+              fontFamily: theme.typography.fontFamilyBold,
+            },
+          ]}
+        >
+          Enter your code
+        </Text>
+        <Text
+          style={[
+            styles.subtitle,
+            {
+              color: theme.colors.textSecondary,
+              fontFamily: theme.typography.fontFamilyRegular,
+            },
+          ]}
+        >
           We sent a verification code to {displayPhone}
         </Text>
         <GlassCard style={styles.card}>
-          <Text style={styles.label}>Verification code</Text>
+          <Text
+            style={[
+              styles.label,
+              {
+                color: theme.colors.textSecondary,
+                fontFamily: theme.typography.fontFamilyMedium,
+              },
+            ]}
+          >
+            Verification code
+          </Text>
           <GlassInput
             value={otp}
             onChangeText={setOtp}
@@ -80,11 +110,24 @@ export function OtpVerifyScreen({ route, navigation }: Props) {
             autoCorrect={false}
             maxLength={6}
           />
-          {error ? <Text style={styles.error}>{error}</Text> : null}
+          {error ? (
+            <Text
+              style={[
+                styles.error,
+                {
+                  color: theme.colors.error,
+                  fontFamily: theme.typography.fontFamilyRegular,
+                },
+              ]}
+            >
+              {error}
+            </Text>
+          ) : null}
           <PrimaryButton
             title="Verify"
             onPress={verify}
             loading={loading}
+            fullWidth
             style={styles.button}
           />
         </GlassCard>
@@ -99,16 +142,12 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   title: {
-    color: "#ffffff",
     fontSize: 28,
-    fontFamily: "Inter_700Bold",
     textAlign: "center",
     marginBottom: 8,
   },
   subtitle: {
-    color: "rgba(255,255,255,0.7)",
     fontSize: 15,
-    fontFamily: "Inter_400Regular",
     textAlign: "center",
     marginBottom: 32,
   },
@@ -116,18 +155,14 @@ const styles = StyleSheet.create({
     marginHorizontal: 0,
   },
   label: {
-    color: "rgba(255,255,255,0.7)",
     fontSize: 13,
-    fontFamily: "Inter_500Medium",
     marginBottom: 8,
   },
   button: {
     marginTop: 20,
   },
   error: {
-    color: "#fecaca",
     fontSize: 13,
-    fontFamily: "Inter_400Regular",
     marginTop: 12,
   },
 });

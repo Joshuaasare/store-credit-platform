@@ -121,6 +121,52 @@ Reference implementation: see `apps/main-webapp/src/app/pages/MyStore/components
 
 Do not ship a form whose submit button stays enabled and unlabeled through a network round-trip — that is a regression.
 
+## Customer-app: Component File Structure
+
+When implementing frontend components in `apps/customer-app` (the Expo/React Native customer mobile app), follow this file structure rule — one component per file, with screen-specific and reusable components in different directories:
+
+- **Reusable components** (used by 2+ screens or generic UI primitives): `apps/customer-app/src/app/shared/components/<ComponentName>.tsx`. Examples: `GlassCard`, `GlassInput`, `GlassSegmentedControl`, `GlassTransition`, `PhoneInput`, `PrimaryButton`, `ScreenBackground`, `ActivityRow`.
+- **Screen-specific components** (used by exactly one screen): `apps/customer-app/src/app/screens/<screen>/components/<ComponentName>.tsx`. Examples: `Home/components/{ActivitiesModal, Header, HeroBalanceCard, ListHeader, NearbyOffersSection, OfferCard, RecentActivitySection}`, `Credits/components/{CreditCard, EmptyState, ErrorState, LoadingState}`.
+- **Pure utilities** (date formatting, currency formatting, string helpers): `apps/customer-app/src/app/shared/utils/<name>.ts`. Examples: `formatGhs`, `computeInitials`.
+- **Screen-specific hooks / derivation helpers**: `apps/customer-app/src/app/screens/<screen>/<name>.ts` (sibling to the screen file, NOT inside `components/`). Examples: `screens/home/useActivitiesFeed.ts`, `screens/home/deriveOffers.ts`.
+
+Decision tree for placement:
+
+1. Is the file a pure utility (no JSX, returns a primitive/string/number)? → `shared/utils/`.
+2. Is it used by more than one screen, OR is it a generic UI primitive (themed button, glass card, gradient background)? → `shared/components/`.
+3. Is it used by exactly one screen and tightly coupled to that screen's data? → `screens/<screen>/components/`.
+4. Is it a screen-specific React Query hook or data-derivation helper? → `screens/<screen>/` (sibling to the screen file).
+
+Default exports vs named exports:
+
+- React components → **default export**. `export default function Foo(...)`. Importers: `import Foo from "..."`.
+- Hooks, utilities, types → **named export**. `export function useFoo()`, `export type X = ...`, `export function fooBar()`. Importers: `import { useFoo, fooBar, type X } from "..."`.
+
+When the screen file itself stays slim. Do NOT inline 3+ sub-components in a screen file — extract them to `screens/<screen>/components/`. The screen file should orchestrate data (queries, derived state) and render a tree of imported components.
+
+Reference implementation: read `apps/customer-app/src/app/screens/home/HomeScreen.tsx` (224 lines — the post-refactor version) and the co-located `screens/home/components/`. The structure is the canonical pattern.
+
+## Customer-app: Theme Tokens Only (No Hardcoded Hex)
+
+Every color, typography, and radius value in `apps/customer-app` MUST be read from `useThemeTokens()` (`theme.colors.*`, `theme.typography.*`, `theme.radii.*`). Never write a hex literal (`#1e40af`, `#fff`, etc.) inside a component, screen, navigation file, or stylesheet. The **only** file allowed to contain hex values is `apps/customer-app/src/app/theme/colors.ts`.
+
+Specific rules:
+
+- Brand colors (`primary` / `primaryActive` / `textOnPrimary`) drive every CTA, every link, the active state of the tab bar, the brand-color "credit card" hero surface, and inline brand accents.
+- Semantic tokens (`surface` / `surfaceBorder` / `text` / `textSecondary` / `textMuted` / `textPlaceholder` / `success` / `error` / `warning` / `sheet` / `sheetText` / `sheetInput` / `sheetSeparator` / `navCard` / `navBorder`) drive every neutral surface and every status indicator.
+- Light/dark parity is automatic via the existing `ThemeContext` — read both palettes from `colors.ts`; do not duplicate the logic in components.
+
+When a surface genuinely needs a brand-derived background (e.g. the hero "credit card" whose fill IS the brand color), bind it inline via `style={{ backgroundColor: theme.colors.primary }}` — do not move it into the static `StyleSheet.create`. The static stylesheet is for layout-only properties (sizes, gaps, paddings, flex directions).
+
+Decorative white-on-card tints (e.g. `rgba(255,255,255,0.06)` for an orb, `rgba(255,255,255,0.72)` for a label) are acceptable inside a static `LinearGradient` overlay because they are *not* brand colors — they describe white-on-brand-card layering, which doesn't change when the brand does. They are never used as a fill, border, text, or icon color.
+
+**Why:** the theme is the single source of truth. A rebrand (orange → blue → maroon, light/dark token swap) must be achievable by editing only `colors.ts`. Any hardcoded hex breaks the visual contract and blocks light/dark parity.
+
+**How to apply:**
+- Before declaring any UI feature in `apps/customer-app` complete, run `grep -rn "#[0-9a-fA-F]\{3,6\}\b" apps/customer-app/src/app/` and confirm every match is either (a) inside `theme/colors.ts`, or (b) inside a clearly justified `LinearGradient` decorative overlay (white-on-card). Never as a fill, border, text, or icon color.
+- If you find a hex outside those two cases, replace it with the matching `theme.colors.*` token (or, if the token doesn't exist, add a new one to `ColorTokens` in `colors.ts` and apply it to both `lightColors` and `darkColors`).
+- This rule applies to existing components too — when you touch any file in `apps/customer-app/src/app/` for a feature, audit that file for stray hexes and migrate them.
+
 ## Decision Framework: New File vs. Existing File
 
 When implementing routes or services, you must decide whether to create a new file or add to an existing one:

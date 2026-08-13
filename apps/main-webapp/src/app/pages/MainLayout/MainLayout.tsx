@@ -17,7 +17,7 @@ import {
   Toaster,
 } from "@store-credit-platform/web-components";
 import { useTheme } from "../../shared/providers/ThemeProvider";
-import { ThemeToggle } from "../../components/ThemeToggle/ThemeToggle";
+import { ThemeToggle } from "@shared/components/ThemeToggle/ThemeToggle";
 import { useStoreStore } from "@shared/stores/storeStore";
 import { StaffRoleValues } from "@shared/types/api.types";
 import {

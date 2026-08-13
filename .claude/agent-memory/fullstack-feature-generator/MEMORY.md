@@ -7,3 +7,4 @@
 - [Backend local boot](backend-local-boot.md) — required env vars + `npx nx serve main-backend` to smoke-check route registration.
 - [Schema hand-edits leak](schema-hand-edits-leak.md) — regenerating main.schema.ts strips hand-edited BaseMerchant/UpdateMerchantRequest fields; backport them to source .types.ts first.
 - [Purchase/credit/redemption re-architecture](purchase_credit_redemption_rearchitecture.md) — customer_transactions is gone; three tables (customer_purchases, customer_credit, customer_credit_redemptions) own the flow.
+- [customer_credit has no config FK](customer_credit_no_config_fk.md) — no FK / config_group_id to running or fixed credit_config; credit_type "running" is a server-side default, not a stored field.

@@ -17,7 +17,7 @@ import {
 } from "@store-credit-platform/web-components";
 import { BranchWithAggregates } from "@shared/types/api.types";
 import { CountryCode, getCountryByCode } from "@shared/utils/countries";
-import { CountryFlag } from "../../../components/CountryFlag/CountryFlag";
+import { CountryFlag } from "@shared/components/CountryFlag/CountryFlag";
 import { formatGHSCompact } from "@shared/utils/format";
 
 interface BranchDetailDialogProps {
@@ -126,7 +126,7 @@ export function BranchDetailDialog({
                 {displayName}
               </h2>
               <p className="text-muted-foreground mt-1 flex items-center gap-1.5 truncate text-sm">
-                <Building2 className="h-3.5 w-3.5 shrink-0 align-text-bottom stroke-[1.5]" />
+                <Building2 className="h-3.5 w-3.5 shrink-0 stroke-[1.5] align-text-bottom" />
                 <span className="truncate">{branch?.city}</span>
                 {country && (
                   <>

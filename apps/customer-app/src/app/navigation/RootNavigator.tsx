@@ -5,6 +5,8 @@ import { LoginScreen } from "../screens/auth/LoginScreen";
 import { OtpVerifyScreen } from "../screens/auth/OtpVerifyScreen";
 import { NewUserScreen } from "../screens/auth/NewUserScreen";
 import { TabNavigator } from "./TabNavigator";
+import { useThemeTokens } from "../theme/ThemeContext";
+import { buildNavTheme } from "../theme/navTheme";
 
 export type AuthStackParamList = {
   Login: undefined;
@@ -48,8 +50,9 @@ function AppStackNavigator() {
  */
 export function RootNavigator() {
   const status = useAuthStore((s) => s.status);
+  const theme = useThemeTokens();
   return (
-    <NavigationContainer>
+    <NavigationContainer theme={buildNavTheme(theme)}>
       {status === "authenticated" ? (
         <AppStackNavigator />
       ) : (

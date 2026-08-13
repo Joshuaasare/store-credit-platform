@@ -4,7 +4,7 @@ import { useForm } from "react-hook-form";
 import { Button } from "@store-credit-platform/web-components";
 import { createAuthService } from "@store-credit-platform/api-services";
 import { useAuthStore } from "@shared/stores/authStore";
-import { PhoneInput } from "../../components/PhoneInput/PhoneInput";
+import { PhoneInput } from "@shared/components/PhoneInput/PhoneInput";
 
 const authService = createAuthService();
 

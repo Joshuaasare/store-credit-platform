@@ -43,9 +43,9 @@ import {
 } from "@shared/utils/misc.utils";
 import { StaffDialog } from "./components/StaffDialog";
 import { DeleteStaffDialog } from "./components/DeleteStaffDialog";
-import SearchInput from "../../components/SearchInput/SearchInput";
+import SearchInput from "@shared/components/SearchInput/SearchInput";
 import useDebounce from "@shared/hooks/useDebounce";
-import { FilterBar } from "../../components/FilterBar/FilterBar";
+import { FilterBar } from "@shared/components/FilterBar/FilterBar";
 import { allBranchOption, roleOptions } from "@shared/utils/options.utils";
 
 export default function Staff() {

@@ -19,7 +19,7 @@ const DURATION_OUT = 60;
  * overlaps read as a soft glass transition over the constant teal gradient
  * background.
  */
-export function GlassTransition({ children }: { children: ReactNode }) {
+export default function GlassTransition({ children }: { children: ReactNode }) {
   const isFocused = useIsFocused();
 
   const opacity = useSharedValue(isFocused ? 1 : 0);

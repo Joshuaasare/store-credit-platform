@@ -1,12 +1,13 @@
 import { useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { ScreenBackground } from "../../components/ScreenBackground";
-import { GlassCard } from "../../components/GlassCard";
-import { PhoneInput } from "../../components/PhoneInput";
-import { PrimaryButton } from "../../components/PrimaryButton";
+import ScreenBackground from "../../shared/components/ScreenBackground";
+import GlassCard from "../../shared/components/GlassCard";
+import PhoneInput from "../../shared/components/PhoneInput";
+import PrimaryButton from "../../shared/components/PrimaryButton";
 import { customerAuthService } from "../../api/client";
 import { useAuthStore } from "../../store/useAuthStore";
+import { useThemeTokens } from "../../theme/ThemeContext";
 import type { AuthStackParamList } from "../../navigation/RootNavigator";
 
 type Props = NativeStackScreenProps<AuthStackParamList, "Login">;
@@ -17,6 +18,7 @@ const DEV_CUSTOMER_OTP = "123456";
 // END DEV
 
 export function LoginScreen({ navigation }: Props) {
+  const theme = useThemeTokens();
   const [phone, setPhone] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -77,25 +79,85 @@ export function LoginScreen({ navigation }: Props) {
   return (
     <ScreenBackground>
       <View style={styles.container}>
-        <Text style={styles.title}>StoreCredit</Text>
-        <Text style={styles.subtitle}>Sign in with your phone number</Text>
+        <Text
+          style={[
+            styles.title,
+            {
+              color: theme.colors.text,
+              fontFamily: theme.typography.fontFamilyBold,
+            },
+          ]}
+        >
+          StoreCredit
+        </Text>
+        <Text
+          style={[
+            styles.subtitle,
+            {
+              color: theme.colors.textSecondary,
+              fontFamily: theme.typography.fontFamilyRegular,
+            },
+          ]}
+        >
+          Sign in with your phone number
+        </Text>
         <GlassCard style={styles.card}>
-          <Text style={styles.label}>Phone number</Text>
+          <Text
+            style={[
+              styles.label,
+              {
+                color: theme.colors.textSecondary,
+                fontFamily: theme.typography.fontFamilyMedium,
+              },
+            ]}
+          >
+            Phone number
+          </Text>
           <PhoneInput value={phone} onChange={setPhone} />
-          {error ? <Text style={styles.error}>{error}</Text> : null}
+          {error ? (
+            <Text
+              style={[
+                styles.error,
+                {
+                  color: theme.colors.error,
+                  fontFamily: theme.typography.fontFamilyRegular,
+                },
+              ]}
+            >
+              {error}
+            </Text>
+          ) : null}
           <PrimaryButton
             title="Send code"
             onPress={send}
             loading={loading}
+            fullWidth
             style={styles.button}
           />
           {/* DEV — delete before production */}
           <Pressable
             onPress={devLogin}
             disabled={loading}
-            style={styles.devButton}
+            style={[
+              styles.devButton,
+              {
+                backgroundColor: theme.colors.warningSurface,
+                borderColor: theme.colors.warningBorder,
+                borderRadius: theme.radii.sm,
+              },
+            ]}
           >
-            <Text style={styles.devText}>Dev Login</Text>
+            <Text
+              style={[
+                styles.devText,
+                {
+                  color: theme.colors.warning,
+                  fontFamily: theme.typography.fontFamilySemiBold,
+                },
+              ]}
+            >
+              Dev Login
+            </Text>
           </Pressable>
           {/* END DEV */}
         </GlassCard>
@@ -110,16 +172,12 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   title: {
-    color: "#ffffff",
     fontSize: 32,
-    fontFamily: "Inter_700Bold",
     textAlign: "center",
     marginBottom: 8,
   },
   subtitle: {
-    color: "rgba(255,255,255,0.7)",
     fontSize: 16,
-    fontFamily: "Inter_400Regular",
     textAlign: "center",
     marginBottom: 32,
   },
@@ -127,32 +185,23 @@ const styles = StyleSheet.create({
     marginHorizontal: 0,
   },
   label: {
-    color: "rgba(255,255,255,0.7)",
     fontSize: 13,
-    fontFamily: "Inter_500Medium",
     marginBottom: 8,
   },
   button: {
     marginTop: 20,
   },
   error: {
-    color: "#fecaca",
     fontSize: 13,
-    fontFamily: "Inter_400Regular",
     marginTop: 12,
   },
   devButton: {
     marginTop: 16,
     paddingVertical: 10,
     alignItems: "center",
-    borderRadius: 8,
-    backgroundColor: "rgba(251, 191, 36, 0.15)",
     borderWidth: 1,
-    borderColor: "rgba(251, 191, 36, 0.4)",
   },
   devText: {
-    color: "#fcd34d",
     fontSize: 13,
-    fontFamily: "Inter_600SemiBold",
   },
 });

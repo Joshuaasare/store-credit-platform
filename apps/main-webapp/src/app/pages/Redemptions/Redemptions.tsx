@@ -1,5 +1,9 @@
 import { useMemo, useState } from "react";
-import { useInfiniteQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQueryClient,
+} from "@tanstack/react-query";
 import { ColumnDef } from "@tanstack/react-table";
 import { Ticket, Check, X } from "lucide-react";
 import { toast } from "sonner";
@@ -19,14 +23,11 @@ import {
   TabsTrigger,
   cn,
 } from "@store-credit-platform/web-components";
-import { DataTable } from "../../components/DataTable/DataTable";
-import InfiniteScroll from "../../components/InfiniteScroll/InfiniteScroll";
+import { DataTable } from "@shared/components/DataTable/DataTable";
+import InfiniteScroll from "@shared/components/InfiniteScroll/InfiniteScroll";
 import { redemptionService } from "@store-credit-platform/api-services";
 import { useStoreStore } from "@shared/stores/storeStore";
-import {
-  RedemptionRow,
-  RedemptionStatus,
-} from "@shared/types/api.types";
+import { RedemptionRow, RedemptionStatus } from "@shared/types/api.types";
 import { isApiError } from "@shared/utils/api.utils";
 import { formatGHS, formatIsoDate } from "@shared/utils/format";
 import {
@@ -97,11 +98,7 @@ export default function Redemptions() {
   const [branchId, setBranchId] = useState<number | null>(null);
 
   const redemptionsQuery = useInfiniteQuery({
-    queryKey: [
-      "redemptions",
-      "list",
-      { status, branchId, limit: LIMIT },
-    ],
+    queryKey: ["redemptions", "list", { status, branchId, limit: LIMIT }],
     queryFn: ({ pageParam }) => {
       const offset = (pageParam as number) ?? 0;
       return redemptionService.listRedemptions({
@@ -176,12 +173,11 @@ export default function Redemptions() {
     },
   });
 
-  const pendingMutationId =
-    approveMutation.isPending
-      ? approveMutation.variables ?? null
-      : rejectMutation.isPending
-        ? rejectMutation.variables ?? null
-        : null;
+  const pendingMutationId = approveMutation.isPending
+    ? (approveMutation.variables ?? null)
+    : rejectMutation.isPending
+      ? (rejectMutation.variables ?? null)
+      : null;
 
   const columns: ColumnDef<RedemptionRow>[] = useMemo(
     () => [
@@ -237,7 +233,7 @@ export default function Redemptions() {
         id: "remaining",
         header: "Remaining",
         cell: ({ row }) => (
-          <span className="text-primary tabular-nums font-medium">
+          <span className="text-primary font-medium tabular-nums">
             {formatGHS(row.original.remaining)}
           </span>
         ),
@@ -246,7 +242,7 @@ export default function Redemptions() {
         id: "requested_amount",
         header: "Requested amount",
         cell: ({ row }) => (
-          <span className="tabular-nums font-medium">
+          <span className="font-medium tabular-nums">
             {formatGHS(Number(row.original.amount_redeemed))}
           </span>
         ),
@@ -267,7 +263,10 @@ export default function Redemptions() {
           const s = deriveRedemptionStatus(row.original);
           const meta = REDEMPTION_STATUS_META[s];
           return (
-            <Badge variant="outline" className={cn("border bg-transparent", meta.chip)}>
+            <Badge
+              variant="outline"
+              className={cn("border bg-transparent", meta.chip)}
+            >
               {meta.label}
             </Badge>
           );
@@ -339,7 +338,9 @@ export default function Redemptions() {
               <Ticket className="h-6 w-6 stroke-[1.75]" />
             </div>
             <div className="space-y-1">
-              <h1 className="text-3xl font-bold tracking-tight">Credit Redemptions</h1>
+              <h1 className="text-3xl font-bold tracking-tight">
+                Credit Redemptions
+              </h1>
               <p className="text-muted-foreground text-sm">
                 Review and approve customer-initiated credit redemption requests
                 across your branches.

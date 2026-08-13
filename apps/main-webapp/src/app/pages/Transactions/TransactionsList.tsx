@@ -15,8 +15,8 @@ import {
   cn,
   Monogram,
 } from "@store-credit-platform/web-components";
-import { DataTable } from "../../components/DataTable/DataTable";
-import InfiniteScroll from "../../components/InfiniteScroll/InfiniteScroll";
+import { DataTable } from "@shared/components/DataTable/DataTable";
+import InfiniteScroll from "@shared/components/InfiniteScroll/InfiniteScroll";
 import { transactionService } from "@store-credit-platform/api-services";
 import { useStoreStore } from "@shared/stores/storeStore";
 import {
