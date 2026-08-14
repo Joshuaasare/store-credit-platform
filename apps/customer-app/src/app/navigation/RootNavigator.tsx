@@ -5,6 +5,7 @@ import { LoginScreen } from "../screens/auth/LoginScreen";
 import { OtpVerifyScreen } from "../screens/auth/OtpVerifyScreen";
 import { NewUserScreen } from "../screens/auth/NewUserScreen";
 import { TabNavigator } from "./TabNavigator";
+import { MerchantCreditsScreen } from "../screens/credits/MerchantCreditsScreen";
 import { useThemeTokens } from "../shared/theme/ThemeContext";
 import { buildNavTheme } from "../shared/theme/navTheme";
 
@@ -16,6 +17,7 @@ export type AuthStackParamList = {
 
 export type AppStackParamList = {
   Tabs: undefined;
+  CreditsMerchantDetail: { merchantId: number };
 };
 
 const AuthStack = createNativeStackNavigator<AuthStackParamList>();
@@ -38,6 +40,10 @@ function AppStackNavigator() {
   return (
     <AppStack.Navigator screenOptions={{ headerShown: false }}>
       <AppStack.Screen name="Tabs" component={TabNavigator} />
+      <AppStack.Screen
+        name="CreditsMerchantDetail"
+        component={MerchantCreditsScreen}
+      />
     </AppStack.Navigator>
   );
 }

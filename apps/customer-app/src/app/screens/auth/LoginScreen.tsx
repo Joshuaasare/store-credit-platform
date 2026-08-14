@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import ScreenBackground from "../../shared/components/ScreenBackground";
+import ScreenBody from "../../shared/components/ScreenBody";
 import GlassCard from "../../shared/components/GlassCard";
 import PhoneInput from "../../shared/components/PhoneInput";
 import PrimaryButton from "../../shared/components/PrimaryButton";
@@ -78,6 +79,7 @@ export function LoginScreen({ navigation }: Props) {
 
   return (
     <ScreenBackground>
+      <ScreenBody>
       <View style={styles.container}>
         <Text
           style={[
@@ -162,6 +164,7 @@ export function LoginScreen({ navigation }: Props) {
           {/* END DEV */}
         </GlassCard>
       </View>
+      </ScreenBody>
     </ScreenBackground>
   );
 }

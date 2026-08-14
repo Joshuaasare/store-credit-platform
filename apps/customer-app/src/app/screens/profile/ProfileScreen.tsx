@@ -1,5 +1,6 @@
 import { StyleSheet, Text, View } from "react-native";
 import ScreenBackground from "../../shared/components/ScreenBackground";
+import ScreenBody from "../../shared/components/ScreenBody";
 import GlassCard from "../../shared/components/GlassCard";
 import PrimaryButton from "../../shared/components/PrimaryButton";
 import GlassTransition from "../../shared/components/GlassTransition";
@@ -17,6 +18,7 @@ export function ProfileScreen() {
 
   return (
     <ScreenBackground>
+      <ScreenBody>
       <GlassTransition>
         <View style={styles.container}>
           <Text
@@ -62,6 +64,7 @@ export function ProfileScreen() {
           </GlassCard>
         </View>
       </GlassTransition>
+      </ScreenBody>
     </ScreenBackground>
   );
 }

@@ -5,6 +5,7 @@ import { merchantService } from "../../services/merchant.service";
 import { customerService } from "../../services/customers.service";
 import { customerCreditsService } from "../../services/customerCredits.service";
 import { customerActivitiesService } from "../../services/customerActivities.service";
+import { customerRedemptionsService } from "../../services/customerRedemptions.service";
 import {
   LeaderboardQuerystring,
   LeaderboardApiResponse,
@@ -15,6 +16,10 @@ import {
 } from "../../schemas/customers.schema";
 import { CustomerCreditsApiResponse } from "../../schemas/customerCredits.schema";
 import { CustomerActivitiesApiResponse } from "../../schemas/customerActivities.schema";
+import {
+  CustomerRedemptionsApiResponse,
+  CustomerRedemptionCancelResponse,
+} from "../../schemas/customerRedemptions.schema";
 
 // Querystring for the customer-app Home tab Recent Activity feed.
 // `cursor` is the numeric id of the last item from the previous page
@@ -334,6 +339,120 @@ export default async function (fastify: FastifyInstance) {
             ? error.message
             : "Failed to load activity feed";
         request.log.error(error, "GET /customers/me/transactions failed");
+        reply.status(400);
+        return { success: false, error: message };
+      }
+    },
+  });
+
+  /**
+   * GET /customers/me/redemptions
+   * Customer-app merchant-detail "Credits Redeemed" tab — every redemption
+   * the logged-in customer has at a given merchant (scoped through the
+   * merchant's branches). `status` narrows the row set
+   * ("pending" | "approved" | "rejected" | "all"). Customer-token only —
+   * `customer_id` is derived from the JWT.
+   */
+  const CustomerRedemptionsQuerystring = Type.Object({
+    merchant_id: Type.Integer({ minimum: 1 }),
+    status: Type.Optional(
+      Type.Union([
+        Type.Literal("pending"),
+        Type.Literal("approved"),
+        Type.Literal("rejected"),
+        Type.Literal("all"),
+      ]),
+    ),
+  });
+
+  fastify.get<{
+    Querystring: Static<typeof CustomerRedemptionsQuerystring>;
+    Reply: CustomerRedemptionsApiResponse;
+  }>("/me/redemptions", {
+    preHandler: [requireAuth],
+    schema: {
+      querystring: CustomerRedemptionsQuerystring,
+      response: {
+        200: CustomerRedemptionsApiResponse,
+        400: CustomerRedemptionsApiResponse,
+        401: CustomerRedemptionsApiResponse,
+        403: CustomerRedemptionsApiResponse,
+      },
+    },
+    handler: async (request, reply) => {
+      try {
+        const customerId = request.user?.customer_id;
+        if (customerId == null) {
+          reply.status(403);
+          return {
+            success: false,
+            error: "Forbidden: this endpoint is for customer accounts only",
+          };
+        }
+        const { merchant_id, status } = request.query;
+        const rows = await customerRedemptionsService.listMyRedemptionsAtMerchant(
+          customerId,
+          { merchantId: merchant_id, status: status ?? "all" },
+        );
+        return { success: true, data: rows };
+      } catch (error) {
+        const message =
+          error instanceof Error
+            ? error.message
+            : "Failed to load redemptions";
+        request.log.error(error, "GET /customers/me/redemptions failed");
+        reply.status(400);
+        return { success: false, error: message };
+      }
+    },
+  });
+
+  /**
+   * DELETE /customers/me/redemptions/:id
+   * Soft-cancel a pending redemption. Asserts the row exists, is not
+   * already deleted, belongs to the caller, and is in the pending state.
+   * 404 / 403 / 409 surface the specific failure to the caller so the
+   * customer-app sheet can map them to the right UX.
+   */
+  fastify.delete<{
+    Params: { id: number };
+    Reply: CustomerRedemptionCancelResponse | { success: false; error: string };
+  }>("/me/redemptions/:id", {
+    preHandler: [requireAuth],
+    schema: {
+      response: {
+        200: CustomerRedemptionCancelResponse,
+        401: CustomerRedemptionCancelResponse,
+        403: CustomerRedemptionCancelResponse,
+        404: CustomerRedemptionCancelResponse,
+        409: CustomerRedemptionCancelResponse,
+      },
+    },
+    handler: async (request, reply) => {
+      try {
+        const customerId = request.user?.customer_id;
+        if (customerId == null) {
+          reply.status(403);
+          return {
+            success: false,
+            error: "Forbidden: this endpoint is for customer accounts only",
+          };
+        }
+        const result = await customerRedemptionsService.cancelMyRedemption(
+          Number(request.params.id),
+          customerId,
+        );
+        if (!result.ok) {
+          reply.status(result.status);
+          return { success: false, error: result.error };
+        }
+        return { success: true, data: null };
+      } catch (error) {
+        const message =
+          error instanceof Error
+            ? error.message
+            : "Failed to cancel redemption";
+        request.log.error(error, "DELETE /customers/me/redemptions/:id failed");
         reply.status(400);
         return { success: false, error: message };
       }

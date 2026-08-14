@@ -1,4 +1,11 @@
-import { StyleSheet, Text, View, type ImageStyle, type StyleProp, type ViewStyle } from "react-native";
+import {
+  StyleSheet,
+  Text,
+  View,
+  type ImageStyle,
+  type StyleProp,
+  type ViewStyle,
+} from "react-native";
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { computeInitials } from "../utils/computeInitials";
@@ -85,7 +92,12 @@ export default function MerchantAvatar({
           it loads. Reads from the same gradient palette as the no-logo
           fallback so the avatar visually anchors before the network
           image arrives. */}
-      <View style={[StyleSheet.absoluteFill, { borderRadius: radius, overflow: "hidden" }]}>
+      <View
+        style={[
+          StyleSheet.absoluteFill,
+          { borderRadius: radius, overflow: "hidden" },
+        ]}
+      >
         <LinearGradient
           colors={[photoStart, photoEnd]}
           start={{ x: 0, y: 0 }}
@@ -95,10 +107,7 @@ export default function MerchantAvatar({
       </View>
       <Image
         source={{ uri: logoUrl }}
-        style={[
-          styles.image,
-          { width: size, height: size, borderRadius: radius },
-        ]}
+        style={[styles.image, { width: size, height: size }]}
         contentFit="cover"
         transition={150}
         accessibilityIgnoresInvertColors

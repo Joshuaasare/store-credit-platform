@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
 import ScreenBackground from "../../shared/components/ScreenBackground";
+import ScreenBody from "../../shared/components/ScreenBody";
 import GlassCard from "../../shared/components/GlassCard";
 import GlassInput from "../../shared/components/GlassInput";
 import PrimaryButton from "../../shared/components/PrimaryButton";
@@ -54,6 +55,7 @@ export function NewUserScreen() {
 
   return (
     <ScreenBackground>
+      <ScreenBody>
       <View style={styles.container}>
         <Text
           style={[
@@ -137,6 +139,7 @@ export function NewUserScreen() {
           />
         </GlassCard>
       </View>
+      </ScreenBody>
     </ScreenBackground>
   );
 }

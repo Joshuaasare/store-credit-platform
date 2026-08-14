@@ -14,6 +14,7 @@ import type {
   CustomerCreditsApiResponse,
 } from "@store-credit-platform/api-services";
 import ScreenBackground from "../../shared/components/ScreenBackground";
+import ScreenBody from "../../shared/components/ScreenBody";
 import { useAuthStore } from "../../shared/store/useAuthStore";
 import {
   customerActivitiesService,
@@ -120,6 +121,7 @@ export function HomeScreen() {
 
   return (
     <ScreenBackground>
+      <ScreenBody>
       <ScrollView showsVerticalScrollIndicator={false}>
         {/* <GlassTransition> */}
         <View>
@@ -151,6 +153,7 @@ export function HomeScreen() {
           previewItemCount={previewItems.length}
         />
       </ScrollView>
+      </ScreenBody>
     </ScreenBackground>
   );
 }

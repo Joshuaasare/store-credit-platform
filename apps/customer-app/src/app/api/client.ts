@@ -2,6 +2,7 @@ import {
   createCustomerAuthService,
   createCustomerCreditsService,
   createCustomerActivitiesService,
+  createCustomerRedemptionsService,
   type ApiClientConfig,
 } from "@store-credit-platform/api-services";
 import * as SecureStore from "expo-secure-store";
@@ -79,3 +80,11 @@ export const customerCreditsService = createCustomerCreditsService(rnConfig);
  * same RN-injected transport as the other customer services.
  */
 export const customerActivitiesService = createCustomerActivitiesService(rnConfig);
+
+/**
+ * Customer-app redemptions service. Backs the "Credits Redeemed" tab on
+ * the merchant detail screen (pending + approved + rejected redemptions
+ * at a single merchant, plus soft-cancel). Shares the same RN-injected
+ * transport as the other customer services.
+ */
+export const customerRedemptionsService = createCustomerRedemptionsService(rnConfig);

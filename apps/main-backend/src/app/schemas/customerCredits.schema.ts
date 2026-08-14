@@ -26,6 +26,7 @@ merchant: BaseMerchant
 })
 ]),
 redeemed_total: Type.Number(),
+pending_total: Type.Number(),
 remaining: Type.Number(),
 status: CustomerCreditStatus,
 credit_type: CustomerCreditType

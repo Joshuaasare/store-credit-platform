@@ -1,6 +1,6 @@
 /**
  * Auto-generated API Types
- * Generated on: 2026-08-13T04:02:08.722Z
+ * Generated on: 2026-08-14T10:18:25.230Z
  * 
  * ⚠️ DO NOT EDIT MANUALLY
  * Source: apps/smartschool-api/src/app/types/
@@ -675,6 +675,8 @@ export interface CustomerCreditWithBranch extends BaseCustomerCredit {
 
   redeemed_total: number;
 
+  pending_total: number;
+
   remaining: number;
   
   status: CustomerCreditStatus;
@@ -694,6 +696,31 @@ export interface CustomerCreditsResponse {
 
 export type CustomerCreditsApiResponse =
   | CustomerCreditsResponse
+  | ApiErrorResponse;
+
+export type CustomerRedemptionStatus = "pending" | "approved" | "rejected";
+
+export type CustomerRedemptionStatusFilter =
+  | CustomerRedemptionStatus
+  | "all";
+
+export type CustomerRedemptionRow = BaseCustomerCreditRedemption & {
+  branch: BaseBranch & { merchant: BaseMerchant };
+  credit: BaseCustomerCredit;
+};
+
+export interface CustomerRedemptionsResponse {
+  success: true;
+  data: CustomerRedemptionRow[];
+}
+
+export interface CustomerRedemptionCancelResponse {
+  success: true;
+  data: null;
+}
+
+export type CustomerRedemptionsApiResponse =
+  | CustomerRedemptionsResponse
   | ApiErrorResponse;
 
 export type LeaderboardSort =

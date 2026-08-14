@@ -44,8 +44,14 @@ export interface CustomerCreditWithBranch extends BaseCustomerCredit {
   // Sum of approved (approved_at IS NOT NULL) redemptions for this credit,
   // excluding soft-deleted rows. Always a non-negative number.
   redeemed_total: number;
-  // max(0, credit_amount - redeemed_total). Clamped at 0 so fully-redeemed
-  // credits still appear with a 0 remaining rather than a negative.
+  // Sum of pending (approved_at IS NULL AND rejected_at IS NULL) redemptions
+  // for this credit, excluding soft-deleted rows. Pending redemptions also
+  // reduce the customer-visible `remaining` so the wallet never claims more
+  // spend than is actually available across both approved + pending.
+  pending_total: number;
+  // max(0, credit_amount - redeemed_total - pending_total). Clamped at 0 so
+  // fully-redeemed credits still appear with a 0 remaining rather than a
+  // negative.
   remaining: number;
   // Customer-facing bucket — see CustomerCreditStatus above.
   status: CustomerCreditStatus;

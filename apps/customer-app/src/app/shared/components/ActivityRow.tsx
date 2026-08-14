@@ -4,6 +4,7 @@ import type { CustomerActivity } from "@store-credit-platform/api-services";
 import MerchantAvatar from "./MerchantAvatar";
 import { useThemeTokens } from "../theme/ThemeContext";
 import { formatGhs } from "../utils/formatGhs";
+import { formatRelativeTimestamp } from "../utils/date.utils";
 
 /**
  * Recent-Activity row — one entry from the unified credit activity feed
@@ -114,36 +115,11 @@ export default function ActivityRow({
 }
 
 /**
- * Compact timestamp — "Just now", "5m ago", "2h ago", "Yesterday", or a
- * short date. Activities are typically recent so the relative form reads
- * more naturally than a full date.
+ * Compact timestamp — delegates to the shared `formatRelativeTimestamp`
+ * helper so the relative-vs-absolute logic lives in one place.
  */
 function formatTimestamp(iso: string): string {
-  const then = new Date(iso).getTime();
-  if (!Number.isFinite(then)) return "";
-  const now = Date.now();
-  const diffMs = now - then;
-  const diffSec = Math.floor(diffMs / 1000);
-
-  if (diffSec < 60) return "Just now";
-  const diffMin = Math.floor(diffSec / 60);
-  if (diffMin < 60) return `${diffMin}m ago`;
-  const diffHr = Math.floor(diffMin / 60);
-  if (diffHr < 24) return `${diffHr}h ago`;
-
-  const thenDate = new Date(then);
-  const nowDate = new Date(now);
-  const isYesterday =
-    thenDate.getFullYear() === nowDate.getFullYear() &&
-    thenDate.getMonth() === nowDate.getMonth() &&
-    nowDate.getDate() - thenDate.getDate() === 1;
-  if (isYesterday) return "Yesterday";
-
-  // Older than 24h — show short date.
-  return thenDate.toLocaleDateString("en-GB", {
-    day: "2-digit",
-    month: "short",
-  });
+  return formatRelativeTimestamp(iso);
 }
 
 const styles = StyleSheet.create({

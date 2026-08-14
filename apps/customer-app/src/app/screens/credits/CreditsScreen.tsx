@@ -1,49 +1,54 @@
-import { useState } from "react";
-import { FlatList, StyleSheet, Text, View } from "react-native";
+import { FlatList, Pressable, StyleSheet, Text, View } from "react-native";
 import { useQuery } from "@tanstack/react-query";
-import type {
-  CustomerCreditWithBranch,
-  CustomerCreditsApiResponse,
-} from "@store-credit-platform/api-services";
+import type { CustomerCreditsApiResponse } from "@store-credit-platform/api-services";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { useNavigation } from "@react-navigation/native";
 import ScreenBackground from "../../shared/components/ScreenBackground";
+import ScreenBody from "../../shared/components/ScreenBody";
 import GlassTransition from "../../shared/components/GlassTransition";
-import GlassSegmentedControl from "../../shared/components/GlassSegmentedControl";
 import CreditCard from "./components/CreditCard";
 import EmptyState from "./components/EmptyState";
 import ErrorState from "./components/ErrorState";
 import LoadingState from "./components/LoadingState";
 import { useThemeTokens } from "../../shared/theme/ThemeContext";
 import { customerCreditsService } from "../../api/client";
-
-type CreditsTab = "live" | "expired";
+import {
+  aggregateLiveByMerchant,
+  type MerchantCreditBucket,
+} from "./lib/aggregateCredits";
+import type { AppStackParamList } from "../../navigation/RootNavigator";
 
 const CREDITS_QUERY_KEY = ["customer", "credits"] as const;
 
 /**
- * Credits screen — the customer's money view of their store credit. Two
- * in-screen tabs ("Live credits" / "Expired credits") sit on top of a single
- * `useQuery` against `/customers/me/credits`; the backend returns both
- * buckets in one response so switching tabs is instant (no network hop).
+ * Credits screen — the customer's money view of their store credit.
  *
- * The whole screen is wrapped in `<GlassTransition>` so the existing
- * cross-fade still plays when the user focuses the Credits tab in the
- * bottom navigator.
+ * The screen shows ONLY live credits (expired/redeemed credits never
+ * reappear on this surface). Live credits are aggregated by merchant —
+ * one card per merchant, total = sum of `remaining` across every branch
+ * the customer has a live credit at. Tapping a card opens the per-merchant
+ * detail screen.
+ *
+ * Backend: single `/customers/me/credits` call returns `live` + `expired`;
+ * only `live` is read.
  */
 export function CreditsScreen() {
   const theme = useThemeTokens();
-  const [tab, setTab] = useState<CreditsTab>("live");
+  const navigation =
+    useNavigation<NativeStackNavigationProp<AppStackParamList>>();
 
   const query = useQuery<CustomerCreditsApiResponse>({
     queryKey: CREDITS_QUERY_KEY,
     queryFn: () => customerCreditsService.getMyCredits(),
   });
 
-  const live = query.data?.success ? query.data.data.live : [];
-  const expired = query.data?.success ? query.data.data.expired : [];
-  const list: CustomerCreditWithBranch[] = tab === "live" ? live : expired;
+  const buckets = aggregateLiveByMerchant(
+    query.data?.success ? query.data.data.live : [],
+  );
 
   return (
     <ScreenBackground>
+      <ScreenBody>
       <GlassTransition>
         <View style={styles.container}>
           <Text
@@ -58,17 +63,6 @@ export function CreditsScreen() {
             Credits
           </Text>
 
-          <GlassSegmentedControl<CreditsTab>
-            value={tab}
-            onChange={setTab}
-            options={[
-              { value: "live", label: "Live credits", badge: live.length },
-              { value: "expired", label: "Expired", badge: expired.length },
-            ]}
-            accessibilityLabel="Credits view"
-            style={styles.segmentedControl}
-          />
-
           <View style={styles.listArea}>
             {query.isLoading ? (
               <LoadingState />
@@ -80,26 +74,27 @@ export function CreditsScreen() {
                     : "Couldn't load your credits."
                 }
               />
-            ) : list.length === 0 ? (
-              tab === "live" ? (
-                <EmptyState
-                  title="No live credits yet"
-                  subtitle="Visit a merchant to start earning credit on your purchases."
-                />
-              ) : (
-                <EmptyState
-                  title="No expired credits"
-                  subtitle="Credits that expire or get revoked will show up here."
-                />
-              )
+            ) : buckets.length === 0 ? (
+              <EmptyState
+                title="No live credits yet"
+                subtitle="Visit a merchant to start earning credit on your purchases."
+              />
             ) : (
               <FlatList
-                data={list}
-                keyExtractor={(item) => String(item.id)}
+                data={buckets}
+                keyExtractor={(item) => String(item.merchantId)}
                 renderItem={({ item, index }) => (
-                  <CreditCard
-                    credit={item}
-                    style={index === 0 ? undefined : { marginTop: 12 }}
+                  <MerchantCreditRow
+                    bucket={item}
+                    isFirst={index === 0}
+                    onPress={() =>
+                      navigation.navigate("CreditsMerchantDetail", {
+                        merchantId: item.merchantId,
+                      })
+                    }
+                    onRedeem={() => {
+                      // No-op placeholder — redeem flow lands in a follow-up.
+                    }}
                   />
                 )}
                 showsVerticalScrollIndicator={false}
@@ -109,7 +104,41 @@ export function CreditsScreen() {
           </View>
         </View>
       </GlassTransition>
+      </ScreenBody>
     </ScreenBackground>
+  );
+}
+
+/**
+ * Single tappable row — wraps `CreditCard` in a `Pressable` so the entire
+ * card surface is the touch target (opens the merchant detail screen).
+ * The card's own `Redeem` button consumes taps on its pill, so the
+ * `Pressable` only fires for taps elsewhere on the card surface.
+ */
+function MerchantCreditRow({
+  bucket,
+  isFirst,
+  onPress,
+  onRedeem,
+}: {
+  bucket: MerchantCreditBucket;
+  isFirst: boolean;
+  onPress: () => void;
+  onRedeem: () => void;
+}) {
+  return (
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.row,
+        isFirst ? undefined : styles.rowSpacing,
+        pressed ? styles.rowPressed : null,
+      ]}
+      accessibilityRole="button"
+      accessibilityLabel={`${bucket.merchantName} credits`}
+    >
+      <CreditCard bucket={bucket} onRedeem={onRedeem} />
+    </Pressable>
   );
 }
 
@@ -122,13 +151,19 @@ const styles = StyleSheet.create({
     letterSpacing: -0.3,
     marginBottom: 16,
   },
-  segmentedControl: {
-    marginBottom: 16,
-  },
   listArea: {
     flex: 1,
   },
   listContent: {
     paddingBottom: 24,
+  },
+  row: {
+    borderRadius: 20,
+  },
+  rowSpacing: {
+    marginTop: 12,
+  },
+  rowPressed: {
+    opacity: 0.7,
   },
 });

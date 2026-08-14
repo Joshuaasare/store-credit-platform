@@ -58,26 +58,54 @@ export class CustomerCreditsService {
 
     const credits = creditRows ?? [];
 
-    // 2. Fetch approved redemptions for these credit_ids in one shot. We
-    //    only sum approved (approved_at IS NOT NULL) redemptions — pending
-    //    and rejected rows do NOT reduce remaining credit.
+    // 2. Fetch approved AND pending redemptions for these credit_ids in two
+    //    parallel queries. We sum approved (approved_at IS NOT NULL) AND
+    //    pending (approved_at IS NULL AND rejected_at IS NULL) redemptions
+    //    so that a customer's wallet never claims more spend than is
+    //    actually available — a pending request reserves the amount even
+    //    before the merchant approves it. Rejected (rejected_at IS NOT
+    //    NULL) rows do NOT reduce remaining.
     const creditIds = credits.map((c) => c.id);
     const redeemedByCredit = new Map<number, number>();
+    const pendingByCredit = new Map<number, number>();
     if (creditIds.length > 0) {
-      const { data: redemptionRows, error: redemptionErr } = await supabaseAdmin
-        .from("customer_credit_redemptions")
-        .select("credit_id, amount_redeemed")
-        .in("credit_id", creditIds)
-        .not("approved_at", "is", null)
-        .is("deleted_at", null);
-      if (redemptionErr) {
-        throw new Error(`Failed to load redemptions: ${redemptionErr.message}`);
+      const [approvedRes, pendingRes] = await Promise.all([
+        supabaseAdmin
+          .from("customer_credit_redemptions")
+          .select("credit_id, amount_redeemed")
+          .in("credit_id", creditIds)
+          .not("approved_at", "is", null)
+          .is("deleted_at", null),
+        supabaseAdmin
+          .from("customer_credit_redemptions")
+          .select("credit_id, amount_redeemed")
+          .in("credit_id", creditIds)
+          .is("approved_at", null)
+          .is("rejected_at", null)
+          .is("deleted_at", null),
+      ]);
+      if (approvedRes.error) {
+        throw new Error(
+          `Failed to load approved redemptions: ${approvedRes.error.message}`,
+        );
       }
-      for (const r of redemptionRows ?? []) {
+      if (pendingRes.error) {
+        throw new Error(
+          `Failed to load pending redemptions: ${pendingRes.error.message}`,
+        );
+      }
+      for (const r of approvedRes.data ?? []) {
         const amt = Number(r.amount_redeemed) || 0;
         redeemedByCredit.set(
           r.credit_id,
           (redeemedByCredit.get(r.credit_id) ?? 0) + amt,
+        );
+      }
+      for (const r of pendingRes.data ?? []) {
+        const amt = Number(r.amount_redeemed) || 0;
+        pendingByCredit.set(
+          r.credit_id,
+          (pendingByCredit.get(r.credit_id) ?? 0) + amt,
         );
       }
     }
@@ -92,7 +120,11 @@ export class CustomerCreditsService {
     for (const row of credits) {
       const creditAmount = Number(row.credit_amount) || 0;
       const redeemedTotal = redeemedByCredit.get(row.id) ?? 0;
-      const remaining = Math.max(0, creditAmount - redeemedTotal);
+      const pendingTotal = pendingByCredit.get(row.id) ?? 0;
+      const remaining = Math.max(
+        0,
+        creditAmount - redeemedTotal - pendingTotal,
+      );
 
       let status: CustomerCreditStatus;
       if (row.revoked_at != null) {
@@ -112,6 +144,7 @@ export class CustomerCreditsService {
       const composed: CustomerCreditWithBranch = {
         ...row,
         redeemed_total: redeemedTotal,
+        pending_total: pendingTotal,
         remaining,
         status,
         credit_type: creditType,

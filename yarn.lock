@@ -2872,6 +2872,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@expo-google-fonts/nunito@npm:^0.4.2":
+  version: 0.4.2
+  resolution: "@expo-google-fonts/nunito@npm:0.4.2"
+  checksum: 10c0/b22712e9892d47561b0d96bfb625fea24eeda3f34531bee88e781827892740e063dcde1ddf4615b097ba0b436e765f5101fbc4788430574369b6e5f4c8860eb3
+  languageName: node
+  linkType: hard
+
 "@expo/cli@npm:55.0.21":
   version: 55.0.21
   resolution: "@expo/cli@npm:55.0.21"
@@ -9359,6 +9366,7 @@ __metadata:
     "@eslint/eslintrc": "npm:^2.1.1"
     "@eslint/js": "npm:^9.8.0"
     "@expo-google-fonts/inter": "npm:^0.4.2"
+    "@expo-google-fonts/nunito": "npm:^0.4.2"
     "@expo/cli": "npm:~54.0.16"
     "@expo/metro-config": "npm:~54.0.9"
     "@expo/metro-runtime": "npm:~6.1.2"

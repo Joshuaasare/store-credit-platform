@@ -1,5 +1,6 @@
 import { StyleSheet, Text, View } from "react-native";
 import ScreenBackground from "../../shared/components/ScreenBackground";
+import ScreenBody from "../../shared/components/ScreenBody";
 import GlassCard from "../../shared/components/GlassCard";
 import GlassTransition from "../../shared/components/GlassTransition";
 import { useThemeTokens } from "../../shared/theme/ThemeContext";
@@ -8,6 +9,7 @@ export function ExploreScreen() {
   const theme = useThemeTokens();
   return (
     <ScreenBackground>
+      <ScreenBody>
       <GlassTransition>
         <View style={styles.container}>
           <Text
@@ -36,6 +38,7 @@ export function ExploreScreen() {
           </GlassCard>
         </View>
       </GlassTransition>
+      </ScreenBody>
     </ScreenBackground>
   );
 }
