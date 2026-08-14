@@ -24,8 +24,6 @@ export default function CreditCard({
   const soonest = bucket.soonest;
 
   const palette = pickAvatarGradient(bucket.merchantName);
-  const accent = palette[1];
-  const accentTint = hexWithAlpha(accent, 0.16);
 
   // Validity line — three states:
   //   1. `soonest === null`  → "Lifetime credit"

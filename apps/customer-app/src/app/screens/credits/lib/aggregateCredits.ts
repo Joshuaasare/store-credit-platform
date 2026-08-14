@@ -1,95 +1,122 @@
 import type { CustomerCreditWithBranch } from "@store-credit-platform/api-services";
 
-export { formatExpiryDistance } from "../../../shared/utils/credits.utils";
-
 /**
- * A merchant-level bucket of the customer's live credits. One card on the
- * Credits screen renders one bucket. The bucketing rule is "merchant
- * wins": every credit at any branch of the same merchant aggregates into
- * the same bucket, regardless of `running_credit_config.cumulative_scope`.
- * Branches are summed as a view layer — the underlying `customer_credit`
- * rows still resolve at the branch level when spent.
+ * One aggregate row per merchant — the customer's "money view" of their
+ * credit at a single merchant. The home-screen Credits card and the
+ * per-merchant detail screen both render from this shape.
+ *
+ * `credits` is the raw live credit rows in this bucket (newest first),
+ * so the per-merchant detail screen can render a per-branch breakdown
+ * without re-querying.
+ *
+ * `totalRemaining` is the sum of `remaining` across `credits` — the
+ * big number rendered on the card.
+ *
+ * `soonest` is the credit that's expiring first (or the lifetime credit
+ * if any of them has `expires_at = null`). The card's subtitle line
+ * ("{amount} expires in N days") reads from this.
  */
 export interface MerchantCreditBucket {
   merchantId: number;
   merchantName: string;
   logoUrl: string | null;
-  /** Sum of `remaining` across all live credit rows at this merchant. */
   totalRemaining: number;
-  /** The credit row with the soonest non-null `expires_at`. Drives the urgency line. */
-  soonest: CustomerCreditWithBranch | null;
-  /** All live credit rows that contributed to the bucket (sorted by expiry, soonest first). */
-  credits: CustomerCreditWithBranch[];
+  soonest: BucketCredit | null;
+  credits: BucketCredit[];
 }
 
 /**
- * Group live credit rows by merchant.
+ * A live credit row in the bucket view. Equivalent to
+ * `CustomerCreditWithBranch` today — kept as a named alias so the
+ * bucket's internal type can be tightened later (e.g. dropping
+ * `pending_redemption_amount` once the fan-out flow is fully removed
+ * from the customer-facing surface) without churning every consumer.
+ */
+export type BucketCredit = CustomerCreditWithBranch;
+
+/**
+ * Group live credit rows by merchant and compute the headline numbers
+ * for the home Credits screen + per-merchant detail screen.
  *
- *   - Stable order: merchants appear in the order of their soonest
- *     contribution's `created_at` (most recently created credit wins on
- *     tie), which keeps the list predictable as new credits arrive.
- *   - `soonest` is the credit with the earliest non-null `expires_at`;
- *     `null` only if every contributing credit has `expires_at = null`.
- *   - Each bucket's `credits` array is sorted by `expires_at ASC NULLS LAST`
- *     so the detail screen can render the same ordering without resorting.
+ * Sort order:
+ *   1. Buckets with the largest `totalRemaining` first (so the most
+ *      valuable card surfaces to the top of the list).
+ *   2. Inside each bucket, credits are sorted by `expires_at` ASC NULLS
+ *      LAST, then by `created_at` ASC — lifetime credits sink to the
+ *      bottom, the soonest-to-expire credit rises to the top. This
+ *      matches the SQL fan-out order used by the merchant-side
+ *      approval queue.
  */
 export function aggregateLiveByMerchant(
   live: CustomerCreditWithBranch[],
 ): MerchantCreditBucket[] {
-  const bucketsByMerchant = new Map<string, MerchantCreditBucket>();
-
+  const buckets = new Map<number, CustomerCreditWithBranch[]>();
   for (const credit of live) {
-    const merchant = credit.branch.merchant;
-    const merchantKey = String(merchant.id);
-    const existing = bucketsByMerchant.get(merchantKey);
-    if (existing) {
-      existing.totalRemaining += credit.remaining;
-      existing.credits.push(credit);
-    } else {
-      bucketsByMerchant.set(merchantKey, {
-        merchantId: merchant.id,
-        merchantName: merchant.name,
-        logoUrl: merchant.logo_url,
-        totalRemaining: credit.remaining,
-        soonest: credit,
-        credits: [credit],
-      });
-    }
+    const merchantId = credit.branch.merchant.id;
+    const list = buckets.get(merchantId) ?? [];
+    list.push(credit);
+    buckets.set(merchantId, list);
   }
 
-  const buckets = Array.from(bucketsByMerchant.values());
-
-  for (const bucket of buckets) {
-    bucket.credits.sort(compareByExpiryAsc);
-
-    const nextSoonest = bucket.credits
-      .map((c) => ({ credit: c, expiresAt: c.expires_at }))
-      .filter(
-        (entry): entry is { credit: CustomerCreditWithBranch; expiresAt: number } =>
-          entry.expiresAt !== null,
-      )
-      .sort((a, b) => a.expiresAt - b.expiresAt)[0];
-
-    bucket.soonest = nextSoonest?.credit ?? null;
+  const composed: MerchantCreditBucket[] = [];
+  for (const [merchantId, credits] of buckets.entries()) {
+    const sorted = [...credits].sort(sortCreditsByExpiry);
+    const totalRemaining = sorted.reduce(
+      (s, c) => s + (Number(c.remaining) || 0),
+      0,
+    );
+    const soonest = pickSoonest(sorted);
+    const head = sorted[0];
+    composed.push({
+      merchantId,
+      merchantName: head.branch.merchant.name,
+      logoUrl: head.branch.merchant.logo_url ?? null,
+      totalRemaining,
+      soonest,
+      credits: sorted,
+    });
   }
 
-  // Sort the bucket list by the soonest contribution's `created_at` DESC so
-  // a freshly-issued credit at any branch promotes its merchant to the top.
-  buckets.sort((a, b) => {
-    const aCreated = a.credits[0]?.created_at ?? "";
-    const bCreated = b.credits[0]?.created_at ?? "";
-    return Date.parse(bCreated) - Date.parse(aCreated);
-  });
-
-  return buckets;
+  composed.sort((a, b) => b.totalRemaining - a.totalRemaining);
+  return composed;
 }
 
-function compareByExpiryAsc(
+/**
+ * Pick the "soonest to expire" credit from a bucket. Returns the credit
+ * with the smallest non-null `expires_at`; if every credit has
+ * `expires_at = null`, returns the first one (lifetime credit).
+ */
+function pickSoonest(credits: CustomerCreditWithBranch[]): BucketCredit | null {
+  if (credits.length === 0) return null;
+  const withExpiry = credits.filter((c) => c.expires_at != null);
+  if (withExpiry.length === 0) {
+    return credits[0];
+  }
+  return withExpiry.reduce((min, c) =>
+    (c.expires_at ?? Infinity) < (min.expires_at ?? Infinity) ? c : min,
+  );
+}
+
+/**
+ * Sort credits: ASC by `expires_at` (nulls last), then ASC by
+ * `created_at`. Mirrors the SQL fan-out order in the merchant
+ * approval queue so the credit breakdown reads consistently across
+ * the customer + merchant surfaces.
+ */
+function sortCreditsByExpiry(
   a: CustomerCreditWithBranch,
   b: CustomerCreditWithBranch,
 ): number {
-  if (a.expires_at === null && b.expires_at === null) return 0;
-  if (a.expires_at === null) return 1;
-  if (b.expires_at === null) return -1;
-  return a.expires_at - b.expires_at;
+  const aExp = a.expires_at ?? null;
+  const bExp = b.expires_at ?? null;
+  if (aExp == null && bExp != null) return 1;
+  if (aExp != null && bExp == null) return -1;
+  if (aExp != null && bExp != null) {
+    if (aExp !== bExp) return aExp - bExp;
+  }
+  const aCreated = String(a.created_at ?? "");
+  const bCreated = String(b.created_at ?? "");
+  if (aCreated < bCreated) return -1;
+  if (aCreated > bCreated) return 1;
+  return 0;
 }

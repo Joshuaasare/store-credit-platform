@@ -1,8 +1,8 @@
 import { supabaseAdmin } from "../utils/supabase.client";
 import { QueryFragments } from "../constants/queryFragments";
 import {
-  CustomerRedemptionRow,
-  CustomerRedemptionStatusFilter,
+  CustomerPendingRequestAmountBody,
+  CustomerPendingRequestResult,
 } from "../types/customerRedemptions.types";
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -10,149 +10,135 @@ import {
 // ────────────────────────────────────────────────────────────────────────────
 
 /**
- * Customer-app redemptions service — the data behind the "Credits Redeemed"
- * tab on the merchant detail screen on the customer mobile app.
+ * Customer-app pending-request service — backs the
+ * `POST /customers/me/merchants/:merchantId/redemptions` (create / edit) and
+ * `DELETE .../redemptions` (cancel) endpoints.
  *
- * Two operations:
- *   - `listMyRedemptionsAtMerchant(customerId, { merchantId, status })`
- *     pulls every non-deleted redemption the customer has at the given
- *     merchant (scoped through `branches` since redemptions don't carry
- *     a `merchant_id`). Status filter narrows the row set; "all" returns
- *     the merged pending + approved + rejected stream.
+ * There is no per-redemption-row CRUD anymore. A redemption request is the
+ * implicit set of `customer_credit` rows at the (customer, merchant) pair
+ * that have `pending_redemption_amount > 0`. Creating or editing the request
+ * fans the new total out across the merchant's credit rows in oldest-expiry
+ * order via the SQL RPC `redemption_fan_out`; cancelling calls the same RPC
+ * with amount=0, which zeroes the pending slice on every row.
  *
- *   - `cancelMyRedemption(id, customerId)` soft-deletes a pending
- *     redemption, asserting (a) the row exists and is not already
- *     deleted, (b) it belongs to the caller, (c) it has not been
- *     approved or rejected yet. Terminal states return 409.
+ * The "breakdown" the customer sees on confirm is read back via the same
+ * RPC's `pending_credit_breakdown` return — we just read the live rows for
+ * the merchant that have `pending_redemption_amount > 0` after the fan-out.
  *
  * All reads use the generated `database.types.ts` types natively — no
  * `any` / `as` casts on the Supabase builders or results.
  */
 export class CustomerRedemptionsService {
   /**
-   * List the customer's redemptions at a given merchant. Resolves the
-   * merchant's branches first (small subquery), then scopes the redemption
-   * list to those branches via `branch_id IN (...)`. Status filter narrows
-   * the row set on the `approved_at` / `rejected_at` columns.
-   *
-   * Returns rows newest-first by `created_at`.
+   * Create or edit the customer's pending request at a merchant. The
+   * `redemption_fan_out` RPC handles the full-row-take walk atomically
+   * server-side; this method just calls the RPC and reads back the
+   * resulting per-credit breakdown.
    */
-  async listMyRedemptionsAtMerchant(
+  async upsertMyPendingRequest(
     customerId: number,
-    options: {
-      merchantId: number;
-      status: CustomerRedemptionStatusFilter;
-    },
-  ): Promise<CustomerRedemptionRow[]> {
-    // 1. Resolve the merchant's branch IDs (small subquery). If the merchant
-    //    has no branches, the redemption list is empty by construction.
-    const { data: branchRows, error: branchError } = await supabaseAdmin
-      .from("branches")
-      .select("id")
-      .eq("merchant_id", options.merchantId)
-      .is("deleted_at", null);
-    if (branchError) {
-      throw new Error(
-        `Failed to resolve merchant branches: ${branchError.message}`,
-      );
-    }
-    const branchIds = (branchRows ?? []).map((b) => b.id);
-    if (branchIds.length === 0) {
-      return [];
-    }
-
-    // 2. Build the redemption list query — same composed join as the
-    //    merchant-side service, minus the redundant `customer` join
-    //    (the caller IS the customer).
-    let query = supabaseAdmin
-      .from("customer_credit_redemptions")
-      .select(
-        `${QueryFragments.BASE_CUSTOMER_CREDIT_REDEMPTION},branch:branches(${QueryFragments.BASE_BRANCH},merchant:merchants(${QueryFragments.BASE_MERCHANT})),credit:customer_credit(${QueryFragments.BASE_CUSTOMER_CREDIT})`,
-      )
-      .eq("customer_id", customerId)
-      .in("branch_id", branchIds)
-      .is("deleted_at", null);
-
-    if (options.status === "pending") {
-      query = query.is("approved_at", null).is("rejected_at", null);
-    } else if (options.status === "approved") {
-      query = query.not("approved_at", "is", null);
-    } else if (options.status === "rejected") {
-      query = query.not("rejected_at", "is", null);
-    }
-
-    query = query.order("created_at", { ascending: false });
-
-    const { data, error } = await query;
-    if (error) {
-      throw new Error(`Failed to load redemptions: ${error.message}`);
-    }
-    return (data ?? []) as CustomerRedemptionRow[];
+    merchantId: number,
+    body: CustomerPendingRequestAmountBody,
+  ): Promise<CustomerPendingRequestResult> {
+    return this.runFanOut(customerId, merchantId, body.amount);
   }
 
   /**
-   * Soft-cancel a pending redemption. Returns a tagged result so the route
-   * can map the failure to a 4xx status without throwing.
+   * Cancel the customer's pending request at a merchant (zero the pending
+   * slice on every row). Idempotent — calling it with no pending request
+   * is a no-op.
    */
-  async cancelMyRedemption(
-    redemptionId: number,
+  async cancelMyPendingRequest(
     customerId: number,
-  ): Promise<
-    | { ok: true }
-    | {
-        ok: false;
-        status: 403 | 404 | 409;
-        error: string;
-      }
-  > {
-    // 1. Load the row (id + ownership + state). Stripped select — we don't
-    //    need the joined branch/credit for the ownership/state checks.
-    const { data, error } = await supabaseAdmin
-      .from("customer_credit_redemptions")
-      .select("id, customer_id, approved_at, rejected_at, deleted_at")
-      .eq("id", redemptionId)
-      .maybeSingle();
-    if (error) {
-      throw new Error(`Failed to load redemption: ${error.message}`);
-    }
-    if (!data || data.deleted_at !== null) {
-      return { ok: false, status: 404, error: "Not found" };
-    }
-    if (data.customer_id !== customerId) {
-      return { ok: false, status: 403, error: "Forbidden" };
-    }
-    if (data.approved_at !== null) {
-      return {
-        ok: false,
-        status: 409,
-        error: "Cannot cancel an approved redemption",
-      };
-    }
-    if (data.rejected_at !== null) {
-      return {
-        ok: false,
-        status: 409,
-        error: "Redemption is already rejected",
-      };
+    merchantId: number,
+  ): Promise<CustomerPendingRequestResult> {
+    return this.runFanOut(customerId, merchantId, 0);
+  }
+
+  // ────────────────────────────────────────────────────────────────────────────
+  // Internals
+  // ────────────────────────────────────────────────────────────────────────────
+
+  /**
+   * Run the fan-out RPC, then read back the per-credit breakdown for the
+   * response. The RPC itself returns the breakdown rows, but we keep this
+   * read in JS so the response shape mirrors the customer-facing schema
+   * (with the nested branch join + merchant wrapper) without coupling
+   * TypeBox to the SQL row type.
+   */
+  private async runFanOut(
+    customerId: number,
+    merchantId: number,
+    amount: number,
+  ): Promise<CustomerPendingRequestResult> {
+    // 1. Atomic fan-out via RPC. The RPC walks the merchant's credit rows
+    //    oldest-expiry-first and writes the requested total across them.
+    //    If amount > the merchant's available_total + current_pending, the
+    //    RPC raises (the route layer caps the body client-side; the SQL
+    //    CHECK on pending + approved <= credit_amount is the server-side
+    //    safety net).
+    const { data: rpcRows, error: rpcError } = await supabaseAdmin.rpc(
+      "redemption_fan_out",
+      {
+        p_customer_id: customerId,
+        p_merchant_id: merchantId,
+        p_amount: amount,
+      },
+    );
+    if (rpcError) {
+      throw new Error(`Fan-out failed: ${rpcError.message}`);
     }
 
-    // 2. Soft-delete with a double-guard so we never overwrite an
-    //    already-deleted / already-decided row (a concurrent approve or
-    //    cancel could have moved this row out from under us).
-    const nowIso = new Date().toISOString();
-    const { error: updateError } = await supabaseAdmin
-      .from("customer_credit_redemptions")
-      .update({ deleted_at: nowIso })
-      .eq("id", redemptionId)
+    // 2. Read back the current pending breakdown — the merchant's credit
+    //    rows for this customer with pending > 0, joined to branch.
+    //    Sorted to match the RPC's fan-out order
+    //    (expires_at ASC NULLS LAST, created_at ASC, id ASC) so the
+    //    customer sees a stable allocation.
+    const { data: breakdown, error: breakdownError } = await supabaseAdmin
+      .from("customer_credit")
+      .select(`${QueryFragments.BASE_CUSTOMER_CREDIT},branch:branches(${QueryFragments.BASE_BRANCH})`)
+      .eq("customer_id", customerId)
+      .eq("branch.merchant_id", merchantId)
+      .gt("pending_redemption_amount", 0)
       .is("deleted_at", null)
-      .is("approved_at", null)
-      .is("rejected_at", null);
-    if (updateError) {
-      throw new Error(
-        `Failed to cancel redemption: ${updateError.message}`,
-      );
+      .order("expires_at", {
+        ascending: true,
+        nullsFirst: false,
+      })
+      .order("created_at", { ascending: true })
+      .order("id", { ascending: true });
+
+    if (breakdownError) {
+      throw new Error(`Failed to read pending breakdown: ${breakdownError.message}`);
     }
-    return { ok: true };
+
+    // 3. Resolve the merchant row (for display name / logo on confirm).
+    const { data: merchant, error: merchantError } = await supabaseAdmin
+      .from("merchants")
+      .select(QueryFragments.BASE_MERCHANT)
+      .eq("id", merchantId)
+      .maybeSingle();
+    if (merchantError) {
+      throw new Error(`Failed to load merchant: ${merchantError.message}`);
+    }
+    if (!merchant) {
+      throw new Error("Merchant not found");
+    }
+
+    const requestedAmount =
+      amount > 0
+        ? (rpcRows ?? []).reduce(
+            (sum, r) => sum + (Number(r.pending_redemption_amount) || 0),
+            0,
+          )
+        : 0;
+
+    return {
+      merchant_id: merchantId,
+      requested_amount: requestedAmount,
+      pending_credit_breakdown: (breakdown ?? []) as CustomerPendingRequestResult["pending_credit_breakdown"],
+      merchant,
+    };
   }
 }
 

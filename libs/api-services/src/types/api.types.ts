@@ -1,6 +1,6 @@
 /**
  * Auto-generated API Types
- * Generated on: 2026-08-14T10:18:25.321Z
+ * Generated on: 2026-08-14T17:17:44.208Z
  * 
  * ⚠️ DO NOT EDIT MANUALLY
  * Source: apps/smartschool-api/src/app/types/
@@ -149,11 +149,25 @@ export interface BaseStaff {
   deleted_at: string | null;
 }
 
+
+
+
+
+
+
+
+
+
+
+
 export interface BaseCustomerCredit {
   id: number;
   customer_id: number;
   branch_id: number;
   credit_amount: number;
+  pending_redemption_amount: number | null;
+  approved_redemption_amount: number | null;
+  redemption_approval_staff_id: number | null;
   expires_at: number | null;
   revoked_at: string | null;
   revoked_by_user_id: string | null;
@@ -173,15 +187,13 @@ export interface BaseCustomerCredit {
 
 
 
+
 export interface BaseCustomerCreditRedemption {
   id: number;
-  credit_id: number;
   customer_id: number;
-  branch_id: number;
   amount_redeemed: number;
   approved_at: string | null;
   approved_by_staff_id: number | null;
-  recorded_by_staff_id: number | null;
   rejected_at: string | null;
   created_at: string;
   updated_at: string | null;
@@ -698,29 +710,24 @@ export type CustomerCreditsApiResponse =
   | CustomerCreditsResponse
   | ApiErrorResponse;
 
-export type CustomerRedemptionStatus = "pending" | "approved" | "rejected";
-
-export type CustomerRedemptionStatusFilter =
-  | CustomerRedemptionStatus
-  | "all";
-
-export type CustomerRedemptionRow = BaseCustomerCreditRedemption & {
-  branch: BaseBranch & { merchant: BaseMerchant };
-  credit: BaseCustomerCredit;
-};
-
-export interface CustomerRedemptionsResponse {
-  success: true;
-  data: CustomerRedemptionRow[];
+export interface CustomerPendingRequestAmountBody {
+  amount: number;
 }
 
-export interface CustomerRedemptionCancelResponse {
-  success: true;
-  data: null;
+export interface CustomerPendingRequestResult {
+  merchant_id: number;
+  requested_amount: number;
+  pending_credit_breakdown: (BaseCustomerCredit & { branch: BaseBranch })[];
+  merchant: BaseMerchant;
 }
 
-export type CustomerRedemptionsApiResponse =
-  | CustomerRedemptionsResponse
+export interface CustomerPendingRequestMutationResponse {
+  success: true;
+  data: CustomerPendingRequestResult;
+}
+
+export type CustomerPendingRequestMutationApiResponse =
+  | CustomerPendingRequestMutationResponse
   | ApiErrorResponse;
 
 export type LeaderboardSort =
@@ -876,49 +883,96 @@ export type MerchantMutationApiResponse =
   | MerchantMutationResponse
   | ApiErrorResponse;
 
-export type RedemptionStatus = "pending" | "approved" | "rejected";
-
-export interface RedemptionCustomer extends BaseCustomer {
-  users: BaseUserProfile | null;
+export interface PendingCreditBreakdown extends BaseCustomerCredit {
+  branch: BaseBranch;
 }
 
-export interface RedemptionRow extends BaseCustomerCreditRedemption {
-  customer: RedemptionCustomer | null;
-  branch: BaseBranch | null;
-  credit: BaseCustomerCredit | null;
-  remaining: number;
+export interface MerchantPendingRequest {
+  customer_id: number;
+  requested_amount: number;
+
+  pending_credit_breakdown: PendingCreditBreakdown[];
+
+  requested_at: string;
+  customer: BaseCustomer & { users: BaseUserProfile | null };
+  merchant: BaseMerchant;
 }
 
-export interface RedemptionsFilters {
-  
-  status: RedemptionStatus;
-  branch_id?: number | null;
-  limit?: number;
-  offset?: number;
-}
-
-export interface RedemptionsPage {
-  rows: RedemptionRow[];
+export interface MerchantPendingRequestsPage {
+  rows: MerchantPendingRequest[];
   total: number;
   offset: number;
   limit: number;
 }
 
-export type RedemptionsQuerystring = RedemptionsFilters;
-
-export interface RedemptionsResponse {
-  success: true;
-  data: RedemptionsPage;
+export interface MerchantApprovedRedemption extends BaseCustomerCreditRedemption {
+  customer: BaseCustomer & { users: BaseUserProfile | null };
+  merchant: BaseMerchant;
+  approved_by_staff: BaseStaff | null;
 }
 
-export interface RedemptionMutationResponse {
-  success: true;
-  data: RedemptionRow;
+export interface MerchantRejectedRedemption extends BaseCustomerCreditRedemption {
+  customer: BaseCustomer & { users: BaseUserProfile | null };
+  merchant: BaseMerchant;
 }
 
-export type RedemptionsApiResponse = RedemptionsResponse | ApiErrorResponse;
-export type RedemptionMutationApiResponse =
-  | RedemptionMutationResponse
+export interface MerchantPendingRequestFilters {
+  branch_id?: number | null;
+  limit?: number;
+  offset?: number;
+}
+
+export interface MerchantAuditFeedFilters {
+  branch_id?: number | null;
+  limit?: number;
+  offset?: number;
+}
+
+export interface MerchantAuditFeedPage<T> {
+  rows: T[];
+  total: number;
+  offset: number;
+  limit: number;
+}
+
+export type MerchantPendingRequestsQuerystring = MerchantPendingRequestFilters;
+export type MerchantApprovedRedemptionsQuerystring = MerchantAuditFeedFilters;
+export type MerchantRejectedRedemptionsQuerystring = MerchantAuditFeedFilters;
+
+export interface MerchantPendingRequestsResponse {
+  success: true;
+  data: MerchantPendingRequestsPage;
+}
+
+export interface MerchantApprovedRedemptionsResponse {
+  success: true;
+  data: MerchantAuditFeedPage<MerchantApprovedRedemption>;
+}
+
+export interface MerchantRejectedRedemptionsResponse {
+  success: true;
+  data: MerchantAuditFeedPage<MerchantRejectedRedemption>;
+}
+
+export interface MerchantRedemptionMutationResponse {
+  success: true;
+  data: {
+    audit_id: number;
+    amount_redeemed: number;
+  };
+}
+
+export type MerchantPendingRequestsApiResponse =
+  | MerchantPendingRequestsResponse
+  | ApiErrorResponse;
+export type MerchantApprovedRedemptionsApiResponse =
+  | MerchantApprovedRedemptionsResponse
+  | ApiErrorResponse;
+export type MerchantRejectedRedemptionsApiResponse =
+  | MerchantRejectedRedemptionsResponse
+  | ApiErrorResponse;
+export type MerchantRedemptionMutationApiResponse =
+  | MerchantRedemptionMutationResponse
   | ApiErrorResponse;
 
 export interface Staff extends BaseStaff {

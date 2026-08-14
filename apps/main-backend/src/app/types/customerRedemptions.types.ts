@@ -1,67 +1,56 @@
 // ────────────────────────────────────────────────────────────────────────────
-// Customer-app redemptions feed (`/customers/me/redemptions`)
+// Customer-app pending-request endpoints (`/customers/me/merchants/:merchantId/redemptions`)
 // ────────────────────────────────────────────────────────────────────────────
-// Customer-scoped projection of the `customer_credit_redemptions` table,
-// scoped to the logged-in customer's `customer_id` (from JWT) and filtered
-// to a single merchant by branch. Powers the "Credits Redeemed" tab on the
-// merchant detail screen on the customer mobile app.
+// The customer app's "redeem at merchant" flow is no longer row-based.
+// There's no per-redemption-row CRUD anymore — instead:
 //
-// The status of each row is derived from `approved_at` / `rejected_at`
-// (no status enum on the table itself):
-//   Pending  → approved_at IS NULL AND rejected_at IS NULL
-//   Approved → approved_at IS NOT NULL
-//   Rejected → rejected_at IS NOT NULL (implies approved_at IS NULL)
+//   POST   /customers/me/merchants/:merchantId/redemptions   — create
+//   PATCH  /customers/me/merchants/:merchantId/redemptions   — edit (upsert)
+//   DELETE /customers/me/merchants/:merchantId/redemptions   — cancel
 //
-// `status` on the query string accepts an additional `"all"` value that
-// the service maps to "no status filter".
+// All three funnel through `redemption_fan_out(customerId, merchantId,
+// amount)` which walks the merchant's credit rows oldest-expiry-first
+// and writes `pending_redemption_amount` to each. The fan-out is
+// idempotent: amount = 0 zeroes every row (cancel), amount = same
+// produces the same allocation (no-op), amount = different re-splits.
 //
-// The row shape intentionally OMITS the merchant-side `customer` join:
-// the caller IS the customer, so emitting the nested customer is at best
-// redundant and at worst a privacy leak (the customer_id is the auth
-// identity and shouldn't echo back). Branch + merchant are kept because
-// they're how the row is contextualized in the redeemed feed.
+// Pending state is derived from the `customer_credit` row's
+// `pending_redemption_amount` column — the customer app reads it via
+// `/customers/me/credits` (live rows expose the pending slice directly)
+// rather than a dedicated pending endpoint.
 
 import {
   ApiErrorResponse,
   BaseBranch,
   BaseCustomerCredit,
-  BaseCustomerCreditRedemption,
   BaseMerchant,
 } from "./main.types";
 
-export type CustomerRedemptionStatus = "pending" | "approved" | "rejected";
-
-export type CustomerRedemptionStatusFilter =
-  | CustomerRedemptionStatus
-  | "all";
-
-/**
- * Single-row shape for `/customers/me/redemptions`. Composed from the base
- * `customer_credit_redemption` row plus the nested `branch` (with its
- * `merchant`) and the joined `credit` (plain `BaseCustomerCredit` — no
- * extra joins — because the redemption's denormalized `branch_id` is the
- * canonical branch for the row). `remaining` is intentionally excluded:
- * the customer's redeemed feed only needs the amount + date + status, and
- * leaking per-row remaining can mis-lead the customer (a rejected row's
- * remaining is meaningless; a pending row's remaining is the live
- * snapshot at row creation, which drifts the moment anything else
- * changes on the credit).
- */
-export type CustomerRedemptionRow = BaseCustomerCreditRedemption & {
-  branch: BaseBranch & { merchant: BaseMerchant };
-  credit: BaseCustomerCredit;
-};
-
-export interface CustomerRedemptionsResponse {
-  success: true;
-  data: CustomerRedemptionRow[];
+// Body for create / edit. Amount is in the same scale as
+// credit_amount (numeric, 2 decimal places). The server caps the
+// amount at the merchant's `available_total + current_pending` so the
+// request can never reserve more than the customer can spend at the
+// merchant.
+export interface CustomerPendingRequestAmountBody {
+  amount: number;
 }
 
-export interface CustomerRedemptionCancelResponse {
-  success: true;
-  data: null;
+// Result of create / edit / cancel. Mirrors the merchant Pending view
+// but customer-scoped (no nested customer row — the caller IS the
+// customer). `requested_amount` is 0 on cancel; on create/edit it's
+// the sum of `pending_credit_breakdown[].pending_redemption_amount`.
+export interface CustomerPendingRequestResult {
+  merchant_id: number;
+  requested_amount: number;
+  pending_credit_breakdown: (BaseCustomerCredit & { branch: BaseBranch })[];
+  merchant: BaseMerchant;
 }
 
-export type CustomerRedemptionsApiResponse =
-  | CustomerRedemptionsResponse
+export interface CustomerPendingRequestMutationResponse {
+  success: true;
+  data: CustomerPendingRequestResult;
+}
+
+export type CustomerPendingRequestMutationApiResponse =
+  | CustomerPendingRequestMutationResponse
   | ApiErrorResponse;

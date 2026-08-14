@@ -220,6 +220,18 @@ id: Type.Number(),
 customer_id: Type.Number(),
 branch_id: Type.Number(),
 credit_amount: Type.Number(),
+pending_redemption_amount: Type.Union([
+Type.Number(),
+Type.Null()
+]),
+approved_redemption_amount: Type.Union([
+Type.Number(),
+Type.Null()
+]),
+redemption_approval_staff_id: Type.Union([
+Type.Number(),
+Type.Null()
+]),
 expires_at: Type.Union([
 Type.Number(),
 Type.Null()
@@ -246,19 +258,13 @@ Type.Null()
 export type BaseCustomerCreditRedemption = Static<typeof BaseCustomerCreditRedemption>
 export const BaseCustomerCreditRedemption = Type.Object({
 id: Type.Number(),
-credit_id: Type.Number(),
 customer_id: Type.Number(),
-branch_id: Type.Number(),
 amount_redeemed: Type.Number(),
 approved_at: Type.Union([
 Type.String(),
 Type.Null()
 ]),
 approved_by_staff_id: Type.Union([
-Type.Number(),
-Type.Null()
-]),
-recorded_by_staff_id: Type.Union([
 Type.Number(),
 Type.Null()
 ]),

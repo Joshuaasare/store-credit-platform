@@ -39,7 +39,7 @@ const PILL_DURATION = 220;
  * which is the wrong visual for this context — these tabs sit directly
  * under the tall pink detail header and need a quieter, neutral surface.
  */
-export type MerchantTab = "available" | "pending" | "redeemed";
+export type MerchantTab = "available" | "pending";
 
 export interface MerchantTabOption<T extends string> {
   value: T;

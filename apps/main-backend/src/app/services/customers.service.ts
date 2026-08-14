@@ -296,45 +296,41 @@ export class CustomerService {
       return expiresAt == null || Number(expiresAt) > nowEpoch;
     });
 
-    // 4. Approved redemptions for those credit_ids (sum per credit).
-    const creditIds = merchantCredits.map((r) => r.id);
-    const redemptionsByCredit = new Map<number, number>();
+    // 4. Approved redemption totals now live on the credit row itself
+    //    (`approved_redemption_amount`) — no SUM-of-audit-table query is
+    //    needed. We still need the customer's most-recent approved
+    //    redemption timestamp to compute `last_activity_epoch`, so we
+    //    pull it directly from the audit table scoped to the customer.
+    const customerIds = [customerId];
     let lastRedemptionEpoch: number | null = null;
-    if (creditIds.length > 0) {
+    if (customerIds.length > 0) {
       const { data: redemptionRows, error: redemptionErr } = await supabaseAdmin
         .from("customer_credit_redemptions")
-        .select("credit_id, amount_redeemed, created_at")
-        .in("credit_id", creditIds)
+        .select("approved_at")
+        .eq("customer_id", customerIds[0])
         .not("approved_at", "is", null)
-        .is("deleted_at", null);
+        .is("deleted_at", null)
+        .order("approved_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
       if (redemptionErr) {
         throw new Error(`Failed to load redemptions: ${redemptionErr.message}`);
       }
-      for (const r of (redemptionRows ?? []) as Array<{
-        credit_id: number;
-        amount_redeemed: number;
-        created_at: string | null;
-      }>) {
-        const cid = r.credit_id;
-        const amt = Number(r.amount_redeemed) || 0;
-        redemptionsByCredit.set(cid, (redemptionsByCredit.get(cid) ?? 0) + amt);
-        if (r.created_at) {
-          const d = Math.floor(new Date(r.created_at).getTime() / 1000);
-          if (lastRedemptionEpoch == null || d > lastRedemptionEpoch) {
-            lastRedemptionEpoch = d;
-          }
-        }
+      if (redemptionRows?.approved_at) {
+        lastRedemptionEpoch = Math.floor(
+          new Date(redemptionRows.approved_at).getTime() / 1000,
+        );
       }
     }
 
     // 5. Per-credit remaining + customer-level credit aggregates. Sort by
     //    remaining desc so the most-relevant credits sit at the top. The
     //    composed row already carries the BASE_CUSTOMER_CREDIT + branch
-    //    columns; we just attach the live aggregates.
+    //    columns; we just read the live aggregate directly off the row.
     const credits: CustomerDetailCreditRow[] = merchantCredits
       .map((row) => {
         const creditAmount = Number(row.credit_amount) || 0;
-        const redeemedTotal = redemptionsByCredit.get(row.id) ?? 0;
+        const redeemedTotal = Number(row.approved_redemption_amount) || 0;
         const remaining = Math.max(0, creditAmount - redeemedTotal);
         const { branch: _branch, ...baseCredit } = row;
         return {

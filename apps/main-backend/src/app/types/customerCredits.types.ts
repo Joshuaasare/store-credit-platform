@@ -12,8 +12,19 @@ import {
 // the logged-in customer, split into `live` and `expired` arrays. The composed
 // row extends `BaseCustomerCredit` (so any column added to the
 // BASE_CUSTOMER_CREDIT fragment + base type auto-propagates) and adds the
-// nested `branch` + `merchant` joins and the live `redeemed_total` /
-// `remaining` aggregates.
+// nested `branch` + `merchant` joins and the live `remaining` aggregate.
+//
+// After the row-state collapse the redemption slice lives on the credit
+// row itself:
+//   `approved_redemption_amount`  — already deducted (formerly the SUM
+//                                   of approved customer_credit_redemptions
+//                                   rows per credit)
+//   `pending_redemption_amount`   — currently reserved by a pending request
+//                                   at this customer + merchant
+// The composed row exposes both columns directly (auto-propagated from
+// BaseCustomerCredit) and also keeps `redeemed_total` / `pending_total`
+// as back-compat aliases (equal to the corresponding column on the row)
+// so any older frontend code that still reads them doesn't break.
 //
 // `credit_type` distinguishes credits issued from a running_credit_config
 // ("running") vs a fixed_credit_config ("fixed"). The current schema does not
@@ -41,17 +52,18 @@ export interface CustomerCreditWithBranch extends BaseCustomerCredit {
   // Nested joins — branch is the issuing branch, merchant is reached via
   // branch.merchant_id (the FK lives on branches, not on customer_credit).
   branch: BaseBranch & { merchant: BaseMerchant };
-  // Sum of approved (approved_at IS NOT NULL) redemptions for this credit,
-  // excluding soft-deleted rows. Always a non-negative number.
+  // Back-compat alias for `approved_redemption_amount` (the SUM of
+  // approved redemptions this credit has ever had). Kept as a separate
+  // field so older frontend code keeps working — equal to the row's
+  // `approved_redemption_amount`.
   redeemed_total: number;
-  // Sum of pending (approved_at IS NULL AND rejected_at IS NULL) redemptions
-  // for this credit, excluding soft-deleted rows. Pending redemptions also
-  // reduce the customer-visible `remaining` so the wallet never claims more
-  // spend than is actually available across both approved + pending.
+  // Back-compat alias for `pending_redemption_amount` (the slice of this
+  // credit currently reserved by a pending request). Equal to the row's
+  // `pending_redemption_amount`.
   pending_total: number;
-  // max(0, credit_amount - redeemed_total - pending_total). Clamped at 0 so
-  // fully-redeemed credits still appear with a 0 remaining rather than a
-  // negative.
+  // max(0, credit_amount - approved_redemption_amount - pending_redemption_amount).
+  // Clamped at 0 so fully-redeemed credits still appear with a 0
+  // remaining rather than a negative.
   remaining: number;
   // Customer-facing bucket — see CustomerCreditStatus above.
   status: CustomerCreditStatus;

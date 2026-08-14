@@ -1,49 +1,34 @@
 import { Type, Static } from '@sinclair/typebox'
-import { BaseMerchant, BaseBranch, ApiErrorResponse, BaseCustomerCredit, BaseCustomerCreditRedemption } from './main.schema'
+import { BaseMerchant, BaseBranch, ApiErrorResponse, BaseCustomerCredit } from './main.schema'
 
 
 
-export type CustomerRedemptionStatus = Static<typeof CustomerRedemptionStatus>
-export const CustomerRedemptionStatus = Type.Union([
-Type.Literal("pending"),
-Type.Literal("approved"),
-Type.Literal("rejected")
-])
+export type CustomerPendingRequestAmountBody = Static<typeof CustomerPendingRequestAmountBody>
+export const CustomerPendingRequestAmountBody = Type.Object({
+amount: Type.Number()
+})
 
-export type CustomerRedemptionStatusFilter = Static<typeof CustomerRedemptionStatusFilter>
-export const CustomerRedemptionStatusFilter = Type.Union([
-CustomerRedemptionStatus,
-Type.Literal("all")
-])
-
-export type CustomerRedemptionRow = Static<typeof CustomerRedemptionRow>
-export const CustomerRedemptionRow = Type.Intersect([
-BaseCustomerCreditRedemption,
+export type CustomerPendingRequestResult = Static<typeof CustomerPendingRequestResult>
+export const CustomerPendingRequestResult = Type.Object({
+merchant_id: Type.Number(),
+requested_amount: Type.Number(),
+pending_credit_breakdown: Type.Array(Type.Intersect([
+BaseCustomerCredit,
 Type.Object({
-branch: Type.Intersect([
-BaseBranch,
-Type.Object({
+branch: BaseBranch
+})
+])),
 merchant: BaseMerchant
 })
-]),
-credit: BaseCustomerCredit
-})
-])
 
-export type CustomerRedemptionsResponse = Static<typeof CustomerRedemptionsResponse>
-export const CustomerRedemptionsResponse = Type.Object({
+export type CustomerPendingRequestMutationResponse = Static<typeof CustomerPendingRequestMutationResponse>
+export const CustomerPendingRequestMutationResponse = Type.Object({
 success: Type.Literal(true),
-data: Type.Array(CustomerRedemptionRow)
+data: CustomerPendingRequestResult
 })
 
-export type CustomerRedemptionCancelResponse = Static<typeof CustomerRedemptionCancelResponse>
-export const CustomerRedemptionCancelResponse = Type.Object({
-success: Type.Literal(true),
-data: Type.Null()
-})
-
-export type CustomerRedemptionsApiResponse = Static<typeof CustomerRedemptionsApiResponse>
-export const CustomerRedemptionsApiResponse = Type.Union([
-CustomerRedemptionsResponse,
+export type CustomerPendingRequestMutationApiResponse = Static<typeof CustomerPendingRequestMutationApiResponse>
+export const CustomerPendingRequestMutationApiResponse = Type.Union([
+CustomerPendingRequestMutationResponse,
 ApiErrorResponse
 ])

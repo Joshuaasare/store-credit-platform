@@ -3,9 +3,12 @@ import { requireAuth, requireRoles } from "../../middleware/auth.middleware";
 import { merchantService } from "../../services/merchant.service";
 import { redemptionService } from "../../services/redemptions.service";
 import {
-  RedemptionsQuerystring,
-  RedemptionsApiResponse,
-  RedemptionMutationApiResponse,
+  MerchantApprovedRedemptionsApiResponse,
+  MerchantAuditFeedFilters,
+  MerchantPendingRequestsApiResponse,
+  MerchantPendingRequestFilters,
+  MerchantRedemptionMutationApiResponse,
+  MerchantRejectedRedemptionsApiResponse,
 } from "../../schemas/redemptions.schema";
 
 async function resolveMerchantId(
@@ -19,31 +22,32 @@ async function resolveMerchantId(
 
 export default async function (fastify: FastifyInstance) {
   /**
-   * GET /redemptions
-   * Merchant-scoped, paginated, status-filtered redemption list. `status` is
-   * required (pending | approved | rejected) — there is no "all" tab. Optional
-   * `branch_id` filters within the merchant's branches. Each row carries a
-   * per-row `remaining` (credit.credit_amount − SUM(approved redemptions on
-   * that credit)).
+   * GET /redemptions/pending
+   *
+   * Pending requests at the merchant — one row per (customer, merchant)
+   * pair that has any `customer_credit` row with
+   * `pending_redemption_amount > 0`. Pending is implicit (no longer a
+   * row in `customer_credit_redemptions`); the SQL `redemption_fan_out`
+   * RPC is what writes the pending slice on the credit rows.
    *
    // TODO(frontend-permissions): the Redemptions nav item is already
    // manager-gated via `permissions: ["manager"]` in MainLayout, but the
    // list endpoint itself is currently readable by any authenticated staff
-   // member of the merchant. The backend role check on approve/reject is the
-   // source of truth for now; finer-grained frontend permission gating for
-   // the page itself is a follow-up.
+   // member of the merchant. The backend role check on approve/reject is
+   // the source of truth for now; finer-grained frontend permission
+   // gating for the page itself is a follow-up.
    */
   fastify.get<{
-    Querystring: RedemptionsQuerystring;
-    Reply: RedemptionsApiResponse;
-  }>("/", {
+    Querystring: MerchantPendingRequestFilters;
+    Reply: MerchantPendingRequestsApiResponse;
+  }>("/pending", {
     preHandler: [requireAuth],
     schema: {
-      querystring: RedemptionsQuerystring,
+      querystring: MerchantPendingRequestFilters,
       response: {
-        200: RedemptionsApiResponse,
-        400: RedemptionsApiResponse,
-        401: RedemptionsApiResponse,
+        200: MerchantPendingRequestsApiResponse,
+        400: MerchantPendingRequestsApiResponse,
+        401: MerchantPendingRequestsApiResponse,
       },
     },
     handler: async (request, reply) => {
@@ -57,20 +61,7 @@ export default async function (fastify: FastifyInstance) {
           };
         }
         const q = request.query;
-        const status = q.status;
-        if (
-          status !== "pending" &&
-          status !== "approved" &&
-          status !== "rejected"
-        ) {
-          reply.status(400);
-          return {
-            success: false,
-            error: "Invalid status: must be pending, approved, or rejected",
-          };
-        }
-        const page = await redemptionService.listRedemptions(merchantId, {
-          status,
+        const page = await redemptionService.listPendingRedemptions(merchantId, {
           branch_id: q.branch_id ?? null,
           limit: q.limit ?? 20,
           offset: q.offset ?? 0,
@@ -80,8 +71,8 @@ export default async function (fastify: FastifyInstance) {
         const message =
           error instanceof Error
             ? error.message
-            : "Failed to load redemptions";
-        request.log.error(error, "GET /redemptions failed");
+            : "Failed to load pending redemptions";
+        request.log.error(error, "GET /redemptions/pending failed");
         reply.status(400);
         return { success: false, error: message };
       }
@@ -89,31 +80,23 @@ export default async function (fastify: FastifyInstance) {
   });
 
   /**
-   * POST /redemptions/:id/approve
-   * Manager-only. Approves a pending redemption: sets `approved_at = now()`
-   * and `approved_by_staff_id = caller.staff_id`. 409 if already in a
-   * terminal state. 400 if `amount_redeemed` exceeds the credit's current
-   * remaining. Returns the updated row.
+   * GET /redemptions/approved
    *
-   // TODO(frontend-permissions): the Approve button is rendered only on the
-   // Pending tab in the webapp, but the backend `requireRoles("manager")`
-   // check is the source of truth for now. A finer-grained frontend
-   // permission check (hiding the button for non-managers who somehow reach
-   // the page) is a follow-up.
+   * Audit feed of APPROVED redemptions for the merchant — one row per
+   * `customer_credit_redemptions` row with `approved_at IS NOT NULL`,
+   * scoped to the merchant's customer set via `customer_credit.branch_id`.
    */
-  fastify.post<{
-    Params: { id: number };
-    Reply: RedemptionMutationApiResponse;
-  }>("/:id/approve", {
-    preHandler: [requireAuth, requireRoles("manager")],
+  fastify.get<{
+    Querystring: MerchantAuditFeedFilters;
+    Reply: MerchantApprovedRedemptionsApiResponse;
+  }>("/approved", {
+    preHandler: [requireAuth],
     schema: {
+      querystring: MerchantAuditFeedFilters,
       response: {
-        200: RedemptionMutationApiResponse,
-        400: RedemptionMutationApiResponse,
-        401: RedemptionMutationApiResponse,
-        403: RedemptionMutationApiResponse,
-        404: RedemptionMutationApiResponse,
-        409: RedemptionMutationApiResponse,
+        200: MerchantApprovedRedemptionsApiResponse,
+        400: MerchantApprovedRedemptionsApiResponse,
+        401: MerchantApprovedRedemptionsApiResponse,
       },
     },
     handler: async (request, reply) => {
@@ -126,26 +109,118 @@ export default async function (fastify: FastifyInstance) {
             error: "Forbidden: no merchant assigned to this user",
           };
         }
-        const row = await redemptionService.approveRedemption(
+        const q = request.query;
+        const page = await redemptionService.listApprovedRedemptions(merchantId, {
+          branch_id: q.branch_id ?? null,
+          limit: q.limit ?? 20,
+          offset: q.offset ?? 0,
+        });
+        return { success: true, data: page };
+      } catch (error) {
+        const message =
+          error instanceof Error
+            ? error.message
+            : "Failed to load approved redemptions";
+        request.log.error(error, "GET /redemptions/approved failed");
+        reply.status(400);
+        return { success: false, error: message };
+      }
+    },
+  });
+
+  /**
+   * GET /redemptions/rejected
+   *
+   * Audit feed of REJECTED redemptions for the merchant — one row per
+   * `customer_credit_redemptions` row with `rejected_at IS NOT NULL`.
+   */
+  fastify.get<{
+    Querystring: MerchantAuditFeedFilters;
+    Reply: MerchantRejectedRedemptionsApiResponse;
+  }>("/rejected", {
+    preHandler: [requireAuth],
+    schema: {
+      querystring: MerchantAuditFeedFilters,
+      response: {
+        200: MerchantRejectedRedemptionsApiResponse,
+        400: MerchantRejectedRedemptionsApiResponse,
+        401: MerchantRejectedRedemptionsApiResponse,
+      },
+    },
+    handler: async (request, reply) => {
+      try {
+        const merchantId = await resolveMerchantId(request);
+        if (merchantId == null) {
+          reply.status(403);
+          return {
+            success: false,
+            error: "Forbidden: no merchant assigned to this user",
+          };
+        }
+        const q = request.query;
+        const page = await redemptionService.listRejectedRedemptions(merchantId, {
+          branch_id: q.branch_id ?? null,
+          limit: q.limit ?? 20,
+          offset: q.offset ?? 0,
+        });
+        return { success: true, data: page };
+      } catch (error) {
+        const message =
+          error instanceof Error
+            ? error.message
+            : "Failed to load rejected redemptions";
+        request.log.error(error, "GET /redemptions/rejected failed");
+        reply.status(400);
+        return { success: false, error: message };
+      }
+    },
+  });
+
+  /**
+   * POST /redemptions/customers/:customerId/approve
+   *
+   * Manager-only. Approves the pending request for (customer, merchant)
+   * — atomic via SQL RPC `redemption_approve`: writes the audit row,
+   * moves `pending_redemption_amount → approved_redemption_amount` on
+   * every touched credit, stamps `redemption_approval_staff_id`.
+   */
+  fastify.post<{
+    Params: { customerId: number };
+    Reply: MerchantRedemptionMutationApiResponse;
+  }>("/customers/:customerId/approve", {
+    preHandler: [requireAuth, requireRoles("manager")],
+    schema: {
+      response: {
+        200: MerchantRedemptionMutationApiResponse,
+        400: MerchantRedemptionMutationApiResponse,
+        401: MerchantRedemptionMutationApiResponse,
+        403: MerchantRedemptionMutationApiResponse,
+        404: MerchantRedemptionMutationApiResponse,
+      },
+    },
+    handler: async (request, reply) => {
+      try {
+        const merchantId = await resolveMerchantId(request);
+        if (merchantId == null) {
+          reply.status(403);
+          return {
+            success: false,
+            error: "Forbidden: no merchant assigned to this user",
+          };
+        }
+        return await redemptionService.approveRequest(
           request.user!,
-          Number(request.params.id),
           merchantId,
+          Number(request.params.customerId),
         );
-        return { success: true, data: row };
       } catch (error) {
         const message =
           error instanceof Error
             ? error.message
             : "Failed to approve redemption";
-        request.log.error(error, "POST /redemptions/:id/approve failed");
-        const conflict =
-          message.includes("already approved") ||
-          message.includes("already rejected");
-        const notFound = message.includes("not found");
-        const exceeded = message.includes("exceeds remaining credit");
-        if (conflict) reply.status(409);
-        else if (notFound) reply.status(404);
-        else if (exceeded) reply.status(400);
+        request.log.error(error, "POST /redemptions/customers/:customerId/approve failed");
+        const notFound = message.includes("No pending request");
+        if (notFound) reply.status(404);
         else reply.status(400);
         return { success: false, error: message };
       }
@@ -153,24 +228,24 @@ export default async function (fastify: FastifyInstance) {
   });
 
   /**
-   * POST /redemptions/:id/reject
-   * Manager-only. Rejects a pending redemption: sets `rejected_at = now()`.
-   * No `rejected_by_staff_id` column (decision 7). 409 if already in a
-   * terminal state. Returns the updated row.
+   * POST /redemptions/customers/:customerId/reject
+   *
+   * Manager-only. Rejects the pending request — atomic via SQL RPC
+   * `redemption_reject`: writes the rejected audit row, zeroes
+   * `pending_redemption_amount` on every touched credit.
    */
   fastify.post<{
-    Params: { id: number };
-    Reply: RedemptionMutationApiResponse;
-  }>("/:id/reject", {
+    Params: { customerId: number };
+    Reply: MerchantRedemptionMutationApiResponse;
+  }>("/customers/:customerId/reject", {
     preHandler: [requireAuth, requireRoles("manager")],
     schema: {
       response: {
-        200: RedemptionMutationApiResponse,
-        400: RedemptionMutationApiResponse,
-        401: RedemptionMutationApiResponse,
-        403: RedemptionMutationApiResponse,
-        404: RedemptionMutationApiResponse,
-        409: RedemptionMutationApiResponse,
+        200: MerchantRedemptionMutationApiResponse,
+        400: MerchantRedemptionMutationApiResponse,
+        401: MerchantRedemptionMutationApiResponse,
+        403: MerchantRedemptionMutationApiResponse,
+        404: MerchantRedemptionMutationApiResponse,
       },
     },
     handler: async (request, reply) => {
@@ -183,23 +258,18 @@ export default async function (fastify: FastifyInstance) {
             error: "Forbidden: no merchant assigned to this user",
           };
         }
-        const row = await redemptionService.rejectRedemption(
-          Number(request.params.id),
+        return await redemptionService.rejectRequest(
           merchantId,
+          Number(request.params.customerId),
         );
-        return { success: true, data: row };
       } catch (error) {
         const message =
           error instanceof Error
             ? error.message
             : "Failed to reject redemption";
-        request.log.error(error, "POST /redemptions/:id/reject failed");
-        const conflict =
-          message.includes("already approved") ||
-          message.includes("already rejected");
-        const notFound = message.includes("not found");
-        if (conflict) reply.status(409);
-        else if (notFound) reply.status(404);
+        request.log.error(error, "POST /redemptions/customers/:customerId/reject failed");
+        const notFound = message.includes("No pending request");
+        if (notFound) reply.status(404);
         else reply.status(400);
         return { success: false, error: message };
       }

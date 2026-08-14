@@ -1,75 +1,75 @@
 import { createApiClient, ApiClientConfig } from "./apiService.js";
 import {
-  CustomerRedemptionsApiResponse,
-  CustomerRedemptionCancelResponse,
-  CustomerRedemptionStatusFilter,
+  CustomerPendingRequestAmountBody,
+  CustomerPendingRequestMutationApiResponse,
 } from "../types/api.types.js";
 
 /**
- * Customer-app redemptions service — backs the "Credits Redeemed" tab on
- * the merchant detail screen. Mirrors the createCustomerCreditsService
- * factory pattern: takes an optional `ApiClientConfig` so the React Native
- * app can plug in its own access-token source and refresh handler.
+ * Customer-app pending-request service — backs the "Redeem at merchant"
+ * flow on the customer mobile app.
  *
- * Two operations:
- *   - `getMyRedemptions({ merchantId, status })` — list every redemption
- *     the logged-in customer has at the given merchant, optionally
- *     narrowed by status. Customer-token only (the backend resolves
- *     `customer_id` from the JWT).
- *   - `cancelMyRedemption(id)` — soft-cancel a pending redemption.
- *     Returns the raw ApiResponse so the caller can branch on
- *     `success` and surface the error string on failure.
+ * There is no per-redemption-row CRUD anymore. A redemption request is
+ * the implicit set of `customer_credit` rows at the (customer, merchant)
+ * pair that have `pending_redemption_amount > 0`. This service exposes
+ * one upsert endpoint (POST / PATCH) and one cancel endpoint (DELETE).
+ *
+ * Mirrors the createCustomerCreditsService factory pattern: takes an
+ * optional `ApiClientConfig` so the React Native app can plug in its
+ * own access-token source and refresh handler.
  */
 export function createCustomerRedemptionsService(
   config?: ApiClientConfig,
 ) {
   const { apiRequest } = createApiClient(config);
 
-  function buildQS(params: object): string {
-    const parts: string[] = [];
-    for (const [k, v] of Object.entries(params)) {
-      if (v == null) continue;
-      parts.push(`${encodeURIComponent(k)}=${encodeURIComponent(String(v))}`);
-    }
-    return parts.length ? `?${parts.join("&")}` : "";
-  }
-
   return {
     /**
-     * GET /customers/me/redemptions — paginated-free list (single page —
-     * the customer's redemption history at one merchant is bounded).
-     * `status` narrows the row set; "all" returns pending + approved +
-     * rejected merged.
+     * POST /customers/me/merchants/:merchantId/redemptions — create or
+     * upsert the customer's pending request at a merchant. Body:
+     * `{ amount }`. The server caps the amount at the merchant's
+     * `available_total + current_pending`. Atomic via SQL RPC
+     * `redemption_fan_out`.
      */
-    async getMyRedemptions(params: {
+    async upsertMyPendingRequest(params: {
       merchantId: number;
-      status: CustomerRedemptionStatusFilter;
-    }): Promise<CustomerRedemptionsApiResponse> {
-      const qs = buildQS({
-        merchant_id: params.merchantId,
-        status: params.status,
-      });
-      return apiRequest<CustomerRedemptionsApiResponse>(
-        `/customers/me/redemptions${qs}`,
-        { method: "GET" },
+      amount: number;
+    }): Promise<CustomerPendingRequestMutationApiResponse> {
+      const body: CustomerPendingRequestAmountBody = { amount: params.amount };
+      return apiRequest<CustomerPendingRequestMutationApiResponse>(
+        `/customers/me/merchants/${encodeURIComponent(params.merchantId)}/redemptions`,
+        { method: "POST", body },
       );
     },
 
     /**
-     * DELETE /customers/me/redemptions/:id — soft-cancel a pending
-     * redemption. Returns the raw ApiResponse; 409 if the redemption is
-     * already in a terminal state, 403 if it belongs to another customer,
-     * 404 if it doesn't exist.
+     * PATCH /customers/me/merchants/:merchantId/redemptions — edit the
+     * pending request amount. Same RPC as POST (the fan-out is
+     * idempotent and re-splits on amount change). We expose PATCH for
+     * HTTP-semantic correctness on the edit action.
      */
-    async cancelMyRedemption(
-      id: number,
-    ): Promise<CustomerRedemptionCancelResponse | { success: false; error: string }> {
-      return apiRequest<
-        | CustomerRedemptionCancelResponse
-        | { success: false; error: string }
-      >(`/customers/me/redemptions/${encodeURIComponent(id)}`, {
-        method: "DELETE",
-      });
+    async updateMyPendingRequest(params: {
+      merchantId: number;
+      amount: number;
+    }): Promise<CustomerPendingRequestMutationApiResponse> {
+      const body: CustomerPendingRequestAmountBody = { amount: params.amount };
+      return apiRequest<CustomerPendingRequestMutationApiResponse>(
+        `/customers/me/merchants/${encodeURIComponent(params.merchantId)}/redemptions`,
+        { method: "PATCH", body },
+      );
+    },
+
+    /**
+     * DELETE /customers/me/merchants/:merchantId/redemptions — cancel
+     * the pending request. Idempotent (no-op if no pending). The SQL
+     * RPC zeroes `pending_redemption_amount` on every touched credit.
+     */
+    async cancelMyPendingRequest(
+      merchantId: number,
+    ): Promise<CustomerPendingRequestMutationApiResponse> {
+      return apiRequest<CustomerPendingRequestMutationApiResponse>(
+        `/customers/me/merchants/${encodeURIComponent(merchantId)}/redemptions`,
+        { method: "DELETE" },
+      );
     },
   };
 }

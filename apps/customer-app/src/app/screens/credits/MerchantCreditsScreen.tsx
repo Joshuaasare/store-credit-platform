@@ -1,5 +1,10 @@
 import { useMemo, useState } from "react";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import {
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { RouteProp } from "@react-navigation/native";
@@ -24,32 +29,31 @@ import MerchantTabSwitcher, {
   type MerchantTab,
 } from "./components/MerchantTabSwitcher";
 import MerchantRedemptionConfirmSheet from "./components/MerchantRedemptionConfirmSheet";
-import { merchantRedemptionsQueryKey } from "./lib/useMerchantRedemptions";
 import { CreditsMerchantAvailable } from "./screens/CreditsMerchantAvailable";
 import { CreditsMerchantPending } from "./screens/CreditsMerchantPending";
-import { CreditsMerchantRedeemed } from "./screens/CreditsMerchantRedeemed";
 
 const CREDITS_QUERY_KEY = ["customer", "credits"] as const;
+const PENDING_REQUEST_KEY = ["customer", "pendingRequest"] as const;
 
 /**
  * Parent merchant credit detail screen. Owns:
  *   - The tall fixed pink header (back arrow + merchant logo + 2-line
- *     store name + meta + available total + progress row).
- *   - The three-option tab switcher (`MerchantTabSwitcher`): Credits
- *     available / Pending / Credits Redeemed.
+ *     store name + meta + available total). The progress bar is
+ *     removed — there's no progress to show on this surface anymore
+ *     (the customer's spend is captured in the rolled-up Pending card
+ *     and the per-credit Available list).
+ *   - The two-option tab switcher (`MerchantTabSwitcher`): Available /
+ *     Pending. The Redeemed tab is gone — the new audit model doesn't
+ *     expose a per-merchant redemption history to the customer.
  *   - The cancel-confirmation bottom sheet
  *     (`MerchantRedemptionConfirmSheet`).
- *   - The cancel mutation (DELETE `/customers/me/redemptions/:id` +
- *     cache invalidation across the credits + merchant-redemptions
- *     query keys so the Available tab's `pending_total` /
- *     `remaining` recompute).
+ *   - The cancel mutation (`DELETE /customers/me/merchants/:merchantId/
+ *     redemptions` + cache invalidation).
  *
- * The tab body content is rendered conditionally from
- * `CreditsMerchantAvailable` / `CreditsMerchantPending` /
- * `CreditsMerchantRedeemed`. Local-state approach (no
- * `@react-navigation/material-top-tabs` dependency — the customer-app
- * package.json doesn't carry it, and we deliberately want to avoid a
- * new dependency churn).
+ * Pending is rendered as a single rolled-up card rather than a list —
+ * the new model exposes one pending request per (customer, merchant)
+ * pair (the fan-out breakdown is visible in the Available tab per
+ * credit).
  */
 export function MerchantCreditsScreen() {
   const route =
@@ -60,15 +64,14 @@ export function MerchantCreditsScreen() {
 
   // The `["customer", "credits"]` query is also read by the Credits
   // tab list and by the Available tab body — the parent subscribes
-  // here so the header progress / available total recompute on
-  // invalidation (e.g. after a redemption cancel).
+  // here so the header available total recomputes on invalidation.
   const creditsQuery = useQuery<CustomerCreditsApiResponse>({
     queryKey: CREDITS_QUERY_KEY,
     queryFn: () => customerCreditsService.getMyCredits(),
   });
 
-  // The bucket for this merchant — derives the header meta + total +
-  // progress so both tabs render the same header.
+  // The bucket for this merchant — derives the header meta + total so
+  // both tabs render the same header.
   const bucket = useMemo<MerchantCreditBucket | null>(() => {
     if (!creditsQuery.data?.success) return null;
     const live = creditsQuery.data.data.live.filter(
@@ -87,60 +90,40 @@ export function MerchantCreditsScreen() {
       })()
     : null;
 
-  const overallTotal = useMemo(() => {
-    if (!bucket) return { issued: 0, redeemed: 0 };
-    let issued = 0;
-    let redeemed = 0;
-    for (const credit of bucket.credits) {
-      const amount = Number(credit.credit_amount) || 0;
-      const used = Number(credit.redeemed_total) || 0;
-      issued += amount;
-      redeemed += Math.min(used, amount);
-    }
-    return { issued, redeemed };
-  }, [bucket]);
-
   const [tab, setTab] = useState<MerchantTab>("available");
 
-  // Three-option pill order is the source of truth here — the
-  // switcher renders whatever order this array declares, and the tab
-  // body map below branches on each value.
+  // Two-option pill order is the source of truth here — the switcher
+  // renders whatever order this array declares.
   const tabOptions = useMemo<{ value: MerchantTab; label: string }[]>(
     () => [
       { value: "available", label: "Available" },
       { value: "pending", label: "Pending" },
-      { value: "redeemed", label: "Redeemed" },
     ],
     [],
   );
 
-  // Cancel state — the parent owns the sheet + mutation so both tabs
-  // can fire `onCancelRequest(id)` without each owning its own.
-  const [pendingCancelId, setPendingCancelId] = useState<number | null>(null);
+  // Cancel state — the parent owns the sheet + mutation so the rolled-up
+  // Pending card can fire `onCancelRequest(merchantId)` without the
+  // child owning its own.
+  const [pendingCancel, setPendingCancel] = useState(false);
 
   const cancelMutation = useMutation({
-    mutationFn: (id: number) =>
-      customerRedemptionsService.cancelMyRedemption(id),
-    onSuccess: async (result, id) => {
-      // Dismiss the sheet first so the user gets immediate feedback.
-      setPendingCancelId(null);
+    mutationFn: () =>
+      customerRedemptionsService.cancelMyPendingRequest(merchantId),
+    onSuccess: async (result) => {
+      setPendingCancel(false);
       if (!result.success) {
-        // Surface a generic failure — the customer-app doesn't have a
-        // toast helper today; the screen logs the failure and the
-        // sheet auto-dismisses.
-        console.warn("Cancel redemption failed:", result.error, "id=", id);
+        console.warn("Cancel redemption failed:", result.error);
         return;
       }
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: CREDITS_QUERY_KEY }),
-        queryClient.invalidateQueries({
-          queryKey: merchantRedemptionsQueryKey(merchantId),
-        }),
+        queryClient.invalidateQueries({ queryKey: PENDING_REQUEST_KEY }),
       ]);
     },
-    onError: (err, id) => {
-      setPendingCancelId(null);
-      console.warn("Cancel redemption errored:", err, "id=", id);
+    onError: (err) => {
+      setPendingCancel(false);
+      console.warn("Cancel redemption errored:", err);
     },
   });
 
@@ -152,11 +135,6 @@ export function MerchantCreditsScreen() {
           logoUrl={bucket?.logoUrl ?? null}
           meta={headerMeta}
           total={bucket?.totalRemaining ?? null}
-          progress={
-            bucket
-              ? { issued: overallTotal.issued, redeemed: overallTotal.redeemed }
-              : null
-          }
           onBack={() => navigation.goBack()}
         />
 
@@ -171,30 +149,24 @@ export function MerchantCreditsScreen() {
         <View style={styles.scrollArea}>
           {tab === "available" ? (
             <CreditsMerchantAvailable />
-          ) : tab === "pending" ? (
+          ) : (
             <CreditsMerchantPending
               merchantId={merchantId}
               merchantName={bucket?.merchantName ?? "this merchant"}
-              onCancelRequest={(id) => setPendingCancelId(id)}
-            />
-          ) : (
-            <CreditsMerchantRedeemed
-              merchantId={merchantId}
-              merchantName={bucket?.merchantName ?? "this merchant"}
-              onCancelRequest={(id) => setPendingCancelId(id)}
+              onCancelRequest={() => setPendingCancel(true)}
             />
           )}
         </View>
       </View>
 
       <MerchantRedemptionConfirmSheet
-        visible={pendingCancelId != null}
+        visible={pendingCancel}
         onDismiss={() => {
-          if (!cancelMutation.isPending) setPendingCancelId(null);
+          if (!cancelMutation.isPending) setPendingCancel(false);
         }}
         onConfirm={() => {
-          if (pendingCancelId == null) return;
-          cancelMutation.mutate(pendingCancelId);
+          if (!pendingCancel) return;
+          cancelMutation.mutate();
         }}
         isPending={cancelMutation.isPending}
       />
@@ -203,28 +175,28 @@ export function MerchantCreditsScreen() {
 }
 
 /**
- * Tall fixed pink header. The structure is 3 stacked rows inside the
- * pink surface:
+ * Tall fixed pink header. The structure is 2 stacked rows inside the
+ * pink surface (the previous progress row is removed):
  *   1. Back arrow (own row at the top — sits above everything else)
  *   2. Avatar + 2-line store name + meta + available total
- *   3. Progress block (X% redeemed + GHc Y of GHc Z + bar)
  *
- * The pink surface mirrors the brand hero card and the bottom tab bar
- * so the brand reads consistently across every surface.
+ * The progress bar that previously showed "X% redeemed of GHc Y of
+ * GHc Z" is gone — the new redemption model exposes pending state
+ * per credit on the Available tab and a rolled-up card on the Pending
+ * tab, so a global progress bar in the header no longer matches the
+ * mental model.
  */
 function DetailHeader({
   merchantName,
   logoUrl,
   meta,
   total,
-  progress,
   onBack,
 }: {
   merchantName: string | null;
   logoUrl: string | null;
   meta: string | null;
   total: number | null;
-  progress: { issued: number; redeemed: number } | null;
   onBack: () => void;
 }) {
   const theme = useThemeTokens();
@@ -330,76 +302,6 @@ function DetailHeader({
           </View>
         ) : null}
       </View>
-
-      {/* Progress row — sits below the top row inside the pink surface.
-          Track = white at low alpha, fill = pure white so the contrast
-          pops on the dark pink. No caption beneath; the available
-          amount in the top row already tells the user what remains. */}
-      {progress !== null ? (
-        <View style={styles.headerProgressBlock}>
-          <View style={styles.headerProgressMetaRow}>
-            <Text
-              style={[
-                styles.headerProgressPercent,
-                {
-                  color: theme.colors.textOnPrimary,
-                  fontFamily: theme.typography.fontFamilySemiBold,
-                },
-              ]}
-              accessibilityLabel={`${Math.round(
-                progress.issued > 0
-                  ? Math.min(1, progress.redeemed / progress.issued) * 100
-                  : 0,
-              )} percent redeemed`}
-            >
-              {Math.round(
-                progress.issued > 0
-                  ? Math.min(1, progress.redeemed / progress.issued) * 100
-                  : 0,
-              )}
-              % redeemed
-            </Text>
-            <Text
-              style={[
-                styles.headerProgressCaption,
-                {
-                  color: theme.colors.textOnPrimary,
-                  fontFamily: theme.typography.fontFamilyMedium,
-                },
-              ]}
-            >
-              {formatGhs(Math.min(progress.redeemed, progress.issued))} of{" "}
-              {formatGhs(progress.issued)}
-            </Text>
-          </View>
-          <View
-            style={styles.headerProgressTrack}
-            accessibilityRole="progressbar"
-            accessibilityValue={{
-              min: 0,
-              now: Math.round(
-                progress.issued > 0
-                  ? Math.min(1, progress.redeemed / progress.issued) * 100
-                  : 0,
-              ),
-              max: 100,
-            }}
-          >
-            <View
-              style={{
-                height: "100%",
-                width: `${
-                  progress.issued > 0
-                    ? Math.min(1, progress.redeemed / progress.issued) * 100
-                    : 0
-                }%`,
-                backgroundColor: "#ffffff",
-                borderRadius: theme.radii.pill,
-              }}
-            />
-          </View>
-        </View>
-      ) : null}
     </SafeAreaView>
   );
 }
@@ -513,27 +415,5 @@ const styles = StyleSheet.create({
     fontSize: 20,
     letterSpacing: -0.3,
     marginTop: 2,
-  },
-  headerProgressBlock: {
-    gap: 8,
-  },
-  headerProgressMetaRow: {
-    flexDirection: "row",
-    alignItems: "baseline",
-    justifyContent: "space-between",
-  },
-  headerProgressPercent: {
-    fontSize: 16,
-    letterSpacing: -0.3,
-  },
-  headerProgressCaption: {
-    fontSize: 13,
-    opacity: 0.78,
-  },
-  headerProgressTrack: {
-    height: 10,
-    overflow: "hidden",
-    borderRadius: 999,
-    backgroundColor: "rgba(255,255,255,0.22)",
   },
 });

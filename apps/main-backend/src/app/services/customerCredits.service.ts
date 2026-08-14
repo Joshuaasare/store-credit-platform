@@ -16,8 +16,12 @@ import {
  *
  * Reads `customer_credit` rows for the logged-in customer, joins each to its
  * `branch` (and through `branch.merchant_id` to `merchants` for the merchant
- * display name), and aggregates approved `customer_credit_redemptions` to
- * compute `redeemed_total` and `remaining` per credit.
+ * display name). After the row-state collapse the redemption slice lives on
+ * the credit row itself — `pending_redemption_amount` and
+ * `approved_redemption_amount` are columns, no SUM-of-audit-table needed.
+ *
+ * `redeemed_total` / `pending_total` are kept on the composed row as back-compat
+ * aliases of those two columns so older frontend code keeps compiling.
  *
  * The result is split into `live` and `expired` arrays on the server so the
  * client can render the two top-level tabs directly without re-bucketing:
@@ -43,6 +47,11 @@ export class CustomerCreditsService {
     //    on revoked_at / expires_at here — both buckets (live + expired)
     //    come from this one result set, and the bucketing logic below is
     //    cheap and explicit.
+    //
+    //    The redemption slice is read directly off the row
+    //    (`approved_redemption_amount`, `pending_redemption_amount`) — there
+    //    is no second SUM query anymore. This is a strict improvement:
+    //    one round-trip, no aggregation drift between row and audit.
     const { data: creditRows, error: creditErr } = await supabaseAdmin
       .from("customer_credit")
       .select(
@@ -58,73 +67,20 @@ export class CustomerCreditsService {
 
     const credits = creditRows ?? [];
 
-    // 2. Fetch approved AND pending redemptions for these credit_ids in two
-    //    parallel queries. We sum approved (approved_at IS NOT NULL) AND
-    //    pending (approved_at IS NULL AND rejected_at IS NULL) redemptions
-    //    so that a customer's wallet never claims more spend than is
-    //    actually available — a pending request reserves the amount even
-    //    before the merchant approves it. Rejected (rejected_at IS NOT
-    //    NULL) rows do NOT reduce remaining.
-    const creditIds = credits.map((c) => c.id);
-    const redeemedByCredit = new Map<number, number>();
-    const pendingByCredit = new Map<number, number>();
-    if (creditIds.length > 0) {
-      const [approvedRes, pendingRes] = await Promise.all([
-        supabaseAdmin
-          .from("customer_credit_redemptions")
-          .select("credit_id, amount_redeemed")
-          .in("credit_id", creditIds)
-          .not("approved_at", "is", null)
-          .is("deleted_at", null),
-        supabaseAdmin
-          .from("customer_credit_redemptions")
-          .select("credit_id, amount_redeemed")
-          .in("credit_id", creditIds)
-          .is("approved_at", null)
-          .is("rejected_at", null)
-          .is("deleted_at", null),
-      ]);
-      if (approvedRes.error) {
-        throw new Error(
-          `Failed to load approved redemptions: ${approvedRes.error.message}`,
-        );
-      }
-      if (pendingRes.error) {
-        throw new Error(
-          `Failed to load pending redemptions: ${pendingRes.error.message}`,
-        );
-      }
-      for (const r of approvedRes.data ?? []) {
-        const amt = Number(r.amount_redeemed) || 0;
-        redeemedByCredit.set(
-          r.credit_id,
-          (redeemedByCredit.get(r.credit_id) ?? 0) + amt,
-        );
-      }
-      for (const r of pendingRes.data ?? []) {
-        const amt = Number(r.amount_redeemed) || 0;
-        pendingByCredit.set(
-          r.credit_id,
-          (pendingByCredit.get(r.credit_id) ?? 0) + amt,
-        );
-      }
-    }
-
-    // 3. Bucket + attach aggregates. The composed row already carries the
-    //    nested branch/merchant join from the select fragment; we only add
-    //    the derived top-level fields.
+    // 2. Bucket + derive aggregates from the row columns. The composed row
+    //    already carries the nested branch/merchant join from the select
+    //    fragment; we only add the derived top-level fields. `redeemed_total`
+    //    / `pending_total` are kept as back-compat aliases of the column
+    //    reads so older frontend code keeps working.
     const nowEpoch = Math.floor(Date.now() / 1000);
     const live: CustomerCreditWithBranch[] = [];
     const expired: CustomerCreditWithBranch[] = [];
 
     for (const row of credits) {
       const creditAmount = Number(row.credit_amount) || 0;
-      const redeemedTotal = redeemedByCredit.get(row.id) ?? 0;
-      const pendingTotal = pendingByCredit.get(row.id) ?? 0;
-      const remaining = Math.max(
-        0,
-        creditAmount - redeemedTotal - pendingTotal,
-      );
+      const approvedTotal = Number(row.approved_redemption_amount) || 0;
+      const pendingTotal = Number(row.pending_redemption_amount) || 0;
+      const remaining = Math.max(0, creditAmount - approvedTotal - pendingTotal);
 
       let status: CustomerCreditStatus;
       if (row.revoked_at != null) {
@@ -143,7 +99,7 @@ export class CustomerCreditsService {
 
       const composed: CustomerCreditWithBranch = {
         ...row,
-        redeemed_total: redeemedTotal,
+        redeemed_total: approvedTotal,
         pending_total: pendingTotal,
         remaining,
         status,

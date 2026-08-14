@@ -121,28 +121,35 @@ export class TransactionService {
       throw new Error(`Failed to load credits: ${creditsRes.error.message}`);
     }
 
-    // Fetch approved redemptions for the credits we just loaded. The redemption
-    // table has no denormalized customer_id / branch_id — we reach them via
-    // credit_id → customer_credit.
-    const creditIds = ((creditsRes.data ?? []) as any[]).map((c) => c.id);
+    // Fetch approved redemptions scoped to the customer's credit_ids. After
+    // the row-state collapse, `customer_credit_redemptions` is a thin audit
+    // table — it carries `customer_id` directly (no `credit_id` / `branch_id`
+    // / `recorded_by_staff_id` anymore). We re-derive `branch_id` from the
+    // joined customer_credit for the activity-feed row shape.
+    //
+    // Collect the distinct customer_ids from the credit rows, then fetch
+    // approved redemptions for those customers.
+    const customerIds = Array.from(
+      new Set(((creditsRes.data ?? []) as any[]).map((c) => c.customer_id)),
+    );
     let redemptionsRes: { data: any[] | null; error: any } = {
       data: [],
       error: null,
     };
-    if (needRedemptions && creditIds.length > 0) {
+    if (needRedemptions && customerIds.length > 0) {
       redemptionsRes = await supabaseAdmin
         .from("customer_credit_redemptions")
         .select(
-          `id, credit_id, amount_redeemed, approved_at, approved_by_staff_id, recorded_by_staff_id, created_at,
+          `id, customer_id, amount_redeemed, approved_at, approved_by_staff_id, created_at,
            credit:customer_credit(id, customer_id, branch_id,
              customer:customers(${QueryFragments.BASE_CUSTOMER}, users(${QueryFragments.BASE_USER_PROFILE})),
              branch:branches(${QueryFragments.BASE_BRANCH})),
            approved_by_staff:staff!approved_by_staff_id(${QueryFragments.BASE_STAFF})`,
         )
-        .in("credit_id", creditIds)
+        .in("customer_id", customerIds)
         .is("deleted_at", null)
         .not("approved_at", "is", null)
-        .order("created_at", { ascending: false });
+        .order("approved_at", { ascending: false });
     }
     if (redemptionsRes.error) {
       throw new Error(
@@ -216,20 +223,25 @@ export class TransactionService {
 
     if (needRedemptions) {
       for (const r of (redemptionsRes.data ?? []) as any[]) {
-        const td = Math.floor(new Date(r.created_at).getTime() / 1000);
+        const td = Math.floor(new Date(r.approved_at ?? r.created_at).getTime() / 1000);
         if (startEpoch != null && td < startEpoch) continue;
         if (endEpoch != null && td > endEpoch) continue;
         const credit = (r.credit ?? null) as any;
         unioned.push({
           id: r.id,
-          customer_id: credit?.customer_id,
+          customer_id: r.customer_id ?? credit?.customer_id,
           branch_id: credit?.branch_id,
-          recorded_by_staff_id: r.recorded_by_staff_id ?? null,
+          // recorded_by_staff_id no longer lives on the audit row — leave
+          // null (the activity-feed row shape stays compatible).
+          recorded_by_staff_id: null,
           amount: Number(r.amount_redeemed),
           transaction_date: td,
           transaction_type: "credit_redeem",
           created_at: r.created_at,
-          credit_id: r.credit_id,
+          // credit_id was dropped from the audit row; we keep the field for
+          // back-compat and populate it from the joined customer_credit
+          // when present.
+          credit_id: credit?.id ?? null,
           customer: credit?.customer,
           branch: credit?.branch,
           recorded_by_staff: null,

@@ -127,11 +127,25 @@ export interface BaseStaff {
   deleted_at: string | null;
 }
 
+// Base row type for customer_credit. Mirrors the BASE_CUSTOMER_CREDIT
+// query fragment. The redemption state lives on the row itself
+// (collapsed from the legacy customer_credit_redemptions rows): the
+// pending slice is `pending_redemption_amount`, the approved slice is
+// `approved_redemption_amount`, and the row's remaining is derived
+//   remaining = credit_amount − approved_redemption_amount − pending_redemption_amount
+// The two redemption slices are bounded by `credit_amount` (DB CHECK
+// constraint) so an over-redemption can never land. `revoked_at` /
+// `expires_at` still drive the customer-facing status bucket (live /
+// expired / revoked) and the auto-shrink trigger re-fans-out any
+// orphaned pending slice when a row is revoked or expires.
 export interface BaseCustomerCredit {
   id: number;
   customer_id: number;
   branch_id: number;
   credit_amount: number;
+  pending_redemption_amount: number | null;
+  approved_redemption_amount: number | null;
+  redemption_approval_staff_id: number | null;
   expires_at: number | null;
   revoked_at: string | null;
   revoked_by_user_id: string | null;
@@ -141,25 +155,30 @@ export interface BaseCustomerCredit {
 }
 
 // Base row type for customer_credit_redemptions. Mirrors the
-// BASE_CUSTOMER_CREDIT_REDEMPTION query fragment. The three redemption states
-// are derived from approved_at / rejected_at (no status enum):
-//   Pending  → approved_at IS NULL AND rejected_at IS NULL
+// BASE_CUSTOMER_CREDIT_REDEMPTION query fragment. After the row-state
+// collapse this table is a thin append-only AUDIT log — one row per
+// approved or rejected fan-out at a (customer, merchant) pair, no
+// per-credit FK. The two terminal states are derived from approved_at /
+// rejected_at (no status enum):
 //   Approved → approved_at IS NOT NULL
 //   Rejected → rejected_at IS NOT NULL (implies approved_at IS NULL)
-// approved_at and rejected_at are mutually exclusive (enforced in the service
-// layer). `recorded_by_staff_id` is the cashier/manager who recorded the row
-// (historic — the cashier-initiated creation flow is being removed); the future
-// customer-app initiation channel will leave it null. `approved_by_staff_id`
-// is the manager who approved the redemption.
+// approved_at and rejected_at are mutually exclusive (enforced in the
+// service layer / RPC). Customer-initiated cancels write NO row —
+// cancelling is a `pending_redemption_amount := 0` on every touched
+// credit row, not an audit entry.
 export interface BaseCustomerCreditRedemption {
   id: number;
-  credit_id: number;
   customer_id: number;
-  branch_id: number;
+  // Set by every approve / reject write path so the activity feed and
+  // merchant audit feeds can join directly to merchants without going
+  // back through customer_credit → branches. Nullable for legacy audit
+  // rows written before this column existed; the activity feed drops
+  // those (orphan audit rows from a deleted merchant aren't surfacable
+  // anyway).
+  merchant_id: number | null;
   amount_redeemed: number;
   approved_at: string | null;
   approved_by_staff_id: number | null;
-  recorded_by_staff_id: number | null;
   rejected_at: string | null;
   created_at: string;
   updated_at: string | null;

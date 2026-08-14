@@ -115,40 +115,142 @@ create index if not exists idx_fixed_credit_config_group
   where deleted_at is null;
 
 -- ──────────────────────────────────────────────────────────────────────────
--- 7. customer_credit_redemptions: credit_id FK + remaining-credit index
+-- 7. customer_credit: redemption-amount columns (collapse redemption state
+--    onto the credit row itself)
 -- ──────────────────────────────────────────────────────────────────────────
--- `credit_id` is the only FK the redemption table needs — customer_id and
--- branch_id are reached via credit_id → customer_credit (the schema is
--- normalized this way; we don't denormalize them onto redemptions).
--- `add column if not exists` is idempotent — safe whether or not credit_id
--- has been added manually.
-alter table public.customer_credit_redemptions
-  add column if not exists credit_id bigint not null references public.customer_credit(id) on delete cascade;
+-- The legacy `customer_credit_redemptions` table is repurposed as a thin
+-- append-only audit log; the per-credit redemption state now lives on the
+-- `customer_credit` row directly. `pending_redemption_amount` reserves a
+-- pending request's slice of each credit; `approved_redemption_amount`
+-- tracks what has already been deducted. A row's `remaining` is derived:
+--   remaining = credit_amount − approved_redemption_amount − pending_redemption_amount
+-- The CHECK constraint enforces `pending + approved <= credit_amount` so an
+-- over-redemption cannot land in the database even on a buggy fan-out.
+alter table public.customer_credit
+  add column if not exists pending_redemption_amount numeric(12,2) not null default 0
+    check (pending_redemption_amount >= 0),
+  add column if not exists approved_redemption_amount numeric(12,2) not null default 0
+    check (approved_redemption_amount >= 0),
+  add column if not exists redemption_approval_staff_id bigint null
+    references public.staff(id) on delete set null;
 
--- Approved-redemption aggregation per credit (used by "remaining credit" calc:
--- remaining = customer_credit.credit_amount − SUM(approved redemptions)).
-create index if not exists idx_customer_credit_redemptions_credit_approved
-  on public.customer_credit_redemptions (credit_id)
+-- Composite bound on a single credit row — a request can never reserve
+-- more than the credit's principal + already-approved slice.
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint where conname = 'customer_credit_pending_approved_within_credit_amount_chk'
+  ) then
+    alter table public.customer_credit
+      add constraint customer_credit_pending_approved_within_credit_amount_chk
+      check (pending_redemption_amount + approved_redemption_amount <= credit_amount);
+  end if;
+end$$;
+
+-- Hot path: "show me every pending request at this merchant" — the merchant
+-- approval queue scans customer_credit rows WHERE pending_redemption_amount > 0
+-- AND branch.merchant_id = $1.
+create index if not exists idx_customer_credit_pending
+  on public.customer_credit (customer_id, branch_id)
+  where pending_redemption_amount > 0 and deleted_at is null;
+
+-- ──────────────────────────────────────────────────────────────────────────
+-- 7a. customer_credit_redemptions: drop credit_id + branch_id + recorded_by_staff_id
+-- ──────────────────────────────────────────────────────────────────────────
+-- After the row-level collapse (see section 7), the audit log no longer
+-- needs to point at a specific credit row — one redemption row covers the
+-- whole (customer, merchant) fan-out. branch_id is reached via merchant
+-- scoping in the service layer; recorded_by_staff_id is dropped because
+-- the legacy cashier-initiated flow is being removed (the customer app is
+-- the only creator of redemption requests).
+drop index if exists idx_customer_credit_redemptions_credit_approved;
+drop index if exists idx_customer_credit_redemptions_credit_rejected;
+
+-- Drop the FK constraints on the soon-to-be-removed columns BEFORE the
+-- column drops — Postgres won't let us drop a column while a constraint
+-- depends on it. Each constraint name is the standard Postgres auto-name
+-- for the FK declared when the column was originally added. `if exists`
+-- keeps the migration idempotent whether the constraint is still present
+-- (legacy schema) or already gone (a partial-run of this script).
+alter table public.customer_credit_redemptions
+  drop constraint if exists customer_credit_redemptions_credit_id_fkey;
+alter table public.customer_credit_redemptions
+  drop constraint if exists customer_credit_redemptions_branch_id_fkey;
+
+alter table public.customer_credit_redemptions
+  drop column if exists credit_id,
+  drop column if exists branch_id;
+
+-- Recorded_by_staff_id (and its FK + legacy rename block) lived in the
+-- section below; the column is removed here so we don't carry forward a
+-- cashier-initiated audit field that nothing writes to anymore.
+alter table public.customer_credit_redemptions
+  drop constraint if exists customer_credit_redemptions_recorded_by_staff_id_fkey;
+alter table public.customer_credit_redemptions
+  drop column if exists recorded_by_staff_id;
+
+-- Approved-redemption audit feed (powers the merchant "Approved" tab and
+-- the customer Home activity feed): sorted by approved_at DESC for the
+-- feed ordering.
+create index if not exists idx_customer_credit_redemptions_customer_approved
+  on public.customer_credit_redemptions (customer_id, approved_at desc)
   where approved_at is not null and deleted_at is null;
 
+-- 7a.1 customer_credit_redemptions: merchant_id
+--
+-- Add `merchant_id` to the audit row so the customer-app Home activity
+-- feed and the merchant Approved / Rejected tabs can join directly to
+-- merchants (audit → merchants). Previously the activity feed derived
+-- merchant by walking back through the customer's customer_credit rows
+-- to a branch, which broke when the customer had no active credits AND
+-- picked a random merchant for multi-merchant customers.
+--
+-- Nullable (not backfilled — see the note at the end of this section).
+-- Legacy audit rows from before this migration have `merchant_id = null`
+-- and are silently dropped from the customer activity feed (the join
+-- skips null). No backfill migration ships with this change; see the
+-- data-quality decision noted below.
+--
+-- ON DELETE SET NULL: if the merchant is hard-deleted, the audit row
+-- stays (it is a financial record — we don't cascade-delete audit data)
+-- but the merchant reference clears so the row falls off the feed.
+alter table public.customer_credit_redemptions
+  add column if not exists merchant_id bigint null references public.merchants(id) on delete set null;
+
+-- Partial index that speeds up the webapp Approved tab listing
+-- (audit row by merchant, newest approved first). The partial WHERE
+-- excludes rejected / pending rows so the index stays tight.
+create index if not exists idx_customer_credit_redemptions_merchant_approved
+  on public.customer_credit_redemptions (merchant_id, approved_at desc)
+  where approved_at is not null;
+
+-- Backfill note: historical audit rows (written before this column
+-- existed) have merchant_id = null. The customer-app activity feed
+-- already drops those rows. If/when a one-shot backfill is run, the
+-- canonical lookup is the customer's most-recent customer_credit row at
+-- the audit row's created_at timestamp (customer_credit.branch_id →
+-- branches.merchant_id). This is a data-quality call, not a code call,
+-- and is intentionally NOT included in this migration.
+
 -- ──────────────────────────────────────────────────────────────────────────
--- 7b. customer_credit_redemptions: rejected_at + manager-approval workflow
+-- 7b. customer_credit_redemptions: rejected_at
 -- ──────────────────────────────────────────────────────────────────────────
 -- `rejected_at` is the distinct "rejected" terminal state — null = not
--- rejected. The three redemption states are derived from approved_at /
+-- rejected. The two terminal states are derived from approved_at /
 -- rejected_at (no status enum):
---   Pending  → approved_at IS NULL AND rejected_at IS NULL
 --   Approved → approved_at IS NOT NULL
 --   Rejected → rejected_at IS NOT NULL (implies approved_at IS NULL)
--- approved_at and rejected_at are mutually exclusive (enforced in the service
--- layer). The merchant-side approval queue filters by these states, so the
--- credit_id index below covers the rejected-at filtering path analogous to
--- the approved-at index above.
+-- approved_at and rejected_at are mutually exclusive (enforced in the
+-- service layer).
 alter table public.customer_credit_redemptions
   add column if not exists rejected_at timestamptz;
 
-create index if not exists idx_customer_credit_redemptions_credit_rejected
-  on public.customer_credit_redemptions (credit_id)
+-- Rejected-redemption audit feed (powers the merchant "Rejected" listing):
+-- sorted by rejected_at DESC for the feed ordering. Lives here (after the
+-- column is added) rather than next to the approved-at index in section
+-- 7a because `rejected_at` doesn't exist until this ALTER runs.
+create index if not exists idx_customer_credit_redemptions_customer_rejected
+  on public.customer_credit_redemptions (customer_id, rejected_at desc)
   where rejected_at is not null and deleted_at is null;
 
 -- ──────────────────────────────────────────────────────────────────────────
@@ -286,32 +388,22 @@ begin
   alter table public.customer_credit_redemptions
     add constraint customer_credit_redemptions_approved_by_staff_id_fkey
     foreign key (approved_by_staff_id) references public.staff(id) on delete set null;
-
-  -- customer_credit_redemptions: recorded_by_staff_id (new — recording cashier
-  -- distinct from approving manager; null on existing rows).
-  if not exists (
-    select 1 from information_schema.columns
-    where table_schema = 'public' and table_name = 'customer_credit_redemptions'
-      and column_name = 'recorded_by_staff_id'
-  ) then
-    alter table public.customer_credit_redemptions add column recorded_by_staff_id bigint;
-  end if;
-  alter table public.customer_credit_redemptions
-    drop constraint if exists customer_credit_redemptions_recorded_by_staff_id_fkey;
-  alter table public.customer_credit_redemptions
-    add constraint customer_credit_redemptions_recorded_by_staff_id_fkey
-    foreign key (recorded_by_staff_id) references public.staff(id) on delete set null;
 end $$;
 
 -- ──────────────────────────────────────────────────────────────────────────
 -- 9. Leaderboard RPCs
 -- ──────────────────────────────────────────────────────────────────────────
--- Source tables (after the purchase/credit/redemption re-architecture):
+-- Source tables (after the redemption row-state collapse):
 --   - customer_purchases              (kind = 'purchase')
 --   - customer_credit                  (kind = 'credit_issue', credit_amount column)
 --   - customer_credit_redemptions      (kind = 'credit_redeem', amount_redeemed column;
---                                      customer_id / branch_id reached via
---                                      credit_id → customer_credit)
+--                                      customer_id lives directly on the row now;
+--                                      branch is reached via the audit row's
+--                                      customer_id → customer_credit → branch_id,
+--                                      but for the leaderboard we only need the
+--                                      customer-level total, so branch scoping is
+--                                      enforced by joining the customer's credits
+--                                      at a merchant branch)
 --
 -- `transaction_date` is Unix epoch seconds (bigint) on customer_purchases.
 -- customer_credit and customer_credit_redemptions only have a timestamptz
@@ -362,12 +454,18 @@ as $$
       and (p_end_epoch   is null or (extract(epoch from c.created_at)::bigint) <= p_end_epoch)
   ),
   redemption_agg as (
-    select c.customer_id, c.branch_id, r.amount_redeemed as amount
+    -- The audit row's `customer_id` IS the merchant's customer; the
+    -- (customer_id, merchant_id) scoping is enforced at write time, so
+    -- we just need to filter the audit rows by their created_at epoch
+    -- and join on customer_id.
+    select r.customer_id, c.branch_id, r.amount_redeemed as amount
     from public.customer_credit_redemptions r
-    join public.customer_credit c on c.id = r.credit_id
+    join public.customer_credit c
+      on c.customer_id = r.customer_id
+     and c.deleted_at is null
+     and c.revoked_at is null
     join merchant_branches mb on mb.id = c.branch_id
     where r.deleted_at is null and r.approved_at is not null
-      and c.deleted_at is null and c.revoked_at is null
       and (p_start_epoch is null or (extract(epoch from r.created_at)::bigint) >= p_start_epoch)
       and (p_end_epoch   is null or (extract(epoch from r.created_at)::bigint) <= p_end_epoch)
   ),
@@ -447,11 +545,13 @@ as $$
       and (p_end_epoch   is null or (extract(epoch from c.created_at)::bigint) <= p_end_epoch)
   ),
   redemption_ids as (
-    select c.customer_id from public.customer_credit_redemptions r
-    join public.customer_credit c on c.id = r.credit_id
+    select r.customer_id from public.customer_credit_redemptions r
+    join public.customer_credit c
+      on c.customer_id = r.customer_id
+     and c.deleted_at is null
+     and c.revoked_at is null
     join merchant_branches mb on mb.id = c.branch_id
     where r.deleted_at is null and r.approved_at is not null
-      and c.deleted_at is null and c.revoked_at is null
       and (p_start_epoch is null or (extract(epoch from r.created_at)::bigint) >= p_start_epoch)
       and (p_end_epoch   is null or (extract(epoch from r.created_at)::bigint) <= p_end_epoch)
   )
@@ -566,26 +666,29 @@ as $$
     where p.deleted_at is null
     group by p.customer_id
   ),
-  redemption_per_credit as (
-    select r.credit_id,
-           coalesce(sum(r.amount_redeemed), 0) as redeemed_total
-    from public.customer_credit_redemptions r
-    where r.deleted_at is null and r.approved_at is not null
-    group by r.credit_id
-  ),
+  -- After the row-state collapse, each credit row carries its own
+  -- approved_redemption_amount and pending_redemption_amount — no JOIN
+  -- through customer_credit_redemptions needed to compute remaining.
+  -- available = credit_amount - approved_redemption_amount - pending_redemption_amount,
+  -- clamped at 0 so an over-redeemed credit can't subtract from the total.
   credit_agg as (
     select c.customer_id,
            coalesce(
-             sum(greatest(0, c.credit_amount - coalesce(rpc.redeemed_total, 0))),
+             sum(greatest(0,
+               c.credit_amount
+               - coalesce(c.approved_redemption_amount, 0)
+               - coalesce(c.pending_redemption_amount, 0))),
              0
            ) as available_credits,
            count(*) filter (
-             where greatest(0, c.credit_amount - coalesce(rpc.redeemed_total, 0)) > 0
+             where greatest(0,
+               c.credit_amount
+               - coalesce(c.approved_redemption_amount, 0)
+               - coalesce(c.pending_redemption_amount, 0)) > 0
            )::bigint as live_credit_count,
            max(extract(epoch from c.created_at)::bigint) as last_credit_epoch
     from public.customer_credit c
     join merchant_branches mb on mb.id = c.branch_id
-    left join redemption_per_credit rpc on rpc.credit_id = c.id
     where c.deleted_at is null
       and c.revoked_at is null
       and (c.expires_at is null
@@ -593,13 +696,19 @@ as $$
     group by c.customer_id
   ),
   redemption_agg as (
+    -- The audit row's customer_id IS the merchant's customer; we scope
+    -- the last-redemption epoch via the customer's credits at this
+    -- merchant (so a redemption against a different merchant doesn't
+    -- pollute this customer's "last activity" at ours).
     select c.customer_id,
            max(extract(epoch from r.created_at)::bigint) as last_redemption_epoch
     from public.customer_credit_redemptions r
-    join public.customer_credit c on c.id = r.credit_id
+    join public.customer_credit c
+      on c.customer_id = r.customer_id
+     and c.deleted_at is null
+     and c.revoked_at is null
     join merchant_branches mb on mb.id = c.branch_id
     where r.deleted_at is null and r.approved_at is not null
-      and c.deleted_at is null and c.revoked_at is null
     group by c.customer_id
   )
   select
@@ -632,9 +741,307 @@ as $$
 $$;
 
 -- ──────────────────────────────────────────────────────────────────────────
--- 12. Grants
+-- 12. Redemption fan-out RPCs (atomic, single-transaction)
+-- ──────────────────────────────────────────────────────────────────────────
+-- All four customer- and merchant-initiated operations that touch
+-- `pending_redemption_amount` run through `redemption_fan_out`. The fan-out
+-- is the only place in the database that writes to the column — every
+-- caller funnels through it so the invariants hold:
+--
+--   1. fan-out order: `expires_at ASC NULLS LAST, created_at ASC, id ASC`.
+--      The "full-row-take" rule means each credit row is either fully
+--      reserved (its pending slice equals its full available capacity) or
+--      zero — there's no partial-fill middle state for a single row.
+--   2. available per row = credit_amount − approved_redemption_amount.
+--      Pending is what's being re-fanned-out; approved is locked.
+--   3. demand walks rows oldest-expiry-first; when demand runs out, the
+--      rest of the rows have their pending set to 0.
+--
+-- `redemption_fan_out` is callable from both customer (create/edit/cancel)
+-- and merchant (approve/reject) code paths. The merchant approve/reject
+-- flow uses its own dedicated RPCs (`redemption_approve`,
+-- `redemption_reject`) so the audit-row insert lives in the same
+-- transaction as the row-state mutation — Supabase JS can't span a
+-- transaction across two calls otherwise.
+create or replace function public.redemption_fan_out(
+  p_customer_id  bigint,
+  p_merchant_id  bigint,
+  p_amount       numeric
+)
+returns table (
+  credit_id              bigint,
+  pending_redemption_amount numeric
+)
+language plpgsql
+volatile
+as $$
+declare
+  v_remaining numeric := greatest(0, coalesce(p_amount, 0));
+begin
+  -- Walk merchant's credit rows at this customer, oldest-expiry-first
+  -- (NULLS LAST so lifetime credits always take the back seat).
+  -- We update each row's pending_redemption_amount to either:
+  --   - min(available, remaining_demand), or
+  --   - 0 if the row wasn't part of the active fan-out.
+  -- Returning the touched rows + their new pending amounts lets the
+  -- caller surface the breakdown without a second round-trip.
+  return query
+  with merchant_branches as (
+    select id from public.branches
+    where merchant_id = p_merchant_id and deleted_at is null
+  ),
+  ordered as (
+    select c.id, c.credit_amount, c.approved_redemption_amount,
+           c.pending_redemption_amount,
+           greatest(
+             0,
+             c.credit_amount - coalesce(c.approved_redemption_amount, 0)
+           ) as available
+    from public.customer_credit c
+    join merchant_branches mb on mb.id = c.branch_id
+    where c.customer_id = p_customer_id
+      and c.deleted_at is null
+      and c.revoked_at is null
+      and (c.expires_at is null or c.expires_at > extract(epoch from now())::bigint)
+    order by c.expires_at asc nulls last, c.created_at asc, c.id asc
+    for update of c
+  ),
+  walk as (
+    select
+      o.id,
+      o.available,
+      greatest(0, v_remaining - coalesce((
+        select sum(x.available) from ordered x
+        where (x.expires_at is null and o.expires_at is null and x.id < o.id)
+           or (x.expires_at is null and o.expires_at is not null)
+           or (x.expires_at is not null and o.expires_at is not null and x.expires_at < o.expires_at)
+           or (x.expires_at = o.expires_at and x.created_at < o.created_at)
+           or (x.expires_at = o.expires_at and x.created_at = o.created_at and x.id < o.id)
+      ), 0)) as demand_before
+    from ordered o
+  ),
+  -- Compute new pending per row: each row takes min(available, demand).
+  -- The first row's demand is v_remaining itself, so demand_before for
+  -- row N is sum of available over rows [1..N-1] and the new pending
+  -- for row N is min(available, max(0, v_remaining - demand_before)).
+  computed as (
+    select
+      w.id,
+      case
+        when w.demand_before >= v_remaining then 0
+        when v_remaining - w.demand_before >= w.available then w.available
+        else v_remaining - w.demand_before
+      end as new_pending
+    from walk w
+  ),
+  updated as (
+    update public.customer_credit c
+    set pending_redemption_amount = coalesce(comp.new_pending, 0),
+        updated_at = now()
+    from computed comp
+    where c.id = comp.id
+    returning c.id, c.pending_redemption_amount
+  )
+  select u.id, u.pending_redemption_amount from updated u;
+end;
+$$;
+
+-- Approve a pending redemption at (customer, merchant). All-or-nothing
+-- in one transaction:
+--   1. snapshot total pending across the merchant's credits at this customer;
+--   2. write one audit row to customer_credit_redemptions;
+--   3. move pending → approved_redemption_amount on every touched row
+--      and stamp redemption_approval_staff_id.
+-- Returns: the new audit row's id + the total approved amount.
+create or replace function public.redemption_approve(
+  p_customer_id  bigint,
+  p_merchant_id  bigint,
+  p_staff_id     bigint
+)
+returns table (
+  audit_id          bigint,
+  amount_redeemed   numeric
+)
+language plpgsql
+volatile
+as $$
+declare
+  v_total numeric := 0;
+  v_audit_id bigint;
+begin
+  -- Lock and sum every pending slice at this (customer, merchant).
+  select coalesce(sum(c.pending_redemption_amount), 0)
+    into v_total
+  from public.customer_credit c
+  join public.branches b on b.id = c.branch_id and b.deleted_at is null
+  where c.customer_id = p_customer_id
+    and b.merchant_id = p_merchant_id
+    and c.deleted_at is null
+    and c.revoked_at is null
+    and c.pending_redemption_amount > 0
+  for update of c;
+
+  if v_total <= 0 then
+    raise exception 'No pending redemption to approve'
+      using errcode = 'P0002';
+  end if;
+
+  -- Write the audit row first so it has the right snapshot amount even
+  -- if the row-state mutation raises (which it shouldn't — both run in
+  -- the same transaction). `merchant_id` is stamped here so the
+  -- customer activity feed and the merchant Approved tab can join
+  -- directly to merchants without going through customer_credit →
+  -- branches.
+  insert into public.customer_credit_redemptions
+    (customer_id, merchant_id, amount_redeemed, approved_at, approved_by_staff_id)
+  values
+    (p_customer_id, p_merchant_id, v_total, now(), p_staff_id)
+  returning id into v_audit_id;
+
+  -- Move pending → approved and stamp the approval staff id.
+  update public.customer_credit c
+  set approved_redemption_amount = approved_redemption_amount + c.pending_redemption_amount,
+      pending_redemption_amount = 0,
+      redemption_approval_staff_id = p_staff_id,
+      updated_at = now()
+  from public.branches b
+  where c.customer_id = p_customer_id
+    and b.id = c.branch_id
+    and b.merchant_id = p_merchant_id
+    and c.deleted_at is null
+    and c.pending_redemption_amount > 0;
+
+  return query select v_audit_id, v_total;
+end;
+$$;
+
+-- Reject a pending redemption at (customer, merchant). Atomic:
+--   1. snapshot total pending across the merchant's credits at this customer;
+--   2. write one audit row to customer_credit_redemptions with
+--      rejected_at = now();
+--   3. zero out pending_redemption_amount on every touched row.
+create or replace function public.redemption_reject(
+  p_customer_id  bigint,
+  p_merchant_id  bigint
+)
+returns table (
+  audit_id          bigint,
+  amount_redeemed   numeric
+)
+language plpgsql
+volatile
+as $$
+declare
+  v_total numeric := 0;
+  v_audit_id bigint;
+begin
+  select coalesce(sum(c.pending_redemption_amount), 0)
+    into v_total
+  from public.customer_credit c
+  join public.branches b on b.id = c.branch_id and b.deleted_at is null
+  where c.customer_id = p_customer_id
+    and b.merchant_id = p_merchant_id
+    and c.deleted_at is null
+    and c.revoked_at is null
+    and c.pending_redemption_amount > 0
+  for update of c;
+
+  if v_total <= 0 then
+    raise exception 'No pending redemption to reject'
+      using errcode = 'P0002';
+  end if;
+
+  insert into public.customer_credit_redemptions
+    (customer_id, merchant_id, amount_redeemed, rejected_at)
+  values
+    (p_customer_id, p_merchant_id, v_total, now())
+  returning id into v_audit_id;
+
+  update public.customer_credit c
+  set pending_redemption_amount = 0,
+      updated_at = now()
+  from public.branches b
+  where c.customer_id = p_customer_id
+    and b.id = c.branch_id
+    and b.merchant_id = p_merchant_id
+    and c.deleted_at is null
+    and c.pending_redemption_amount > 0;
+
+  return query select v_audit_id, v_total;
+end;
+$$;
+
+-- Auto-shrink hook: when a credit row is revoked (or soft-deleted), if
+-- it was part of a pending fan-out, re-fan-out the remaining demand
+-- across the customer's other live rows at the merchant so the request
+-- doesn't claim more than the customer can still spend. Trigger-only —
+-- called by the trigger below, never directly from the service layer.
+create or replace function public.redemption_auto_shrink()
+returns trigger
+language plpgsql
+as $$
+declare
+  v_merchant_id bigint;
+  v_remaining numeric := 0;
+begin
+  -- Only act when revoked_at / deleted_at just got stamped and there was
+  -- a pending slice on this row. The OLD row captures the previous
+  -- pending amount (before the UPDATE sets it to 0).
+  if tg_op = 'UPDATE' then
+    if new.revoked_at is null and new.deleted_at is null then
+      return new;
+    end if;
+    if coalesce(old.pending_redemption_amount, 0) <= 0 then
+      return new;
+    end if;
+  elsif tg_op = 'DELETE' then
+    if coalesce(old.pending_redemption_amount, 0) <= 0 then
+      return old;
+    end if;
+  end if;
+
+  select b.merchant_id into v_merchant_id
+  from public.branches b
+  where b.id = coalesce(old.branch_id, new.branch_id)
+    and b.deleted_at is null;
+
+  if v_merchant_id is null then
+    return coalesce(new, old);
+  end if;
+
+  -- Re-fan-out the previous pending demand; the revoked/deleted row is
+  -- already filtered out by `revoked_at IS NULL AND deleted_at IS NULL`.
+  v_remaining := coalesce(old.pending_redemption_amount, 0);
+
+  -- Clear the revoked row's pending so the walk starts clean.
+  if tg_op = 'UPDATE' then
+    new.pending_redemption_amount := 0;
+  end if;
+
+  -- Fan out the rest. We use the existing RPC (it filters by deleted_at
+  -- and revoked_at, so the revoked row won't be in the result set).
+  perform public.redemption_fan_out(
+    coalesce(old.customer_id, new.customer_id),
+    v_merchant_id,
+    v_remaining
+  );
+
+  return coalesce(new, old);
+end;
+$$;
+
+drop trigger if exists trg_customer_credit_auto_shrink on public.customer_credit;
+create trigger trg_customer_credit_auto_shrink
+  before update of revoked_at, deleted_at on public.customer_credit
+  for each row execute function public.redemption_auto_shrink();
+
+-- ──────────────────────────────────────────────────────────────────────────
+-- 13. Grants
 -- ──────────────────────────────────────────────────────────────────────────
 grant execute on function public.get_customer_leaderboard(bigint, bigint, text, bigint, bigint, int, int) to authenticated, service_role;
 grant execute on function public.get_customer_leaderboard_count(bigint, bigint, bigint, bigint) to authenticated, service_role;
 grant execute on function public.get_distinct_customer_count(bigint, bigint) to authenticated, service_role;
 grant execute on function public.get_customers(bigint, bigint, text, int, int) to authenticated, service_role;
+grant execute on function public.redemption_fan_out(bigint, bigint, numeric) to service_role;
+grant execute on function public.redemption_approve(bigint, bigint, bigint) to service_role;
+grant execute on function public.redemption_reject(bigint, bigint) to service_role;

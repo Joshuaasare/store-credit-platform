@@ -91,6 +91,7 @@ export type Database = {
       }
       customer_credit: {
         Row: {
+          approved_redemption_amount: number | null
           branch_id: number
           created_at: string
           credit_amount: number
@@ -98,11 +99,14 @@ export type Database = {
           deleted_at: string | null
           expires_at: number | null
           id: number
+          pending_redemption_amount: number | null
+          redemption_approval_staff_id: number | null
           revoked_at: string | null
           revoked_by_user_id: string | null
           updated_at: string | null
         }
         Insert: {
+          approved_redemption_amount?: number | null
           branch_id: number
           created_at?: string
           credit_amount: number
@@ -110,11 +114,14 @@ export type Database = {
           deleted_at?: string | null
           expires_at?: number | null
           id?: number
+          pending_redemption_amount?: number | null
+          redemption_approval_staff_id?: number | null
           revoked_at?: string | null
           revoked_by_user_id?: string | null
           updated_at?: string | null
         }
         Update: {
+          approved_redemption_amount?: number | null
           branch_id?: number
           created_at?: string
           credit_amount?: number
@@ -122,6 +129,8 @@ export type Database = {
           deleted_at?: string | null
           expires_at?: number | null
           id?: number
+          pending_redemption_amount?: number | null
+          redemption_approval_staff_id?: number | null
           revoked_at?: string | null
           revoked_by_user_id?: string | null
           updated_at?: string | null
@@ -142,6 +151,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "customer_credit_redemption_approval_staff_id_fkey"
+            columns: ["redemption_approval_staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "customer_credit_revoked_by_user_id_fkey"
             columns: ["revoked_by_user_id"]
             isOneToOne: false
@@ -155,13 +171,11 @@ export type Database = {
           amount_redeemed: number
           approved_at: string | null
           approved_by_staff_id: number | null
-          branch_id: number
           created_at: string
-          credit_id: number
           customer_id: number
           deleted_at: string | null
           id: number
-          recorded_by_staff_id: number | null
+          merchant_id: number | null
           rejected_at: string | null
           updated_at: string | null
         }
@@ -169,13 +183,11 @@ export type Database = {
           amount_redeemed: number
           approved_at?: string | null
           approved_by_staff_id?: number | null
-          branch_id: number
           created_at?: string
-          credit_id: number
           customer_id: number
           deleted_at?: string | null
           id?: number
-          recorded_by_staff_id?: number | null
+          merchant_id?: number | null
           rejected_at?: string | null
           updated_at?: string | null
         }
@@ -183,13 +195,11 @@ export type Database = {
           amount_redeemed?: number
           approved_at?: string | null
           approved_by_staff_id?: number | null
-          branch_id?: number
           created_at?: string
-          credit_id?: number
           customer_id?: number
           deleted_at?: string | null
           id?: number
-          recorded_by_staff_id?: number | null
+          merchant_id?: number | null
           rejected_at?: string | null
           updated_at?: string | null
         }
@@ -202,20 +212,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "customer_credit_redemptions_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: false
-            referencedRelation: "branches"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "customer_credit_redemptions_credit_id_fkey"
-            columns: ["credit_id"]
-            isOneToOne: false
-            referencedRelation: "customer_credit"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "customer_credit_redemptions_customer_id_fkey"
             columns: ["customer_id"]
             isOneToOne: false
@@ -223,10 +219,10 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "customer_credit_redemptions_recorded_by_staff_id_fkey"
-            columns: ["recorded_by_staff_id"]
+            foreignKeyName: "customer_credit_redemptions_merchant_id_fkey"
+            columns: ["merchant_id"]
             isOneToOne: false
-            referencedRelation: "staff"
+            referencedRelation: "merchants"
             referencedColumns: ["id"]
           },
         ]
@@ -796,6 +792,26 @@ export type Database = {
       get_distinct_customer_count: {
         Args: { p_branch_id?: number; p_merchant_id: number }
         Returns: number
+      }
+      redemption_approve: {
+        Args: {
+          p_customer_id: number
+          p_merchant_id: number
+          p_staff_id: number
+        }
+        Returns: { audit_id: number; amount_redeemed: number }[]
+      }
+      redemption_fan_out: {
+        Args: {
+          p_amount: number
+          p_customer_id: number
+          p_merchant_id: number
+        }
+        Returns: { credit_id: number; pending_redemption_amount: number }[]
+      }
+      redemption_reject: {
+        Args: { p_customer_id: number; p_merchant_id: number }
+        Returns: { audit_id: number; amount_redeemed: number }[]
       }
     }
     Enums: {

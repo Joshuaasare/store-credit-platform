@@ -144,10 +144,22 @@ export class CustomerActivitiesService {
 
   /**
    * Fetch up to `limit + 1` APPROVED `customer_credit_redemptions` rows for
-   * the customer, joined to the redeeming branch and its merchant, ordered
-   * by `created_at` desc. Approved rows have `approved_at IS NOT NULL` and
-   * are the only rows that should appear in the customer's spend history —
-   * pending / rejected rows are not yet part of the customer's money.
+   * the customer, ordered by `approved_at` desc.
+   *
+   * The audit row carries `merchant_id` directly (set by the approve /
+   * reject write path). We join `audit → merchants` to fetch the
+   * merchant row, then a second-level `merchant → branches` join to
+   * surface the merchant's primary branch. `branch` is informational for
+   * the activity card ("redeemed at Acme — Legon branch"); the primary
+   * branch is acceptable for v1 even though a merchant may have many —
+   * the activity card surfaces merchant identity, not branch address.
+   *
+   * Approved rows have `approved_at IS NOT NULL` and are the only rows
+   * that should appear in the customer's spend history — pending / rejected
+   * rows are not yet part of the customer's money. Rows with a null
+   * `merchant_id` (orphan audit rows from a deleted merchant, or legacy
+   * rows from before the column existed) are skipped — there is no
+   * merchant to display and the row cannot be surfaced.
    */
   private async fetchRedemptions(
     customerId: number,
@@ -157,12 +169,14 @@ export class CustomerActivitiesService {
     let query = supabaseAdmin
       .from("customer_credit_redemptions")
       .select(
-        `${QueryFragments.BASE_CUSTOMER_CREDIT_REDEMPTION},branch:branches(${QueryFragments.BASE_BRANCH},merchant:merchants(${QueryFragments.BASE_MERCHANT}))`,
+        `${QueryFragments.BASE_CUSTOMER_CREDIT_REDEMPTION},
+         merchant:merchants!inner(${QueryFragments.BASE_MERCHANT}, branches:branches(${QueryFragments.BASE_BRANCH}))`,
       )
       .eq("customer_id", customerId)
+      .not("merchant_id", "is", null)
       .is("deleted_at", null)
       .not("approved_at", "is", null)
-      .order("created_at", { ascending: false })
+      .order("approved_at", { ascending: false })
       .limit(limit + 1);
 
     if (cursor != null) {
@@ -177,7 +191,17 @@ export class CustomerActivitiesService {
     const rows = data ?? [];
     const out: CustomerActivity[] = [];
     for (const r of rows) {
-      if (!r.branch) continue;
+      // Defensive: the .not("merchant_id", "is", null) filter + the
+      // !inner join guarantee the merchant shape, but TS still types the
+      // nested embed as nullable. Skip rows that somehow lack it.
+      const merchant = r.merchant;
+      if (!merchant) continue;
+      // merchant.branches is an array (the embedded FK has no
+      // !inner() so Supabase returns all matched rows); pick the first
+      // as the "primary branch" surfaced on the activity card.
+      const branch = merchant.branches?.[0];
+      if (!branch) continue;
+
       // approved_at is guaranteed non-null by the .not("approved_at", "is", null)
       // filter, but TypeScript still types it as nullable. Fall back to
       // created_at if the column ever comes back null (e.g. a data-migration
@@ -187,13 +211,17 @@ export class CustomerActivitiesService {
         kind: "credit_redeemed",
         id: r.id,
         amount: Number(r.amount_redeemed) || 0,
-        merchant: r.branch.merchant,
-        branch: r.branch,
+        merchant,
+        branch,
         created_at: displayCreatedAt,
-        credit_id: r.credit_id,
-        // No purchase_id FK exists in the schema (redemptions are tied to
-        // credits, not purchases) — leave null until a purchase join is
-        // added. The frontend treats null as "no purchase context".
+        // The audit row has no `credit_id` FK — we keep the field on
+        // the response type for back-compat. Populate with the redemption's
+        // own id (a stable identifier); consumers should not rely on it
+        // post-collapse.
+        credit_id: r.id,
+        // No purchase_id FK exists in the schema — leave null until a
+        // purchase join is added. The frontend treats null as "no purchase
+        // context".
         purchase_id: null,
       });
     }

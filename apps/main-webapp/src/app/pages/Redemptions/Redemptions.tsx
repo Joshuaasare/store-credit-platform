@@ -8,7 +8,6 @@ import { ColumnDef } from "@tanstack/react-table";
 import { Ticket, Check, X } from "lucide-react";
 import { toast } from "sonner";
 import {
-  Badge,
   Button,
   Card,
   Monogram,
@@ -21,35 +20,38 @@ import {
   Tabs,
   TabsList,
   TabsTrigger,
-  cn,
 } from "@store-credit-platform/web-components";
 import { DataTable } from "@shared/components/DataTable/DataTable";
 import InfiniteScroll from "@shared/components/InfiniteScroll/InfiniteScroll";
 import { redemptionService } from "@store-credit-platform/api-services";
 import { useStoreStore } from "@shared/stores/storeStore";
-import { RedemptionRow, RedemptionStatus } from "@shared/types/api.types";
+import {
+  MerchantPendingRequest,
+  MerchantApprovedRedemption,
+  MerchantRedemptionMutationResponse,
+} from "@shared/types/api.types";
 import { isApiError } from "@shared/utils/api.utils";
 import { formatGHS, formatIsoDate } from "@shared/utils/format";
 import {
   errorToastProperties,
   successToastProperties,
 } from "@shared/utils/misc.utils";
-import {
-  REDEMPTION_STATUS_META,
-  deriveRedemptionStatus,
-  formatDisplayNumber,
-} from "@shared/utils/ui.utils";
+import { formatDisplayNumber } from "@shared/utils/ui.utils";
 
 const LIMIT = 20;
 
-// Three status tabs — no "all". The page is always in exactly one of these.
-const STATUS_TABS: { value: RedemptionStatus; label: string }[] = [
+// Two tabs only — Pending + Approved. Rejected is removed from the manager
+// UI by product spec (decision 13 — the manager still has a reject
+// action available on Pending rows; rejected requests are tracked in the
+// audit table for the customer-side reconciliation flow).
+type Tab = "pending" | "approved";
+
+const STATUS_TABS: { value: Tab; label: string }[] = [
   { value: "pending", label: "Pending" },
   { value: "approved", label: "Approved" },
-  { value: "rejected", label: "Rejected" },
 ];
 
-const EMPTY_COPY: Record<RedemptionStatus, { title: string; hint: string }> = {
+const EMPTY_COPY: Record<Tab, { title: string; hint: string }> = {
   pending: {
     title: "No pending redemption requests",
     hint: "Customer-initiated redemption requests will appear here for manager review.",
@@ -58,16 +60,15 @@ const EMPTY_COPY: Record<RedemptionStatus, { title: string; hint: string }> = {
     title: "No approved redemptions",
     hint: "Approved redemption requests will appear here.",
   },
-  rejected: {
-    title: "No rejected redemptions",
-    hint: "Rejected redemption requests will appear here.",
-  },
 };
 
-// Build a customer display name from a nested customer row. Names live on the
-// customer row (surname / other_names); returns "" when both are empty so the
-// caller can fall back to phone or "Unnamed customer".
-function redemptionCustomerName(c: RedemptionRow["customer"]): string {
+// ────────────────────────────────────────────────────────────────────────────
+// Customer display helpers (shared between the two tabs)
+// ────────────────────────────────────────────────────────────────────────────
+
+type CustomerLike = MerchantPendingRequest["customer"] | MerchantApprovedRedemption["customer"];
+
+function customerName(c: CustomerLike): string {
   if (!c) return "";
   const surname = c.surname ?? "";
   const otherNames = c.other_names ?? "";
@@ -75,10 +76,8 @@ function redemptionCustomerName(c: RedemptionRow["customer"]): string {
   return name || "";
 }
 
-// 1-2 char monogram for a redemption customer. Named customer: first letter of
-// first + last word. Unnamed: last 2 digits of phone. Returns "?" if neither.
-function redemptionCustomerInitials(c: RedemptionRow["customer"]): string {
-  const name = redemptionCustomerName(c);
+function customerInitials(c: CustomerLike): string {
+  const name = customerName(c);
   if (name) {
     const parts = name.split(/\s+/).filter(Boolean);
     if (parts.length >= 2) {
@@ -91,18 +90,183 @@ function redemptionCustomerInitials(c: RedemptionRow["customer"]): string {
   return "?";
 }
 
+// ────────────────────────────────────────────────────────────────────────────
+// Pending row (MerchantPendingRequest)
+// ────────────────────────────────────────────────────────────────────────────
+
+// Customer column for the pending tab.
+const pendingCustomerColumn: ColumnDef<MerchantPendingRequest> = {
+  id: "customer",
+  header: "Customer",
+  cell: ({ row }) => {
+    const c = row.original.customer;
+    const name = customerName(c);
+    const phone = formatDisplayNumber(c?.phone) ?? "";
+    const isLinked = Boolean(name);
+    return (
+      <div className="flex min-w-0 items-center gap-3">
+        <Monogram
+          text={customerInitials(c)}
+          seed={c?.user_id ?? c?.phone ?? (c ? String(c.id) : "")}
+          size="sm"
+        />
+        <div className="min-w-0">
+          <div className="truncate font-medium">
+            {isLinked ? name : phone || "Unnamed customer"}
+          </div>
+          {isLinked && phone && (
+            <div className="text-muted-foreground truncate text-xs">
+              {phone}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  },
+};
+
+// Branch column — pending tab rows don't carry `branch_id` on the audit
+// row anymore. We pull the branch from the first touched credit row's
+// branch join (always present because pending rows must have at least
+// one credit slice).
+const pendingBranchColumn: ColumnDef<MerchantPendingRequest> = {
+  id: "branch",
+  header: "Branch",
+  cell: ({ row }) => {
+    const breakdown = row.original.pending_credit_breakdown;
+    const first = breakdown?.[0];
+    const branch = (first as unknown as { branch: { id: number; name: string | null } | null })?.branch;
+    return (
+      <span className="truncate">
+        {branch?.name?.trim() || (branch ? `#${branch.id}` : "—")}
+      </span>
+    );
+  },
+};
+
+// Requested amount — the sum across the breakdown.
+const pendingRequestedColumn: ColumnDef<MerchantPendingRequest> = {
+  id: "requested_amount",
+  header: "Requested amount",
+  cell: ({ row }) => (
+    <span className="font-medium tabular-nums">
+      {formatGHS(Number(row.original.requested_amount) || 0)}
+    </span>
+  ),
+};
+
+// Pending breakdown preview — count of touched credit rows + total
+// `pending_redemption_amount` across them (matches the merchant confirm
+// step on the customer app).
+const pendingBreakdownColumn: ColumnDef<MerchantPendingRequest> = {
+  id: "breakdown",
+  header: "Credits",
+  cell: ({ row }) => {
+    const rows = row.original.pending_credit_breakdown;
+    return (
+      <span className="text-muted-foreground tabular-nums">
+        {rows.length} credit{rows.length === 1 ? "" : "s"}
+      </span>
+    );
+  },
+};
+
+const pendingRequestedAtColumn: ColumnDef<MerchantPendingRequest> = {
+  id: "requested_at",
+  header: "Requested at",
+  cell: ({ row }) => (
+    <span className="text-muted-foreground text-sm">
+      {formatIsoDate(row.original.requested_at)}
+    </span>
+  ),
+};
+
+// ────────────────────────────────────────────────────────────────────────────
+// Approved row (MerchantApprovedRedemption)
+// ────────────────────────────────────────────────────────────────────────────
+
+const approvedCustomerColumn: ColumnDef<MerchantApprovedRedemption> = {
+  id: "customer",
+  header: "Customer",
+  cell: ({ row }) => {
+    const c = row.original.customer;
+    const name = customerName(c);
+    const phone = formatDisplayNumber(c?.phone) ?? "";
+    const isLinked = Boolean(name);
+    return (
+      <div className="flex min-w-0 items-center gap-3">
+        <Monogram
+          text={customerInitials(c)}
+          seed={c?.user_id ?? c?.phone ?? (c ? String(c.id) : "")}
+          size="sm"
+        />
+        <div className="min-w-0">
+          <div className="truncate font-medium">
+            {isLinked ? name : phone || "Unnamed customer"}
+          </div>
+          {isLinked && phone && (
+            <div className="text-muted-foreground truncate text-xs">
+              {phone}
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  },
+};
+
+const approvedAmountColumn: ColumnDef<MerchantApprovedRedemption> = {
+  id: "amount_redeemed",
+  header: "Amount redeemed",
+  cell: ({ row }) => (
+    <span className="font-medium tabular-nums">
+      {formatGHS(Number(row.original.amount_redeemed) || 0)}
+    </span>
+  ),
+};
+
+const approvedAtColumn: ColumnDef<MerchantApprovedRedemption> = {
+  id: "approved_at",
+  header: "Approved at",
+  cell: ({ row }) => (
+    <span className="text-muted-foreground text-sm">
+      {formatIsoDate(row.original.approved_at ?? row.original.created_at)}
+    </span>
+  ),
+};
+
+const approvedByColumn: ColumnDef<MerchantApprovedRedemption> = {
+  id: "approved_by",
+  header: "Approved by",
+  cell: ({ row }) => {
+    const s = row.original.approved_by_staff;
+    if (!s) return <span className="text-muted-foreground text-sm">—</span>;
+    const name =
+      `${s.surname ?? ""}${s.other_names ? " " + s.other_names : ""}`.trim();
+    return (
+      <span className="truncate">
+        {name || `Staff #${s.id}`}
+      </span>
+    );
+  },
+};
+
+// ────────────────────────────────────────────────────────────────────────────
+// Page
+// ────────────────────────────────────────────────────────────────────────────
+
 export default function Redemptions() {
   const { branches } = useStoreStore();
   const queryClient = useQueryClient();
-  const [status, setStatus] = useState<RedemptionStatus>("pending");
+  const [tab, setTab] = useState<Tab>("pending");
   const [branchId, setBranchId] = useState<number | null>(null);
 
-  const redemptionsQuery = useInfiniteQuery({
-    queryKey: ["redemptions", "list", { status, branchId, limit: LIMIT }],
+  // ─── Pending ───
+  const pendingQuery = useInfiniteQuery({
+    queryKey: ["redemptions", "pending", { branchId, limit: LIMIT }],
     queryFn: ({ pageParam }) => {
       const offset = (pageParam as number) ?? 0;
-      return redemptionService.listRedemptions({
-        status,
+      return redemptionService.listPendingRedemptions({
         branch_id: branchId ?? undefined,
         limit: LIMIT,
         offset,
@@ -116,32 +280,70 @@ export default function Redemptions() {
     },
   });
 
-  const rows = useMemo(() => {
-    const pages = redemptionsQuery.data?.pages ?? [];
-    const out: RedemptionRow[] = [];
+  const pendingRows: MerchantPendingRequest[] = useMemo(() => {
+    const pages = pendingQuery.data?.pages ?? [];
+    const out: MerchantPendingRequest[] = [];
     for (const p of pages) {
       if (p.success) out.push(...p.data.rows);
     }
     return out;
-  }, [redemptionsQuery.data]);
+  }, [pendingQuery.data]);
 
+  // ─── Approved ───
+  const approvedQuery = useInfiniteQuery({
+    queryKey: ["redemptions", "approved", { branchId, limit: LIMIT }],
+    queryFn: ({ pageParam }) => {
+      const offset = (pageParam as number) ?? 0;
+      return redemptionService.listApprovedRedemptions({
+        branch_id: branchId ?? undefined,
+        limit: LIMIT,
+        offset,
+      });
+    },
+    initialPageParam: 0,
+    getNextPageParam: (lastPage) => {
+      if (!lastPage.success) return undefined;
+      const nextOffset = lastPage.data.offset + LIMIT;
+      return nextOffset < lastPage.data.total ? nextOffset : undefined;
+    },
+  });
+
+  const approvedRows: MerchantApprovedRedemption[] = useMemo(() => {
+    const pages = approvedQuery.data?.pages ?? [];
+    const out: MerchantApprovedRedemption[] = [];
+    for (const p of pages) {
+      if (p.success) out.push(...p.data.rows);
+    }
+    return out;
+  }, [approvedQuery.data]);
+
+  // Pick the right query based on the active tab — drives both the table
+  // and the total-count chip.
+  const activeQuery = tab === "pending" ? pendingQuery : approvedQuery;
   const lastPage =
-    redemptionsQuery.data?.pages?.[redemptionsQuery.data.pages.length - 1];
+    activeQuery.data?.pages?.[activeQuery.data.pages.length - 1];
   const total = lastPage?.success ? lastPage.data.total : 0;
-  const hasNextPage = redemptionsQuery.hasNextPage;
-  const isFetching = redemptionsQuery.isFetching;
+  const hasNextPage = activeQuery.hasNextPage;
+  const isFetching = activeQuery.isFetching;
+  const activeRows = tab === "pending" ? pendingRows : approvedRows;
 
   const invalidateAllRedemptions = () => {
-    // Approve/reject moves a row between tabs, so invalidate every tab's
-    // query (the whole "redemptions" key namespace).
+    // Approve / reject moves a row from Pending → Approved, so invalidate
+    // both tabs to keep them consistent.
     void queryClient.invalidateQueries({ queryKey: ["redemptions"] });
   };
 
+  const invalidatePending = () => {
+    void queryClient.invalidateQueries({
+      queryKey: ["redemptions", "pending"],
+    });
+  };
+
   const approveMutation = useMutation({
-    mutationFn: async (id: number) => {
-      const res = await redemptionService.approveRedemption(id);
+    mutationFn: async (customerId: number): Promise<MerchantRedemptionMutationResponse> => {
+      const res = await redemptionService.approveRequest(customerId);
       if (isApiError(res)) throw new Error(res.error);
-      return res.data;
+      return res;
     },
     onSuccess: () => {
       toast.success("Redemption approved", successToastProperties);
@@ -156,14 +358,16 @@ export default function Redemptions() {
   });
 
   const rejectMutation = useMutation({
-    mutationFn: async (id: number) => {
-      const res = await redemptionService.rejectRedemption(id);
+    mutationFn: async (customerId: number): Promise<MerchantRedemptionMutationResponse> => {
+      const res = await redemptionService.rejectRequest(customerId);
       if (isApiError(res)) throw new Error(res.error);
-      return res.data;
+      return res;
     },
     onSuccess: () => {
       toast.success("Redemption rejected", successToastProperties);
-      invalidateAllRedemptions();
+      // Reject clears the pending slice but doesn't create an audit row
+      // we display (Rejected is not a tab), so just refresh Pending.
+      invalidatePending();
     },
     onError: (err) => {
       toast.error(
@@ -173,148 +377,81 @@ export default function Redemptions() {
     },
   });
 
-  const pendingMutationId = approveMutation.isPending
-    ? (approveMutation.variables ?? null)
-    : rejectMutation.isPending
-      ? (rejectMutation.variables ?? null)
-      : null;
+  // Track which (customerId) the current mutation is operating on so the
+  // row's Approve/Reject buttons can disable themselves.
+  const pendingMutationKey: { customerId: number; kind: "approve" | "reject" } | null =
+    approveMutation.isPending
+      ? { customerId: approveMutation.variables, kind: "approve" }
+      : rejectMutation.isPending
+        ? { customerId: rejectMutation.variables, kind: "reject" }
+        : null;
 
-  const columns: ColumnDef<RedemptionRow>[] = useMemo(
+  const pendingActionColumn: ColumnDef<MerchantPendingRequest> = {
+    id: "actions",
+    header: "Actions",
+    cell: ({ row }) => {
+      const customerId = row.original.customer_id;
+      const myDisabled =
+        pendingMutationKey != null && pendingMutationKey.customerId === customerId;
+      const approveDisabled = myDisabled && pendingMutationKey?.kind === "approve";
+      const rejectDisabled = myDisabled && pendingMutationKey?.kind === "reject";
+      const anyMutationPending = approveMutation.isPending || rejectMutation.isPending;
+      return (
+        <div className="flex items-center gap-2">
+          <Button
+            size="sm"
+            variant="default"
+            disabled={anyMutationPending}
+            onClick={() => approveMutation.mutate(customerId)}
+            className="h-8 rounded-sm px-3 text-xs"
+          >
+            <Check className="mr-1 h-3.5 w-3.5" />
+            {approveDisabled ? "Approving..." : "Approve"}
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={anyMutationPending}
+            onClick={() => rejectMutation.mutate(customerId)}
+            className="text-destructive border-destructive/30 hover:bg-destructive/10 h-8 rounded-sm px-3 text-xs"
+          >
+            <X className="mr-1 h-3.5 w-3.5" />
+            {rejectDisabled ? "Rejecting..." : "Reject"}
+          </Button>
+        </div>
+      );
+    },
+  };
+
+  const pendingColumns: ColumnDef<MerchantPendingRequest>[] = useMemo(
     () => [
-      {
-        id: "customer",
-        header: "Customer",
-        cell: ({ row }) => {
-          const r = row.original;
-          const c = r.customer;
-          const name = redemptionCustomerName(c);
-          const phone = formatDisplayNumber(c?.phone) ?? "";
-          const isLinked = Boolean(name);
-          return (
-            <div className="flex min-w-0 items-center gap-3">
-              <Monogram
-                text={redemptionCustomerInitials(c)}
-                seed={c?.user_id ?? c?.phone ?? (c ? String(c.id) : "")}
-                size="sm"
-              />
-              <div className="min-w-0">
-                <div className="truncate font-medium">
-                  {isLinked ? name : phone || "Unnamed customer"}
-                </div>
-                {isLinked && phone && (
-                  <div className="text-muted-foreground truncate text-xs">
-                    {phone}
-                  </div>
-                )}
-              </div>
-            </div>
-          );
-        },
-      },
-      {
-        id: "branch",
-        header: "Branch",
-        cell: ({ row }) => (
-          <span className="truncate">
-            {row.original.branch?.name?.trim() || `#${row.original.branch_id}`}
-          </span>
-        ),
-      },
-      {
-        id: "credit_amount",
-        header: "Credit amount",
-        cell: ({ row }) => (
-          <span className="tabular-nums">
-            {formatGHS(Number(row.original.credit?.credit_amount ?? 0))}
-          </span>
-        ),
-      },
-      {
-        id: "remaining",
-        header: "Remaining",
-        cell: ({ row }) => (
-          <span className="text-primary font-medium tabular-nums">
-            {formatGHS(row.original.remaining)}
-          </span>
-        ),
-      },
-      {
-        id: "requested_amount",
-        header: "Requested amount",
-        cell: ({ row }) => (
-          <span className="font-medium tabular-nums">
-            {formatGHS(Number(row.original.amount_redeemed))}
-          </span>
-        ),
-      },
-      {
-        id: "requested_at",
-        header: "Requested at",
-        cell: ({ row }) => (
-          <span className="text-muted-foreground text-sm">
-            {formatIsoDate(row.original.created_at)}
-          </span>
-        ),
-      },
-      {
-        id: "status",
-        header: "Status",
-        cell: ({ row }) => {
-          const s = deriveRedemptionStatus(row.original);
-          const meta = REDEMPTION_STATUS_META[s];
-          return (
-            <Badge
-              variant="outline"
-              className={cn("border bg-transparent", meta.chip)}
-            >
-              {meta.label}
-            </Badge>
-          );
-        },
-      },
-      {
-        id: "actions",
-        header: "Actions",
-        cell: ({ row }) => {
-          // TODO(frontend-permissions): the Approve/Reject buttons are
-          // rendered only on the Pending tab. The backend `requireRoles
-          // ("manager")` check is the source of truth for now; a finer-grained
-          // frontend permission check (hiding buttons for non-managers who
-          // somehow reach the page) is a follow-up.
-          if (status !== "pending") return null;
-          const id = row.original.id;
-          const disabled = pendingMutationId === id;
-          return (
-            <div className="flex items-center gap-2">
-              <Button
-                size="sm"
-                variant="default"
-                disabled={disabled}
-                onClick={() => approveMutation.mutate(id)}
-                className="h-8 rounded-sm px-3 text-xs"
-              >
-                <Check className="mr-1 h-3.5 w-3.5" />
-                Approve
-              </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                disabled={disabled}
-                onClick={() => rejectMutation.mutate(id)}
-                className="text-destructive border-destructive/30 hover:bg-destructive/10 h-8 rounded-sm px-3 text-xs"
-              >
-                <X className="mr-1 h-3.5 w-3.5" />
-                Reject
-              </Button>
-            </div>
-          );
-        },
-      },
+      pendingCustomerColumn,
+      pendingBranchColumn,
+      pendingRequestedColumn,
+      pendingBreakdownColumn,
+      pendingRequestedAtColumn,
+      pendingActionColumn,
     ],
-    [status, pendingMutationId, approveMutation, rejectMutation],
+    // re-create when the mutation state changes so the disabled state
+    // re-renders correctly on the row.
+    [approveMutation.isPending, rejectMutation.isPending],
   );
 
-  const emptyCopy = EMPTY_COPY[status];
+  const approvedColumns: ColumnDef<MerchantApprovedRedemption>[] = useMemo(
+    () => [
+      approvedCustomerColumn,
+      approvedAmountColumn,
+      approvedAtColumn,
+      approvedByColumn,
+    ],
+    [],
+  );
+
+  const activeColumns =
+    tab === "pending" ? pendingColumns : approvedColumns;
+  const activeTypedRows: unknown[] = activeRows;
+
+  const emptyCopy = EMPTY_COPY[tab];
 
   return (
     <div className="relative min-h-screen px-4 py-6 md:px-8 md:py-10">
@@ -349,15 +486,15 @@ export default function Redemptions() {
           </div>
         </div>
 
-        {/* Status tabs + branch filter */}
+        {/* Tabs + branch filter */}
         <Card
           className="animate-fade-in-up p-4 motion-reduce:animate-none"
           style={{ animationDelay: "60ms" }}
         >
           <div className="flex flex-wrap items-center justify-between gap-3">
             <Tabs
-              value={status}
-              onValueChange={(v) => setStatus(v as RedemptionStatus)}
+              value={tab}
+              onValueChange={(v) => setTab(v as Tab)}
               className="w-auto"
             >
               <TabsList className="bg-muted/40 rounded-lg border p-0.5">
@@ -406,12 +543,12 @@ export default function Redemptions() {
           <InfiniteScroll
             next={async (onComplete) => {
               if (hasNextPage && !isFetching) {
-                await redemptionsQuery.fetchNextPage();
+                await activeQuery.fetchNextPage();
               }
               onComplete?.();
             }}
             loader={
-              redemptionsQuery.isFetchingNextPage ? (
+              activeQuery.isFetchingNextPage ? (
                 <div className="space-y-2 p-4">
                   <Skeleton className="h-10 w-full" />
                   <Skeleton className="h-10 w-full" />
@@ -420,11 +557,11 @@ export default function Redemptions() {
             }
           >
             <DataTable
-              columns={columns}
-              data={rows}
+              columns={activeColumns as ColumnDef<unknown>[]}
+              data={activeTypedRows}
               hasPagination={false}
               emptyStateComponent={
-                redemptionsQuery.isPending ? (
+                activeQuery.isPending ? (
                   <div className="w-full space-y-2 p-2">
                     {Array.from({ length: 2 }).map((_, i) => (
                       <Skeleton key={i} className="h-20 w-full" />
