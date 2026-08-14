@@ -1,12 +1,12 @@
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
-import { useAuthStore } from "../store/useAuthStore";
+import { useAuthStore } from "../shared/store/useAuthStore";
 import { LoginScreen } from "../screens/auth/LoginScreen";
 import { OtpVerifyScreen } from "../screens/auth/OtpVerifyScreen";
 import { NewUserScreen } from "../screens/auth/NewUserScreen";
 import { TabNavigator } from "./TabNavigator";
-import { useThemeTokens } from "../theme/ThemeContext";
-import { buildNavTheme } from "../theme/navTheme";
+import { useThemeTokens } from "../shared/theme/ThemeContext";
+import { buildNavTheme } from "../shared/theme/navTheme";
 
 export type AuthStackParamList = {
   Login: undefined;

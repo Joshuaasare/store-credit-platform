@@ -1,7 +1,12 @@
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { useThemeTokens } from "../../theme/ThemeContext";
+import { useThemeTokens } from "../theme/ThemeContext";
 
+/**
+ * Home-only "Welcome back" banner — sits at the top of the Home screen's
+ * scroll content. Avatar + two-line name label on the left; notifications
+ * bell on the right (no-op for now, lands in a future feature).
+ */
 export default function Header({
   fullName,
   initials,

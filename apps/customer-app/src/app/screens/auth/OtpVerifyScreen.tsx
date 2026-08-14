@@ -6,9 +6,9 @@ import GlassCard from "../../shared/components/GlassCard";
 import GlassInput from "../../shared/components/GlassInput";
 import PrimaryButton from "../../shared/components/PrimaryButton";
 import { customerAuthService } from "../../api/client";
-import { useAuthStore } from "../../store/useAuthStore";
-import { useThemeTokens } from "../../theme/ThemeContext";
-import { parsePhoneNumber } from "../../utils/countries";
+import { useAuthStore } from "../../shared/store/useAuthStore";
+import { useThemeTokens } from "../../shared/theme/ThemeContext";
+import { parsePhoneNumber } from "../../shared/utils/countries";
 import type { AuthStackParamList } from "../../navigation/RootNavigator";
 
 type Props = NativeStackScreenProps<AuthStackParamList, "OtpVerify">;

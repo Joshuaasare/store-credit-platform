@@ -8,7 +8,7 @@ import Animated, {
 } from "react-native-reanimated";
 import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
 import type { ParamListBase, RouteProp } from "@react-navigation/native";
-import { useThemeTokens } from "../theme/ThemeContext";
+import { useThemeTokens } from "../shared/theme/ThemeContext";
 
 type TabIcon = keyof typeof Ionicons.glyphMap;
 
@@ -32,7 +32,8 @@ const ACTIVE_FLEX = 1.7;
 /**
  * Wearify-style segmented tab bar. Each tab is a flex slot whose `flex`
  * value springs between idle and active ratios; the active tab also gets a
- * filled brand background + a label. Idle tabs are icon-only and narrower.
+ * filled white pill + a label, sitting inside a brand-colored (berry) bar.
+ * Idle tabs are icon-only and narrower.
  *
  * Implementation: each tab owns a shared `flex` value via a child component
  * (rules-of-hooks safe). The Pressable's parent Animated.View maps the
@@ -54,8 +55,7 @@ export function GlassTabBar({
           styles.bar,
           {
             borderRadius: theme.radii.pill,
-            backgroundColor: theme.colors.surface,
-            borderColor: theme.colors.surfaceBorder,
+            backgroundColor: theme.colors.pillSurface,
           },
         ]}
       >
@@ -80,9 +80,8 @@ export function GlassTabBar({
               label={label}
               icon={icon}
               onPress={onPress}
-              primary={theme.colors.primary}
-              textOnPrimary={theme.colors.textOnPrimary}
-              textMuted={theme.colors.textMuted}
+              pillSurface={theme.colors.pillSurface}
+              idleIcon={theme.colors.tabIdleIcon}
               pillRadius={theme.radii.pill}
               semiBold={theme.typography.fontFamilySemiBold}
             />
@@ -104,9 +103,8 @@ function TabSlot({
   label,
   icon,
   onPress,
-  primary,
-  textOnPrimary,
-  textMuted,
+  pillSurface,
+  idleIcon,
   pillRadius,
   semiBold,
 }: {
@@ -114,9 +112,8 @@ function TabSlot({
   label: string;
   icon: TabIcon;
   onPress: () => void;
-  primary: string;
-  textOnPrimary: string;
-  textMuted: string;
+  pillSurface: string;
+  idleIcon: string;
   pillRadius: number;
   semiBold: string;
 }) {
@@ -144,7 +141,7 @@ function TabSlot({
             ? [
                 styles.activeTab,
                 {
-                  backgroundColor: primary,
+                  backgroundColor: "#ffffff",
                   borderRadius: pillRadius,
                 },
               ]
@@ -158,7 +155,7 @@ function TabSlot({
         <Ionicons
           name={icon}
           size={22}
-          color={isFocused ? textOnPrimary : textMuted}
+          color={isFocused ? pillSurface : idleIcon}
         />
         {isFocused ? (
           <Text
@@ -166,7 +163,7 @@ function TabSlot({
             style={[
               styles.activeLabel,
               {
-                color: textOnPrimary,
+                color: pillSurface,
                 fontFamily: semiBold,
               },
             ]}
@@ -192,7 +189,6 @@ const styles = StyleSheet.create({
     height: 64,
     paddingHorizontal: 8,
     paddingVertical: 8,
-    borderWidth: 1,
     gap: 4,
   },
   // Animated.View flex slot — its `flexGrow` is driven by the shared value.

@@ -27,8 +27,8 @@ export function deriveOffers(
     seen.add(merchantName);
     // Copy: prefer a percent-style offer ("10% Back on every visit") —
     // we don't have the percent on the credit row itself, so we fall back
-    // to a "Earn GHS X back" copy derived from the credit amount. The
-    // accent text is the dollar amount, which pops in the brand primary.
+    // to a "Earn GH₵ X back" copy derived from the credit amount. The
+    // accent text is the cedi amount, which pops in the brand primary.
     const amount = Number(c.credit_amount) || 0;
     if (amount > 0) {
       const formatted = formatGhs(amount);

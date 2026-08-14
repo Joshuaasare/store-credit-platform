@@ -1,8 +1,8 @@
 import { create } from "zustand";
 import type { CustomerAuthUser } from "@store-credit-platform/api-services";
 import * as SecureStore from "expo-secure-store";
-import { customerAuthService, wireAccessToken } from "../api/client";
-import { SECURE_STORE_KEYS } from "../config";
+import { customerAuthService, wireAccessToken } from "../../api/client";
+import { SECURE_STORE_KEYS } from "../../config";
 
 export type AuthStatus =
   | "idle"

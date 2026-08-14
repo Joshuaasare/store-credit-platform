@@ -1,5 +1,5 @@
 import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
-import { useThemeTokens } from "../../../theme/ThemeContext";
+import { useThemeTokens } from "../../../shared/theme/ThemeContext";
 
 /**
  * Loading state for the Credits screen — a centered spinner + caption. Used

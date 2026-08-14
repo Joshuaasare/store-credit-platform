@@ -1,7 +1,6 @@
 import { useMemo, useState } from "react";
 import {
   FlatList,
-  Image,
   Modal,
   Pressable,
   StyleSheet,
@@ -9,6 +8,7 @@ import {
   TextInput,
   View,
 } from "react-native";
+import { Image } from "expo-image";
 import {
   countries,
   Country,
@@ -16,8 +16,8 @@ import {
   defaultCountry,
   formatPhoneWithCountry,
   parsePhoneNumber,
-} from "../../utils/countries";
-import { useThemeTokens } from "../../theme/ThemeContext";
+} from "../utils/countries";
+import { useThemeTokens } from "../theme/ThemeContext";
 
 /**
  * Flag emoji don't render on Android (the system font lacks the
@@ -121,7 +121,8 @@ export default function PhoneInput({
           <Image
             source={{ uri: flagUrl(selectedCountry.code) }}
             style={styles.flag}
-            resizeMode="cover"
+            contentFit="cover"
+            transition={120}
           />
           <Text
             style={[
@@ -215,7 +216,8 @@ export default function PhoneInput({
                   <Image
                     source={{ uri: flagUrl(item.code) }}
                     style={styles.optionFlag}
-                    resizeMode="cover"
+                    contentFit="cover"
+                    transition={120}
                   />
                   <Text
                     style={[

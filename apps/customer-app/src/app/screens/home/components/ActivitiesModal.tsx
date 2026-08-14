@@ -11,7 +11,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import type { CustomerActivity } from "@store-credit-platform/api-services";
-import { useThemeTokens } from "../../../theme/ThemeContext";
+import { useThemeTokens } from "../../../shared/theme/ThemeContext";
 import ActivityRow from "../../../shared/components/ActivityRow";
 import type { ActivitiesFeedQuery } from "../useActivitiesFeed";
 
@@ -66,6 +66,19 @@ export default function ActivitiesModal({
   const renderItem = useCallback<ListRenderItem<CustomerActivity>>(
     ({ item }) => <ActivityRow activity={item} />,
     [],
+  );
+
+  // Same inset hairline as the preview card — clears the icon disc + gap.
+  const ItemSeparator = useCallback(
+    () => (
+      <View
+        style={[
+          styles.rowSeparator,
+          { backgroundColor: theme.colors.sheetSeparator },
+        ]}
+      />
+    ),
+    [theme],
   );
 
   // Footer: hide entirely until we've tried to paginate at least once
@@ -168,10 +181,7 @@ export default function ActivitiesModal({
               </Pressable>
             </View>
             <View style={styles.centerFill}>
-              <ActivityIndicator
-                size="large"
-                color={theme.colors.primary}
-              />
+              <ActivityIndicator size="large" color={theme.colors.primary} />
               <Text
                 style={{
                   color: theme.colors.sheetTextMuted,
@@ -302,17 +312,14 @@ export default function ActivitiesModal({
               accessibilityLabel="Close activity"
               style={styles.closeButton}
             >
-              <Ionicons
-                name="close"
-                size={24}
-                color={theme.colors.sheetText}
-              />
+              <Ionicons name="close" size={24} color={theme.colors.sheetText} />
             </Pressable>
           </View>
           <FlatList
             data={items}
             keyExtractor={keyExtractor}
             renderItem={renderItem}
+            ItemSeparatorComponent={ItemSeparator}
             ListFooterComponent={ListFooter}
             onEndReached={() => {
               if (
@@ -367,6 +374,10 @@ const styles = StyleSheet.create({
   listContent: {
     paddingHorizontal: 20,
     paddingBottom: 16,
+  },
+  rowSeparator: {
+    height: StyleSheet.hairlineWidth,
+    marginLeft: 68, // clears the arrow + avatar ring + gaps
   },
   centerFill: {
     paddingVertical: 64,

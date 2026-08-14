@@ -9,7 +9,7 @@ import {
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { computeInitials } from "../../../shared/utils/computeInitials";
-import { useThemeTokens } from "../../../theme/ThemeContext";
+import { useThemeTokens } from "../../../shared/theme/ThemeContext";
 
 export default function OfferCard({
   merchantName,
@@ -46,14 +46,7 @@ export default function OfferCard({
       accessibilityRole="button"
       accessibilityLabel={`${offerCopy} at ${merchantName}`}
     >
-      <View
-        style={[
-          styles.card,
-          {
-            backgroundColor: theme.colors.surface,
-          },
-        ]}
-      >
+      <View style={[styles.card]}>
         <View style={[styles.photo, { borderRadius: theme.radii.lg }]}>
           <LinearGradient
             colors={[photoStart, photoEnd]}

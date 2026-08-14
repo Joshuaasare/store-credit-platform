@@ -6,7 +6,7 @@ import {
   type StyleProp,
   type ViewStyle,
 } from "react-native";
-import { useThemeTokens } from "../../theme/ThemeContext";
+import { useThemeTokens } from "../theme/ThemeContext";
 
 /**
  * Solid brand CTA — pill shape by default. Self-sizes around its label so it

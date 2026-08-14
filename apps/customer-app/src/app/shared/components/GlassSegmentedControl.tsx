@@ -1,6 +1,6 @@
 import { StyleSheet, Text, View, Pressable } from "react-native";
 import type { StyleProp, ViewStyle } from "react-native";
-import { useThemeTokens } from "../../theme/ThemeContext";
+import { useThemeTokens } from "../theme/ThemeContext";
 
 /**
  * Glass segmented control — a pill-shaped two-option switcher used inside a
@@ -62,12 +62,8 @@ export default function GlassSegmentedControl<T extends string | number>({
             style={[
               styles.segment,
               {
-                backgroundColor: active
-                  ? theme.colors.primary
-                  : "transparent",
-                borderColor: active
-                  ? theme.colors.primary
-                  : "transparent",
+                backgroundColor: active ? theme.colors.primary : "transparent",
+                borderColor: active ? theme.colors.primary : "transparent",
                 borderRadius: theme.radii.pill,
                 // Small gap between segments so the inactive segment reads as
                 // part of the pill rather than a separate button.

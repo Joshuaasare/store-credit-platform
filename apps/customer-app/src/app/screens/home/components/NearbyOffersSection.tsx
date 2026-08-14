@@ -1,6 +1,6 @@
 import { FlatList, StyleSheet, Text, View } from "react-native";
 import OfferCard from "./OfferCard";
-import { useThemeTokens } from "../../../theme/ThemeContext";
+import { useThemeTokens } from "../../../shared/theme/ThemeContext";
 
 export default function NearbyOffersSection({
   offers,

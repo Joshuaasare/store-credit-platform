@@ -1,6 +1,6 @@
 import { StyleSheet, View, type StyleProp, type ViewStyle } from "react-native";
 import type { ReactNode } from "react";
-import { useThemeTokens } from "../../theme/ThemeContext";
+import { useThemeTokens } from "../theme/ThemeContext";
 
 /**
  * Flat card surface — white fill in light theme, translucent navy in dark

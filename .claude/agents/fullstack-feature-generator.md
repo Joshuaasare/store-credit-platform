@@ -167,6 +167,32 @@ Decorative white-on-card tints (e.g. `rgba(255,255,255,0.06)` for an orb, `rgba(
 - If you find a hex outside those two cases, replace it with the matching `theme.colors.*` token (or, if the token doesn't exist, add a new one to `ColorTokens` in `colors.ts` and apply it to both `lightColors` and `darkColors`).
 - This rule applies to existing components too — when you touch any file in `apps/customer-app/src/app/` for a feature, audit that file for stray hexes and migrate them.
 
+## Customer-app: Always Use `expo-image` for Remote Images
+
+In `apps/customer-app`, **never** import `Image` from `react-native` for any component that renders a remote URL. Use `Image` from `expo-image` instead. The stock `Image` re-fetches on every screen mount, which is exactly the "images reload on every visit" complaint that triggered this rule.
+
+`expo-image` gives the customer-app:
+
+- Persistent disk + memory cache across screen visits (the avatar renders from cache on the second visit instead of re-fetching the merchant logo).
+- Progressive loading with cross-fade transitions.
+- Blurhash / thumbhash placeholders for slow networks.
+- First-class Fabric / new-architecture support, which `react-native-fast-image` lacks.
+
+Specific rules:
+
+- Import: `import { Image } from "expo-image";`. Never `import { Image } from "react-native"` for remote URLs.
+- API mapping: `resizeMode="cover"` → `contentFit="cover"`. `source={{ uri }}` → `source={{ uri }}` (unchanged). Always pass `transition={150}` for a soft fade-in.
+- Use a layered placeholder (gradient + initials behind the image) rather than the `placeholder` JSX prop — `expo-image`'s `placeholder` only accepts serialized sources (URI / blurhash string), not JSX. Layered placeholders also avoid the empty-square flash while the image is in flight.
+- For merchant avatars, use the shared `MerchantAvatar` component (`apps/customer-app/src/app/shared/components/MerchantAvatar.tsx`) — it already handles the gradient + initials fallback, the `expo-image` migration, and the layered placeholder. Don't write a new avatar from scratch in a screen.
+- Local-only assets (static `require('./foo.png')` inside the bundle, not a remote URL) still work with the stock `Image` from `react-native` if you really need it, but `expo-image` handles them too — prefer consistency.
+
+**Why:** the original `react-native` `Image` re-fetches on every screen mount, which is jarring on the home screen (merchants' logos flicker every time you switch tabs back to Home). `expo-image`'s disk cache survives across mounts and app launches, so the second visit is instant.
+
+**How to apply:**
+- Before declaring any UI feature in `apps/customer-app` complete, run `grep -rn "from \"react-native\"" apps/customer-app/src/app/ | xargs grep -l "Image"` and confirm the result is empty. Any match means a stray `Image` import that needs to be migrated.
+- If you find a stray `Image` import, replace it with `import { Image } from "expo-image"`, swap `resizeMode` → `contentFit`, and add a `transition={150}` for the soft fade.
+- This rule applies to existing components too — when you touch any file in `apps/customer-app/src/app/` for a feature, audit that file for `Image` imports from `react-native` and migrate them.
+
 ## Decision Framework: New File vs. Existing File
 
 When implementing routes or services, you must decide whether to create a new file or add to an existing one:

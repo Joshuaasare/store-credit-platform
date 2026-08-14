@@ -14,8 +14,7 @@ import type {
   CustomerCreditsApiResponse,
 } from "@store-credit-platform/api-services";
 import ScreenBackground from "../../shared/components/ScreenBackground";
-import GlassTransition from "../../shared/components/GlassTransition";
-import { useAuthStore } from "../../store/useAuthStore";
+import { useAuthStore } from "../../shared/store/useAuthStore";
 import {
   customerActivitiesService,
   customerCreditsService,

@@ -7,7 +7,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
-import { useThemeTokens } from "../../../theme/ThemeContext";
+import { useThemeTokens } from "../../../shared/theme/ThemeContext";
 import { formatGhs } from "../../../shared/utils/formatGhs";
 
 /**
@@ -17,8 +17,8 @@ import { formatGhs } from "../../../shared/utils/formatGhs";
  * balance on a single account). The CTA is a white pill on the card surface.
  *
  * Every brand-derived color is read from the theme so the card re-skins
- * when the brand changes (deep blue today, maroon tomorrow). The static
- * stylesheet only carries layout + the white decorative tints.
+ * when the brand changes. The static stylesheet only carries layout + the
+ * white decorative tints.
  */
 export default function HeroBalanceCard({
   totalRemaining,
@@ -37,7 +37,8 @@ export default function HeroBalanceCard({
     <View
       style={[
         styles.card,
-        { backgroundColor: theme.colors.primary },
+        { backgroundColor: theme.colors.heroSurface },
+        // { backgroundColor: "#89023E" },
       ]}
     >
       {/* Soft white highlight at the top so the gradient doesn't read as a flat
@@ -95,7 +96,7 @@ export default function HeroBalanceCard({
           <Text
             style={[
               styles.pillCtaLabel,
-              { color: theme.colors.primaryActive },
+              { color: theme.colors.heroSurfaceCta },
             ]}
           >
             View credits
@@ -103,7 +104,7 @@ export default function HeroBalanceCard({
           <Ionicons
             name="arrow-forward"
             size={14}
-            color={theme.colors.primaryActive}
+            color={theme.colors.heroSurfaceCta}
           />
         </TouchableOpacity>
       </View>

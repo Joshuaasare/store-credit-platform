@@ -1,6 +1,6 @@
 import { StyleSheet, Text, View } from "react-native";
 import GlassCard from "../../../shared/components/GlassCard";
-import { useThemeTokens } from "../../../theme/ThemeContext";
+import { useThemeTokens } from "../../../shared/theme/ThemeContext";
 
 /**
  * Empty state for the Credits screen — a glass card with a title and

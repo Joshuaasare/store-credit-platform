@@ -5,8 +5,8 @@ import GlassCard from "../../shared/components/GlassCard";
 import GlassInput from "../../shared/components/GlassInput";
 import PrimaryButton from "../../shared/components/PrimaryButton";
 import { customerAuthService } from "../../api/client";
-import { useAuthStore } from "../../store/useAuthStore";
-import { useThemeTokens } from "../../theme/ThemeContext";
+import { useAuthStore } from "../../shared/store/useAuthStore";
+import { useThemeTokens } from "../../shared/theme/ThemeContext";
 
 export function NewUserScreen() {
   const theme = useThemeTokens();

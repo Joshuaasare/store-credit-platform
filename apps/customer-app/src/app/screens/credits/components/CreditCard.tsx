@@ -2,7 +2,8 @@ import { StyleSheet, Text, View } from "react-native";
 import type { StyleProp, ViewStyle } from "react-native";
 import type { CustomerCreditWithBranch } from "@store-credit-platform/api-services";
 import GlassCard from "../../../shared/components/GlassCard";
-import { useThemeTokens } from "../../../theme/ThemeContext";
+import { useThemeTokens } from "../../../shared/theme/ThemeContext";
+import { formatGhs } from "../../../shared/utils/formatGhs";
 
 /**
  * Credit card — the money-themed anchor of the Credits screen. Each card
@@ -30,14 +31,8 @@ export default function CreditCard({
   const theme = useThemeTokens();
 
   // Numbers — the backend returns credit_amount / redeemed_total / remaining
-  // as numbers (GHS). Format with 2 decimal places and a thousands separator
-  // so the money reads cleanly.
-  const formatGhs = (n: number) =>
-    `GHS ${n.toLocaleString("en-GH", {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    })}`;
-
+  // as numbers (GHS). Format with the canonical cedi sign ("GH₵1,234.50")
+  // via the shared helper so every surface in the app reads identically.
   const remaining = Number(credit.remaining) || 0;
   const redeemedTotal = Number(credit.redeemed_total) || 0;
   const creditAmount = Number(credit.credit_amount) || 0;

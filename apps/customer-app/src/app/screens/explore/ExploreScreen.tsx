@@ -2,7 +2,7 @@ import { StyleSheet, Text, View } from "react-native";
 import ScreenBackground from "../../shared/components/ScreenBackground";
 import GlassCard from "../../shared/components/GlassCard";
 import GlassTransition from "../../shared/components/GlassTransition";
-import { useThemeTokens } from "../../theme/ThemeContext";
+import { useThemeTokens } from "../../shared/theme/ThemeContext";
 
 export function ExploreScreen() {
   const theme = useThemeTokens();

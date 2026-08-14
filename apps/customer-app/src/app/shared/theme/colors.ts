@@ -5,14 +5,19 @@
  * hex values. Adding a new token: add the key to `ColorTokens`, then to both
  * `lightColors` and `darkColors`. The two maps MUST keep identical keys.
  *
- * Brand accent is maroon (#7f1d1d, red-800) — a warm, premium tone in
- * commerce / financial products (think banking, loyalty, premium goods).
- * The single brand voltage carries every primary CTA, the active state,
- * and inline brand links. Light theme is a pure-white canvas with slate
- * ink (#0f172a) text/icons (Airbnb-style) — maroon survives only as the
- * primary CTA accent. Dark theme is the canonical brand look: a maroon
- * gradient (#7f1d1d → #450a0a) with white text on flat white/glass
- * surfaces.
+ * Three-tone palette, light theme:
+ *   - Canvas: whisper blush (#FDF2F5) — a barely-there berry tint so
+ *     the canvas picks up the brand hue without ever reading as dark.
+ *     White cards, peach hero, and slate CTAs all sit cleanly on top.
+ *   - Surfaces (cards, sheets, inputs, nav) lean white with a slate
+ *     tint — glass-card fill uses dark-on-blush at low alpha so cards
+ *     separate from the canvas without competing with it.
+ *   - Ink: slate (#0F172A) at full / 72% / 55% / 42% — body copy stays
+ *     legible at all sizes.
+ *
+ * Brand accent is slate-700 — drives every primary CTA, the active tab
+ * bar pill, and inline brand links. Peach hero card stays on
+ * `heroSurface` so the card reads as warm against the blush canvas.
  *
  * Semantic money tokens: `success` (positive money flow — credit issued
  * into the customer's wallet) and `successSurface` (rare tinted background
@@ -20,7 +25,7 @@
  */
 
 export interface ColorTokens {
-  /** Brand accent — primary CTAs, active states. */
+  /** Brand accent — primary CTAs, active states, hero card surface. */
   primary: string;
   /** Pressed/darker variant of the brand accent. */
   primaryActive: string;
@@ -31,6 +36,34 @@ export interface ColorTokens {
   backgroundEnd: string;
   /** Solid fallback background (used before gradient mounts / for loading). */
   backgroundSolid: string;
+
+  /**
+   * Hero balance card surface — peach (#DE6E4B), the brand's warm accent.
+   * The hero card is the only place this token is used so the card stays
+   * visually distinct from the slate primary that anchors every other
+   * surface (CTAs, active tabs, links).
+   */
+  heroSurface: string;
+  /**
+   * Hero CTA text color — a darker peach that pairs with `heroSurface` so
+   * the pill CTA label reads cleanly against the white pill.
+   */
+  heroSurfaceCta: string;
+
+  /**
+   * Active tab bar pill surface — the deep berry that carries the bottom
+   * tab's active state. Lives next to `heroSurface` (also a brand
+   * accent, also paired with white text via `textOnPrimary`) so the
+   * brand-driven surfaces stay grouped in the token interface.
+   */
+  pillSurface: string;
+  /**
+   * Idle tab icon color — renders on top of `pillSurface` so it must be a
+   * white tint that reads on the berry bar. Decoupled from `textMuted`
+   * because that token is tuned for the canvas surface, not for icons on
+   * the brand-colored tab bar.
+   */
+  tabIdleIcon: string;
 
   /** Glass card fill (semi-transparent). */
   surface: string;
@@ -91,25 +124,41 @@ export interface ColorTokens {
 }
 
 export const lightColors: ColorTokens = {
-  primary: "#7f1d1d",
-  primaryActive: "#641111",
+  primary: "#334155",
+  primaryActive: "#1e293b",
 
-  // Pure-white canvas — flat design reads on solid white. Hero / marketing
-  // surfaces carry their own subtle gradient strips when they need visual
-  // energy.
-  backgroundStart: "#ffffff",
-  backgroundEnd: "#ffffff",
-  backgroundSolid: "#ffffff",
+  // Peach hero card — sits parallel to the slate brand but reads as a
+  // distinct "credit card" tone. The CTA text uses a darker peach so
+  // the white pill label reads cleanly.
+  heroSurface: "#89023E",
+  heroSurfaceCta: "#C25A3A",
 
+  // Active tab bar pill — the deep berry that anchors the bottom tab
+  // active state. Same family as the hero card so the brand accents
+  // share a hue; the pill's job is to draw the eye to the current tab,
+  // which the warm berry does more vividly than the cool slate.
+  pillSurface: "#89023E",
+  // Idle tab icons sit on the berry bar — white at 50% keeps them
+  // readable without competing with the white active pill.
+  tabIdleIcon: "rgba(255,255,255,1)",
+
+  // Whisper-blush canvas — a barely-there berry tint. The gradient
+  // softens the blush slightly toward the bottom so it doesn't read as
+  // a flat slab. Peach hero + slate CTAs both pop on top of this.
+  backgroundStart: "#ffff",
+  backgroundEnd: "#ffff",
+  backgroundSolid: "#ffff",
+
+  // Surfaces on the blush canvas — dark-on-blush low-alpha tints so
+  // glass cards lift off the canvas without competing with it. Slate
+  // hairlines at 10% give clean separation against the warm blush.
   surface: "#ffffff",
-  surfaceInput: "#f1f5f9",
+  surfaceInput: "rgba(15,23,42,0.04)",
   surfaceBorder: "rgba(15,23,42,0.10)",
   surfacePill: "rgba(15,23,42,0.06)",
   surfacePillBorder: "rgba(15,23,42,0.12)",
 
-  // Slate ink — text and icons are deep slate (#0f172a) so body copy stays
-  // legible at all sizes. Maroon survives only as the primary CTA accent,
-  // like Airbnb's Rausch on a white canvas.
+  // Slate ink — body copy stays legible at all sizes.
   text: "#0f172a",
   textSecondary: "rgba(15,23,42,0.72)",
   textMuted: "rgba(15,23,42,0.55)",
@@ -124,6 +173,8 @@ export const lightColors: ColorTokens = {
   success: "#059669",
   successSurface: "rgba(5,150,105,0.10)",
 
+  // Sheets are crisp white — the strongest lift against the blush
+  // canvas, reads as a clear elevated layer.
   sheet: "#ffffff",
   sheetText: "#0f172a",
   sheetTextMuted: "#64748b",
@@ -135,15 +186,27 @@ export const lightColors: ColorTokens = {
 };
 
 export const darkColors: ColorTokens = {
-  primary: "#f87171",
-  primaryActive: "#dc2626",
+  primary: "#cbd5e1",
+  primaryActive: "#94a3b8",
 
-  // Canonical dark brand look — maroon gradient backdrop + white text +
+  // Dark hero card — a lifted peach so the card contrasts against the
+  // slate gradient backdrop. The CTA text uses a slightly darker peach
+  // for contrast against the white pill.
+  heroSurface: "#F09578",
+  heroSurfaceCta: "#E07F5E",
+
+  // Dark active tab pill — lifted berry so the pill reads cleanly against
+  // the slate gradient backdrop.
+  pillSurface: "#B23A6A",
+  // Dark idle icons — white at 50% on the lifted berry bar.
+  tabIdleIcon: "rgba(255,255,255,0.50)",
+
+  // Canonical dark brand look — slate gradient backdrop + white text +
   // flat translucent surfaces (the canvas itself does the heavy lifting;
   // cards read against it).
-  backgroundStart: "#7f1d1d",
-  backgroundEnd: "#450a0a",
-  backgroundSolid: "#450a0a",
+  backgroundStart: "#334155",
+  backgroundEnd: "#0f172a",
+  backgroundSolid: "#0f172a",
 
   surface: "rgba(255,255,255,0.08)",
   surfaceInput: "rgba(255,255,255,0.06)",
@@ -174,6 +237,6 @@ export const darkColors: ColorTokens = {
   sheetInput: "rgba(255,255,255,0.08)",
   sheetSeparator: "rgba(255,255,255,0.10)",
 
-  navCard: "#0f1e4d",
+  navCard: "#0f172a",
   navBorder: "rgba(255,255,255,0.14)",
 };

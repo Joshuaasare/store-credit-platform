@@ -12,7 +12,7 @@ import CreditCard from "./components/CreditCard";
 import EmptyState from "./components/EmptyState";
 import ErrorState from "./components/ErrorState";
 import LoadingState from "./components/LoadingState";
-import { useThemeTokens } from "../../theme/ThemeContext";
+import { useThemeTokens } from "../../shared/theme/ThemeContext";
 import { customerCreditsService } from "../../api/client";
 
 type CreditsTab = "live" | "expired";

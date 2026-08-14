@@ -1,10 +1,5 @@
 import { useEffect } from "react";
-import {
-  ActivityIndicator,
-  StyleSheet,
-  View,
-  LogBox,
-} from "react-native";
+import { ActivityIndicator, StyleSheet, View, LogBox } from "react-native";
 import { useFonts } from "expo-font";
 import {
   Inter_400Regular,
@@ -14,9 +9,9 @@ import {
 } from "@expo-google-fonts/inter";
 import * as SplashScreen from "expo-splash-screen";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { useAuthStore } from "./store/useAuthStore";
+import { useAuthStore } from "./shared/store/useAuthStore";
 import { RootNavigator } from "./navigation/RootNavigator";
-import { ThemeProvider, useThemeTokens } from "./theme/ThemeContext";
+import { ThemeProvider, useThemeTokens } from "./shared/theme/ThemeContext";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -59,7 +54,12 @@ function AppShell() {
 
   if (!fontsLoaded || status === "idle" || status === "loading") {
     return (
-      <View style={[styles.loading, { backgroundColor: theme.colors.backgroundSolid }]}>
+      <View
+        style={[
+          styles.loading,
+          { backgroundColor: theme.colors.backgroundSolid },
+        ]}
+      >
         <ActivityIndicator size="large" color={theme.colors.primary} />
       </View>
     );
