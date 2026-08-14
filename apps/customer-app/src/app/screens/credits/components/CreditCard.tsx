@@ -1,5 +1,6 @@
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import type { StyleProp, ViewStyle } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import GlassCard from "../../../shared/components/GlassCard";
 import MerchantAvatar from "../../../shared/components/MerchantAvatar";
 import { useThemeTokens } from "../../../shared/theme/ThemeContext";
@@ -41,7 +42,7 @@ export default function CreditCard({
       validityText = `${formatGhs(soonest.remaining)} expires soon`;
       validityTone = theme.colors.warning;
     } else {
-      validityText = `${formatGhs(soonest.remaining)} ${distance}`;
+      validityText = `${formatGhs(soonest.remaining)} expires ${distance}`;
       // `expires_at` arrives in seconds from the backend; promote to ms
       // before comparing against `Date.now()` (ms).
       const msUntilExpiry = soonest.expires_at * 1000 - Date.now();
@@ -61,21 +62,11 @@ export default function CreditCard({
             the merchant's pastel accent as a soft fill so each card
             has a distinct color identity, matching the reference. */}
         <View style={styles.left}>
-          <View
-            style={[
-              styles.avatarRing,
-              {
-                backgroundColor: accentTint,
-                borderColor: hexWithAlpha(accent, 0.45),
-              },
-            ]}
-          >
-            <MerchantAvatar
-              merchantName={bucket.merchantName}
-              logoUrl={bucket.logoUrl}
-              size={56}
-            />
-          </View>
+          <MerchantAvatar
+            merchantName={bucket.merchantName}
+            logoUrl={bucket.logoUrl}
+            size={66}
+          />
           <Text
             style={[
               styles.storeName,
@@ -88,24 +79,7 @@ export default function CreditCard({
           >
             {bucket.merchantName}
           </Text>
-          <Text
-            style={[
-              styles.storeSub,
-              {
-                color: theme.colors.textSecondary,
-                fontFamily: theme.typography.fontFamilyRegular,
-              },
-            ]}
-            numberOfLines={1}
-          >
-            Store credit
-          </Text>
         </View>
-
-        {/* Vertical dashed divider between the two columns. */}
-        <View
-          style={[styles.divider, { borderColor: theme.colors.surfaceBorder }]}
-        />
 
         {/* Right column — total, validity line, Redeem CTA. */}
         <View style={styles.right}>
@@ -113,7 +87,7 @@ export default function CreditCard({
             style={[
               styles.total,
               {
-                color: theme.colors.text,
+                color: theme.colors.heroSurface,
                 fontFamily: theme.typography.fontFamilyBold,
                 fontSize: theme.typography.displayLg,
               },
@@ -164,6 +138,12 @@ export default function CreditCard({
               >
                 Redeem Now
               </Text>
+              <Ionicons
+                name="gift-outline"
+                size={14}
+                color={theme.colors.surface}
+                style={styles.ctaIcon}
+              />
             </TouchableOpacity>
           </View>
         </View>
@@ -219,7 +199,24 @@ const styles = StyleSheet.create({
     width: 0,
     borderLeftWidth: 1,
     borderStyle: "dashed",
-    marginVertical: 8,
+    marginVertical: 14,
+  },
+  seam: {
+    width: 0,
+    position: "relative",
+  },
+  notch: {
+    position: "absolute",
+    left: -8,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+  },
+  notchTop: {
+    top: -8,
+  },
+  notchBottom: {
+    bottom: -8,
   },
   right: {
     flex: 1.4,
@@ -246,9 +243,14 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
+    gap: 3,
+    flexDirection: "row",
   },
   ctaText: {
     fontSize: 14,
     letterSpacing: 0.2,
+  },
+  ctaIcon: {
+    marginLeft: 6,
   },
 });

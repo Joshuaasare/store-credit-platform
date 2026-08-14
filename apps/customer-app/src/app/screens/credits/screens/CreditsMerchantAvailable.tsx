@@ -197,7 +197,7 @@ function CreditDetailRow({
             style={[
               styles.creditAmount,
               {
-                color: theme.colors.text,
+                color: theme.colors.heroSurface,
                 fontFamily: theme.typography.fontFamilyBold,
               },
             ]}
