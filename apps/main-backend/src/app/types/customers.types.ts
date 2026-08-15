@@ -113,6 +113,7 @@ export interface CustomerListResponse {
 // greyed. `expires_at` is Unix epoch seconds; null = lifetime.
 export interface CustomerDetailCreditRow extends BaseCustomerCredit {
   redeemed_total: number;
+  pending_total: number;
   remaining: number;
   branch: BaseBranch;
 }

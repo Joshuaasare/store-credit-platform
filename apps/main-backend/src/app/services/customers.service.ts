@@ -330,12 +330,17 @@ export class CustomerService {
     const credits: CustomerDetailCreditRow[] = merchantCredits
       .map((row) => {
         const creditAmount = Number(row.credit_amount) || 0;
-        const redeemedTotal = Number(row.approved_redemption_amount) || 0;
-        const remaining = Math.max(0, creditAmount - redeemedTotal);
+        const approvedTotal = Number(row.approved_redemption_amount) || 0;
+        const pendingTotal = Number(row.pending_redemption_amount) || 0;
+        const remaining = Math.max(
+          0,
+          creditAmount - approvedTotal - pendingTotal,
+        );
         const { branch: _branch, ...baseCredit } = row;
         return {
           ...baseCredit,
-          redeemed_total: redeemedTotal,
+          redeemed_total: approvedTotal,
+          pending_total: pendingTotal,
           remaining,
           branch: row.branch,
         };

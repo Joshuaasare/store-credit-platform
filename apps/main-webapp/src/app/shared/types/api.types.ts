@@ -1,6 +1,6 @@
 /**
  * Auto-generated API Types
- * Generated on: 2026-08-15T12:57:45.706Z
+ * Generated on: 2026-08-15T13:01:00.302Z
  * 
  * ⚠️ DO NOT EDIT MANUALLY
  * Source: apps/smartschool-api/src/app/types/
@@ -832,6 +832,7 @@ export interface CustomerListResponse {
 
 export interface CustomerDetailCreditRow extends BaseCustomerCredit {
   redeemed_total: number;
+  pending_total: number;
   remaining: number;
   branch: BaseBranch;
 }

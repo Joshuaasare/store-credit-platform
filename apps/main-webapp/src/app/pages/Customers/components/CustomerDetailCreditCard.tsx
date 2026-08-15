@@ -9,12 +9,13 @@ interface CustomerDetailCreditCardProps {
 
 /**
  * One live credit row on the customer detail page. Shows the credit amount
- * as the headline, redeemed + remaining beneath, and the expiry / issued
- * date / branch as a meta footer.
+ * as the headline, a redeemed-progress bar, redeemed + remaining beneath,
+ * and the expiry / issued date / branch as a meta footer.
  *
  * Fully-redeemed credits (remaining = 0) are still listed — they're rendered
  * greyed so the history is visible without being mistaken for spendable
- * credit. Brand voltage: ONE teal accent on the remaining number when > 0.
+ * credit. Brand voltage: ONE teal accent on the progress fill + remaining
+ * number when > 0.
  */
 export function CustomerDetailCreditCard({
   row,
@@ -22,6 +23,19 @@ export function CustomerDetailCreditCard({
   const isFullyRedeemed = row.remaining <= 0;
   const isExpired =
     row.expires_at != null && row.expires_at <= Math.floor(Date.now() / 1000);
+  // Bar represents the redeemed slice of the credit's principal. 100% fill
+  // → fully consumed; 0% fill → untouched. Clamped 0–1 so a rounding
+  // overshoot on `redeemed_total` doesn't render a >100% fill. Unredeemed
+  // credits (redeemed = 0) hide the bar entirely — the empty track would
+  // just be visual noise.
+  const creditAmount = Number(row.credit_amount) || 0;
+  const redeemedTotal = Number(row.redeemed_total) || 0;
+  const fillRatio =
+    creditAmount > 0
+      ? Math.max(0, Math.min(1, redeemedTotal / creditAmount))
+      : 0;
+  const fillPercent = Math.round(fillRatio * 100);
+  const showProgressBar = fillPercent > 0;
 
   return (
     <Card
@@ -56,6 +70,25 @@ export function CustomerDetailCreditCard({
           {isFullyRedeemed ? "Fully redeemed" : "Live"}
         </Badge>
       </div>
+
+      {showProgressBar && (
+        <div
+          className="bg-muted mt-3 h-1.5 overflow-hidden rounded-full"
+          role="progressbar"
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={fillPercent}
+          aria-label={`${fillPercent}% redeemed`}
+        >
+          <div
+            className={cn(
+              "h-full rounded-full transition-[width]",
+              isFullyRedeemed ? "bg-muted-foreground" : "bg-primary",
+            )}
+            style={{ width: `${fillPercent}%` }}
+          />
+        </div>
+      )}
 
       <div className="mt-3 grid grid-cols-2 gap-3 border-t pt-3">
         <div>

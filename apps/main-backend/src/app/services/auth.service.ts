@@ -187,6 +187,7 @@ export class AuthService {
       role: staffAssignment.role,
       merchant_id: staffAssignment.merchant_id,
       branch_id: staffAssignment.branch_id,
+      staff_id: staffAssignment.staff_id,
     };
 
     // Issue custom JWT access token
@@ -371,7 +372,9 @@ export class AuthService {
   } | null> {
     const { data: staff } = await supabaseAdmin
       .from("staff")
-      .select(`id, role, surname, other_names, access_granted, created_at, updated_at, branches(id, merchants(id))`)
+      .select(
+        `id, role, surname, other_names, access_granted, created_at, updated_at, branches(id, merchants(id))`,
+      )
       .eq("user_id", userId)
       .is("deleted_at", null)
       .not("role", "is", null)
