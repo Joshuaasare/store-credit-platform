@@ -147,7 +147,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 4,
     paddingVertical: 4,
-    paddingHorizontal: 8,
   },
   separator: {
     height: StyleSheet.hairlineWidth,

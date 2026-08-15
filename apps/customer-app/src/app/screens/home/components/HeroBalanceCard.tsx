@@ -88,10 +88,7 @@ export default function HeroBalanceCard({
           accessibilityLabel="View credits"
         >
           <Text
-            style={[
-              styles.pillCtaLabel,
-              { color: theme.colors.heroSurfaceCta },
-            ]}
+            style={[styles.pillCtaLabel, { color: theme.colors.heroSurface }]}
           >
             View credits
           </Text>

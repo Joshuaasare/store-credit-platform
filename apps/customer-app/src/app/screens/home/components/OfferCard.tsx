@@ -6,21 +6,51 @@ import {
   type StyleProp,
   type ViewStyle,
 } from "react-native";
+import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { Ionicons } from "@expo/vector-icons";
 import { computeInitials } from "../../../shared/utils/computeInitials";
 import { useThemeTokens } from "../../../shared/theme/ThemeContext";
 
+/**
+ * Build a stable two-color pastel gradient from a merchant name. Soft tones
+ * that read as "photo placeholder" (think Wearify's product tile) and stay
+ * visually distinct between merchants without being noisy.
+ */
+function pickPhotoGradient(merchantName: string): [string, string] {
+  const palettes: Array<[string, string]> = [
+    ["#e0e7ff", "#c7d2fe"], // sky
+    ["#fce7f3", "#fbcfe8"], // rose
+    ["#d1fae5", "#a7f3d0"], // emerald
+    ["#fef3c7", "#fde68a"], // amber
+    ["#ede9fe", "#ddd6fe"], // violet
+    ["#cffafe", "#a5f3fc"], // cyan
+  ];
+  const idx = hashString(merchantName) % palettes.length;
+  return palettes[idx] ?? ["#e0e7ff", "#c7d2fe"];
+}
+
+/** Tiny djb2-style hash — stable across reloads, fits in a 32-bit int. */
+function hashString(s: string): number {
+  let h = 5381;
+  for (let i = 0; i < s.length; i++) {
+    h = ((h << 5) + h + s.charCodeAt(i)) | 0;
+  }
+  return Math.abs(h);
+}
+
 export default function OfferCard({
   merchantName,
   offerCopy,
   accentText,
+  logoUrl,
   onPress,
   style,
 }: {
   merchantName: string;
   offerCopy: string;
   accentText: string;
+  logoUrl: string | null;
   onPress?: () => void;
   style?: StyleProp<ViewStyle>;
 }) {
@@ -48,20 +78,37 @@ export default function OfferCard({
     >
       <View style={[styles.card]}>
         <View style={[styles.photo, { borderRadius: theme.radii.lg }]}>
+          {/* Logo fills the entire photo section. The gradient + initials
+              placeholder always renders beneath so the card never flashes
+              blank while the logo is in flight; the expo-image logo then
+              fades over the placeholder via `transition={150}`. When no
+              logo is supplied we keep the same gradient + initials as the
+              fallback — the card looks the same as before from the user's
+              perspective. */}
           <LinearGradient
             colors={[photoStart, photoEnd]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={[StyleSheet.absoluteFill, { borderRadius: theme.radii.lg }]}
           />
-          <Text
-            style={styles.photoInitials}
-            accessibilityElementsHidden
-            importantForAccessibility="no"
-            numberOfLines={1}
-          >
-            {initials}
-          </Text>
+          {logoUrl ? (
+            <Image
+              source={{ uri: logoUrl }}
+              style={[StyleSheet.absoluteFill, { borderRadius: theme.radii.lg }]}
+              contentFit="cover"
+              transition={150}
+              accessibilityIgnoresInvertColors
+            />
+          ) : (
+            <Text
+              style={styles.photoInitials}
+              accessibilityElementsHidden
+              importantForAccessibility="no"
+              numberOfLines={1}
+            >
+              {initials}
+            </Text>
+          )}
         </View>
 
         <View style={styles.meta}>
@@ -120,33 +167,6 @@ export default function OfferCard({
       </View>
     </TouchableOpacity>
   );
-}
-
-/**
- * Build a stable two-color pastel gradient from a merchant name. Soft tones
- * that read as "photo placeholder" (think Wearify's product tile) and stay
- * visually distinct between merchants without being noisy.
- */
-function pickPhotoGradient(merchantName: string): [string, string] {
-  const palettes: Array<[string, string]> = [
-    ["#e0e7ff", "#c7d2fe"], // sky
-    ["#fce7f3", "#fbcfe8"], // rose
-    ["#d1fae5", "#a7f3d0"], // emerald
-    ["#fef3c7", "#fde68a"], // amber
-    ["#ede9fe", "#ddd6fe"], // violet
-    ["#cffafe", "#a5f3fc"], // cyan
-  ];
-  const idx = hashString(merchantName) % palettes.length;
-  return palettes[idx] ?? ["#e0e7ff", "#c7d2fe"];
-}
-
-/** Tiny djb2-style hash — stable across reloads, fits in a 32-bit int. */
-function hashString(s: string): number {
-  let h = 5381;
-  for (let i = 0; i < s.length; i++) {
-    h = ((h << 5) + h + s.charCodeAt(i)) | 0;
-  }
-  return Math.abs(h);
 }
 
 const styles = StyleSheet.create({

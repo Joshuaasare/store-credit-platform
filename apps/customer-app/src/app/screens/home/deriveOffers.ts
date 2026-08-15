@@ -9,7 +9,12 @@ import { formatGhs } from "../../shared/utils/formatGhs";
  */
 export function deriveOffers(
   creditsData: CustomerCreditsApiResponse | undefined,
-): Array<{ merchantName: string; offerCopy: string; accent: string }> {
+): Array<{
+  merchantName: string;
+  offerCopy: string;
+  accent: string;
+  logoUrl: string | null;
+}> {
   if (!creditsData?.success) return [];
   const live = creditsData.data.live;
   if (live.length === 0) return [];
@@ -19,12 +24,14 @@ export function deriveOffers(
     merchantName: string;
     offerCopy: string;
     accent: string;
+    logoUrl: string | null;
   }> = [];
   for (const c of live) {
     const merchantName = c.branch?.merchant?.name;
     if (!merchantName) continue;
     if (seen.has(merchantName)) continue;
     seen.add(merchantName);
+    const logoUrl = c.branch?.merchant?.logo_url ?? null;
     // Copy: prefer a percent-style offer ("10% Back on every visit") —
     // we don't have the percent on the credit row itself, so we fall back
     // to a "Earn GH₵ X back" copy derived from the credit amount. The
@@ -36,6 +43,7 @@ export function deriveOffers(
         merchantName,
         offerCopy: `Earn ${formatted} back on your next visit`,
         accent: formatted,
+        logoUrl,
       });
     } else {
       // No usable amount — skip rather than render a generic placeholder.

@@ -5,7 +5,12 @@ import { useThemeTokens } from "../../../shared/theme/ThemeContext";
 export default function NearbyOffersSection({
   offers,
 }: {
-  offers: Array<{ merchantName: string; offerCopy: string; accent: string }>;
+  offers: Array<{
+    merchantName: string;
+    offerCopy: string;
+    accent: string;
+    logoUrl: string | null;
+  }>;
 }) {
   const theme = useThemeTokens();
   return (
@@ -35,6 +40,7 @@ export default function NearbyOffersSection({
             merchantName={item.merchantName}
             offerCopy={item.offerCopy}
             accentText={item.accent}
+            logoUrl={item.logoUrl}
           />
         )}
       />

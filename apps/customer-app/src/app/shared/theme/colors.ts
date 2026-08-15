@@ -151,7 +151,7 @@ export const lightColors: ColorTokens = {
   // CTA, the active tab pill, and the new fixed detail header. Single
   // brand color discipline: the card is a brand surface, not a parallel
   // accent.
-  heroSurface: "#812374",
+  heroSurface: "#3D052A",
   heroSurfaceCta: "#89023E",
 
   // Active tab bar pill — same deep pink as `primary` / `heroSurface`.
@@ -179,7 +179,7 @@ export const lightColors: ColorTokens = {
   // making the borders visually heavy.
   surface: "#ffffff",
   surfaceInput: "rgba(15,23,42,0.04)",
-  surfaceBorder: "rgba(137, 2, 62, 0.10)",
+  surfaceBorder: "rgba(137, 2, 62, 0.15)",
   surfacePill: "rgba(137, 2, 62, 0.06)",
   surfacePillBorder: "rgba(137, 2, 62, 0.12)",
 
