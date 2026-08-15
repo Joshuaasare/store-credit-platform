@@ -169,6 +169,7 @@ export default async function (fastify: FastifyInstance) {
           user.role ?? null,
           user.merchant_id,
           user.branch_id,
+          user.staff_id ?? null,
         );
 
         const nowSeconds = Math.floor(Date.now() / 1000);

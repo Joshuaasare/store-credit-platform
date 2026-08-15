@@ -259,6 +259,10 @@ export type BaseCustomerCreditRedemption = Static<typeof BaseCustomerCreditRedem
 export const BaseCustomerCreditRedemption = Type.Object({
 id: Type.Number(),
 customer_id: Type.Number(),
+merchant_id: Type.Union([
+Type.Number(),
+Type.Null()
+]),
 amount_redeemed: Type.Number(),
 approved_at: Type.Union([
 Type.String(),

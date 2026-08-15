@@ -1,6 +1,6 @@
 /**
  * Auto-generated API Types
- * Generated on: 2026-08-14T17:17:44.208Z
+ * Generated on: 2026-08-15T12:57:46.106Z
  * 
  * ⚠️ DO NOT EDIT MANUALLY
  * Source: apps/smartschool-api/src/app/types/
@@ -191,6 +191,13 @@ export interface BaseCustomerCredit {
 export interface BaseCustomerCreditRedemption {
   id: number;
   customer_id: number;
+  
+  
+  
+  
+  
+  
+  merchant_id: number | null;
   amount_redeemed: number;
   approved_at: string | null;
   approved_by_staff_id: number | null;
@@ -274,6 +281,8 @@ export interface AuthUser {
   role: StaffRoleValues | null;
   merchant_id: number | null;
   branch_id: number | null;
+
+  staff_id: number | null;
 }
 
 export interface AuthSession {

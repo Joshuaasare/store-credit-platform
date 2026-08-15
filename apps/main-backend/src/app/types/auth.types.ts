@@ -37,6 +37,10 @@ export interface AuthUser {
   role: StaffRoleValues | null;
   merchant_id: number | null;
   branch_id: number | null;
+  // Carried in the access token so staff-only routes (e.g. approving a
+  // redemption) can stamp `redemption_approval_staff_id` without an extra
+  // staff lookup. Null for non-staff users (customers have no `staff` row).
+  staff_id: number | null;
 }
 
 export interface AuthSession {

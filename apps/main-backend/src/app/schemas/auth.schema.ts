@@ -76,6 +76,10 @@ Type.Null()
 branch_id: Type.Union([
 Type.Number(),
 Type.Null()
+]),
+staff_id: Type.Union([
+Type.Number(),
+Type.Null()
 ])
 })
 

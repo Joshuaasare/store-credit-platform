@@ -1,14 +1,5 @@
 import { Type, Static, TSchema } from '@sinclair/typebox'
-import {
-  BaseMerchant,
-  BaseBranch,
-  ApiErrorResponse,
-  BaseCustomer,
-  BaseUserProfile,
-  BaseStaff,
-  BaseCustomerCredit,
-  BaseCustomerCreditRedemption,
-} from './main.schema'
+import { BaseMerchant, BaseBranch, ApiErrorResponse, BaseCustomer, BaseUserProfile, BaseStaff, BaseCustomerCredit, BaseCustomerCreditRedemption } from './main.schema'
 
 
 

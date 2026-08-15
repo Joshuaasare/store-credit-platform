@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { ThemeProvider } from "./shared/providers/ThemeProvider";
 import { useAuthStore } from "@shared/stores/authStore";
-import ProtectedRoute from "./components/ProtectedRoute/ProtectedRoute";
+import ProtectedRoute from "@shared//components/ProtectedRoute/ProtectedRoute";
 import Credits from "./pages/Credits/Credits";
 import MyStore from "./pages/MyStore/MyStore";
 import MainLayout from "./pages/MainLayout/MainLayout";

@@ -275,6 +275,7 @@ export class AuthService {
       role: staffAssignment?.role ?? null,
       merchant_id: staffAssignment?.merchant_id ?? null,
       branch_id: staffAssignment?.branch_id ?? null,
+      staff_id: staffAssignment?.staff_id ?? null,
     };
   }
 
@@ -305,6 +306,7 @@ export class AuthService {
       role: staffAssignment?.role ?? null,
       merchant_id: staffAssignment?.merchant_id ?? null,
       branch_id: staffAssignment?.branch_id ?? null,
+      staff_id: staffAssignment?.staff_id ?? null,
     };
 
     const accessToken = await TokenService.signAccessToken(
@@ -313,7 +315,7 @@ export class AuthService {
       authUserResponse.role ?? "",
       authUserResponse.merchant_id,
       authUserResponse.branch_id,
-      staffAssignment?.staff_id ?? null,
+      authUserResponse.staff_id,
     );
 
     const deviceFingerprint = TokenService.computeDeviceFingerprint(
