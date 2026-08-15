@@ -149,11 +149,13 @@ ${apiTypesContent}`;
   fs.writeFileSync(frontedPath, frontendContent);
   console.log(`   ✅ Types: main-webapp/src/app/shared/types/api.types.ts`);
 
-  // Run post-processing to fix schema imports
+  // Run post-processing to fix schema imports. Use an absolute path so
+  // this works whether the script is invoked from the repo root
+  // (`yarn generate:types`) or from apps/main-backend (`node scripts/...`).
   console.log("\n🔧 Post-processing schemas...");
   const { execSync } = require("child_process");
   try {
-    execSync("node apps/main-backend/scripts/fix-schema-imports.js", {
+    execSync(`node ${path.join(__dirname, "fix-schema-imports.js")}`, {
       stdio: "inherit",
     });
   } catch (error) {

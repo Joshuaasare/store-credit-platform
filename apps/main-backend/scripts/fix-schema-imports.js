@@ -70,10 +70,15 @@ for (const schemaFile of schemaFiles) {
     const hasMainSchemaImport = content.includes("from './main.schema'");
 
     if (!hasMainSchemaImport) {
-      // Add import after the first import line
+      // Add import after the first import line. Match either
+      // `import { Type, Static } from '@sinclair/typebox'` or the
+      // `import { Type, Static, TSchema } from '@sinclair/typebox'`
+      // variant that generic schemas (e.g. MerchantAuditFeedPage<T extends TSchema>)
+      // produce — without this broader pattern the script silently no-ops on
+      // those files and leaves them with unresolved `./main.schema` imports.
       const importStatement = `import { ${usedSchemas.join(", ")} } from './main.schema'\n`;
       content = content.replace(
-        /(import { Type, Static } from '@sinclair\/typebox')/,
+        /(import \{ Type, Static(?:, TSchema)? \} from '@sinclair\/typebox')/,
         `$1\n${importStatement}`,
       );
 
