@@ -140,24 +140,24 @@ export interface ColorTokens {
 }
 
 export const lightColors: ColorTokens = {
-  primary: "#89023E",
+  primary: "#5C0435",
   primaryActive: "#5e012a",
   // Pale berry fill — a lighter shade of `primary` for soft CTAs.
   // Pairs with `primary` text so the button carries the brand identity
   // without the heavy fill.
-  primarySurface: "#F5DDE3",
+  primarySurface: "#3E4B0E",
 
   // Hero balance card — the same deep pink that anchors every primary
   // CTA, the active tab pill, and the new fixed detail header. Single
   // brand color discipline: the card is a brand surface, not a parallel
   // accent.
-  heroSurface: "#89023E",
+  heroSurface: "#812374",
   heroSurfaceCta: "#89023E",
 
   // Active tab bar pill — same deep pink as `primary` / `heroSurface`.
   // The pill's job is to draw the eye to the current tab; the warm
   // berry carries that more vividly than a neutral would.
-  pillSurface: "#89023E",
+  pillSurface: "#5C0435",
   // Pale berry — a lighter shade of `pillSurface` for soft CTAs.
   // Pairs with `pillSurface` text so the button carries the brand
   // identity without the heavy fill.

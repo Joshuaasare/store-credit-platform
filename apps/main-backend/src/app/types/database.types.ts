@@ -799,19 +799,24 @@ export type Database = {
           p_merchant_id: number
           p_staff_id: number
         }
-        Returns: { audit_id: number; amount_redeemed: number }[]
+        Returns: {
+          amount_redeemed: number
+          audit_id: number
+        }[]
       }
       redemption_fan_out: {
-        Args: {
-          p_amount: number
-          p_customer_id: number
-          p_merchant_id: number
-        }
-        Returns: { credit_id: number; pending_redemption_amount: number }[]
+        Args: { p_amount: number; p_customer_id: number; p_merchant_id: number }
+        Returns: {
+          credit_id: number
+          pending_redemption_amount: number
+        }[]
       }
       redemption_reject: {
         Args: { p_customer_id: number; p_merchant_id: number }
-        Returns: { audit_id: number; amount_redeemed: number }[]
+        Returns: {
+          amount_redeemed: number
+          audit_id: number
+        }[]
       }
     }
     Enums: {

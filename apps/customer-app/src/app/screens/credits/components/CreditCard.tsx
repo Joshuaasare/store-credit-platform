@@ -85,7 +85,7 @@ export default function CreditCard({
             style={[
               styles.total,
               {
-                color: theme.colors.heroSurface,
+                color: theme.colors.primary,
                 fontFamily: theme.typography.fontFamilyBold,
                 fontSize: theme.typography.displayLg,
               },
@@ -118,7 +118,7 @@ export default function CreditCard({
               style={[
                 styles.cta,
                 {
-                  backgroundColor: theme.colors.heroSurface,
+                  backgroundColor: theme.colors.primary,
                   borderRadius: theme.radii.sm,
                 },
               ]}

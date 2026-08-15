@@ -27,10 +27,12 @@ export function CreditsMerchantPending({
   merchantId,
   merchantName,
   onCancelRequest,
+  onEditRequest,
 }: {
   merchantId: number;
   merchantName: string;
   onCancelRequest: () => void;
+  onEditRequest: () => void;
 }) {
   const theme = useThemeTokens();
 
@@ -121,6 +123,7 @@ export function CreditsMerchantPending({
         amount={total}
         merchantName={merchantName}
         onCancelRequest={onCancelRequest}
+        onEditRequest={onEditRequest}
       />
     </View>
   );
@@ -130,10 +133,12 @@ function PendingCard({
   amount,
   merchantName,
   onCancelRequest,
+  onEditRequest,
 }: {
   amount: number;
   merchantName: string;
   onCancelRequest: () => void;
+  onEditRequest: () => void;
 }) {
   const theme = useThemeTokens();
   return (
@@ -178,36 +183,63 @@ function PendingCard({
           },
         ]}
       >
-        Waiting for {merchantName} to confirm. Cancel any time before
-        they approve.
+        Waiting for {merchantName} to confirm. Cancel any time before they
+        approve.
       </Text>
 
-      <Pressable
-        onPress={onCancelRequest}
-        accessibilityRole="button"
-        accessibilityLabel="Cancel request"
-        style={({ pressed }) => [
-          styles.cancelButton,
-          {
-            backgroundColor: pressed
-              ? theme.colors.surfaceInput
-              : theme.colors.surface,
-            borderColor: theme.colors.error,
-          },
-        ]}
-      >
-        <Text
-          style={[
-            styles.cancelLabel,
+      <View style={styles.actionsRow}>
+        <Pressable
+          onPress={onEditRequest}
+          accessibilityRole="button"
+          accessibilityLabel="Edit request"
+          style={({ pressed }) => [
+            styles.actionButton,
             {
-              color: theme.colors.error,
-              fontFamily: theme.typography.fontFamilySemiBold,
+              backgroundColor: theme.colors.primary,
+              opacity: pressed ? 0.85 : 1,
+              borderRadius: theme.radii.sm,
             },
           ]}
         >
-          Cancel request
-        </Text>
-      </Pressable>
+          <Text
+            style={{
+              color: theme.colors.textOnPrimary,
+              fontFamily: theme.typography.fontFamilySemiBold,
+              fontSize: 13,
+              letterSpacing: 0.2,
+            }}
+          >
+            Edit request
+          </Text>
+        </Pressable>
+        <Pressable
+          onPress={onCancelRequest}
+          accessibilityRole="button"
+          accessibilityLabel="Cancel request"
+          style={({ pressed }) => [
+            styles.actionButton,
+            {
+              backgroundColor: pressed
+                ? theme.colors.surfaceInput
+                : theme.colors.surface,
+              borderColor: theme.colors.error,
+              borderWidth: 1,
+              borderRadius: theme.radii.sm,
+            },
+          ]}
+        >
+          <Text
+            style={{
+              color: theme.colors.error,
+              fontFamily: theme.typography.fontFamilySemiBold,
+              fontSize: 13,
+              letterSpacing: 0.2,
+            }}
+          >
+            Cancel request
+          </Text>
+        </Pressable>
+      </View>
     </View>
   );
 }
@@ -238,17 +270,16 @@ const styles = StyleSheet.create({
     lineHeight: 19,
     marginBottom: 8,
   },
-  cancelButton: {
-    alignSelf: "flex-start",
-    borderWidth: 1,
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 9,
+  actionsRow: {
+    flexDirection: "row",
+    gap: 10,
     marginTop: 4,
   },
-  cancelLabel: {
-    fontSize: 13,
-    letterSpacing: 0.2,
+  actionButton: {
+    flex: 1,
+    height: 44,
+    alignItems: "center",
+    justifyContent: "center",
   },
   centerFill: {
     flex: 1,

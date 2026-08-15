@@ -1,13 +1,8 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { ScrollView, StyleSheet, View } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import type { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
 import { useQuery } from "@tanstack/react-query";
-import {
-  useAnimatedStyle,
-  useSharedValue,
-  withTiming,
-} from "react-native-reanimated";
 import type {
   CustomerActivity,
   CustomerActivitiesApiResponse,
@@ -87,18 +82,6 @@ export function HomeScreen() {
 
   const [modalVisible, setModalVisible] = useState(false);
 
-  // Fade the preview section to 0 while the modal is open so the same
-  // rows don't read as duplicated content above the sheet.
-  const sectionOpacity = useSharedValue(1);
-  useEffect(() => {
-    sectionOpacity.value = withTiming(modalVisible ? 0 : 1, {
-      duration: 180,
-    });
-  }, [modalVisible, sectionOpacity]);
-  const sectionAnimatedStyle = useAnimatedStyle(() => ({
-    opacity: sectionOpacity.value,
-  }));
-
   // Derive offers from the credits data — each live credit's branch +
   // merchant gives a real entry point. This beats placeholder copy.
   const offers = useMemo(
@@ -141,7 +124,6 @@ export function HomeScreen() {
           previewError={previewQuery.error}
           previewItems={previewItems}
           onOpenActivitiesModal={openActivitiesModal}
-          sectionAnimatedStyle={sectionAnimatedStyle}
         />
 
         {offers.length > 0 ? <NearbyOffersSection offers={offers} /> : null}

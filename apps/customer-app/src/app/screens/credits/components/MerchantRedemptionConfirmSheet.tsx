@@ -1,17 +1,36 @@
+import { useEffect } from "react";
 import { ActivityIndicator, Modal, Pressable, StyleSheet, Text, View } from "react-native";
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  withSpring,
+  Easing,
+} from "react-native-reanimated";
 import { useThemeTokens } from "../../../shared/theme/ThemeContext";
 
+const DURATION_IN = 180;
+const DURATION_OUT = 120;
+
 /**
- * Cancel-confirm bottom sheet for a pending redemption.
+ * Cancel-confirm dialog for a pending redemption.
  *
- * Uses the React Native `Modal` (transparent backdrop, slide-up) — the
- * same pattern as `ActivitiesModal` and the country-picker sheet in
- * `PhoneInput.tsx`. The repo doesn't depend on `@gorhom/bottom-sheet`,
- * so a plain Modal with a custom rounded sheet surface is the idiomatic
- * choice here.
+ * Centered modal (NOT a bottom sheet) — matches the
+ * `RedemptionAmountSheet` style so confirm moments look like
+ * confirm moments across the redemption flow. The customer app
+ * enforces no bottom pop-up modals; the centered modal is the
+ * canonical confirm surface.
  *
- * The sheet is controlled by the parent (the parent owns the
- * `pendingCancelId` state and the `useMutation` for the DELETE call).
+ * The enter animation is a scale-up + fade (iOS-style centered
+ * modal feel): the surface scales from 0.92 → 1.0 and fades in over
+ * 180ms, then springs to settle. The exit reverses the scale and
+ * fades out over 120ms. We animate the content view rather than the
+ * `Modal` itself so the backdrop fades via the `Modal`'s native
+ * animationType="none" path while the inner surface animates with
+ * Reanimated.
+ *
+ * The sheet is controlled by the parent (the parent owns
+ * `pendingCancel` state and the `useMutation` for the DELETE call).
  * `onConfirm` fires only after the user taps the destructive CTA.
  */
 export default function MerchantRedemptionConfirmSheet({
@@ -27,11 +46,35 @@ export default function MerchantRedemptionConfirmSheet({
 }) {
   const theme = useThemeTokens();
 
+  const opacity = useSharedValue(visible ? 1 : 0);
+  const scale = useSharedValue(visible ? 1 : 0.92);
+
+  useEffect(() => {
+    if (visible) {
+      opacity.value = withTiming(1, {
+        duration: DURATION_IN,
+        easing: Easing.out(Easing.cubic),
+      });
+      scale.value = withSpring(1, { damping: 45, stiffness: 500 });
+    } else {
+      opacity.value = withTiming(0, {
+        duration: DURATION_OUT,
+        easing: Easing.in(Easing.cubic),
+      });
+      scale.value = withTiming(0.92, { duration: DURATION_OUT });
+    }
+  }, [visible, opacity, scale]);
+
+  const sheetAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: opacity.value,
+    transform: [{ scale: scale.value }],
+  }));
+
   return (
     <Modal
       visible={visible}
       transparent
-      animationType="slide"
+      animationType="none"
       onRequestClose={isPending ? undefined : onDismiss}
       statusBarTranslucent
     >
@@ -39,25 +82,17 @@ export default function MerchantRedemptionConfirmSheet({
         style={styles.overlay}
         onPress={isPending ? undefined : onDismiss}
       >
-        <Pressable
+        <Animated.View
           style={[
             styles.sheet,
             {
               backgroundColor: theme.colors.sheet,
-              borderTopLeftRadius: theme.radii.xl,
-              borderTopRightRadius: theme.radii.xl,
+              borderRadius: theme.radii.md,
             },
+            sheetAnimatedStyle,
           ]}
-          onPress={(e) => e.stopPropagation()}
         >
-          <View
-            style={[
-              styles.grabber,
-              { backgroundColor: theme.colors.surfacePill },
-            ]}
-          />
-
-          <View style={styles.body}>
+          <Pressable onPress={(e) => e.stopPropagation()}>
             <Text
               style={{
                 color: theme.colors.sheetText,
@@ -72,70 +107,69 @@ export default function MerchantRedemptionConfirmSheet({
               style={{
                 color: theme.colors.sheetTextMuted,
                 fontFamily: theme.typography.fontFamilyRegular,
-                fontSize: 14,
-                lineHeight: 20,
+                fontSize: 13,
+                lineHeight: 19,
                 marginTop: 8,
               }}
             >
               This amount will return to your available credits.
             </Text>
-          </View>
 
-          <View style={styles.actionsRow}>
-            <Pressable
-              onPress={onDismiss}
-              disabled={isPending}
-              accessibilityRole="button"
-              accessibilityLabel="Keep request"
-              style={({ pressed }) => [
-                styles.actionButton,
-                styles.cancelButton,
-                {
-                  borderColor: theme.colors.surfaceBorder,
-                  opacity: isPending ? 0.5 : pressed ? 0.85 : 1,
-                },
-              ]}
-            >
-              <Text
-                style={{
-                  color: theme.colors.sheetText,
-                  fontFamily: theme.typography.fontFamilySemiBold,
-                  fontSize: 15,
-                }}
+            <View style={styles.actionsRow}>
+              <Pressable
+                onPress={onDismiss}
+                disabled={isPending}
+                accessibilityRole="button"
+                accessibilityLabel="Keep request"
+                style={({ pressed }) => [
+                  styles.actionButton,
+                  styles.keepButton,
+                  {
+                    borderColor: theme.colors.surfaceBorder,
+                    opacity: isPending ? 0.5 : pressed ? 0.85 : 1,
+                  },
+                ]}
               >
-                Keep request
-              </Text>
-            </Pressable>
-            <Pressable
-              onPress={onConfirm}
-              disabled={isPending}
-              accessibilityRole="button"
-              accessibilityLabel="Cancel request"
-              style={({ pressed }) => [
-                styles.actionButton,
-                styles.confirmButton,
-                {
-                  backgroundColor: theme.colors.error,
-                  opacity: isPending ? 0.7 : pressed ? 0.85 : 1,
-                },
-              ]}
-            >
-              {isPending ? (
-                <ActivityIndicator color={theme.colors.textOnPrimary} />
-              ) : (
                 <Text
                   style={{
-                    color: theme.colors.textOnPrimary,
+                    color: theme.colors.sheetText,
                     fontFamily: theme.typography.fontFamilySemiBold,
                     fontSize: 15,
                   }}
                 >
-                  Cancel request
+                  Keep request
                 </Text>
-              )}
-            </Pressable>
-          </View>
-        </Pressable>
+              </Pressable>
+              <Pressable
+                onPress={onConfirm}
+                disabled={isPending}
+                accessibilityRole="button"
+                accessibilityLabel="Cancel request"
+                style={({ pressed }) => [
+                  styles.actionButton,
+                  {
+                    backgroundColor: theme.colors.error,
+                    opacity: isPending ? 0.7 : pressed ? 0.85 : 1,
+                  },
+                ]}
+              >
+                {isPending ? (
+                  <ActivityIndicator color={theme.colors.textOnPrimary} />
+                ) : (
+                  <Text
+                    style={{
+                      color: theme.colors.textOnPrimary,
+                      fontFamily: theme.typography.fontFamilySemiBold,
+                      fontSize: 15,
+                    }}
+                  >
+                    Cancel request
+                  </Text>
+                )}
+              </Pressable>
+            </View>
+          </Pressable>
+        </Animated.View>
       </Pressable>
     </Modal>
   );
@@ -144,37 +178,31 @@ export default function MerchantRedemptionConfirmSheet({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    justifyContent: "flex-end",
+    justifyContent: "center",
+    alignItems: "center",
     backgroundColor: "rgba(0,0,0,0.45)",
+    paddingHorizontal: 24,
   },
   sheet: {
-    paddingTop: 8,
-    paddingBottom: 32,
+    width: "100%",
+    maxWidth: 420,
+    paddingTop: 24,
+    paddingBottom: 24,
     paddingHorizontal: 20,
-  },
-  grabber: {
-    width: 36,
-    height: 4,
-    borderRadius: 2,
-    alignSelf: "center",
-    marginBottom: 16,
-  },
-  body: {
-    marginBottom: 24,
   },
   actionsRow: {
     flexDirection: "row",
     gap: 12,
+    marginTop: 24,
   },
   actionButton: {
     flex: 1,
     height: 48,
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: 12,
+    borderRadius: 8,
   },
-  cancelButton: {
+  keepButton: {
     borderWidth: 1,
   },
-  confirmButton: {},
 });

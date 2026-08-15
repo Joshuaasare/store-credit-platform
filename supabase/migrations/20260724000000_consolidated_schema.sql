@@ -127,6 +127,7 @@ create index if not exists idx_fixed_credit_config_group
 -- The CHECK constraint enforces `pending + approved <= credit_amount` so an
 -- over-redemption cannot land in the database even on a buggy fan-out.
 alter table public.customer_credit
+  add column if not exists expires_at bigint null,
   add column if not exists pending_redemption_amount numeric(12,2) not null default 0
     check (pending_redemption_amount >= 0),
   add column if not exists approved_redemption_amount numeric(12,2) not null default 0
@@ -780,11 +781,14 @@ declare
 begin
   -- Walk merchant's credit rows at this customer, oldest-expiry-first
   -- (NULLS LAST so lifetime credits always take the back seat).
-  -- We update each row's pending_redemption_amount to either:
-  --   - min(available, remaining_demand), or
-  --   - 0 if the row wasn't part of the active fan-out.
-  -- Returning the touched rows + their new pending amounts lets the
-  -- caller surface the breakdown without a second round-trip.
+  -- Each row takes min(available, demand_remaining), where demand_remaining
+  -- for row N is v_remaining minus the sum of available seen in rows 1..N-1.
+  --
+  -- Implementation: compute a running sum of `available` over the sorted
+  -- rows using a window function (`sum(...) over (order by ...)`), then
+  -- for each row the demand-before-it is `cum_available - this_row_available`
+  -- and the slice it consumes is `min(available, max(0, v_remaining - demand_before))`.
+
   return query
   with merchant_branches as (
     select id from public.branches
@@ -792,7 +796,7 @@ begin
   ),
   ordered as (
     select c.id, c.credit_amount, c.approved_redemption_amount,
-           c.pending_redemption_amount,
+           c.pending_redemption_amount, c.expires_at, c.created_at,
            greatest(
              0,
              c.credit_amount - coalesce(c.approved_redemption_amount, 0)
@@ -806,33 +810,30 @@ begin
     order by c.expires_at asc nulls last, c.created_at asc, c.id asc
     for update of c
   ),
-  walk as (
+  with_running_sum as (
+    -- Cumulative `available` over the ordering, INCLUDING each row.
+    -- `cum_after_this_row = sum(available[1..N])`. To get demand BEFORE
+    -- this row, subtract this row's `available`.
     select
       o.id,
       o.available,
-      greatest(0, v_remaining - coalesce((
-        select sum(x.available) from ordered x
-        where (x.expires_at is null and o.expires_at is null and x.id < o.id)
-           or (x.expires_at is null and o.expires_at is not null)
-           or (x.expires_at is not null and o.expires_at is not null and x.expires_at < o.expires_at)
-           or (x.expires_at = o.expires_at and x.created_at < o.created_at)
-           or (x.expires_at = o.expires_at and x.created_at = o.created_at and x.id < o.id)
-      ), 0)) as demand_before
+      sum(o.available) over (
+        order by o.expires_at asc nulls last, o.created_at asc, o.id asc
+        rows between unbounded preceding and current row
+      ) as cum_after_this_row
     from ordered o
   ),
-  -- Compute new pending per row: each row takes min(available, demand).
-  -- The first row's demand is v_remaining itself, so demand_before for
-  -- row N is sum of available over rows [1..N-1] and the new pending
-  -- for row N is min(available, max(0, v_remaining - demand_before)).
   computed as (
     select
-      w.id,
-      case
-        when w.demand_before >= v_remaining then 0
-        when v_remaining - w.demand_before >= w.available then w.available
-        else v_remaining - w.demand_before
-      end as new_pending
-    from walk w
+      r.id,
+      greatest(
+        0,
+        least(
+          r.available,
+          v_remaining - greatest(0, r.cum_after_this_row - r.available)
+        )
+      ) as new_pending
+    from with_running_sum r
   ),
   updated as (
     update public.customer_credit c

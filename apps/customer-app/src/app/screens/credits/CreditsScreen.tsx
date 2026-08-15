@@ -92,9 +92,12 @@ export function CreditsScreen() {
                         merchantId: item.merchantId,
                       })
                     }
-                    onRedeem={() => {
-                      // No-op placeholder — redeem flow lands in a follow-up.
-                    }}
+                    onRedeem={() =>
+                      navigation.navigate("CreditsMerchantDetail", {
+                        merchantId: item.merchantId,
+                        autoOpenRedemption: true,
+                      })
+                    }
                   />
                 )}
                 showsVerticalScrollIndicator={false}

@@ -96,7 +96,9 @@ export class CustomerRedemptionsService {
     //    customer sees a stable allocation.
     const { data: breakdown, error: breakdownError } = await supabaseAdmin
       .from("customer_credit")
-      .select(`${QueryFragments.BASE_CUSTOMER_CREDIT},branch:branches(${QueryFragments.BASE_BRANCH})`)
+      .select(
+        `${QueryFragments.BASE_CUSTOMER_CREDIT},branch:branches(${QueryFragments.BASE_BRANCH})`,
+      )
       .eq("customer_id", customerId)
       .eq("branch.merchant_id", merchantId)
       .gt("pending_redemption_amount", 0)
@@ -109,7 +111,9 @@ export class CustomerRedemptionsService {
       .order("id", { ascending: true });
 
     if (breakdownError) {
-      throw new Error(`Failed to read pending breakdown: ${breakdownError.message}`);
+      throw new Error(
+        `Failed to read pending breakdown: ${breakdownError.message}`,
+      );
     }
 
     // 3. Resolve the merchant row (for display name / logo on confirm).
@@ -136,7 +140,8 @@ export class CustomerRedemptionsService {
     return {
       merchant_id: merchantId,
       requested_amount: requestedAmount,
-      pending_credit_breakdown: (breakdown ?? []) as CustomerPendingRequestResult["pending_credit_breakdown"],
+      pending_credit_breakdown: (breakdown ??
+        []) as CustomerPendingRequestResult["pending_credit_breakdown"],
       merchant,
     };
   }

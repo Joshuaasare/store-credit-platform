@@ -492,6 +492,14 @@ export default async function (fastify: FastifyInstance) {
   }>("/me/merchants/:merchantId/redemptions", {
     preHandler: [requireAuth],
     schema: {
+      // DELETE carries no body. Fastify 5's default JSON parser rejects
+      // `Content-Type: application/json` + empty payload with
+      // `FST_ERR_CTP_EMPTY_JSON_BODY` before the handler runs. The
+      // global JSON parser override (in `app.ts`) replaces that
+      // behaviour so an empty body parses to `undefined` instead of
+      // throwing. The route still declares `body: null` so the schema
+      // validator doesn't require a body shape.
+      body: null,
       response: {
         200: CustomerPendingRequestMutationApiResponse,
         400: CustomerPendingRequestMutationApiResponse,

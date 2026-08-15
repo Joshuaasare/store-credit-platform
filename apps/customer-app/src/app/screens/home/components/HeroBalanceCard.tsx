@@ -34,13 +34,7 @@ export default function HeroBalanceCard({
   const theme = useThemeTokens();
   const formattedAmount = formatGhs(totalRemaining);
   return (
-    <View
-      style={[
-        styles.card,
-        { backgroundColor: theme.colors.heroSurface },
-        // { backgroundColor: "#89023E" },
-      ]}
-    >
+    <View style={[styles.card, { backgroundColor: theme.colors.heroSurface }]}>
       {/* Soft white highlight at the top so the gradient doesn't read as a flat
           block. Pure white at low alpha gives the card a "lit edge" without
           committing to a photo or pattern. */}
@@ -187,8 +181,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 14,
     paddingVertical: 8,
-    borderRadius: 999,
     backgroundColor: "#ffffff",
+    borderRadius: 5,
   },
   pillCtaLabel: {
     fontFamily: "Inter_600SemiBold",

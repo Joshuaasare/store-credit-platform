@@ -1,10 +1,5 @@
-import { useMemo, useState } from "react";
-import {
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import { useEffect, useMemo, useState } from "react";
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { RouteProp } from "@react-navigation/native";
@@ -29,6 +24,7 @@ import MerchantTabSwitcher, {
   type MerchantTab,
 } from "./components/MerchantTabSwitcher";
 import MerchantRedemptionConfirmSheet from "./components/MerchantRedemptionConfirmSheet";
+import RedemptionAmountSheet from "./components/RedemptionAmountSheet";
 import { CreditsMerchantAvailable } from "./screens/CreditsMerchantAvailable";
 import { CreditsMerchantPending } from "./screens/CreditsMerchantPending";
 
@@ -59,6 +55,7 @@ export function MerchantCreditsScreen() {
   const route =
     useRoute<RouteProp<AppStackParamList, "CreditsMerchantDetail">>();
   const merchantId = route.params.merchantId;
+  const autoOpenRedemption = route.params.autoOpenRedemption ?? false;
   const navigation = useNavigation();
   const queryClient = useQueryClient();
 
@@ -102,10 +99,71 @@ export function MerchantCreditsScreen() {
     [],
   );
 
+  // Pending totals at this merchant — drives both the redeem-button
+  // disable state (any pending → both CTAs disabled) and the sheet's
+  // cap (available + current_pending, per the grilled decision).
+  const pendingTotal = useMemo(() => {
+    if (!creditsQuery.data?.success) return 0;
+    let sum = 0;
+    for (const credit of creditsQuery.data.data.live) {
+      if (credit.branch.merchant.id !== merchantId) continue;
+      sum += Number(credit.pending_redemption_amount) || 0;
+    }
+    return sum;
+  }, [creditsQuery.data, merchantId]);
+
+  const availableTotal = bucket?.totalRemaining ?? 0;
+  const redemptionCap = availableTotal + pendingTotal;
+  const isRedeemDisabled = redemptionCap <= 0;
+
   // Cancel state — the parent owns the sheet + mutation so the rolled-up
   // Pending card can fire `onCancelRequest(merchantId)` without the
   // child owning its own.
   const [pendingCancel, setPendingCancel] = useState(false);
+
+  // Create / edit redemption sheet — `'closed' | 'create' | 'edit'`. The
+  // mode drives the sheet copy + initial value.
+  const [redemptionSheet, setRedemptionSheet] = useState<
+    "closed" | "create" | "edit"
+  >("closed");
+
+  const upsertMutation = useMutation({
+    mutationFn: (amount: number) =>
+      customerRedemptionsService.upsertMyPendingRequest({
+        merchantId,
+        amount,
+      }),
+    onSuccess: async (result) => {
+      if (!result.success) {
+        console.warn("Upsert redemption failed:", result.error);
+        return;
+      }
+      // Auto-dismiss on success — the fan-out preview was the
+      // confirmation moment (per the grilled decision).
+      setRedemptionSheet("closed");
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: CREDITS_QUERY_KEY }),
+        queryClient.invalidateQueries({ queryKey: PENDING_REQUEST_KEY }),
+      ]);
+    },
+    onError: (err) => {
+      console.warn("Upsert redemption errored:", err);
+    },
+  });
+
+  // Auto-open the redemption sheet when navigated from the main Credits
+  // screen with `autoOpenRedemption: true`. Only fires once after the
+  // credits query has data (so the cap is correct) and the redeem
+  // affordance isn't disabled.
+  useEffect(() => {
+    if (!autoOpenRedemption) return;
+    if (redemptionSheet !== "closed") return;
+    if (creditsQuery.isLoading) return;
+    if (isRedeemDisabled) return;
+    setRedemptionSheet(pendingTotal > 0 ? "edit" : "create");
+    // We only want this to fire once on mount with the param set.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoOpenRedemption, creditsQuery.isLoading]);
 
   const cancelMutation = useMutation({
     mutationFn: () =>
@@ -148,16 +206,43 @@ export function MerchantCreditsScreen() {
 
         <View style={styles.scrollArea}>
           {tab === "available" ? (
-            <CreditsMerchantAvailable />
+            <CreditsMerchantAvailable
+              onRedeemPress={() => {
+                if (isRedeemDisabled) return;
+                setRedemptionSheet(pendingTotal > 0 ? "edit" : "create");
+              }}
+              isRedeemDisabled={isRedeemDisabled}
+              redeemCtaLabel={
+                pendingTotal > 0 ? "Edit pending request" : "Redeem Now"
+              }
+            />
           ) : (
             <CreditsMerchantPending
               merchantId={merchantId}
               merchantName={bucket?.merchantName ?? "this merchant"}
               onCancelRequest={() => setPendingCancel(true)}
+              onEditRequest={() => setRedemptionSheet("edit")}
             />
           )}
         </View>
       </View>
+
+      <RedemptionAmountSheet
+        visible={redemptionSheet !== "closed"}
+        mode={redemptionSheet === "edit" ? "edit" : "create"}
+        initialAmount={pendingTotal}
+        maxAmount={redemptionCap}
+        merchantName={bucket?.merchantName ?? "this merchant"}
+        isSubmitting={upsertMutation.isPending}
+        onSubmit={(amount) => {
+          if (upsertMutation.isPending) return;
+          upsertMutation.mutate(amount);
+        }}
+        onDismiss={() => {
+          if (upsertMutation.isPending) return;
+          setRedemptionSheet("closed");
+        }}
+      />
 
       <MerchantRedemptionConfirmSheet
         visible={pendingCancel}
@@ -203,7 +288,7 @@ function DetailHeader({
   return (
     <SafeAreaView
       edges={["top"]}
-      style={[styles.header, { backgroundColor: theme.colors.heroSurface }]}
+      style={[styles.header, { backgroundColor: theme.colors.primary }]}
     >
       {/* Decorative coupon layer — sits behind the row of content.
           A rotated ticket-style rectangle with a dashed perforation

@@ -7,7 +7,6 @@ import {
   View,
   type ListRenderItem,
 } from "react-native";
-import Animated, { useAnimatedStyle } from "react-native-reanimated";
 import { Ionicons } from "@expo/vector-icons";
 import type { CustomerActivity } from "@store-credit-platform/api-services";
 import ActivityRow from "../../../shared/components/ActivityRow";
@@ -25,13 +24,11 @@ export default function RecentActivitySection({
   previewError,
   previewItems,
   onOpenActivitiesModal,
-  sectionAnimatedStyle,
 }: {
   previewLoading: boolean;
   previewError: Error | null;
   previewItems: CustomerActivity[];
   onOpenActivitiesModal: () => void;
-  sectionAnimatedStyle: ReturnType<typeof useAnimatedStyle>;
 }) {
   const theme = useThemeTokens();
 
@@ -48,91 +45,89 @@ export default function RecentActivitySection({
 
   return (
     <View style={styles.section}>
-      <Animated.View style={sectionAnimatedStyle}>
-        <GlassCard padding={20}>
-          {/* Card header — sits inside the card on its own row */}
-          <View style={styles.cardHeader}>
+      <GlassCard padding={20}>
+        {/* Card header — sits inside the card on its own row */}
+        <View style={styles.cardHeader}>
+          <Text
+            style={{
+              color: theme.colors.text,
+              fontFamily: theme.typography.fontFamilySemiBold,
+              fontSize: 18,
+              letterSpacing: 0.1,
+            }}
+          >
+            Recent Activity
+          </Text>
+          <TouchableOpacity
+            onPress={onOpenActivitiesModal}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel="See all activity"
+            style={styles.seeAllPill}
+          >
             <Text
               style={{
-                color: theme.colors.text,
+                color: theme.colors.primary,
                 fontFamily: theme.typography.fontFamilySemiBold,
-                fontSize: 18,
-                letterSpacing: 0.1,
-              }}
-            >
-              Recent Activity
-            </Text>
-            <TouchableOpacity
-              onPress={onOpenActivitiesModal}
-              activeOpacity={0.7}
-              accessibilityRole="button"
-              accessibilityLabel="See all activity"
-              style={styles.seeAllPill}
-            >
-              <Text
-                style={{
-                  color: theme.colors.primary,
-                  fontFamily: theme.typography.fontFamilySemiBold,
-                  fontSize: 14,
-                }}
-              >
-                See all
-              </Text>
-              <Ionicons
-                name="arrow-forward"
-                size={14}
-                color={theme.colors.primary}
-              />
-            </TouchableOpacity>
-          </View>
-
-          {/* Body — list, loading, error, or empty, all inside the card */}
-          {previewLoading && previewItems.length === 0 ? (
-            <View style={styles.placeholderRow}>
-              <ActivityIndicator size="small" color={theme.colors.primary} />
-              <Text
-                style={{
-                  color: theme.colors.textSecondary,
-                  fontFamily: theme.typography.fontFamilyRegular,
-                  fontSize: 14,
-                  marginLeft: 8,
-                }}
-              >
-                Loading activity…
-              </Text>
-            </View>
-          ) : previewError && previewItems.length === 0 ? (
-            <Text
-              style={{
-                color: theme.colors.error,
-                fontFamily: theme.typography.fontFamilyRegular,
                 fontSize: 14,
               }}
             >
-              Couldn't load activity.
+              See all
             </Text>
-          ) : previewItems.length === 0 ? (
-            <Text
-              style={{
-                color: theme.colors.textMuted,
-                fontFamily: theme.typography.fontFamilyRegular,
-                fontSize: 14,
-              }}
-            >
-              No activity yet — visit a merchant to get started.
-            </Text>
-          ) : (
-            <FlatList
-              data={previewItems}
-              keyExtractor={keyExtractor}
-              renderItem={renderActivityRow}
-              ItemSeparatorComponent={ItemSeparator}
-              scrollEnabled={false}
-              showsVerticalScrollIndicator={false}
+            <Ionicons
+              name="arrow-forward"
+              size={14}
+              color={theme.colors.primary}
             />
-          )}
-        </GlassCard>
-      </Animated.View>
+          </TouchableOpacity>
+        </View>
+
+        {/* Body — list, loading, error, or empty, all inside the card */}
+        {previewLoading && previewItems.length === 0 ? (
+          <View style={styles.placeholderRow}>
+            <ActivityIndicator size="small" color={theme.colors.primary} />
+            <Text
+              style={{
+                color: theme.colors.textSecondary,
+                fontFamily: theme.typography.fontFamilyRegular,
+                fontSize: 14,
+                marginLeft: 8,
+              }}
+            >
+              Loading activity…
+            </Text>
+          </View>
+        ) : previewError && previewItems.length === 0 ? (
+          <Text
+            style={{
+              color: theme.colors.error,
+              fontFamily: theme.typography.fontFamilyRegular,
+              fontSize: 14,
+            }}
+          >
+            Couldn't load activity.
+          </Text>
+        ) : previewItems.length === 0 ? (
+          <Text
+            style={{
+              color: theme.colors.textMuted,
+              fontFamily: theme.typography.fontFamilyRegular,
+              fontSize: 14,
+            }}
+          >
+            No activity yet — visit a merchant to get started.
+          </Text>
+        ) : (
+          <FlatList
+            data={previewItems}
+            keyExtractor={keyExtractor}
+            renderItem={renderActivityRow}
+            ItemSeparatorComponent={ItemSeparator}
+            scrollEnabled={false}
+            showsVerticalScrollIndicator={false}
+          />
+        )}
+      </GlassCard>
     </View>
   );
 }

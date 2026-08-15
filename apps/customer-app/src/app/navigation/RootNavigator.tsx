@@ -17,7 +17,10 @@ export type AuthStackParamList = {
 
 export type AppStackParamList = {
   Tabs: undefined;
-  CreditsMerchantDetail: { merchantId: number };
+  CreditsMerchantDetail: {
+    merchantId: number;
+    autoOpenRedemption?: boolean;
+  };
 };
 
 const AuthStack = createNativeStackNavigator<AuthStackParamList>();

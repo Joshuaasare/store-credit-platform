@@ -1,5 +1,6 @@
 import { useMemo } from "react";
-import { FlatList, StyleSheet, Text, View } from "react-native";
+import { FlatList, Pressable, StyleSheet, Text, View } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
 import type { RouteProp } from "@react-navigation/native";
 import { useRoute } from "@react-navigation/native";
@@ -28,7 +29,15 @@ const CREDITS_QUERY_KEY = ["customer", "credits"] as const;
  * the prior `MerchantCreditsScreen` body. The header + progress + tab
  * switcher live on the parent screen.
  */
-export function CreditsMerchantAvailable() {
+export function CreditsMerchantAvailable({
+  onRedeemPress,
+  isRedeemDisabled,
+  redeemCtaLabel,
+}: {
+  onRedeemPress: () => void;
+  isRedeemDisabled: boolean;
+  redeemCtaLabel: string;
+}) {
   const theme = useThemeTokens();
   const route =
     useRoute<RouteProp<AppStackParamList, "CreditsMerchantDetail">>();
@@ -54,10 +63,17 @@ export function CreditsMerchantAvailable() {
   // show a "Branch A — 2 credits, GH₵X total" section header. Even
   // when every credit lives at a single branch, this still renders the
   // branch name so the user knows where the credit is spendable.
+  //
+  // Credits whose remaining has been fully consumed by pending
+  // (remaining <= 0) are dropped from the Available list — they're no
+  // longer spendable, so showing them would only add noise. The
+  // customer still sees them on the merchant's Approved history (via
+  // the audit feed) once approved.
   const sections = useMemo<BranchSection[]>(() => {
     if (!bucket) return [];
     const byBranch = new Map<number, BranchSection>();
     for (const credit of bucket.credits) {
+      if (Number(credit.remaining) <= 0) continue;
       const existing = byBranch.get(credit.branch.id);
       if (existing) {
         existing.credits.push(credit);
@@ -80,6 +96,7 @@ export function CreditsMerchantAvailable() {
   const flatRows = useMemo<DetailRow[]>(() => {
     const rows: DetailRow[] = [];
     for (const section of sections) {
+      if (section.credits.length === 0) continue;
       rows.push({ kind: "section", section });
       for (const credit of section.credits) {
         rows.push({ kind: "credit", credit });
@@ -111,6 +128,23 @@ export function CreditsMerchantAvailable() {
       </View>
     );
   }
+  if (flatRows.length === 0) {
+    return (
+      <View style={styles.centerFill}>
+        <Text
+          style={{
+            color: theme.colors.textSecondary,
+            fontFamily: theme.typography.fontFamilyRegular,
+            fontSize: 14,
+            textAlign: "center",
+          }}
+        >
+          Every credit here is reserved by a pending request. Cancel or wait for
+          approval to free it up.
+        </Text>
+      </View>
+    );
+  }
 
   return (
     <FlatList
@@ -129,6 +163,38 @@ export function CreditsMerchantAvailable() {
       }
       contentContainerStyle={styles.listContent}
       showsVerticalScrollIndicator={false}
+      ListFooterComponent={
+        <Pressable
+          onPress={onRedeemPress}
+          disabled={isRedeemDisabled}
+          accessibilityRole="button"
+          accessibilityLabel={redeemCtaLabel}
+          style={({ pressed }) => [
+            styles.cta,
+            {
+              backgroundColor: theme.colors.primary,
+              opacity: isRedeemDisabled ? 0.45 : pressed ? 0.85 : 1,
+            },
+          ]}
+        >
+          <Text
+            style={{
+              color: theme.colors.textOnPrimary,
+              fontFamily: theme.typography.fontFamilySemiBold,
+              fontSize: 15,
+              letterSpacing: 0.2,
+            }}
+          >
+            {redeemCtaLabel}
+          </Text>
+          <Ionicons
+            name="gift-outline"
+            size={16}
+            color={theme.colors.textOnPrimary}
+            style={{ marginLeft: 6, marginTop: -1 }}
+          />
+        </Pressable>
+      }
     />
   );
 }
@@ -176,6 +242,12 @@ function CreditDetailRow({
   const theme = useThemeTokens();
   const amount = Number(credit.credit_amount) || 0;
   const remaining = Number(credit.remaining) || 0;
+  // The bar represents how much of this credit is still available.
+  // 100% remaining → fully filled; 0% remaining → empty. Clamped 0–1
+  // so a rounding overshoot on `remaining` doesn't render a >100% bar.
+  const fillRatio =
+    amount > 0 ? Math.max(0, Math.min(1, remaining / amount)) : 0;
+  const fillPercent = Math.round(fillRatio * 100);
 
   const chip = creditStatusChip(credit.expires_at);
   const chipBg =
@@ -197,7 +269,7 @@ function CreditDetailRow({
             style={[
               styles.creditAmount,
               {
-                color: theme.colors.heroSurface,
+                color: theme.colors.primary,
                 fontFamily: theme.typography.fontFamilyBold,
               },
             ]}
@@ -233,6 +305,35 @@ function CreditDetailRow({
             {chip.label}
           </Text>
         </View>
+      </View>
+
+      {/* Per-credit progress bar — how much of this credit is still
+          available (remaining vs credit's principal). A credit that's
+          untouched renders fully filled; one fully consumed by
+          pending renders empty. Clamped 0–100% so a rounding
+          overshoot on `remaining` doesn't overflow the track. */}
+      <View
+        style={[
+          styles.progressTrack,
+          { backgroundColor: theme.colors.surfacePill },
+        ]}
+        accessibilityRole="progressbar"
+        accessibilityValue={{
+          min: 0,
+          max: 100,
+          now: fillPercent,
+        }}
+        accessibilityLabel={`${fillPercent}% available`}
+      >
+        <View
+          style={[
+            styles.progressFill,
+            {
+              width: `${fillPercent}%`,
+              backgroundColor: theme.colors.primary,
+            },
+          ]}
+        />
       </View>
 
       <View style={styles.creditMetaRow}>
@@ -288,6 +389,14 @@ const styles = StyleSheet.create({
   listContent: {
     paddingBottom: 24,
   },
+  cta: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    height: 52,
+    borderRadius: 8,
+    marginTop: 16,
+  },
   sectionHeader: {
     flexDirection: "row",
     alignItems: "center",
@@ -340,5 +449,15 @@ const styles = StyleSheet.create({
   },
   creditMetaValue: {
     fontSize: 12,
+  },
+  progressTrack: {
+    height: 6,
+    borderRadius: 3,
+    marginTop: 14,
+    overflow: "hidden",
+  },
+  progressFill: {
+    height: "100%",
+    borderRadius: 3,
   },
 });

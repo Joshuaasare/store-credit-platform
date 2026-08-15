@@ -23,10 +23,20 @@ import type { ActivitiesFeedQuery } from "../useActivitiesFeed";
  * drives the FlatList's `onEndReached → fetchNextPage` plumbing, and
  * shows the "Loading more…" / "That's all your activity." footer.
  *
- * Visual model: slides up from the bottom over a dim scrim, the same
- * idiom as the country-picker sheet in `PhoneInput.tsx`. The scrim is
- * hardcoded `rgba(0,0,0,0.45)` because it's a one-off dim layer (not a
- * themed surface) and adding a `scrim` token is a separate theme change.
+ * Visual model: bottom sheet (NOT a centered modal). The list surface
+ * anchors to the bottom of the screen and grows up to half the screen
+ * height — the user can scroll the list inside the surface or glance
+ * back at the home screen for context. The surface carries a grabber
+ * pill at the top so it reads as a sheet, not a centered dialog.
+ *
+ * This is intentionally a separate idiom from the centered modals
+ * (`RedemptionAmountSheet`, `MerchantRedemptionConfirmSheet`) which are
+ * for short-form confirm moments. A long paginated list behaves like a
+ * scroll view, not a dialog, so the centered pattern would cramp it.
+ *
+ * The scrim is hardcoded `rgba(0,0,0,0.45)` because it's a one-off dim
+ * layer (not a themed surface) and adding a `scrim` token is a separate
+ * theme change.
  */
 type ActivitiesModalProps = {
   visible: boolean;
@@ -349,7 +359,7 @@ const styles = StyleSheet.create({
   sheet: {
     paddingTop: 8,
     paddingBottom: 32,
-    maxHeight: "85%",
+    maxHeight: "50%",
   },
   grabber: {
     width: 36,
