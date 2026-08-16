@@ -1,12 +1,19 @@
 import { useEffect, useMemo, useState } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import type { RouteProp } from "@react-navigation/native";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import type {
   BaseBranch,
+  CustomerApprovedRedemption,
+  CustomerApprovedRedemptionApiResponse,
   CustomerCreditsApiResponse,
   CustomerMerchantBranchesApiResponse,
   CustomerPendingRedemption,
@@ -32,11 +39,13 @@ import MerchantTabSwitcher, {
 import MerchantRedemptionConfirmSheet from "./components/MerchantRedemptionConfirmSheet";
 import RedemptionAmountSheet from "./components/RedemptionAmountSheet";
 import { CreditsMerchantAvailable } from "./screens/CreditsMerchantAvailable";
+import { CreditsMerchantApproved } from "./screens/CreditsMerchantApproved";
 import { CreditsMerchantPending } from "./screens/CreditsMerchantPending";
 
 const CREDITS_QUERY_KEY = ["customer", "credits"] as const;
 const PENDING_REQUEST_KEY = ["customer", "pendingRequest"] as const;
 const BRANCHES_KEY_PREFIX = ["customer", "merchantBranches"] as const;
+const APPROVED_REDEMPTIONS_KEY = ["customer", "approvedRedemptions"] as const;
 
 /**
  * Parent merchant credit detail screen. Owns:
@@ -88,6 +97,51 @@ export function MerchantCreditsScreen() {
     queryFn: () => customerRedemptionsService.getMyPendingRequest(merchantId),
   });
 
+  // The customer's approved history at this merchant — drives the
+  // Approved tab. Cursor-paginated 20-per-page; the parent owns the
+  // query so the cache survives tab switches. The child
+  // `CreditsMerchantApproved` reads `items` + `hasNextPage` /
+  // `fetchNextPage` and renders the FlatList.
+  const approvedInfinite = useInfiniteQuery<
+    CustomerApprovedRedemptionApiResponse,
+    Error,
+    { pages: CustomerApprovedRedemptionApiResponse[]; pageParams: unknown[] },
+    readonly ["customer", "approvedRedemptions", number],
+    number | undefined
+  >({
+    queryKey: [...APPROVED_REDEMPTIONS_KEY, merchantId] as readonly [
+      "customer",
+      "approvedRedemptions",
+      number,
+    ],
+    initialPageParam: undefined,
+    queryFn: ({ pageParam }) =>
+      customerRedemptionsService.getMyApprovedRedemptions(merchantId, {
+        cursor: pageParam,
+        limit: 20,
+      }),
+    getNextPageParam: (last) => {
+      if (!last.success) return undefined;
+      const next = last.data?.nextCursor;
+      return next == null ? undefined : next;
+    },
+  });
+
+  // Flatten the infinite-query pages into a single items array for
+  // the child. Failed pages are skipped so a transient mid-feed error
+  // doesn't blank the list — the child surfaces the latest failure
+  // separately via `approvedInfinite.error`.
+  const approvedItems: CustomerApprovedRedemption[] = useMemo(() => {
+    const pages = approvedInfinite.data?.pages ?? [];
+    const items: CustomerApprovedRedemption[] = [];
+    for (const page of pages) {
+      if (page.success && page.data) {
+        items.push(...page.data.items);
+      }
+    }
+    return items;
+  }, [approvedInfinite.data]);
+
   const branches: BaseBranch[] = useMemo(() => {
     const data = branchesQuery.data;
     if (data?.success) return data.data;
@@ -126,6 +180,7 @@ export function MerchantCreditsScreen() {
     () => [
       { value: "available", label: "Available" },
       { value: "pending", label: "Pending" },
+      { value: "approved", label: "Approved" },
     ],
     [],
   );
@@ -264,12 +319,23 @@ export function MerchantCreditsScreen() {
                 pendingTotal > 0 ? "Edit pending request" : "Redeem Now"
               }
             />
-          ) : (
+          ) : tab === "pending" ? (
             <CreditsMerchantPending
               merchantId={merchantId}
               merchantName={bucket?.merchantName ?? "this merchant"}
               onCancelRequest={() => setPendingCancel(true)}
               onEditRequest={() => setRedemptionSheet("edit")}
+            />
+          ) : (
+            <CreditsMerchantApproved
+              items={approvedItems}
+              isLoading={approvedInfinite.isLoading}
+              isError={approvedInfinite.isError}
+              error={approvedInfinite.error}
+              isFetchingNextPage={approvedInfinite.isFetchingNextPage}
+              hasNextPage={approvedInfinite.hasNextPage}
+              fetchNextPage={approvedInfinite.fetchNextPage}
+              refetch={approvedInfinite.refetch}
             />
           )}
         </View>

@@ -1,6 +1,8 @@
 import { supabaseAdmin } from "../utils/supabase.client";
 import { QueryFragments } from "../constants/queryFragments";
 import {
+  CustomerApprovedRedemption,
+  CustomerApprovedRedemptionPage,
   CustomerPendingRedemption,
   CustomerRedemptionRequestBody,
   CustomerRedemptionRequestResult,
@@ -104,6 +106,82 @@ export class CustomerRedemptionsService {
       requested_date: Number(data.requested_date),
       requested_at: String(data.created_at),
     };
+  }
+
+  /**
+   * List the customer's approved redemptions at one merchant — drives
+   * the merchant-screen "Approved" tab. One row per approved request
+   * (the audit-trail projection, NOT the per-credit slice rows).
+   *
+   * Cursor-paginated by `approved_at DESC`. The caller passes the last
+   * item's `approved_at` (ms) as `cursor`; the service filters with
+   * `approved_at < cursor` so rows are strictly older than the previous
+   * page. `limit` is clamped to [1, 50] with a default of 20.
+   *
+   * `nextCursor` is the last row's `approved_at` (ms) when the page
+   * came back exactly `limit`-sized — i.e. the caller should keep
+   * fetching. `null` when the page was partial or empty (end-of-feed).
+   *
+   * The 4-digit code is intentionally NOT returned — the code was used
+   * once at approve time and is no longer needed for reference. Customer
+   * privacy: the merchant side has its own list (see the webapp's
+   * `Redemptions.tsx`) which excludes the code.
+   */
+  async getMyApprovedRedemptions(
+    customerId: number,
+    merchantId: number,
+    params: { cursor?: number; limit: number },
+  ): Promise<CustomerApprovedRedemptionPage> {
+    const limit = Math.min(Math.max(1, params.limit), 50);
+    let query = supabaseAdmin
+      .from("customer_credit_redemptions")
+      .select(
+        `id, branch_id, amount_redeemed, approved_at,
+         branch:branches(${QueryFragments.BASE_BRANCH})`,
+      )
+      .eq("customer_id", customerId)
+      .eq("merchant_id", merchantId)
+      .is("deleted_at", null)
+      .not("approved_at", "is", null)
+      .order("approved_at", { ascending: false })
+      .limit(limit);
+
+    if (params.cursor !== undefined) {
+      // Supabase returns timestamptz as ISO; the cursor arrives as ms
+      // from the client. Convert at the boundary so the predicate is
+      // a real timestamp comparison rather than a string sort.
+      query = query.lt(
+        "approved_at",
+        new Date(params.cursor).toISOString(),
+      );
+    }
+
+    const { data, error } = await query;
+    if (error) {
+      throw new Error(
+        `Failed to load approved redemptions: ${error.message}`,
+      );
+    }
+    const rows = data ?? [];
+
+    const items: CustomerApprovedRedemption[] = rows.map((row) => {
+      const branch = row.branch as unknown as { name: string | null } | null;
+      return {
+        redemption_id: Number(row.id),
+        branch_id: Number(row.branch_id),
+        branch_name: branch?.name ?? null,
+        amount_redeemed: Number(row.amount_redeemed),
+        approved_at: new Date(String(row.approved_at)).getTime(),
+      };
+    });
+
+    const last = rows[rows.length - 1];
+    const nextCursor =
+      rows.length === limit && last
+        ? new Date(String(last.approved_at)).getTime()
+        : null;
+
+    return { items, nextCursor };
   }
 
   // ──────────────────────────────────────────────────────────────────────────

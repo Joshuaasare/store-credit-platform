@@ -88,3 +88,45 @@ export const CustomerRedemptionCancelApiResponse = Type.Union([
 CustomerRedemptionCancelResponse,
 ApiErrorResponse
 ])
+
+export type CustomerApprovedRedemption = Static<typeof CustomerApprovedRedemption>
+export const CustomerApprovedRedemption = Type.Object({
+redemption_id: Type.Number(),
+amount_redeemed: Type.Number(),
+branch_id: Type.Number(),
+branch_name: Type.Union([
+Type.String(),
+Type.Null()
+]),
+approved_at: Type.Number()
+})
+
+export type CustomerApprovedRedemptionPage = Static<typeof CustomerApprovedRedemptionPage>
+export const CustomerApprovedRedemptionPage = Type.Object({
+items: Type.Array(CustomerApprovedRedemption),
+nextCursor: Type.Union([
+Type.Number(),
+Type.Null()
+])
+})
+
+export type CustomerApprovedRedemptionResponse = Static<typeof CustomerApprovedRedemptionResponse>
+export const CustomerApprovedRedemptionResponse = Type.Object({
+success: Type.Literal(true),
+data: CustomerApprovedRedemptionPage
+})
+
+export type CustomerApprovedRedemptionApiResponse = Static<typeof CustomerApprovedRedemptionApiResponse>
+export const CustomerApprovedRedemptionApiResponse = Type.Union([
+CustomerApprovedRedemptionResponse,
+ApiErrorResponse
+])
+
+export type CustomerApprovedRedemptionQuerystring = Static<typeof CustomerApprovedRedemptionQuerystring>
+export const CustomerApprovedRedemptionQuerystring = Type.Object({
+cursor: Type.Optional(Type.Union([
+Type.String(),
+Type.Number()
+])),
+limit: Type.Optional(Type.Number())
+})

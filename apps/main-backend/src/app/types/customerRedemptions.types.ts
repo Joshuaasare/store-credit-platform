@@ -8,11 +8,12 @@
 // customer's pending card; the merchant enters the same code at approve
 // or reject time.
 //
-// Two query endpoints (`GET .../branches`, `GET .../redemptions/pending`)
-// and three mutation endpoints (`POST/PATCH/DELETE .../redemptions`).
-// Mutations go through SQL RPCs (`redemption_request_create`,
-// `redemption_request_update`, `redemption_request_cancel`) so the
-// audit-row write + fan-out happen atomically.
+// Three query endpoints (`GET .../branches`, `GET .../redemptions/pending`,
+// `GET .../redemptions/approved`) and three mutation endpoints
+// (`POST/PATCH/DELETE .../redemptions`). Mutations go through SQL RPCs
+// (`redemption_request_create`, `redemption_request_update`,
+// `redemption_request_cancel`) so the audit-row write + fan-out happen
+// atomically.
 
 import { ApiErrorResponse, BaseBranch } from "./main.types";
 
@@ -116,3 +117,52 @@ export interface CustomerRedemptionCancelResponse {
 export type CustomerRedemptionCancelApiResponse =
   | CustomerRedemptionCancelResponse
   | ApiErrorResponse;
+
+// ────────────────────────────────────────────────────────────────────────────
+// GET .../redemptions/approved
+// ────────────────────────────────────────────────────────────────────────────
+// Customer-facing view of past approved redemptions at one merchant.
+// One row per approved request (the audit-trail row, not the per-credit
+// slice rows). Powers the merchant-screen "Approved" tab — infinite-scroll
+// list, ordered `approved_at DESC`. The 4-digit code is intentionally
+// NOT included — the code was used once at the till and is no longer
+// needed for reference.
+
+// One item in the approved list. `approved_at` is epoch ms — matches
+// the customer-app's `date.utils.ts` convention (all time helpers take
+// ms). `branch_name` is null when the branch got soft-deleted after
+// the redemption (the audit row keeps `branch_id` for accounting; the
+// UI falls back to `"—"` so the row stays readable).
+export interface CustomerApprovedRedemption {
+  redemption_id: number;
+  amount_redeemed: number;
+  branch_id: number;
+  branch_name: string | null;
+  approved_at: number;
+}
+
+// Cursor-paginated page. `nextCursor` is the last item's `approved_at`
+// (ms) when the page was full — i.e. there may be more rows. `null`
+// when the page was partial / empty, signalling end-of-feed.
+export interface CustomerApprovedRedemptionPage {
+  items: CustomerApprovedRedemption[];
+  nextCursor: number | null;
+}
+
+export interface CustomerApprovedRedemptionResponse {
+  success: true;
+  data: CustomerApprovedRedemptionPage;
+}
+
+export type CustomerApprovedRedemptionApiResponse =
+  | CustomerApprovedRedemptionResponse
+  | ApiErrorResponse;
+
+// Querystring schema (mirrored as a TypeBox schema in the auto-gen
+// `schemas/customerRedemptions.schema.ts`). `cursor` arrives as a
+// string in the querystring and is coerced to `number` in the route
+// handler. `limit` defaults to 20, capped at 50 by the service.
+export interface CustomerApprovedRedemptionQuerystring {
+  cursor?: string | number;
+  limit?: number;
+}

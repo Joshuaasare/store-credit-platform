@@ -1,6 +1,6 @@
 /**
  * Auto-generated API Types
- * Generated on: 2026-08-16T09:17:23.059Z
+ * Generated on: 2026-08-16T14:14:48.039Z
  * 
  * ⚠️ DO NOT EDIT MANUALLY
  * Source: apps/smartschool-api/src/app/types/
@@ -781,6 +781,33 @@ export interface CustomerRedemptionCancelResponse {
 export type CustomerRedemptionCancelApiResponse =
   | CustomerRedemptionCancelResponse
   | ApiErrorResponse;
+
+export interface CustomerApprovedRedemption {
+  redemption_id: number;
+  amount_redeemed: number;
+  branch_id: number;
+  branch_name: string | null;
+  approved_at: number;
+}
+
+export interface CustomerApprovedRedemptionPage {
+  items: CustomerApprovedRedemption[];
+  nextCursor: number | null;
+}
+
+export interface CustomerApprovedRedemptionResponse {
+  success: true;
+  data: CustomerApprovedRedemptionPage;
+}
+
+export type CustomerApprovedRedemptionApiResponse =
+  | CustomerApprovedRedemptionResponse
+  | ApiErrorResponse;
+
+export interface CustomerApprovedRedemptionQuerystring {
+  cursor?: string | number;
+  limit?: number;
+}
 
 export type LeaderboardSort =
   | "purchases"

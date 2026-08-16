@@ -1,5 +1,6 @@
 import { createApiClient, ApiClientConfig } from "./apiService.js";
 import {
+  CustomerApprovedRedemptionApiResponse,
   CustomerMerchantBranchesApiResponse,
   CustomerPendingRedemptionApiResponse,
   CustomerRedemptionCancelApiResponse,
@@ -16,9 +17,10 @@ import {
  * carries a 4-digit code that's shown on the customer's Pending tab
  * and entered by the merchant staff at approve / reject time.
  *
- * Five endpoints:
+ * Six endpoints:
  *   GET    .../branches             — list non-deleted branches at the merchant
  *   GET    .../redemptions/pending  — fetch the pending audit row + code
+ *   GET    .../redemptions/approved — cursor-paginated approved history
  *   POST   .../redemptions          — create (rejects 409 if pending exists)
  *   PATCH  .../redemptions          — edit (404 if no pending; no-op when amount+branch unchanged)
  *   DELETE .../redemptions          — cancel (idempotent: hard-deletes the row + zeroes fan-out)
@@ -64,6 +66,33 @@ export function createCustomerRedemptionsService(
         `/customers/me/merchants/${encodeURIComponent(merchantId)}/redemptions/pending`,
         { method: "GET" },
       );
+    },
+
+    /**
+     * GET /customers/me/merchants/:merchantId/redemptions/approved —
+     * cursor-paginated list of the customer's approved redemptions at
+     * one merchant (drives the merchant-screen "Approved" tab).
+     *
+     * Pass `cursor` (the previous page's `nextCursor`) to fetch the
+     * next page; pass `limit` to override the default page size
+     * (server clamps to [1, 50], default 20). Omit both for the first
+     * page.
+     */
+    async getMyApprovedRedemptions(
+      merchantId: number,
+      params: { cursor?: number; limit: number },
+    ): Promise<CustomerApprovedRedemptionApiResponse> {
+      const search = new URLSearchParams();
+      if (params.cursor !== undefined) {
+        search.set("cursor", String(params.cursor));
+      }
+      search.set("limit", String(params.limit));
+      const endpoint = `/customers/me/merchants/${encodeURIComponent(
+        merchantId,
+      )}/redemptions/approved?${search.toString()}`;
+      return apiRequest<CustomerApprovedRedemptionApiResponse>(endpoint, {
+        method: "GET",
+      });
     },
 
     /**

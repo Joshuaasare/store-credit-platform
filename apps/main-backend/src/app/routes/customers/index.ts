@@ -22,6 +22,8 @@ import {
   CustomerRedemptionCancelApiResponse,
   CustomerRedemptionRequestBody,
   CustomerRedemptionRequestMutationApiResponse,
+  CustomerApprovedRedemptionApiResponse,
+  CustomerApprovedRedemptionQuerystring,
 } from "../../schemas/customerRedemptions.schema";
 
 // Querystring for the customer-app Home tab Recent Activity feed.
@@ -443,6 +445,93 @@ export default async function (fastify: FastifyInstance) {
         request.log.error(
           error,
           "GET /customers/me/merchants/:merchantId/redemptions/pending failed",
+        );
+        reply.status(400);
+        return { success: false, error: message };
+      }
+    },
+  });
+
+  /**
+   * GET /customers/me/merchants/:merchantId/redemptions/approved
+   *
+   * Cursor-paginated list of the customer's approved redemptions at one
+   * merchant — drives the merchant-screen "Approved" tab.
+   *
+   * Querystring:
+   *   - `cursor` (optional, ms epoch): the last item's `approved_at`
+   *     from the previous page. Pass `null` / omit on the first page.
+   *   - `limit` (optional, integer): page size, defaults to 20, max 50.
+   *
+   * Returns `{ success: true, data: { items, nextCursor } }`. `nextCursor`
+   * is the last item's `approved_at` (ms) when the page was exactly
+   * `limit`-sized (caller should keep fetching); `null` on a partial /
+   * empty page (end-of-feed).
+   *
+   * The 4-digit `redemption_code` is INTENTIONALLY not returned — it
+   * was used once at the till and is no longer needed for reference.
+   * The customer app falls back to `—` for `branch_name` when the
+   * branch was soft-deleted after the redemption (the audit row keeps
+   * `branch_id` for accounting).
+   */
+  fastify.get<{
+    Params: { merchantId: number };
+    Querystring: Static<typeof CustomerApprovedRedemptionQuerystring>;
+    Reply: CustomerApprovedRedemptionApiResponse;
+  }>("/me/merchants/:merchantId/redemptions/approved", {
+    preHandler: [requireAuth],
+    schema: {
+      querystring: CustomerApprovedRedemptionQuerystring,
+      response: {
+        200: CustomerApprovedRedemptionApiResponse,
+        400: CustomerApprovedRedemptionApiResponse,
+        401: CustomerApprovedRedemptionApiResponse,
+        403: CustomerApprovedRedemptionApiResponse,
+      },
+    },
+    handler: async (request, reply) => {
+      try {
+        const customerId = request.user?.customer_id;
+        if (customerId == null) {
+          reply.status(403);
+          return {
+            success: false,
+            error: "Forbidden: this endpoint is for customer accounts only",
+          };
+        }
+
+        // Coerce the cursor from querystring to a finite number. The
+        // TypeBox schema accepts `string | number | undefined`; the
+        // service expects a number for `lt(approved_at, new Date(ms))`.
+        const rawCursor = request.query.cursor;
+        let cursor: number | undefined;
+        if (rawCursor != null && rawCursor !== "") {
+          const parsed = Number(rawCursor);
+          if (!Number.isFinite(parsed) || parsed < 0) {
+            reply.status(400);
+            return {
+              success: false,
+              error: "Invalid cursor: must be a non-negative number",
+            };
+          }
+          cursor = parsed;
+        }
+
+        const limit = request.query.limit ?? 20;
+        const page = await customerRedemptionsService.getMyApprovedRedemptions(
+          customerId,
+          Number(request.params.merchantId),
+          { cursor, limit },
+        );
+        return { success: true, data: page };
+      } catch (error) {
+        const message =
+          error instanceof Error
+            ? error.message
+            : "Failed to load approved redemptions";
+        request.log.error(
+          error,
+          "GET /customers/me/merchants/:merchantId/redemptions/approved failed",
         );
         reply.status(400);
         return { success: false, error: message };
