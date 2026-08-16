@@ -244,6 +244,10 @@ export function MerchantCreditsScreen() {
         return;
       }
       setRedemptionSheet("closed");
+      // After create / update the customer wants to see (or share) the
+      // freshly-issued 4-digit code, so jump straight to the Pending
+      // tab — that's where the code chip lives.
+      setTab("pending");
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: CREDITS_QUERY_KEY }),
         queryClient.invalidateQueries({ queryKey: PENDING_REQUEST_KEY }),
