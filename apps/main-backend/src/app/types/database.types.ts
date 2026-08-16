@@ -6,11 +6,6 @@ export type Json =
   | { [key: string]: Json | undefined }
   | Json[]
 
-/**
- * Numeric epoch columns (e.g. `transaction_date`, `expires_at`) are stored as
- * milliseconds since the Unix epoch. ISO-string columns (`created_at`,
- * `approved_at`, `rejected_at`, `last_login_at`) are unchanged.
- */
 export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
@@ -187,6 +182,7 @@ export type Database = {
           merchant_id: number | null
           redemption_code: number
           rejected_at: string | null
+          requested_date: number
           transaction_date: number
           updated_at: string | null
         }
@@ -202,6 +198,7 @@ export type Database = {
           merchant_id?: number | null
           redemption_code: number
           rejected_at?: string | null
+          requested_date: number
           transaction_date: number
           updated_at?: string | null
         }
@@ -217,6 +214,7 @@ export type Database = {
           merchant_id?: number | null
           redemption_code?: number
           rejected_at?: string | null
+          requested_date?: number
           transaction_date?: number
           updated_at?: string | null
         }
@@ -817,17 +815,30 @@ export type Database = {
         Args: { p_branch_id?: number; p_merchant_id: number }
         Returns: number
       }
-      redemption_approve: {
-        Args: {
-          p_customer_id: number
-          p_merchant_id: number
-          p_staff_id: number
-        }
-        Returns: {
-          amount_redeemed: number
-          audit_id: number
-        }[]
-      }
+      redemption_approve:
+        | {
+            Args: {
+              p_customer_id: number
+              p_merchant_id: number
+              p_staff_id: number
+            }
+            Returns: {
+              amount_redeemed: number
+              audit_id: number
+            }[]
+          }
+        | {
+            Args: {
+              p_customer_id: number
+              p_merchant_id: number
+              p_redemption_code: number
+              p_staff_id: number
+            }
+            Returns: {
+              amount_redeemed: number
+              audit_id: number
+            }[]
+          }
       redemption_fan_out: {
         Args: { p_amount: number; p_customer_id: number; p_merchant_id: number }
         Returns: {
@@ -835,11 +846,55 @@ export type Database = {
           pending_redemption_amount: number
         }[]
       }
-      redemption_reject: {
-        Args: { p_customer_id: number; p_merchant_id: number }
+      redemption_reject:
+        | {
+            Args: { p_customer_id: number; p_merchant_id: number }
+            Returns: {
+              amount_redeemed: number
+              audit_id: number
+            }[]
+          }
+        | {
+            Args: {
+              p_customer_id: number
+              p_merchant_id: number
+              p_redemption_code: number
+            }
+            Returns: {
+              amount_redeemed: number
+              audit_id: number
+            }[]
+          }
+      redemption_request_cancel: {
+        Args: { p_redemption_id: number }
+        Returns: undefined
+      }
+      redemption_request_create: {
+        Args: {
+          p_amount: number
+          p_branch_id: number
+          p_customer_id: number
+          p_merchant_id: number
+          p_requested_date_ms: number
+        }
         Returns: {
           amount_redeemed: number
           audit_id: number
+          branch_id: number
+          redemption_code: number
+          requested_at: string
+          requested_date: number
+        }[]
+      }
+      redemption_request_update: {
+        Args: { p_amount: number; p_branch_id: number; p_redemption_id: number }
+        Returns: {
+          amount_redeemed: number
+          audit_id: number
+          branch_id: number
+          redemption_code: number
+          requested_at: string
+          requested_date: number
         }[]
       }
     }

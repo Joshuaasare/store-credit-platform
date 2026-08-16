@@ -1,6 +1,6 @@
 /**
  * Auto-generated API Types
- * Generated on: 2026-08-16T05:44:52.686Z
+ * Generated on: 2026-08-16T09:17:23.059Z
  * 
  * ⚠️ DO NOT EDIT MANUALLY
  * Source: apps/smartschool-api/src/app/types/
@@ -718,24 +718,68 @@ export type CustomerCreditsApiResponse =
   | CustomerCreditsResponse
   | ApiErrorResponse;
 
-export interface CustomerPendingRequestAmountBody {
-  amount: number;
-}
-
-export interface CustomerPendingRequestResult {
-  merchant_id: number;
-  requested_amount: number;
-  pending_credit_breakdown: (BaseCustomerCredit & { branch: BaseBranch })[];
-  merchant: BaseMerchant;
-}
-
-export interface CustomerPendingRequestMutationResponse {
+export interface CustomerMerchantBranchesResponse {
   success: true;
-  data: CustomerPendingRequestResult;
+  data: BaseBranch[];
 }
 
-export type CustomerPendingRequestMutationApiResponse =
-  | CustomerPendingRequestMutationResponse
+export type CustomerMerchantBranchesApiResponse =
+  | CustomerMerchantBranchesResponse
+  | ApiErrorResponse;
+
+export interface CustomerPendingRedemption {
+  redemption_code: number;
+  redemption_id: number;
+  branch_id: number;
+  branch_name: string | null;
+  amount_redeemed: number;
+  requested_date: number;
+  requested_at: string;
+}
+
+export interface CustomerPendingRedemptionResponse {
+  success: true;
+  data: CustomerPendingRedemption | null;
+}
+
+export type CustomerPendingRedemptionApiResponse =
+  | CustomerPendingRedemptionResponse
+  | ApiErrorResponse;
+
+export interface CustomerRedemptionRequestBody {
+  amount: number;
+  branchId: number;
+}
+
+export interface CustomerRedemptionRequestResult {
+  audit_id: number;
+  redemption_code: number;
+  requested_date: number;
+  branch_id: number;
+  amount_redeemed: number;
+  requested_at: string;
+}
+
+export interface CustomerRedemptionRequestMutationResponse {
+  success: true;
+  data: CustomerRedemptionRequestResult;
+}
+
+export type CustomerRedemptionRequestMutationApiResponse =
+  | CustomerRedemptionRequestMutationResponse
+  | ApiErrorResponse;
+
+export interface CustomerRedemptionCancelResult {
+  cancelled: boolean;
+}
+
+export interface CustomerRedemptionCancelResponse {
+  success: true;
+  data: CustomerRedemptionCancelResult;
+}
+
+export type CustomerRedemptionCancelApiResponse =
+  | CustomerRedemptionCancelResponse
   | ApiErrorResponse;
 
 export type LeaderboardSort =
@@ -892,16 +936,13 @@ export type MerchantMutationApiResponse =
   | MerchantMutationResponse
   | ApiErrorResponse;
 
-export interface PendingCreditBreakdown extends BaseCustomerCredit {
-  branch: BaseBranch;
-}
-
 export interface MerchantPendingRequest {
+  redemption_id: number;
   customer_id: number;
-  requested_amount: number;
-
-  pending_credit_breakdown: PendingCreditBreakdown[];
-
+  branch_id: number;
+  branch_name: string | null;
+  amount_redeemed: number;
+  requested_date: number;
   requested_at: string;
   customer: BaseCustomer & { users: BaseUserProfile | null };
   merchant: BaseMerchant;
@@ -918,11 +959,18 @@ export interface MerchantApprovedRedemption extends BaseCustomerCreditRedemption
   customer: BaseCustomer & { users: BaseUserProfile | null };
   merchant: BaseMerchant;
   approved_by_staff: BaseStaff | null;
+  branch: BaseBranch | null;
 }
 
 export interface MerchantRejectedRedemption extends BaseCustomerCreditRedemption {
   customer: BaseCustomer & { users: BaseUserProfile | null };
   merchant: BaseMerchant;
+  branch: BaseBranch | null;
+}
+
+export interface MerchantRedemptionActionBody {
+  redemption_code: number;
+  redemption_id: number;
 }
 
 export interface MerchantPendingRequestFilters {

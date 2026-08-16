@@ -9,6 +9,7 @@ import {
   MerchantPendingRequestFilters,
   MerchantPendingRequestsPage,
   MerchantPendingRequestsResponse,
+  MerchantRedemptionActionBody,
   MerchantRedemptionMutationResponse,
   MerchantRejectedRedemption,
   MerchantRejectedRedemptionsResponse,
@@ -23,10 +24,15 @@ import {
  *
  * Three views on the customer-initiated flow:
  *
- *   1. Pending — implicit set of `customer_credit` rows at the merchant
- *                with `pending_redemption_amount > 0`. There is one
- *                Pending row per (customer, merchant) pair; the per-credit
- *                breakdown is the fan-out across that customer's credits.
+ *   1. Pending  — rows from `customer_credit_redemptions` where
+ *                 `approved_at IS NULL AND rejected_at IS NULL AND
+ *                 deleted_at IS NULL`, scoped to the merchant via the
+ *                 row's `merchant_id` column. Sorted by `requested_date`
+ *                 ASC so the longest-waiting request surfaces first.
+ *                 NOTE: the `redemption_code` column is INTENTIONALLY
+ *                 NOT projected — the code is customer-only, the
+ *                 merchant staff reads it from the customer's screen
+ *                 and types it into the approve dialog.
  *
  *   2. Approved — audit feed from `customer_credit_redemptions` where
  *                 `approved_at IS NOT NULL`.
@@ -35,17 +41,25 @@ import {
  *                 `rejected_at IS NOT NULL`.
  *
  * Approve / reject are atomic single-call SQL RPCs
- * (`redemption_approve`, `redemption_reject`) — they write the audit row +
- * update every touched `customer_credit` row in one transaction.
+ * (`redemption_approve`, `redemption_reject`) that verify the supplied
+ * `redemption_code` matches the pending audit row at the merchant,
+ * stamp approved_at / rejected_at, and move / zero the fan-out slices
+ * in one transaction.
  */
 export class RedemptionService {
   private static readonly DEFAULT_LIMIT = 20;
 
   /**
-   * Pending requests at the merchant. One row per (customer, merchant) pair
-   * that has any customer_credit row with pending_redemption_amount > 0.
-   * Sorted by oldest-touched-credit-created-at (so the longest-waiting
-   * request surfaces first) then by customer_id for stability.
+   * Pending requests at the merchant. One row per (customer, merchant)
+   * pair that has a `customer_credit_redemptions` row in the pending
+   * state. The pending state lives in the audit table — there's
+   * exactly one row per (customer, merchant) pair in pending, so the
+   * row count is the pending count.
+   *
+   * Sorted by `requested_date` ASC (longest-waiting first), then by
+   * `id` ASC for stability. The `branch` join supplies the human-
+   * readable branch name; `branch_id` on the audit row is the source
+   * of truth.
    */
   async listPendingRedemptions(
     merchantId: number,
@@ -54,122 +68,106 @@ export class RedemptionService {
     const limit = filters.limit ?? RedemptionService.DEFAULT_LIMIT;
     const offset = filters.offset ?? 0;
 
-    // 1. Resolve the merchant's branch IDs. The pending view scopes through
-    //    branches — `customer_credit` carries branch_id, not merchant_id.
-    const branchIds = await this.resolveMerchantBranchIds(merchantId);
-    if (branchIds.length === 0) {
-      return { rows: [], total: 0, offset, limit };
-    }
-    const scopedBranchIds =
-      filters.branch_id != null && branchIds.includes(filters.branch_id)
-        ? [filters.branch_id]
-        : branchIds;
-
-    // 2. Pull the touched credit rows (one row per pending credit slice,
-    //    multiple rows per customer is fine — they fan out the breakdown).
-    //    Sorted to match the SQL fan-out order so the breakdown reads in
-    //    the order the merchant's UI will display it.
-    const { data: creditRows, error: creditErr } = await supabaseAdmin
-      .from("customer_credit")
+    // Pull the pending audit rows at this merchant, joined to branch
+    // (for the display name) and to the customer (for surname /
+    // other_names / phone) and the merchant. The redemption_code is
+    // intentionally omitted from the SELECT — the merchant service
+    // never returns the code; the customer app shows it on the
+    // Pending card.
+    const { data, error, count } = await supabaseAdmin
+      .from("customer_credit_redemptions")
       .select(
-        `${QueryFragments.BASE_CUSTOMER_CREDIT},branch:branches(${QueryFragments.BASE_BRANCH})`,
+        `id, customer_id, branch_id, amount_redeemed, requested_date, created_at,
+         branch:branches(${QueryFragments.BASE_BRANCH}),
+         customer:customers(${QueryFragments.BASE_CUSTOMER}, users(${QueryFragments.BASE_USER_PROFILE})),
+         merchant:merchants!inner(${QueryFragments.BASE_MERCHANT})`,
+        { count: "exact" },
       )
-      .in("branch_id", scopedBranchIds)
-      .gt("pending_redemption_amount", 0)
+      .eq("merchant_id", merchantId)
       .is("deleted_at", null)
-      .order("expires_at", { ascending: true, nullsFirst: false })
-      .order("created_at", { ascending: true })
-      .order("id", { ascending: true });
+      .is("approved_at", null)
+      .is("rejected_at", null)
+      .order("requested_date", { ascending: true })
+      .order("id", { ascending: true })
+      .range(offset, offset + limit - 1);
 
-    if (creditErr) {
-      throw new Error(`Failed to load pending redemptions: ${creditErr.message}`);
+    if (error) {
+      throw new Error(`Failed to load pending redemptions: ${error.message}`);
     }
 
-    const rows = creditRows ?? [];
-
-    // 3. Group by customer_id, build the Pending view.
-    const byCustomer = new Map<
-      number,
-      {
-        requested_amount: number;
-        pending_credit_breakdown: MerchantPendingRequest["pending_credit_breakdown"];
-        requested_at: string | null;
-      }
-    >();
-
-    for (const row of rows) {
-      const pending = Number(row.pending_redemption_amount) || 0;
-      if (pending <= 0) continue;
-      const bucket = byCustomer.get(row.customer_id) ?? {
-        requested_amount: 0,
-        pending_credit_breakdown: [],
-        requested_at: null,
+    const rows = (data ?? []) as Array<{
+      id: number;
+      customer_id: number;
+      branch_id: number;
+      amount_redeemed: number;
+      requested_date: number;
+      created_at: string;
+      branch: { id: number; name: string | null } | null;
+      customer: {
+        id: number;
+        phone: string | null;
+        unique_id: string | null;
+        user_id: string | null;
+        surname: string | null;
+        other_names: string | null;
+        created_at: string;
+        deleted_at: string | null;
+        users: {
+          id: string;
+          phone: string;
+          last_login_at: string | null;
+          created_at: string;
+          deleted_at: string | null;
+        } | null;
+      } | null;
+      merchant: {
+        id: number;
+        name: string;
+        phone: string;
+        country_code: string;
+        slug: string | null;
+        logo_url: string | null;
+        cover_photo_url: string | null;
+        is_active: boolean;
+        created_at: string;
       };
-      bucket.requested_amount += pending;
-      bucket.pending_credit_breakdown.push(
-        row as MerchantPendingRequest["pending_credit_breakdown"][number],
-      );
-      // requested_at = oldest touched credit's created_at
-      if (bucket.requested_at == null || row.created_at < bucket.requested_at) {
-        bucket.requested_at = row.created_at;
-      }
-      byCustomer.set(row.customer_id, bucket);
-    }
+    }>;
 
-    // 4. Hydrate customer + merchant rows in two batched queries. The merchant
-    //    is constant; the customers are the distinct customer_ids.
-    const customerIds = Array.from(byCustomer.keys());
-    const { data: customers, error: customersErr } = await supabaseAdmin
-      .from("customers")
-      .select(
-        `${QueryFragments.BASE_CUSTOMER},users(${QueryFragments.BASE_USER_PROFILE})`,
-      )
-      .in("id", customerIds);
-    if (customersErr) {
-      throw new Error(`Failed to load customers: ${customersErr.message}`);
-    }
+    const composed: MerchantPendingRequest[] = rows
+      .filter((r) => r.customer != null)
+      .map((r) => ({
+        redemption_id: Number(r.id),
+        customer_id: Number(r.customer_id),
+        branch_id: Number(r.branch_id),
+        branch_name: r.branch?.name ?? null,
+        amount_redeemed: Number(r.amount_redeemed),
+        requested_date: Number(r.requested_date),
+        requested_at: String(r.created_at),
+        customer: r.customer as MerchantPendingRequest["customer"],
+        merchant: r.merchant,
+      }));
 
-    const { data: merchantRow, error: merchantErr } = await supabaseAdmin
-      .from("merchants")
-      .select(QueryFragments.BASE_MERCHANT)
-      .eq("id", merchantId)
-      .maybeSingle();
-    if (merchantErr || !merchantRow) {
-      throw new Error(`Failed to load merchant: ${merchantErr?.message ?? "not found"}`);
-    }
+    // Filter by branch_id when the caller requested a branch. We apply
+    // the filter in JS (after the SQL fetch) because the audit row's
+    // branch_id is a single column — the SQL filter would be just as
+    // fast but adding it complicates the query string.
+    const filtered = filters.branch_id != null
+      ? composed.filter((r) => r.branch_id === filters.branch_id)
+      : composed;
 
-    // 5. Build the page rows. Sort by oldest-requested-at desc so the
-    //    longest-waiting request surfaces first.
-    const composed: MerchantPendingRequest[] = [];
-    for (const [customerId, bucket] of byCustomer.entries()) {
-      const customer = (customers ?? []).find((c) => c.id === customerId);
-      if (!customer) continue;
-      composed.push({
-        customer_id: customerId,
-        requested_amount: bucket.requested_amount,
-        pending_credit_breakdown: bucket.pending_credit_breakdown,
-        requested_at: bucket.requested_at ?? new Date().toISOString(),
-        customer: customer as MerchantPendingRequest["customer"],
-        merchant: merchantRow,
-      });
-    }
-    composed.sort((a, b) =>
-      a.requested_at < b.requested_at ? -1 : a.requested_at > b.requested_at ? 1 : 0,
-    );
-
-    // 6. Paginate the composed list (the SQL fan-out row count is a strict
-    //    upper bound on the customer count — drop pagination math on the
-    //    ungrouped row set).
-    const total = composed.length;
-    const pageRows = composed.slice(offset, offset + limit);
-    return { rows: pageRows, total, offset, limit };
+    return {
+      rows: filtered,
+      total: count ?? filtered.length,
+      offset,
+      limit,
+    };
   }
 
   /**
    * Approved audit feed — rows from `customer_credit_redemptions` with
    * `approved_at IS NOT NULL`, scoped to the merchant via the audit
-   * row's `merchant_id` column, joined to customer + merchant + the
-   * approving staff.
+   * row's `merchant_id` column, joined to customer + merchant + branch
+   * + the approving staff.
    */
   async listApprovedRedemptions(
     merchantId: number,
@@ -184,6 +182,7 @@ export class RedemptionService {
         `${QueryFragments.BASE_CUSTOMER_CREDIT_REDEMPTION},
          merchant:merchants!inner(${QueryFragments.BASE_MERCHANT}),
          customer:customers(${QueryFragments.BASE_CUSTOMER}, users(${QueryFragments.BASE_USER_PROFILE})),
+         branch:branches(${QueryFragments.BASE_BRANCH}),
          approved_by_staff:staff(${QueryFragments.BASE_STAFF})`,
         { count: "exact" },
       )
@@ -220,7 +219,8 @@ export class RedemptionService {
       .select(
         `${QueryFragments.BASE_CUSTOMER_CREDIT_REDEMPTION},
          merchant:merchants!inner(${QueryFragments.BASE_MERCHANT}),
-         customer:customers(${QueryFragments.BASE_CUSTOMER}, users(${QueryFragments.BASE_USER_PROFILE}))`,
+         customer:customers(${QueryFragments.BASE_CUSTOMER}, users(${QueryFragments.BASE_USER_PROFILE})),
+         branch:branches(${QueryFragments.BASE_BRANCH})`,
         { count: "exact" },
       )
       .eq("merchant_id", merchantId)
@@ -241,15 +241,22 @@ export class RedemptionService {
   }
 
   /**
-   * Approve the pending request for a (customer, merchant) pair. Atomic
-   * via the SQL RPC: writes the audit row + moves pending → approved +
-   * stamps the staff id in one transaction. Manager-only (enforced at
-   * the route via `requireRoles("manager")`).
+   * Approve the pending request for a (customer, merchant) pair.
+   * Atomic via the SQL RPC: verifies `redemption_code`, stamps
+   * `approved_at` + `approved_by_staff_id` on the existing audit row,
+   * moves `pending → approved` on every touched credit, stamps
+   * `redemption_approval_staff_id`. Manager-only (enforced at the
+   * route via `requireRoles("manager")`).
+   *
+   * The response deliberately does NOT echo the code back — the
+   * merchant already supplied it. Mismatched codes raise a 400 (the
+   * SQL RPC raises `P0001`).
    */
   async approveRequest(
     user: AccessTokenPayload,
     merchantId: number,
     customerId: number,
+    body: MerchantRedemptionActionBody,
   ): Promise<MerchantRedemptionMutationResponse> {
     const staffId = user.staff_id;
     if (staffId == null) {
@@ -259,6 +266,7 @@ export class RedemptionService {
       p_customer_id: customerId,
       p_merchant_id: merchantId,
       p_staff_id: staffId,
+      p_redemption_code: body.redemption_code,
     });
     if (error) {
       throw new Error(`Approve failed: ${error.message}`);
@@ -277,17 +285,22 @@ export class RedemptionService {
   }
 
   /**
-   * Reject the pending request for a (customer, merchant) pair. Atomic
-   * via the SQL RPC: writes the rejected audit row + zeroes the pending
-   * slice on every touched credit row.
+   * Reject the pending request for a (customer, merchant) pair.
+   * Atomic via the SQL RPC: verifies `redemption_code`, stamps
+   * `rejected_at` on the audit row, zeroes `pending_redemption_amount`
+   * on every touched credit. Manager-only.
+   *
+   * The response deliberately does NOT echo the code back.
    */
   async rejectRequest(
     merchantId: number,
     customerId: number,
+    body: MerchantRedemptionActionBody,
   ): Promise<MerchantRedemptionMutationResponse> {
     const { data, error } = await supabaseAdmin.rpc("redemption_reject", {
       p_customer_id: customerId,
       p_merchant_id: merchantId,
+      p_redemption_code: body.redemption_code,
     });
     if (error) {
       throw new Error(`Reject failed: ${error.message}`);
@@ -319,22 +332,6 @@ export class RedemptionService {
 
   buildRejectedResponse(page: MerchantRejectedRedemptionsResponse["data"]): MerchantRejectedRedemptionsResponse {
     return { success: true, data: page };
-  }
-
-  // ──────────────────────────────────────────────────────────────────────────
-  // Helpers
-  // ──────────────────────────────────────────────────────────────────────────
-
-  private async resolveMerchantBranchIds(merchantId: number): Promise<number[]> {
-    const { data, error } = await supabaseAdmin
-      .from("branches")
-      .select("id")
-      .eq("merchant_id", merchantId)
-      .is("deleted_at", null);
-    if (error) {
-      throw new Error(`Failed to resolve branches: ${error.message}`);
-    }
-    return (data ?? []).map((b) => b.id);
   }
 }
 

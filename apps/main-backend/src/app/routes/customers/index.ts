@@ -17,8 +17,11 @@ import {
 import { CustomerCreditsApiResponse } from "../../schemas/customerCredits.schema";
 import { CustomerActivitiesApiResponse } from "../../schemas/customerActivities.schema";
 import {
-  CustomerPendingRequestAmountBody,
-  CustomerPendingRequestMutationApiResponse,
+  CustomerMerchantBranchesApiResponse,
+  CustomerPendingRedemptionApiResponse,
+  CustomerRedemptionCancelApiResponse,
+  CustomerRedemptionRequestBody,
+  CustomerRedemptionRequestMutationApiResponse,
 } from "../../schemas/customerRedemptions.schema";
 
 // Querystring for the customer-app Home tab Recent Activity feed.
@@ -346,35 +349,134 @@ export default async function (fastify: FastifyInstance) {
   });
 
   /**
+   * GET /customers/me/merchants/:merchantId/branches
+   *
+   * List non-deleted branches at the merchant. Drives the customer-app
+   * redemption sheet's branch picker. Customer-token only — `customer_id`
+   * is derived from the JWT, the merchant id from the URL.
+   */
+  fastify.get<{
+    Params: { merchantId: number };
+    Reply: CustomerMerchantBranchesApiResponse;
+  }>("/me/merchants/:merchantId/branches", {
+    preHandler: [requireAuth],
+    schema: {
+      response: {
+        200: CustomerMerchantBranchesApiResponse,
+        400: CustomerMerchantBranchesApiResponse,
+        401: CustomerMerchantBranchesApiResponse,
+        403: CustomerMerchantBranchesApiResponse,
+      },
+    },
+    handler: async (request, reply) => {
+      try {
+        const customerId = request.user?.customer_id;
+        if (customerId == null) {
+          reply.status(403);
+          return {
+            success: false,
+            error: "Forbidden: this endpoint is for customer accounts only",
+          };
+        }
+        const branches = await customerRedemptionsService.getMyBranches(
+          Number(request.params.merchantId),
+        );
+        return { success: true, data: branches };
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : "Failed to load branches";
+        request.log.error(
+          error,
+          "GET /customers/me/merchants/:merchantId/branches failed",
+        );
+        reply.status(400);
+        return { success: false, error: message };
+      }
+    },
+  });
+
+  /**
+   * GET /customers/me/merchants/:merchantId/redemptions/pending
+   *
+   * The customer's pending redemption request at one merchant — returns
+   * the audit row projection with the 4-digit `redemption_code`. Returns
+   * `{ success: true, data: null }` when there's no pending row at this
+   * merchant. Customer-token only.
+   *
+   * The `redemption_code` is INTENTIONALLY exposed here — the customer
+   * is the only party who should see it. The merchant service reads the
+   * same audit row but strips the code from its response.
+   */
+  fastify.get<{
+    Params: { merchantId: number };
+    Reply: CustomerPendingRedemptionApiResponse;
+  }>("/me/merchants/:merchantId/redemptions/pending", {
+    preHandler: [requireAuth],
+    schema: {
+      response: {
+        200: CustomerPendingRedemptionApiResponse,
+        400: CustomerPendingRedemptionApiResponse,
+        401: CustomerPendingRedemptionApiResponse,
+        403: CustomerPendingRedemptionApiResponse,
+      },
+    },
+    handler: async (request, reply) => {
+      try {
+        const customerId = request.user?.customer_id;
+        if (customerId == null) {
+          reply.status(403);
+          return {
+            success: false,
+            error: "Forbidden: this endpoint is for customer accounts only",
+          };
+        }
+        const pending = await customerRedemptionsService.getMyPendingRequest(
+          customerId,
+          Number(request.params.merchantId),
+        );
+        return { success: true, data: pending };
+      } catch (error) {
+        const message =
+          error instanceof Error
+            ? error.message
+            : "Failed to load pending request";
+        request.log.error(
+          error,
+          "GET /customers/me/merchants/:merchantId/redemptions/pending failed",
+        );
+        reply.status(400);
+        return { success: false, error: message };
+      }
+    },
+  });
+
+  /**
    * POST /customers/me/merchants/:merchantId/redemptions
    *
-   * Create or edit the logged-in customer's pending redemption request at
-   * a merchant. Body: `{ amount: number }`. Atomic via the SQL RPC
-   * `redemption_fan_out(customer_id, merchant_id, amount)` — the RPC
-   * walks the merchant's credit rows oldest-expiry-first and writes
-   * `pending_redemption_amount` to each. `amount = 0` is a no-op (the
-   * fan-out zeroes any existing pending slice).
+   * Create a new pending redemption request at (customer, merchant).
+   * Body: `{ amount, branchId }`. Calls the SQL RPC
+   * `redemption_request_create` which generates the 4-digit code,
+   * inserts the audit row, and runs the fan-out atomically.
    *
-   * Customer-token only — `customer_id` is derived from the JWT. The
-   * route layer enforces the cap: amount must be ≤ the merchant's
-   * `available_total + current_pending` (the customer's full wallet
-   * for this merchant). The server returns the resulting per-credit
-   * breakdown so the customer-app confirm sheet can render the fan-out
-   * preview.
+   * Returns 409 if a pending row already exists at this merchant (the
+   * RPC raises P0001 — "A pending redemption already exists for this
+   * merchant"). The customer app handles 409 by routing the user into
+   * the edit flow instead.
    */
   fastify.post<{
     Params: { merchantId: number };
-    Body: CustomerPendingRequestAmountBody;
-    Reply: CustomerPendingRequestMutationApiResponse;
+    Body: CustomerRedemptionRequestBody;
+    Reply: CustomerRedemptionRequestMutationApiResponse;
   }>("/me/merchants/:merchantId/redemptions", {
     preHandler: [requireAuth],
     schema: {
-      body: CustomerPendingRequestAmountBody,
+      body: CustomerRedemptionRequestBody,
       response: {
-        200: CustomerPendingRequestMutationApiResponse,
-        400: CustomerPendingRequestMutationApiResponse,
-        401: CustomerPendingRequestMutationApiResponse,
-        403: CustomerPendingRequestMutationApiResponse,
+        200: CustomerRedemptionRequestMutationApiResponse,
+        400: CustomerRedemptionRequestMutationApiResponse,
+        401: CustomerRedemptionRequestMutationApiResponse,
+        403: CustomerRedemptionRequestMutationApiResponse,
+        409: CustomerRedemptionRequestMutationApiResponse,
       },
     },
     handler: async (request, reply) => {
@@ -392,7 +494,11 @@ export default async function (fastify: FastifyInstance) {
           reply.status(400);
           return { success: false, error: "Invalid amount: must be a non-negative number" };
         }
-        const result = await customerRedemptionsService.upsertMyPendingRequest(
+        if (typeof body.branchId !== "number" || !Number.isFinite(body.branchId)) {
+          reply.status(400);
+          return { success: false, error: "Invalid branchId: must be a number" };
+        }
+        const result = await customerRedemptionsService.createMyRedemptionRequest(
           customerId,
           Number(request.params.merchantId),
           body,
@@ -403,11 +509,14 @@ export default async function (fastify: FastifyInstance) {
           error instanceof Error
             ? error.message
             : "Failed to create pending request";
+        // SQL RPC raises P0001 ("A pending redemption already exists")
+        // when a pending row is already present — surface as 409.
+        const conflict = message.includes("already exists");
         request.log.error(
           error,
           "POST /customers/me/merchants/:merchantId/redemptions failed",
         );
-        reply.status(400);
+        reply.status(conflict ? 409 : 400);
         return { success: false, error: message };
       }
     },
@@ -416,26 +525,31 @@ export default async function (fastify: FastifyInstance) {
   /**
    * PATCH /customers/me/merchants/:merchantId/redemptions
    *
-   * Edit an existing pending request — same shape as POST, same RPC
-   * (`redemption_fan_out`). The fan-out is idempotent and re-splits on
-   * amount change, so POST and PATCH are interchangeable at the SQL
-   * layer. We expose both verbs because the customer-app sheet uses
-   * POST on initial create and PATCH on edit; the backend treats them
-   * identically.
+   * Edit an existing pending redemption request. Body: `{ amount, branchId }`.
+   * Calls the SQL RPC `redemption_request_update` which:
+   *   - no-ops when amount + branch are both unchanged (the code stays);
+   *   - otherwise hard-deletes the old row + inserts a new one with a
+   *     fresh code + re-runs the fan-out. Edits don't accumulate
+   *     soft-deleted rows in the audit table.
+   *
+   * Returns 404 when there is no pending row at the merchant (the RPC
+   * raises P0002). The customer app handles 404 by falling back to the
+   * create flow.
    */
   fastify.patch<{
     Params: { merchantId: number };
-    Body: CustomerPendingRequestAmountBody;
-    Reply: CustomerPendingRequestMutationApiResponse;
+    Body: CustomerRedemptionRequestBody;
+    Reply: CustomerRedemptionRequestMutationApiResponse;
   }>("/me/merchants/:merchantId/redemptions", {
     preHandler: [requireAuth],
     schema: {
-      body: CustomerPendingRequestAmountBody,
+      body: CustomerRedemptionRequestBody,
       response: {
-        200: CustomerPendingRequestMutationApiResponse,
-        400: CustomerPendingRequestMutationApiResponse,
-        401: CustomerPendingRequestMutationApiResponse,
-        403: CustomerPendingRequestMutationApiResponse,
+        200: CustomerRedemptionRequestMutationApiResponse,
+        400: CustomerRedemptionRequestMutationApiResponse,
+        401: CustomerRedemptionRequestMutationApiResponse,
+        403: CustomerRedemptionRequestMutationApiResponse,
+        404: CustomerRedemptionRequestMutationApiResponse,
       },
     },
     handler: async (request, reply) => {
@@ -453,7 +567,11 @@ export default async function (fastify: FastifyInstance) {
           reply.status(400);
           return { success: false, error: "Invalid amount: must be a non-negative number" };
         }
-        const result = await customerRedemptionsService.upsertMyPendingRequest(
+        if (typeof body.branchId !== "number" || !Number.isFinite(body.branchId)) {
+          reply.status(400);
+          return { success: false, error: "Invalid branchId: must be a number" };
+        }
+        const result = await customerRedemptionsService.updateMyRedemptionRequest(
           customerId,
           Number(request.params.merchantId),
           body,
@@ -464,11 +582,12 @@ export default async function (fastify: FastifyInstance) {
           error instanceof Error
             ? error.message
             : "Failed to edit pending request";
+        const notFound = message.includes("No pending redemption");
         request.log.error(
           error,
           "PATCH /customers/me/merchants/:merchantId/redemptions failed",
         );
-        reply.status(400);
+        reply.status(notFound ? 404 : 400);
         return { success: false, error: message };
       }
     },
@@ -477,18 +596,16 @@ export default async function (fastify: FastifyInstance) {
   /**
    * DELETE /customers/me/merchants/:merchantId/redemptions
    *
-   * Cancel the logged-in customer's pending request at a merchant. The
-   * SQL RPC zeroes the pending slice on every credit row for the
-   * (customer, merchant) pair. Idempotent — calling with no pending
-   * request is a no-op.
+   * Cancel the logged-in customer's pending request at a merchant.
+   * Calls the SQL RPC `redemption_request_cancel` which hard-deletes
+   * the audit row + zeroes the fan-out slices. Idempotent — no-op
+   * when there's no pending row to cancel.
    *
-   * No 404 / 409 surfaced here: cancellation is a no-op when there is
-   * no pending state, so the route always succeeds with the resulting
-   * breakdown (which will be empty).
+   * Returns `{ success: true, data: { cancelled: true|false } }`.
    */
   fastify.delete<{
     Params: { merchantId: number };
-    Reply: CustomerPendingRequestMutationApiResponse;
+    Reply: CustomerRedemptionCancelApiResponse;
   }>("/me/merchants/:merchantId/redemptions", {
     preHandler: [requireAuth],
     schema: {
@@ -501,10 +618,10 @@ export default async function (fastify: FastifyInstance) {
       // validator doesn't require a body shape.
       body: null,
       response: {
-        200: CustomerPendingRequestMutationApiResponse,
-        400: CustomerPendingRequestMutationApiResponse,
-        401: CustomerPendingRequestMutationApiResponse,
-        403: CustomerPendingRequestMutationApiResponse,
+        200: CustomerRedemptionCancelApiResponse,
+        400: CustomerRedemptionCancelApiResponse,
+        401: CustomerRedemptionCancelApiResponse,
+        403: CustomerRedemptionCancelApiResponse,
       },
     },
     handler: async (request, reply) => {
@@ -517,7 +634,7 @@ export default async function (fastify: FastifyInstance) {
             error: "Forbidden: this endpoint is for customer accounts only",
           };
         }
-        const result = await customerRedemptionsService.cancelMyPendingRequest(
+        const result = await customerRedemptionsService.cancelMyRedemptionRequest(
           customerId,
           Number(request.params.merchantId),
         );

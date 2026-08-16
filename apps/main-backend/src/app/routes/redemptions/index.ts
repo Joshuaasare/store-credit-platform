@@ -7,6 +7,7 @@ import {
   MerchantAuditFeedFilters,
   MerchantPendingRequestsApiResponse,
   MerchantPendingRequestFilters,
+  MerchantRedemptionActionBody,
   MerchantRedemptionMutationApiResponse,
   MerchantRejectedRedemptionsApiResponse,
 } from "../../schemas/redemptions.schema";
@@ -25,17 +26,14 @@ export default async function (fastify: FastifyInstance) {
    * GET /redemptions/pending
    *
    * Pending requests at the merchant — one row per (customer, merchant)
-   * pair that has any `customer_credit` row with
-   * `pending_redemption_amount > 0`. Pending is implicit (no longer a
-   * row in `customer_credit_redemptions`); the SQL `redemption_fan_out`
-   * RPC is what writes the pending slice on the credit rows.
+   * pair that has a `customer_credit_redemptions` row in the pending
+   * state (approved_at IS NULL AND rejected_at IS NULL AND deleted_at
+   * IS NULL). The audit row IS the pending record; the customer app
+   * shows the 4-digit code on its Pending tab and the merchant staff
+   * types it into the approve dialog.
    *
-   // TODO(frontend-permissions): the Redemptions nav item is already
-   // manager-gated via `permissions: ["manager"]` in MainLayout, but the
-   // list endpoint itself is currently readable by any authenticated staff
-   // member of the merchant. The backend role check on approve/reject is
-   // the source of truth for now; finer-grained frontend permission
-   // gating for the page itself is a follow-up.
+   * IMPORTANT: the response shape NEVER includes `redemption_code` —
+   * the code is customer-only, not staff-visible.
    */
   fastify.get<{
     Querystring: MerchantPendingRequestFilters;
@@ -188,17 +186,23 @@ export default async function (fastify: FastifyInstance) {
   /**
    * POST /redemptions/customers/:customerId/approve
    *
-   * Manager-only. Approves the pending request for (customer, merchant)
-   * — atomic via SQL RPC `redemption_approve`: writes the audit row,
-   * moves `pending_redemption_amount → approved_redemption_amount` on
-   * every touched credit, stamps `redemption_approval_staff_id`.
+   * Manager-only. Approves the pending request for (customer, merchant).
+   * Body: `{ redemption_code, redemption_id }` — the staff member types
+   * the 4-digit code from the customer's screen; the SQL RPC verifies
+   * it matches the pending audit row at this merchant before stamping
+   * `approved_at` + `approved_by_staff_id` + moving pending → approved.
+   *
+   * 404 when there's no pending request at the merchant. 400 when the
+   * supplied code does not match (the SQL RPC raises P0001).
    */
   fastify.post<{
     Params: { customerId: number };
+    Body: MerchantRedemptionActionBody;
     Reply: MerchantRedemptionMutationApiResponse;
   }>("/customers/:customerId/approve", {
     preHandler: [requireAuth, requireRoles("manager")],
     schema: {
+      body: MerchantRedemptionActionBody,
       response: {
         200: MerchantRedemptionMutationApiResponse,
         400: MerchantRedemptionMutationApiResponse,
@@ -221,6 +225,7 @@ export default async function (fastify: FastifyInstance) {
           request.user!,
           merchantId,
           Number(request.params.customerId),
+          request.body,
         );
       } catch (error) {
         const message =
@@ -242,16 +247,22 @@ export default async function (fastify: FastifyInstance) {
   /**
    * POST /redemptions/customers/:customerId/reject
    *
-   * Manager-only. Rejects the pending request — atomic via SQL RPC
-   * `redemption_reject`: writes the rejected audit row, zeroes
-   * `pending_redemption_amount` on every touched credit.
+   * Manager-only. Rejects the pending request. Body: `{ redemption_code,
+   * redemption_id }`. The SQL RPC verifies the code matches the pending
+   * audit row at this merchant, stamps `rejected_at`, and zeroes the
+   * fan-out slices.
+   *
+   * 404 when there's no pending request at the merchant. 400 when the
+   * supplied code does not match.
    */
   fastify.post<{
     Params: { customerId: number };
+    Body: MerchantRedemptionActionBody;
     Reply: MerchantRedemptionMutationApiResponse;
   }>("/customers/:customerId/reject", {
     preHandler: [requireAuth, requireRoles("manager")],
     schema: {
+      body: MerchantRedemptionActionBody,
       response: {
         200: MerchantRedemptionMutationApiResponse,
         400: MerchantRedemptionMutationApiResponse,
@@ -273,6 +284,7 @@ export default async function (fastify: FastifyInstance) {
         return await redemptionService.rejectRequest(
           merchantId,
           Number(request.params.customerId),
+          request.body,
         );
       } catch (error) {
         const message =

@@ -5,7 +5,13 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { RouteProp } from "@react-navigation/native";
 import { useNavigation, useRoute } from "@react-navigation/native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import type { CustomerCreditsApiResponse } from "@store-credit-platform/api-services";
+import type {
+  BaseBranch,
+  CustomerCreditsApiResponse,
+  CustomerMerchantBranchesApiResponse,
+  CustomerPendingRedemption,
+  CustomerPendingRedemptionApiResponse,
+} from "@store-credit-platform/api-services";
 import ScreenBackground from "../../shared/components/ScreenBackground";
 import MerchantAvatar from "../../shared/components/MerchantAvatar";
 import { useThemeTokens } from "../../shared/theme/ThemeContext";
@@ -30,26 +36,24 @@ import { CreditsMerchantPending } from "./screens/CreditsMerchantPending";
 
 const CREDITS_QUERY_KEY = ["customer", "credits"] as const;
 const PENDING_REQUEST_KEY = ["customer", "pendingRequest"] as const;
+const BRANCHES_KEY_PREFIX = ["customer", "merchantBranches"] as const;
 
 /**
  * Parent merchant credit detail screen. Owns:
- *   - The tall fixed pink header (back arrow + merchant logo + 2-line
- *     store name + meta + available total). The progress bar is
- *     removed — there's no progress to show on this surface anymore
- *     (the customer's spend is captured in the rolled-up Pending card
- *     and the per-credit Available list).
+ *   - The tall fixed purple header (back arrow + merchant logo + 2-line
+ *     store name + meta + available total).
  *   - The two-option tab switcher (`MerchantTabSwitcher`): Available /
- *     Pending. The Redeemed tab is gone — the new audit model doesn't
- *     expose a per-merchant redemption history to the customer.
- *   - The cancel-confirmation bottom sheet
- *     (`MerchantRedemptionConfirmSheet`).
- *   - The cancel mutation (`DELETE /customers/me/merchants/:merchantId/
- *     redemptions` + cache invalidation).
+ *     Pending.
+ *   - The cancel-confirmation bottom-cancel modal
+ *     (`MerchantRedemptionConfirmSheet`) + the cancellation mutation.
+ *   - The amount + branch redemption sheet (`RedemptionAmountSheet`)
+ *     and its create-vs-edit mutation pair
+ *     (`createMyRedemptionRequest` / `updateMyRedemptionRequest`).
  *
- * Pending is rendered as a single rolled-up card rather than a list —
- * the new model exposes one pending request per (customer, merchant)
- * pair (the fan-out breakdown is visible in the Available tab per
- * credit).
+ * Branches and the pending audit row are fetched in parallel so the
+ * sheet can render the branch picker immediately on open. Single-
+ * branch merchants collapse the picker to a static label (handled by
+ * the sheet itself).
  */
 export function MerchantCreditsScreen() {
   const route =
@@ -66,6 +70,35 @@ export function MerchantCreditsScreen() {
     queryKey: CREDITS_QUERY_KEY,
     queryFn: () => customerCreditsService.getMyCredits(),
   });
+
+  // Branches at this merchant. Drives the redemption sheet's branch
+  // picker. Cached per-merchant so re-opening the sheet after a
+  // network blip doesn't reflash the picker.
+  const branchesQuery = useQuery<CustomerMerchantBranchesApiResponse>({
+    queryKey: [...BRANCHES_KEY_PREFIX, merchantId],
+    queryFn: () => customerRedemptionsService.getMyBranches(merchantId),
+  });
+
+  // The customer's pending redemption at this merchant. `data` is null
+  // when no pending row exists, which is the source-of-truth signal
+  // for "no request out". Carries the 4-digit `redemption_code` that
+  // the Pending tab renders.
+  const pendingQuery = useQuery<CustomerPendingRedemptionApiResponse>({
+    queryKey: [...PENDING_REQUEST_KEY, merchantId],
+    queryFn: () => customerRedemptionsService.getMyPendingRequest(merchantId),
+  });
+
+  const branches: BaseBranch[] = useMemo(() => {
+    const data = branchesQuery.data;
+    if (data?.success) return data.data;
+    return [];
+  }, [branchesQuery.data]);
+
+  const pendingRow: CustomerPendingRedemption | null = useMemo(() => {
+    const data = pendingQuery.data;
+    if (data?.success) return data.data;
+    return null;
+  }, [pendingQuery.data]);
 
   // The bucket for this merchant — derives the header meta + total so
   // both tabs render the same header.
@@ -89,8 +122,6 @@ export function MerchantCreditsScreen() {
 
   const [tab, setTab] = useState<MerchantTab>("available");
 
-  // Two-option pill order is the source of truth here — the switcher
-  // renders whatever order this array declares.
   const tabOptions = useMemo<{ value: MerchantTab; label: string }[]>(
     () => [
       { value: "available", label: "Available" },
@@ -127,19 +158,36 @@ export function MerchantCreditsScreen() {
     "closed" | "create" | "edit"
   >("closed");
 
+  // `create` and `update` are sibling mutations: `create` POSTs a new
+  // audit row (rejects 409 if pending already exists — the parent
+  // guards the entry-point to never POST in that case), `update`
+  // PATCHes the existing row (404 if no pending). The RPC returns the
+  // new code on each successful round-trip; we just invalidate the
+  // relevant queries.
   const upsertMutation = useMutation({
-    mutationFn: (amount: number) =>
-      customerRedemptionsService.upsertMyPendingRequest({
+    mutationFn: (params: { amount: number; branchId: number }) => {
+      // Create vs edit drives the right verb — `pendingRow` is null
+      // for `create`. We deliberately READ `pendingRow` here rather
+      // than switching on `redemptionSheet === "edit"` so a stale
+      // sheet-mode state can't fire POST against an existing row.
+      if (pendingRow) {
+        return customerRedemptionsService.updateMyRedemptionRequest({
+          merchantId,
+          amount: params.amount,
+          branchId: params.branchId,
+        });
+      }
+      return customerRedemptionsService.createMyRedemptionRequest({
         merchantId,
-        amount,
-      }),
+        amount: params.amount,
+        branchId: params.branchId,
+      });
+    },
     onSuccess: async (result) => {
       if (!result.success) {
         console.warn("Upsert redemption failed:", result.error);
         return;
       }
-      // Auto-dismiss on success — the fan-out preview was the
-      // confirmation moment (per the grilled decision).
       setRedemptionSheet("closed");
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: CREDITS_QUERY_KEY }),
@@ -167,7 +215,7 @@ export function MerchantCreditsScreen() {
 
   const cancelMutation = useMutation({
     mutationFn: () =>
-      customerRedemptionsService.cancelMyPendingRequest(merchantId),
+      customerRedemptionsService.cancelMyRedemptionRequest(merchantId),
     onSuccess: async (result) => {
       setPendingCancel(false);
       if (!result.success) {
@@ -230,13 +278,16 @@ export function MerchantCreditsScreen() {
       <RedemptionAmountSheet
         visible={redemptionSheet !== "closed"}
         mode={redemptionSheet === "edit" ? "edit" : "create"}
-        initialAmount={pendingTotal}
+        initialAmount={pendingRow?.amount_redeemed ?? pendingTotal}
         maxAmount={redemptionCap}
+        branches={branches}
+        initialBranchId={pendingRow?.branch_id ?? null}
+        branchesLoading={branchesQuery.isLoading}
         merchantName={bucket?.merchantName ?? "this merchant"}
         isSubmitting={upsertMutation.isPending}
-        onSubmit={(amount) => {
+        onSubmit={(amount, branchId) => {
           if (upsertMutation.isPending) return;
-          upsertMutation.mutate(amount);
+          upsertMutation.mutate({ amount, branchId });
         }}
         onDismiss={() => {
           if (upsertMutation.isPending) return;
@@ -260,16 +311,10 @@ export function MerchantCreditsScreen() {
 }
 
 /**
- * Tall fixed pink header. The structure is 2 stacked rows inside the
- * pink surface (the previous progress row is removed):
+ * Tall fixed purple header. The structure is 2 stacked rows inside the
+ * purple surface:
  *   1. Back arrow (own row at the top — sits above everything else)
  *   2. Avatar + 2-line store name + meta + available total
- *
- * The progress bar that previously showed "X% redeemed of GHc Y of
- * GHc Z" is gone — the new redemption model exposes pending state
- * per credit on the Available tab and a rolled-up card on the Pending
- * tab, so a global progress bar in the header no longer matches the
- * mental model.
  */
 function DetailHeader({
   merchantName,

@@ -1,18 +1,19 @@
 import { Type, Static, TSchema } from '@sinclair/typebox'
-import { BaseMerchant, BaseBranch, ApiErrorResponse, BaseCustomer, BaseUserProfile, BaseStaff, BaseCustomerCredit, BaseCustomerCreditRedemption } from './main.schema'
+import { BaseMerchant, BaseBranch, ApiErrorResponse, BaseCustomer, BaseUserProfile, BaseStaff, BaseCustomerCreditRedemption } from './main.schema'
 
 
-
-export type PendingCreditBreakdown = Static<typeof PendingCreditBreakdown>
-export const PendingCreditBreakdown = Type.Composite([BaseCustomerCredit, Type.Object({
-branch: BaseBranch
-})])
 
 export type MerchantPendingRequest = Static<typeof MerchantPendingRequest>
 export const MerchantPendingRequest = Type.Object({
+redemption_id: Type.Number(),
 customer_id: Type.Number(),
-requested_amount: Type.Number(),
-pending_credit_breakdown: Type.Array(PendingCreditBreakdown),
+branch_id: Type.Number(),
+branch_name: Type.Union([
+Type.String(),
+Type.Null()
+]),
+amount_redeemed: Type.Number(),
+requested_date: Type.Number(),
 requested_at: Type.String(),
 customer: Type.Intersect([
 BaseCustomer,
@@ -49,6 +50,10 @@ merchant: BaseMerchant,
 approved_by_staff: Type.Union([
 BaseStaff,
 Type.Null()
+]),
+branch: Type.Union([
+BaseBranch,
+Type.Null()
 ])
 })])
 
@@ -63,8 +68,18 @@ Type.Null()
 ])
 })
 ]),
-merchant: BaseMerchant
+merchant: BaseMerchant,
+branch: Type.Union([
+BaseBranch,
+Type.Null()
+])
 })])
+
+export type MerchantRedemptionActionBody = Static<typeof MerchantRedemptionActionBody>
+export const MerchantRedemptionActionBody = Type.Object({
+redemption_code: Type.Number(),
+redemption_id: Type.Number()
+})
 
 export type MerchantPendingRequestFilters = Static<typeof MerchantPendingRequestFilters>
 export const MerchantPendingRequestFilters = Type.Object({

@@ -1,56 +1,118 @@
 // ────────────────────────────────────────────────────────────────────────────
-// Customer-app pending-request endpoints (`/customers/me/merchants/:merchantId/redemptions`)
+// Customer-app redemption-request endpoints
+// (`/customers/me/merchants/:merchantId/*`)
 // ────────────────────────────────────────────────────────────────────────────
-// The customer app's "redeem at merchant" flow is no longer row-based.
-// There's no per-redemption-row CRUD anymore — instead:
+// The customer-app "redeem at merchant" flow is row-based — there's one
+// `customer_credit_redemptions` row per (customer, merchant) pair in the
+// pending state. The row carries a 4-digit code that's shown on the
+// customer's pending card; the merchant enters the same code at approve
+// or reject time.
 //
-//   POST   /customers/me/merchants/:merchantId/redemptions   — create
-//   PATCH  /customers/me/merchants/:merchantId/redemptions   — edit (upsert)
-//   DELETE /customers/me/merchants/:merchantId/redemptions   — cancel
-//
-// All three funnel through `redemption_fan_out(customerId, merchantId,
-// amount)` which walks the merchant's credit rows oldest-expiry-first
-// and writes `pending_redemption_amount` to each. The fan-out is
-// idempotent: amount = 0 zeroes every row (cancel), amount = same
-// produces the same allocation (no-op), amount = different re-splits.
-//
-// Pending state is derived from the `customer_credit` row's
-// `pending_redemption_amount` column — the customer app reads it via
-// `/customers/me/credits` (live rows expose the pending slice directly)
-// rather than a dedicated pending endpoint.
+// Two query endpoints (`GET .../branches`, `GET .../redemptions/pending`)
+// and three mutation endpoints (`POST/PATCH/DELETE .../redemptions`).
+// Mutations go through SQL RPCs (`redemption_request_create`,
+// `redemption_request_update`, `redemption_request_cancel`) so the
+// audit-row write + fan-out happen atomically.
 
-import {
-  ApiErrorResponse,
-  BaseBranch,
-  BaseCustomerCredit,
-  BaseMerchant,
-} from "./main.types";
+import { ApiErrorResponse, BaseBranch } from "./main.types";
 
-// Body for create / edit. Amount is in the same scale as
-// credit_amount (numeric, 2 decimal places). The server caps the
-// amount at the merchant's `available_total + current_pending` so the
-// request can never reserve more than the customer can spend at the
-// merchant.
-export interface CustomerPendingRequestAmountBody {
-  amount: number;
-}
+// ────────────────────────────────────────────────────────────────────────────
+// GET .../branches
+// ────────────────────────────────────────────────────────────────────────────
 
-// Result of create / edit / cancel. Mirrors the merchant Pending view
-// but customer-scoped (no nested customer row — the caller IS the
-// customer). `requested_amount` is 0 on cancel; on create/edit it's
-// the sum of `pending_credit_breakdown[].pending_redemption_amount`.
-export interface CustomerPendingRequestResult {
-  merchant_id: number;
-  requested_amount: number;
-  pending_credit_breakdown: (BaseCustomerCredit & { branch: BaseBranch })[];
-  merchant: BaseMerchant;
-}
-
-export interface CustomerPendingRequestMutationResponse {
+// List of non-deleted branches at the merchant — drives the redemption
+// sheet's branch picker. Customer-app renders one picker per merchant
+// detail screen; the list is small (≤ a handful of branches).
+export interface CustomerMerchantBranchesResponse {
   success: true;
-  data: CustomerPendingRequestResult;
+  data: BaseBranch[];
 }
 
-export type CustomerPendingRequestMutationApiResponse =
-  | CustomerPendingRequestMutationResponse
+export type CustomerMerchantBranchesApiResponse =
+  | CustomerMerchantBranchesResponse
+  | ApiErrorResponse;
+
+// ────────────────────────────────────────────────────────────────────────────
+// GET .../redemptions/pending
+// ────────────────────────────────────────────────────────────────────────────
+
+// Customer-facing view of the pending redemption row at one merchant.
+// Carries the 4-digit code so the customer can show it to the merchant
+// at the till. The webapp MUST NOT see this — the code is customer-only.
+export interface CustomerPendingRedemption {
+  redemption_code: number;
+  redemption_id: number;
+  branch_id: number;
+  branch_name: string | null;
+  amount_redeemed: number;
+  requested_date: number;
+  requested_at: string;
+}
+
+// Wrapped success shape: `{ success: true, data: <pending|null> }`.
+// `null` when there's no pending row at this merchant. The wrapper
+// always resolves (the route is idempotent on "no pending").
+export interface CustomerPendingRedemptionResponse {
+  success: true;
+  data: CustomerPendingRedemption | null;
+}
+
+export type CustomerPendingRedemptionApiResponse =
+  | CustomerPendingRedemptionResponse
+  | ApiErrorResponse;
+
+// ────────────────────────────────────────────────────────────────────────────
+// POST/PATCH .../redemptions
+// ────────────────────────────────────────────────────────────────────────────
+
+// Body for create / edit. `branchId` is now required (the customer
+// picks the branch on the redemption sheet). `amount` is in the same
+// scale as `credit_amount` (numeric, 2 decimal places). The server
+// caps the amount at the merchant's `available_total + current_pending`
+// so the request can never reserve more than the customer can spend at
+// the merchant.
+export interface CustomerRedemptionRequestBody {
+  amount: number;
+  branchId: number;
+}
+
+// Result of create / edit. Returns the audit row from the SQL RPC —
+// the customer app uses `redemption_code` to display the code on the
+// pending card.
+export interface CustomerRedemptionRequestResult {
+  audit_id: number;
+  redemption_code: number;
+  requested_date: number;
+  branch_id: number;
+  amount_redeemed: number;
+  requested_at: string;
+}
+
+export interface CustomerRedemptionRequestMutationResponse {
+  success: true;
+  data: CustomerRedemptionRequestResult;
+}
+
+export type CustomerRedemptionRequestMutationApiResponse =
+  | CustomerRedemptionRequestMutationResponse
+  | ApiErrorResponse;
+
+// ────────────────────────────────────────────────────────────────────────────
+// DELETE .../redemptions
+// ────────────────────────────────────────────────────────────────────────────
+
+// DELETE returns the wrapped success with a `cancelled` boolean so the
+// customer app can distinguish a successful cancel from a no-op. The
+// route is idempotent (no-op if no pending).
+export interface CustomerRedemptionCancelResult {
+  cancelled: boolean;
+}
+
+export interface CustomerRedemptionCancelResponse {
+  success: true;
+  data: CustomerRedemptionCancelResult;
+}
+
+export type CustomerRedemptionCancelApiResponse =
+  | CustomerRedemptionCancelResponse
   | ApiErrorResponse;

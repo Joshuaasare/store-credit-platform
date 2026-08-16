@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   useInfiniteQuery,
   useMutation,
@@ -28,6 +28,7 @@ import { useStoreStore } from "@shared/stores/storeStore";
 import {
   MerchantPendingRequest,
   MerchantApprovedRedemption,
+  MerchantRedemptionActionBody,
   MerchantRedemptionMutationResponse,
 } from "@shared/types/api.types";
 import { isApiError } from "@shared/utils/api.utils";
@@ -37,6 +38,7 @@ import {
   successToastProperties,
 } from "@shared/utils/misc.utils";
 import { formatDisplayNumber } from "@shared/utils/ui.utils";
+import RedemptionCodeDialog from "./components/RedemptionCodeDialog";
 
 const LIMIT = 20;
 
@@ -66,7 +68,9 @@ const EMPTY_COPY: Record<Tab, { title: string; hint: string }> = {
 // Customer display helpers (shared between the two tabs)
 // ────────────────────────────────────────────────────────────────────────────
 
-type CustomerLike = MerchantPendingRequest["customer"] | MerchantApprovedRedemption["customer"];
+type CustomerLike =
+  | MerchantPendingRequest["customer"]
+  | MerchantApprovedRedemption["customer"];
 
 function customerName(c: CustomerLike): string {
   if (!c) return "";
@@ -125,58 +129,41 @@ const pendingCustomerColumn: ColumnDef<MerchantPendingRequest> = {
   },
 };
 
-// Branch column — pending tab rows don't carry `branch_id` on the audit
-// row anymore. We pull the branch from the first touched credit row's
-// branch join (always present because pending rows must have at least
-// one credit slice).
+// Branch column — pending tab rows carry `branch_id` + `branch_name` on
+// the audit row (the customer picked the branch on the redemption
+// sheet). No more per-credit breakdown: pending is now a single amount
+// per audit row.
 const pendingBranchColumn: ColumnDef<MerchantPendingRequest> = {
   id: "branch",
   header: "Branch",
   cell: ({ row }) => {
-    const breakdown = row.original.pending_credit_breakdown;
-    const first = breakdown?.[0];
-    const branch = (first as unknown as { branch: { id: number; name: string | null } | null })?.branch;
+    const r = row.original;
     return (
       <span className="truncate">
-        {branch?.name?.trim() || (branch ? `#${branch.id}` : "—")}
+        {r.branch_name?.trim() || `Branch #${r.branch_id}`}
       </span>
     );
   },
 };
 
-// Requested amount — the sum across the breakdown.
+// Requested amount — the audit row's `amount_redeemed`.
 const pendingRequestedColumn: ColumnDef<MerchantPendingRequest> = {
   id: "requested_amount",
   header: "Requested amount",
   cell: ({ row }) => (
     <span className="font-medium tabular-nums">
-      {formatGHS(Number(row.original.requested_amount) || 0)}
+      {formatGHS(Number(row.original.amount_redeemed) || 0)}
     </span>
   ),
 };
 
-// Pending breakdown preview — count of touched credit rows + total
-// `pending_redemption_amount` across them (matches the merchant confirm
-// step on the customer app).
-const pendingBreakdownColumn: ColumnDef<MerchantPendingRequest> = {
-  id: "breakdown",
-  header: "Credits",
-  cell: ({ row }) => {
-    const rows = row.original.pending_credit_breakdown;
-    return (
-      <span className="text-muted-foreground tabular-nums">
-        {rows.length} credit{rows.length === 1 ? "" : "s"}
-      </span>
-    );
-  },
-};
-
+// Requested date — the audit row's `requested_date` (epoch ms).
 const pendingRequestedAtColumn: ColumnDef<MerchantPendingRequest> = {
   id: "requested_at",
   header: "Requested at",
   cell: ({ row }) => (
     <span className="text-muted-foreground text-sm">
-      {formatIsoDate(row.original.requested_at)}
+      {formatIsoDate(new Date(row.original.requested_date).toISOString())}
     </span>
   ),
 };
@@ -211,6 +198,20 @@ const approvedCustomerColumn: ColumnDef<MerchantApprovedRedemption> = {
           )}
         </div>
       </div>
+    );
+  },
+};
+
+const approvedBranchColumn: ColumnDef<MerchantApprovedRedemption> = {
+  id: "branch",
+  header: "Branch",
+  cell: ({ row }) => {
+    const r = row.original;
+    const name = r.branch?.name?.trim();
+    return (
+      <span className="truncate">
+        {name || (r.branch ? `Branch #${r.branch.id}` : "—")}
+      </span>
     );
   },
 };
@@ -260,6 +261,21 @@ export default function Redemptions() {
   const queryClient = useQueryClient();
   const [tab, setTab] = useState<Tab>("pending");
   const [branchId, setBranchId] = useState<number | null>(null);
+
+  // ─── Code-entry dialog state ───
+  // `dialog` is null when the dialog is closed; otherwise it carries the
+  // (customerId, redemptionId, kind) tuple that the dialog acts on. The
+  // dialog asks the user to type the 4-digit code, then calls the
+  // matching approve / reject mutation with the code in the body.
+  const [dialog, setDialog] = useState<
+    | {
+        customerId: number;
+        redemptionId: number;
+        customerName: string;
+        kind: "approve" | "reject";
+      }
+    | null
+  >(null);
 
   // ─── Pending ───
   const pendingQuery = useInfiniteQuery({
@@ -340,13 +356,21 @@ export default function Redemptions() {
   };
 
   const approveMutation = useMutation({
-    mutationFn: async (customerId: number): Promise<MerchantRedemptionMutationResponse> => {
-      const res = await redemptionService.approveRequest(customerId);
+    mutationFn: async (input: {
+      customerId: number;
+      body: MerchantRedemptionActionBody;
+    }): Promise<MerchantRedemptionMutationResponse> => {
+      const res = await redemptionService.approveRequest(
+        input.customerId,
+        input.body,
+      );
       if (isApiError(res)) throw new Error(res.error);
       return res;
     },
     onSuccess: () => {
       toast.success("Redemption approved", successToastProperties);
+      // Close the dialog and refresh both tabs.
+      setDialog(null);
       invalidateAllRedemptions();
     },
     onError: (err) => {
@@ -354,19 +378,27 @@ export default function Redemptions() {
         err instanceof Error ? err.message : "Failed to approve redemption",
         errorToastProperties,
       );
+      // Don't close the dialog on error — let the user retry with the
+      // correct code. The dialog's internal state will re-enable the
+      // submit button on the next attempt.
     },
   });
 
   const rejectMutation = useMutation({
-    mutationFn: async (customerId: number): Promise<MerchantRedemptionMutationResponse> => {
-      const res = await redemptionService.rejectRequest(customerId);
+    mutationFn: async (input: {
+      customerId: number;
+      body: MerchantRedemptionActionBody;
+    }): Promise<MerchantRedemptionMutationResponse> => {
+      const res = await redemptionService.rejectRequest(
+        input.customerId,
+        input.body,
+      );
       if (isApiError(res)) throw new Error(res.error);
       return res;
     },
     onSuccess: () => {
       toast.success("Redemption rejected", successToastProperties);
-      // Reject clears the pending slice but doesn't create an audit row
-      // we display (Rejected is not a tab), so just refresh Pending.
+      setDialog(null);
       invalidatePending();
     },
     onError: (err) => {
@@ -377,46 +409,82 @@ export default function Redemptions() {
     },
   });
 
-  // Track which (customerId) the current mutation is operating on so the
-  // row's Approve/Reject buttons can disable themselves.
-  const pendingMutationKey: { customerId: number; kind: "approve" | "reject" } | null =
-    approveMutation.isPending
-      ? { customerId: approveMutation.variables, kind: "approve" }
-      : rejectMutation.isPending
-        ? { customerId: rejectMutation.variables, kind: "reject" }
-        : null;
+  // The dialog drives the actual mutation. When it submits, it calls
+  // `confirm({ redemption_code, redemption_id })`. We route to the right
+  // mutation by `dialog.kind`.
+  const confirmDialog = (body: MerchantRedemptionActionBody) => {
+    if (!dialog) return;
+    if (dialog.kind === "approve") {
+      approveMutation.mutate({ customerId: dialog.customerId, body });
+    } else {
+      rejectMutation.mutate({ customerId: dialog.customerId, body });
+    }
+  };
+
+  // Surface a dialog-side error toast (mismatch) when the mutation
+  // rejects. We watch both mutations and feed the message back into the
+  // dialog via `dialogError`.
+  const dialogError =
+    approveMutation.isError || rejectMutation.isError
+      ? approveMutation.error instanceof Error
+        ? approveMutation.error.message
+        : rejectMutation.error instanceof Error
+          ? rejectMutation.error.message
+          : "Code did not match"
+      : null;
+
+  // Clear the dialog error whenever the user reopens the dialog (a new
+  // attempt starts clean).
+  useEffect(() => {
+    if (dialog == null) {
+      approveMutation.reset();
+      rejectMutation.reset();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dialog]);
 
   const pendingActionColumn: ColumnDef<MerchantPendingRequest> = {
     id: "actions",
     header: "Actions",
     cell: ({ row }) => {
       const customerId = row.original.customer_id;
-      const myDisabled =
-        pendingMutationKey != null && pendingMutationKey.customerId === customerId;
-      const approveDisabled = myDisabled && pendingMutationKey?.kind === "approve";
-      const rejectDisabled = myDisabled && pendingMutationKey?.kind === "reject";
-      const anyMutationPending = approveMutation.isPending || rejectMutation.isPending;
+      const redemptionId = row.original.redemption_id;
+      const anyDialogOpen = dialog != null;
       return (
         <div className="flex items-center gap-2">
           <Button
             size="sm"
             variant="default"
-            disabled={anyMutationPending}
-            onClick={() => approveMutation.mutate(customerId)}
+            disabled={anyDialogOpen}
+            onClick={() =>
+              setDialog({
+                customerId,
+                redemptionId,
+                customerName: customerName(row.original.customer),
+                kind: "approve",
+              })
+            }
             className="h-8 rounded-sm px-3 text-xs"
           >
             <Check className="mr-1 h-3.5 w-3.5" />
-            {approveDisabled ? "Approving..." : "Approve"}
+            Approve
           </Button>
           <Button
             size="sm"
             variant="outline"
-            disabled={anyMutationPending}
-            onClick={() => rejectMutation.mutate(customerId)}
+            disabled={anyDialogOpen}
+            onClick={() =>
+              setDialog({
+                customerId,
+                redemptionId,
+                customerName: customerName(row.original.customer),
+                kind: "reject",
+              })
+            }
             className="text-destructive border-destructive/30 hover:bg-destructive/10 h-8 rounded-sm px-3 text-xs"
           >
             <X className="mr-1 h-3.5 w-3.5" />
-            {rejectDisabled ? "Rejecting..." : "Reject"}
+            Reject
           </Button>
         </div>
       );
@@ -428,18 +496,16 @@ export default function Redemptions() {
       pendingCustomerColumn,
       pendingBranchColumn,
       pendingRequestedColumn,
-      pendingBreakdownColumn,
       pendingRequestedAtColumn,
       pendingActionColumn,
     ],
-    // re-create when the mutation state changes so the disabled state
-    // re-renders correctly on the row.
-    [approveMutation.isPending, rejectMutation.isPending],
+    [dialog],
   );
 
   const approvedColumns: ColumnDef<MerchantApprovedRedemption>[] = useMemo(
     () => [
       approvedCustomerColumn,
+      approvedBranchColumn,
       approvedAmountColumn,
       approvedAtColumn,
       approvedByColumn,
@@ -480,7 +546,8 @@ export default function Redemptions() {
               </h1>
               <p className="text-muted-foreground text-sm">
                 Review and approve customer-initiated credit redemption requests
-                across your branches.
+                across your branches. Customers show you a 4-digit code at
+                the till — enter it to approve or reject.
               </p>
             </div>
           </div>
@@ -581,6 +648,23 @@ export default function Redemptions() {
           </InfiniteScroll>
         </Card>
       </div>
+
+      {/* Code-entry dialog */}
+      {dialog && (
+        <RedemptionCodeDialog
+          open={true}
+          kind={dialog.kind}
+          customerName={dialog.customerName}
+          isPending={approveMutation.isPending || rejectMutation.isPending}
+          errorMessage={dialogError}
+          onConfirm={confirmDialog}
+          onDismiss={() => {
+            if (!approveMutation.isPending && !rejectMutation.isPending) {
+              setDialog(null);
+            }
+          }}
+        />
+      )}
     </div>
   );
 }
