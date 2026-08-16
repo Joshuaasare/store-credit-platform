@@ -35,6 +35,7 @@ import {
   successToastProperties,
 } from "@shared/utils/misc.utils";
 import {
+  endOfDayEpochMs,
   fromEpochMs,
   startOfMonth,
   toEpochMs,
@@ -222,7 +223,7 @@ export function FixedConfigDialog({
     }
     const next = {
       start_date: f ? toEpochMs(f) : null,
-      end_date: t ? toEpochMs(t) : null,
+      end_date: t ? endOfDayEpochMs(t) : null,
     };
     // Patch form state directly via react-hook-form setValue on the controller values.
     // We use reset to merge the new dates with the existing values.

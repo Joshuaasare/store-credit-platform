@@ -39,3 +39,26 @@ export function startOfYearEpochMs(date: Date = new Date()): number {
 export function startOfMonth(date: Date): Date {
   return new Date(date.getFullYear(), date.getMonth(), 1);
 }
+
+/**
+ * Epoch ms for the *end* of the picked calendar day (23:59:59.999 local).
+ *
+ * Date pickers return the day at midnight (00:00:00). When that day is used
+ * as the upper bound of an inclusive range filter (`<= end`), any timestamp
+ * later in the day gets cut off. Bumping it to the last millisecond of the
+ * day makes "selected day" mean "selected day, all of it".
+ *
+ * Use this for the `end` side of any user-picked date range that feeds an
+ * inclusive `<=` filter on a millisecond-precision epoch column.
+ */
+export function endOfDayEpochMs(date: Date): number {
+  return new Date(
+    date.getFullYear(),
+    date.getMonth(),
+    date.getDate(),
+    23,
+    59,
+    59,
+    999,
+  ).getTime();
+}

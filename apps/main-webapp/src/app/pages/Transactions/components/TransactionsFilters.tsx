@@ -18,6 +18,7 @@ import {
 import { BranchWithAggregates } from "@shared/types/api.types";
 import { LeaderboardSort } from "@shared/types/api.types";
 import {
+  endOfDayEpochMs,
   fromEpochMs,
   startOfMonth,
   startOfYearEpochMs,
@@ -130,7 +131,7 @@ export function TransactionsFilters({
       ...value,
       datePreset: "custom",
       start: from ? toEpochMs(from) : null,
-      end: to ? toEpochMs(to) : null,
+      end: to ? endOfDayEpochMs(to) : null,
     });
     setCustomOpen(false);
   };
