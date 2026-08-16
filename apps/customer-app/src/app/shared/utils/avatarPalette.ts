@@ -28,6 +28,30 @@ export function pickAvatarGradient(name: string): readonly [string, string] {
   return AVATAR_PALETTES[idx] ?? (AVATAR_PALETTES[0] as readonly [string, string]);
 }
 
+/**
+ * Pick a stable two-color pastel gradient for a stable numeric ID
+ * (typically `branch_id` or `merchant_id`). Used by the customer-app
+ * list surfaces so the same branch / merchant renders the same
+ * gradient across every tab and screen — Available → Pending →
+ * Approved, and the main Credits list. The hash is taken on the
+ * stringified ID so callers don't have to wrap with `String()`.
+ *
+ * Falls back to `pickAvatarGradient("")` if the ID is nullish, so
+ * legacy callers that don't supply one still get a valid palette.
+ */
+export function pickAvatarGradientById(
+  id: number | string | null | undefined,
+): readonly [string, string] {
+  if (id === null || id === undefined) {
+    return pickAvatarGradient("");
+  }
+  const numeric = typeof id === "number" ? id : Number(id);
+  const idx = Number.isFinite(numeric)
+    ? Math.abs(Math.trunc(numeric)) % AVATAR_PALETTES.length
+    : hashString(String(id)) % AVATAR_PALETTES.length;
+  return AVATAR_PALETTES[idx] ?? (AVATAR_PALETTES[0] as readonly [string, string]);
+}
+
 /** Tiny djb2-style hash — stable across reloads, fits in a 32-bit int. */
 export function hashString(s: string): number {
   let h = 5381;

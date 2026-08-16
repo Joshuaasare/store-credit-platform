@@ -9,7 +9,7 @@ import {
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { computeInitials } from "../utils/computeInitials";
-import { pickAvatarGradient } from "../utils/avatarPalette";
+import { pickAvatarGradient, pickAvatarGradientById } from "../utils/avatarPalette";
 
 /**
  * Merchant avatar — preferred: the merchant's logo URL (rendered via
@@ -33,18 +33,29 @@ export default function MerchantAvatar({
   size = 40,
   initialsFontSize,
   style,
+  initials,
+  idSeed,
 }: {
   merchantName: string;
   logoUrl: string | null;
   size?: number;
+  initials?: string;
   /** Override the default initials font size — useful for the larger
    *  offer-card photo (40px) versus the activity-row avatar (40px keeps
    *  the same weight). */
   initialsFontSize?: number;
   style?: StyleProp<ViewStyle | ImageStyle>;
+  /** Stable numeric ID used to pick the placeholder palette. When
+   *  supplied the same ID always renders the same gradient — this
+   *  keeps a single branch / merchant visually consistent across every
+   *  tab and screen, regardless of the merchant name's casing or
+   *  wording at that surface. Falls back to name-based hashing when
+   *  nullish (legacy callers without a stable ID, e.g. OfferCard). */
+  idSeed?: number | string | null;
 }) {
-  const [photoStart, photoEnd] = pickAvatarGradient(merchantName);
-  const initials = computeInitials(merchantName);
+  const [photoStart, photoEnd] = idSeed != null
+    ? pickAvatarGradientById(idSeed)
+    : pickAvatarGradient(merchantName);
   const radius = size / 2;
 
   // Fallback placeholder — gradient + initials watermark. Used as the
@@ -73,7 +84,7 @@ export default function MerchantAvatar({
         importantForAccessibility="no"
         numberOfLines={1}
       >
-        {initials}
+        {initials ?? computeInitials(merchantName)}
       </Text>
     </View>
   );
