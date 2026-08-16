@@ -4,3 +4,16 @@ export const splitSearchTerm = (searchTerm: string) => {
     .map((part) => part.trim())
     .filter((part) => part.length > 0);
 };
+
+export const toEpoch = (v: string | null): number =>
+  Math.floor(new Date(v ?? new Date().toISOString()).getTime() / 1000);
+
+export const isTimestampInWindow = (
+  timestamp: number,
+  startEpoch: number | null,
+  endEpoch: number | null,
+): boolean => {
+  if (startEpoch != null && timestamp < startEpoch) return false;
+  if (endEpoch != null && timestamp > endEpoch) return false;
+  return true;
+};

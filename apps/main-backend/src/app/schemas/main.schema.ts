@@ -148,18 +148,10 @@ export const BaseCustomerTransaction = Type.Object({
 id: Type.Number(),
 customer_id: Type.Number(),
 branch_id: Type.Number(),
-recorded_by_staff_id: Type.Union([
-Type.Number(),
-Type.Null()
-]),
 amount: Type.Number(),
 transaction_date: Type.Number(),
 transaction_type: TransactionTypeValues,
-created_at: Type.String(),
-credit_id: Type.Optional(Type.Union([
-Type.Number(),
-Type.Null()
-]))
+created_at: Type.String()
 })
 
 export type BaseUserProfile = Static<typeof BaseUserProfile>
@@ -284,7 +276,8 @@ Type.Null()
 deleted_at: Type.Union([
 Type.String(),
 Type.Null()
-])
+]),
+branch_id: Type.Number()
 })
 
 export type BaseRunningCreditConfig = Static<typeof BaseRunningCreditConfig>

@@ -1,6 +1,6 @@
 /**
  * Auto-generated API Types
- * Generated on: 2026-08-15T13:01:00.363Z
+ * Generated on: 2026-08-16T05:44:52.686Z
  * 
  * ⚠️ DO NOT EDIT MANUALLY
  * Source: apps/smartschool-api/src/app/types/
@@ -105,7 +105,6 @@ export interface BaseCustomerTransaction {
   id: number;
   customer_id: number;
   branch_id: number;
-  recorded_by_staff_id: number | null;
   amount: number;
   transaction_date: number;
   transaction_type: TransactionTypeValues;
@@ -113,7 +112,6 @@ export interface BaseCustomerTransaction {
   
   
   
-  credit_id?: number | null;
 }
 
 
@@ -205,6 +203,7 @@ export interface BaseCustomerCreditRedemption {
   created_at: string;
   updated_at: string | null;
   deleted_at: string | null;
+  branch_id: number;
 }
 
 export interface BaseRunningCreditConfig {
@@ -1065,8 +1064,8 @@ export interface CustomerWithUser extends BaseCustomer {
 export interface CustomerTransactions extends BaseCustomerTransaction {
   customer: CustomerWithUser;
   branch: BaseBranch;
-  recorded_by_staff: BaseStaff | null;
-  approved_by_staff: BaseStaff | null;
+  recorded_by_staff?: BaseStaff | null;
+  approved_by_staff?: BaseStaff | null;
 }
 
 export type TransactionTypeFilter =

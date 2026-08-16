@@ -83,7 +83,6 @@ export interface BaseCustomerTransaction {
   id: number;
   customer_id: number;
   branch_id: number;
-  recorded_by_staff_id: number | null;
   amount: number;
   transaction_date: number;
   transaction_type: TransactionTypeValues;
@@ -91,7 +90,6 @@ export interface BaseCustomerTransaction {
   // Set for credit_issue and credit_redeem rows (the originating
   // customer_credit.id). Null for purchase rows. Used by the frontend to
   // open the redemption dialog against a specific credit.
-  credit_id?: number | null;
 }
 
 // Slim profile projection of users for customer / recorded-by joins.
@@ -183,6 +181,7 @@ export interface BaseCustomerCreditRedemption {
   created_at: string;
   updated_at: string | null;
   deleted_at: string | null;
+  branch_id: number;
 }
 
 export interface BaseRunningCreditConfig {

@@ -15,14 +15,14 @@ export type CustomerTransactions = Static<typeof CustomerTransactions>
 export const CustomerTransactions = Type.Composite([BaseCustomerTransaction, Type.Object({
 customer: CustomerWithUser,
 branch: BaseBranch,
-recorded_by_staff: Type.Union([
+recorded_by_staff: Type.Optional(Type.Union([
 BaseStaff,
 Type.Null()
-]),
-approved_by_staff: Type.Union([
+])),
+approved_by_staff: Type.Optional(Type.Union([
 BaseStaff,
 Type.Null()
-])
+]))
 })])
 
 export type TransactionTypeFilter = Static<typeof TransactionTypeFilter>

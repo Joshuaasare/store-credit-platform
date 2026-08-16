@@ -61,11 +61,14 @@ export default async function (fastify: FastifyInstance) {
           };
         }
         const q = request.query;
-        const page = await redemptionService.listPendingRedemptions(merchantId, {
-          branch_id: q.branch_id ?? null,
-          limit: q.limit ?? 20,
-          offset: q.offset ?? 0,
-        });
+        const page = await redemptionService.listPendingRedemptions(
+          merchantId,
+          {
+            branch_id: q.branch_id ?? null,
+            limit: q.limit ?? 20,
+            offset: q.offset ?? 0,
+          },
+        );
         return { success: true, data: page };
       } catch (error) {
         const message =
@@ -110,11 +113,14 @@ export default async function (fastify: FastifyInstance) {
           };
         }
         const q = request.query;
-        const page = await redemptionService.listApprovedRedemptions(merchantId, {
-          branch_id: q.branch_id ?? null,
-          limit: q.limit ?? 20,
-          offset: q.offset ?? 0,
-        });
+        const page = await redemptionService.listApprovedRedemptions(
+          merchantId,
+          {
+            branch_id: q.branch_id ?? null,
+            limit: q.limit ?? 20,
+            offset: q.offset ?? 0,
+          },
+        );
         return { success: true, data: page };
       } catch (error) {
         const message =
@@ -158,11 +164,14 @@ export default async function (fastify: FastifyInstance) {
           };
         }
         const q = request.query;
-        const page = await redemptionService.listRejectedRedemptions(merchantId, {
-          branch_id: q.branch_id ?? null,
-          limit: q.limit ?? 20,
-          offset: q.offset ?? 0,
-        });
+        const page = await redemptionService.listRejectedRedemptions(
+          merchantId,
+          {
+            branch_id: q.branch_id ?? null,
+            limit: q.limit ?? 20,
+            offset: q.offset ?? 0,
+          },
+        );
         return { success: true, data: page };
       } catch (error) {
         const message =
@@ -218,7 +227,10 @@ export default async function (fastify: FastifyInstance) {
           error instanceof Error
             ? error.message
             : "Failed to approve redemption";
-        request.log.error(error, "POST /redemptions/customers/:customerId/approve failed");
+        request.log.error(
+          error,
+          "POST /redemptions/customers/:customerId/approve failed",
+        );
         const notFound = message.includes("No pending request");
         if (notFound) reply.status(404);
         else reply.status(400);
@@ -267,7 +279,10 @@ export default async function (fastify: FastifyInstance) {
           error instanceof Error
             ? error.message
             : "Failed to reject redemption";
-        request.log.error(error, "POST /redemptions/customers/:customerId/reject failed");
+        request.log.error(
+          error,
+          "POST /redemptions/customers/:customerId/reject failed",
+        );
         const notFound = message.includes("No pending request");
         if (notFound) reply.status(404);
         else reply.status(400);

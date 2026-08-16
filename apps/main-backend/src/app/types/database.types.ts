@@ -103,6 +103,7 @@ export type Database = {
           redemption_approval_staff_id: number | null
           revoked_at: string | null
           revoked_by_user_id: string | null
+          transaction_date: number
           updated_at: string | null
         }
         Insert: {
@@ -118,6 +119,7 @@ export type Database = {
           redemption_approval_staff_id?: number | null
           revoked_at?: string | null
           revoked_by_user_id?: string | null
+          transaction_date: number
           updated_at?: string | null
         }
         Update: {
@@ -133,6 +135,7 @@ export type Database = {
           redemption_approval_staff_id?: number | null
           revoked_at?: string | null
           revoked_by_user_id?: string | null
+          transaction_date?: number
           updated_at?: string | null
         }
         Relationships: [
@@ -171,36 +174,45 @@ export type Database = {
           amount_redeemed: number
           approved_at: string | null
           approved_by_staff_id: number | null
+          branch_id: number
           created_at: string
           customer_id: number
           deleted_at: string | null
           id: number
           merchant_id: number | null
+          redemption_code: number
           rejected_at: string | null
+          transaction_date: number
           updated_at: string | null
         }
         Insert: {
           amount_redeemed: number
           approved_at?: string | null
           approved_by_staff_id?: number | null
+          branch_id: number
           created_at?: string
           customer_id: number
           deleted_at?: string | null
           id?: number
           merchant_id?: number | null
+          redemption_code: number
           rejected_at?: string | null
+          transaction_date: number
           updated_at?: string | null
         }
         Update: {
           amount_redeemed?: number
           approved_at?: string | null
           approved_by_staff_id?: number | null
+          branch_id?: number
           created_at?: string
           customer_id?: number
           deleted_at?: string | null
           id?: number
           merchant_id?: number | null
+          redemption_code?: number
           rejected_at?: string | null
+          transaction_date?: number
           updated_at?: string | null
         }
         Relationships: [
@@ -209,6 +221,13 @@ export type Database = {
             columns: ["approved_by_staff_id"]
             isOneToOne: false
             referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_credit_redemptions_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
             referencedColumns: ["id"]
           },
           {

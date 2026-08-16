@@ -28,7 +28,7 @@ export class MerchantService {
       .maybeSingle();
 
     if (!staff) return null;
-    const branch = (staff as any)?.branches;
+    const branch = staff?.branches;
     const merchant = branch?.merchants;
     if (!branch?.id || !merchant?.id) return null;
     return {
