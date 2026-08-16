@@ -149,7 +149,7 @@ id: Type.Number(),
 customer_id: Type.Number(),
 branch_id: Type.Number(),
 amount: Type.Number(),
-transaction_date: Type.Number(),
+transaction_date: Type.Number(), // milliseconds since epoch
 transaction_type: TransactionTypeValues,
 created_at: Type.String()
 })
@@ -225,7 +225,7 @@ Type.Number(),
 Type.Null()
 ]),
 expires_at: Type.Union([
-Type.Number(),
+Type.Number(), // milliseconds since epoch; null = lifetime
 Type.Null()
 ]),
 revoked_at: Type.Union([

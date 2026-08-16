@@ -41,7 +41,7 @@ import {
 // `deleted_at` rows are excluded entirely (soft-deleted credits are not
 // shown to the customer).
 //
-// `expires_at` is Unix epoch seconds (nullable = lifetime credit). The
+// `expires_at` is Unix epoch milliseconds (nullable = lifetime credit). The
 // frontend uses it to render the expiry / revocation date on each card.
 
 export type CustomerCreditStatus = "live" | "expired" | "revoked";

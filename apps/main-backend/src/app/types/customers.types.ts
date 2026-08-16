@@ -110,7 +110,7 @@ export interface CustomerListResponse {
 // `remaining` / `redeemed_total` aggregates and the nested `branch: BaseBranch`
 // (replaces the denormalized `branch_name`). `remaining` is clamped at 0 per
 // credit; fully-redeemed credits (remaining = 0) are still listed but rendered
-// greyed. `expires_at` is Unix epoch seconds; null = lifetime.
+// greyed. `expires_at` is Unix epoch milliseconds; null = lifetime.
 export interface CustomerDetailCreditRow extends BaseCustomerCredit {
   redeemed_total: number;
   pending_total: number;

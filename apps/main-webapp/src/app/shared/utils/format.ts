@@ -5,7 +5,7 @@
  * — produces "GH₵1,234.50". Use for any customer-facing cedi amount.
  */
 
-import { fromEpochSeconds } from "./date.utils";
+import { fromEpochMs } from "./date.utils";
 
 const cediFormatter = new Intl.NumberFormat("en-GH", {
   style: "currency",
@@ -41,10 +41,10 @@ export function formatStatValue(value: number): string {
 }
 
 /**
- * Format a Unix epoch (seconds) as a readable date string.
+ * Format a Unix epoch (milliseconds) as a readable date string.
  */
-export function formatEpochDate(epochSeconds: number): string {
-  const d = fromEpochSeconds(epochSeconds);
+export function formatEpochDate(epochMs: number): string {
+  const d = fromEpochMs(epochMs);
   if (!d) return "—";
   return d.toLocaleDateString(undefined, {
     year: "numeric",
@@ -54,10 +54,10 @@ export function formatEpochDate(epochSeconds: number): string {
 }
 
 /**
- * Format a Unix epoch (seconds) as a readable date + time string.
+ * Format a Unix epoch (milliseconds) as a readable date + time string.
  */
-export function formatEpochDateTime(epochSeconds: number): string {
-  const d = fromEpochSeconds(epochSeconds);
+export function formatEpochDateTime(epochMs: number): string {
+  const d = fromEpochMs(epochMs);
   if (!d) return "—";
   return d.toLocaleString(undefined, {
     year: "numeric",
@@ -71,7 +71,7 @@ export function formatEpochDateTime(epochSeconds: number): string {
 /**
  * Format an ISO 8601 timestamp (the format Postgres timestamptz serializes
  * to) as a readable date string. Returns "—" for null/undefined. Used for
- * columns like `users.last_login_at` that are NOT stored as epoch seconds.
+ * columns like `users.last_login_at` that are NOT stored as epoch ms.
  */
 export function formatIsoDate(iso: string | null | undefined): string {
   if (!iso) return "—";

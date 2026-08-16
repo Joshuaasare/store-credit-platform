@@ -6,7 +6,7 @@ export const splitSearchTerm = (searchTerm: string) => {
 };
 
 export const toEpoch = (v: string | null): number =>
-  Math.floor(new Date(v ?? new Date().toISOString()).getTime() / 1000);
+  Math.floor(new Date(v ?? new Date().toISOString()).getTime());
 
 export const isTimestampInWindow = (
   timestamp: number,

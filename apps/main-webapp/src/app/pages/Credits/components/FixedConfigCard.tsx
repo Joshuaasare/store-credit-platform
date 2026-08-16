@@ -125,7 +125,7 @@ export function FixedConfigCard({ config, isManager }: FixedConfigCardProps) {
     tagline = "No active window set.";
   }
 
-  const now = Math.floor(Date.now() / 1000);
+  const now = Math.floor(Date.now());
   const withinWindow =
     start != null && end != null && now >= start && now <= end;
   const activeRightNow = config.is_active && withinWindow;

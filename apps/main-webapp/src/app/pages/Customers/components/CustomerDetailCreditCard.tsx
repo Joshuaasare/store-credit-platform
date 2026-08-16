@@ -22,7 +22,7 @@ export function CustomerDetailCreditCard({
 }: CustomerDetailCreditCardProps) {
   const isFullyRedeemed = row.remaining <= 0;
   const isExpired =
-    row.expires_at != null && row.expires_at <= Math.floor(Date.now() / 1000);
+    row.expires_at != null && row.expires_at <= Math.floor(Date.now());
   // Bar represents the redeemed slice of the credit's principal. 100% fill
   // → fully consumed; 0% fill → untouched. Clamped 0–1 so a rounding
   // overshoot on `redeemed_total` doesn't render a >100% fill. Unredeemed

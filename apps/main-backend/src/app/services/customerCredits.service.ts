@@ -72,7 +72,7 @@ export class CustomerCreditsService {
     //    fragment; we only add the derived top-level fields. `redeemed_total`
     //    / `pending_total` are kept as back-compat aliases of the column
     //    reads so older frontend code keeps working.
-    const nowEpoch = Math.floor(Date.now() / 1000);
+    const nowEpoch = Math.floor(Date.now());
     const live: CustomerCreditWithBranch[] = [];
     const expired: CustomerCreditWithBranch[] = [];
 

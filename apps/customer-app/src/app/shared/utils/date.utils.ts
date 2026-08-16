@@ -2,9 +2,8 @@
  * Date / time formatting helpers for the customer app.
  *
  * All formats use en-GB to match the rest of the app (e.g. "14 Aug 2025").
- * Time math runs in milliseconds — callers that hold Unix epoch SECONDS
- * (the customer-credit `expires_at` is the canonical example) must
- * multiply by 1000 before passing to these helpers.
+ * Time math runs in milliseconds — callers pass Unix epoch milliseconds
+ * directly (e.g. `customer_credit.expires_at`, `created_at` epoch columns).
  */
 
 const SHORT_DATE_OPTIONS: Intl.DateTimeFormatOptions = {

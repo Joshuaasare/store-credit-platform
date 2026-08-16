@@ -35,9 +35,9 @@ import {
   successToastProperties,
 } from "@shared/utils/misc.utils";
 import {
-  fromEpochSeconds,
+  fromEpochMs,
   startOfMonth,
-  toEpochSeconds,
+  toEpochMs,
 } from "@shared/utils/date.utils";
 import { useStoreStore } from "@shared/stores/storeStore";
 import { BranchMultiSelect } from "./BranchMultiSelect";
@@ -110,10 +110,10 @@ export function FixedConfigDialog({
   const [rangeOpen, setRangeOpen] = useState(false);
   const [customRange, setCustomRange] = useState<DateRange | undefined>();
   const [fromMonth, setFromMonth] = useState<Date>(() =>
-    startOfMonth(fromEpochSeconds(config?.start_date) ?? new Date()),
+    startOfMonth(fromEpochMs(config?.start_date) ?? new Date()),
   );
   const [toMonth, setToMonth] = useState<Date>(() => {
-    const t = fromEpochSeconds(config?.end_date);
+    const t = fromEpochMs(config?.end_date);
     if (t) return startOfMonth(t);
     const d = new Date();
     return startOfMonth(new Date(d.getFullYear(), d.getMonth() + 1, 1));
@@ -154,8 +154,8 @@ export function FixedConfigDialog({
         terms: config?.terms ?? null,
       });
       setCustomRange({
-        from: fromEpochSeconds(config?.start_date),
-        to: fromEpochSeconds(config?.end_date),
+        from: fromEpochMs(config?.start_date),
+        to: fromEpochMs(config?.end_date),
       });
     }
   }, [open, config, reset]);
@@ -202,8 +202,8 @@ export function FixedConfigDialog({
   const percentageValue = watch("percentage_credit_value");
   const fixedValue = watch("fixed_credit_value");
   const maximumAllowed = watch("maximum_allowed_credit");
-  const from = fromEpochSeconds(startDate);
-  const to = fromEpochSeconds(endDate);
+  const from = fromEpochMs(startDate);
+  const to = fromEpochMs(endDate);
 
   const setFrom = (d: Date | undefined) => {
     setCustomRange((r) => ({ from: d, to: r?.to }));
@@ -221,8 +221,8 @@ export function FixedConfigDialog({
       t = tmp;
     }
     const next = {
-      start_date: f ? toEpochSeconds(f) : null,
-      end_date: t ? toEpochSeconds(t) : null,
+      start_date: f ? toEpochMs(f) : null,
+      end_date: t ? toEpochMs(t) : null,
     };
     // Patch form state directly via react-hook-form setValue on the controller values.
     // We use reset to merge the new dates with the existing values.
@@ -384,15 +384,15 @@ export function FixedConfigDialog({
                 setRangeOpen(o);
                 if (o) {
                   setCustomRange({
-                    from: fromEpochSeconds(startDate),
-                    to: fromEpochSeconds(endDate),
+                    from: fromEpochMs(startDate),
+                    to: fromEpochMs(endDate),
                   });
                   setFromMonth(
-                    startOfMonth(fromEpochSeconds(startDate) ?? new Date()),
+                    startOfMonth(fromEpochMs(startDate) ?? new Date()),
                   );
                   setToMonth(
                     startOfMonth(
-                      fromEpochSeconds(endDate) ??
+                      fromEpochMs(endDate) ??
                         new Date(
                           new Date().getFullYear(),
                           new Date().getMonth() + 1,

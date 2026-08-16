@@ -204,7 +204,7 @@ export function FixedConfigSummary(v: FixedSummaryValues & { accent?: Accent }) 
 }
 
 function formatEpoch(epoch: number): string {
-  return new Date(epoch * 1000).toLocaleDateString("default", {
+  return new Date(epoch).toLocaleDateString("default", {
     month: "short",
     day: "numeric",
     year: "numeric",

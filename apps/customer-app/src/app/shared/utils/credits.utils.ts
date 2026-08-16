@@ -1,9 +1,9 @@
 /**
  * Credit-related helpers for the customer app.
  *
- * Time math runs in milliseconds internally; callers may pass the
- * backend's Unix epoch SECONDS directly — the helpers promote to ms
- * at the boundary so unit confusion never lands in product code.
+ * Time math runs in milliseconds internally; callers pass the backend's
+ * Unix epoch milliseconds (the unit `customer_credit.expires_at` is stored
+ * as) directly.
  */
 
 const MS_PER_DAY = 1000 * 60 * 60 * 24;
@@ -15,18 +15,17 @@ const MS_PER_DAY = 1000 * 60 * 60 * 24;
  *   - Falls back to a formatted absolute date when the gap is over a
  *     year ("on 14 Aug 2027") so the line never reads as "in 60 months".
  *   - Returns `"soon"` when the expiry is in the past or within 60s.
- *   - Returns `null` when `expiresAtEpochSeconds` is null so the caller
- *     can fall back to the lifetime-credit copy.
+ *   - Returns `null` when `expiresAtMs` is null so the caller can fall
+ *     back to the lifetime-credit copy.
  *
- *   `expiresAtEpochSeconds` is a Unix epoch in **SECONDS** (matches how
- *   the backend stores `BaseCustomerCredit.expires_at`).
+ *   `expiresAtMs` is a Unix epoch in **MILLISECONDS** (matches how the
+ *   backend stores `customer_credit.expires_at`).
  */
 export function formatExpiryDistance(
-  expiresAtEpochSeconds: number | null,
+  expiresAtMs: number | null,
 ): string | null {
-  if (expiresAtEpochSeconds === null) return null;
+  if (expiresAtMs === null) return null;
 
-  const expiresAtMs = expiresAtEpochSeconds * 1000;
   const diffMs = expiresAtMs - Date.now();
   if (diffMs <= 0) return "soon";
 
@@ -140,9 +139,9 @@ export function redemptionStatusChip(
  * `useThemeTokens().colors`.
  */
 export function creditStatusChip(
-  expiresAtEpochSeconds: number | null,
+  expiresAtMs: number | null,
 ): CreditStatusChip {
-  if (expiresAtEpochSeconds === null) {
+  if (expiresAtMs === null) {
     return {
       label: "Lifetime",
       tone: "success",
@@ -151,7 +150,7 @@ export function creditStatusChip(
     };
   }
 
-  const msUntilExpiry = expiresAtEpochSeconds * 1000 - Date.now();
+  const msUntilExpiry = expiresAtMs - Date.now();
 
   if (msUntilExpiry <= 0) {
     return {
@@ -162,7 +161,7 @@ export function creditStatusChip(
     };
   }
 
-  const phrase = formatExpiryDistance(expiresAtEpochSeconds);
+  const phrase = formatExpiryDistance(expiresAtMs);
 
   if (msUntilExpiry <= MS_PER_DAY * 7) {
     return {

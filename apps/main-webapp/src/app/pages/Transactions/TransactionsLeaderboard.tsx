@@ -13,7 +13,7 @@ import InfiniteScroll from "@shared/components/InfiniteScroll/InfiniteScroll";
 import { customerService } from "@store-credit-platform/api-services";
 import { useStoreStore } from "@shared/stores/storeStore";
 import { LeaderboardRow } from "@shared/types/api.types";
-import { startOfYearEpoch } from "@shared/utils/date.utils";
+import { startOfYearEpochMs } from "@shared/utils/date.utils";
 import { formatGHS } from "@shared/utils/format";
 import { leaderboardInitials } from "@shared/utils/customers.utils";
 import {
@@ -31,7 +31,7 @@ export default function TransactionsLeaderboard() {
     sort: "purchases",
     branchId: null,
     datePreset: "this_year",
-    start: startOfYearEpoch(),
+    start: startOfYearEpochMs(),
     // end=null → "no upper bound". Keeps newly-created transactions in-window
     // so the leaderboard reflects purchases added in the current session.
     end: null,

@@ -23,7 +23,7 @@ import {
   CustomerTransactions,
   TransactionTypeFilter,
 } from "@shared/types/api.types";
-import { startOfYearEpoch } from "@shared/utils/date.utils";
+import { startOfYearEpochMs } from "@shared/utils/date.utils";
 import { formatEpochDate, formatGHS } from "@shared/utils/format";
 import {
   customerDisplayName,
@@ -80,7 +80,7 @@ export default function TransactionsList() {
   const [filters, setFilters] = useState<TransactionsFiltersValue>(() => ({
     branchId: null,
     datePreset: "this_year",
-    start: startOfYearEpoch(),
+    start: startOfYearEpochMs(),
     // end=null → "no upper bound". Keeps newly-created transactions in-window
     // so they appear immediately on refetch after a purchase is added.
     end: null,

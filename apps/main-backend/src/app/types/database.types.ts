@@ -6,6 +6,11 @@ export type Json =
   | { [key: string]: Json | undefined }
   | Json[]
 
+/**
+ * Numeric epoch columns (e.g. `transaction_date`, `expires_at`) are stored as
+ * milliseconds since the Unix epoch. ISO-string columns (`created_at`,
+ * `approved_at`, `rejected_at`, `last_login_at`) are unchanged.
+ */
 export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)

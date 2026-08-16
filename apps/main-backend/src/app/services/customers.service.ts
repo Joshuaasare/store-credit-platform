@@ -282,7 +282,7 @@ export class CustomerService {
       throw new Error(`Failed to load credits: ${creditErr.message}`);
     }
 
-    const nowEpoch = Math.floor(Date.now() / 1000);
+    const nowEpoch = Math.floor(Date.now());
     const merchantCredits = ((creditRows ?? []) as unknown as Array<
       CustomerDetailCreditRow & {
         branch: { merchant_id: number };
@@ -318,7 +318,7 @@ export class CustomerService {
       }
       if (redemptionRows?.approved_at) {
         lastRedemptionEpoch = Math.floor(
-          new Date(redemptionRows.approved_at).getTime() / 1000,
+          new Date(redemptionRows.approved_at).getTime(),
         );
       }
     }
@@ -354,7 +354,7 @@ export class CustomerService {
       (max, r) => {
         const created = r.created_at;
         if (!created) return max;
-        const d = Math.floor(new Date(created).getTime() / 1000);
+        const d = Math.floor(new Date(created).getTime());
         return max == null || d > max ? d : max;
       },
       null,

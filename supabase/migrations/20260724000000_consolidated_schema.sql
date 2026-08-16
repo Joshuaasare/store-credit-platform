@@ -406,10 +406,10 @@ end $$;
 --                                      enforced by joining the customer's credits
 --                                      at a merchant branch)
 --
--- `transaction_date` is Unix epoch seconds (bigint) on customer_purchases.
+-- `transaction_date` is Unix epoch MILLISECONDS (bigint) on customer_purchases.
 -- customer_credit and customer_credit_redemptions only have a timestamptz
--- `created_at`, so we synthesize an epoch via EXTRACT(EPOCH FROM created_at)::bigint
--- when applying the date filter.
+-- `created_at`, so we synthesize a millisecond epoch via
+-- (EXTRACT(EPOCH FROM created_at) * 1000)::bigint when applying the date filter.
 create or replace function public.get_customer_leaderboard(
   p_merchant_id  bigint,
   p_branch_id    bigint default null,
@@ -451,14 +451,14 @@ as $$
     from public.customer_credit c
     join merchant_branches mb on mb.id = c.branch_id
     where c.deleted_at is null and c.revoked_at is null
-      and (p_start_epoch is null or (extract(epoch from c.created_at)::bigint) >= p_start_epoch)
-      and (p_end_epoch   is null or (extract(epoch from c.created_at)::bigint) <= p_end_epoch)
+      and (p_start_epoch is null or c.transaction_date >= p_start_epoch)
+      and (p_end_epoch   is null or c.transaction_date <= p_end_epoch)
   ),
   redemption_agg as (
     -- The audit row's `customer_id` IS the merchant's customer; the
     -- (customer_id, merchant_id) scoping is enforced at write time, so
-    -- we just need to filter the audit rows by their created_at epoch
-    -- and join on customer_id.
+    -- we just need to filter the audit rows by their transaction_date
+    -- epoch and join on customer_id.
     select r.customer_id, c.branch_id, r.amount_redeemed as amount
     from public.customer_credit_redemptions r
     join public.customer_credit c
@@ -467,8 +467,8 @@ as $$
      and c.revoked_at is null
     join merchant_branches mb on mb.id = c.branch_id
     where r.deleted_at is null and r.approved_at is not null
-      and (p_start_epoch is null or (extract(epoch from r.created_at)::bigint) >= p_start_epoch)
-      and (p_end_epoch   is null or (extract(epoch from r.created_at)::bigint) <= p_end_epoch)
+      and (p_start_epoch is null or r.transaction_date >= p_start_epoch)
+      and (p_end_epoch   is null or r.transaction_date <= p_end_epoch)
   ),
   unioned as (
     select customer_id, branch_id, amount, 'purchase'  ::text as kind from purchase_agg
@@ -542,8 +542,8 @@ as $$
     select c.customer_id from public.customer_credit c
     join merchant_branches mb on mb.id = c.branch_id
     where c.deleted_at is null and c.revoked_at is null
-      and (p_start_epoch is null or (extract(epoch from c.created_at)::bigint) >= p_start_epoch)
-      and (p_end_epoch   is null or (extract(epoch from c.created_at)::bigint) <= p_end_epoch)
+      and (p_start_epoch is null or c.transaction_date >= p_start_epoch)
+      and (p_end_epoch   is null or c.transaction_date <= p_end_epoch)
   ),
   redemption_ids as (
     select r.customer_id from public.customer_credit_redemptions r
@@ -553,8 +553,8 @@ as $$
      and c.revoked_at is null
     join merchant_branches mb on mb.id = c.branch_id
     where r.deleted_at is null and r.approved_at is not null
-      and (p_start_epoch is null or (extract(epoch from r.created_at)::bigint) >= p_start_epoch)
-      and (p_end_epoch   is null or (extract(epoch from r.created_at)::bigint) <= p_end_epoch)
+      and (p_start_epoch is null or r.transaction_date >= p_start_epoch)
+      and (p_end_epoch   is null or r.transaction_date <= p_end_epoch)
   )
   select count(distinct customer_id)::bigint
   from (
@@ -687,13 +687,13 @@ as $$
                - coalesce(c.approved_redemption_amount, 0)
                - coalesce(c.pending_redemption_amount, 0)) > 0
            )::bigint as live_credit_count,
-           max(extract(epoch from c.created_at)::bigint) as last_credit_epoch
+           max(c.transaction_date) as last_credit_epoch
     from public.customer_credit c
     join merchant_branches mb on mb.id = c.branch_id
     where c.deleted_at is null
       and c.revoked_at is null
       and (c.expires_at is null
-           or c.expires_at > extract(epoch from now())::bigint)
+           or c.expires_at > (extract(epoch from now()) * 1000)::bigint)
     group by c.customer_id
   ),
   redemption_agg as (
@@ -702,7 +702,7 @@ as $$
     -- merchant (so a redemption against a different merchant doesn't
     -- pollute this customer's "last activity" at ours).
     select c.customer_id,
-           max(extract(epoch from r.created_at)::bigint) as last_redemption_epoch
+           max(r.transaction_date) as last_redemption_epoch
     from public.customer_credit_redemptions r
     join public.customer_credit c
       on c.customer_id = r.customer_id
@@ -806,7 +806,7 @@ begin
     where c.customer_id = p_customer_id
       and c.deleted_at is null
       and c.revoked_at is null
-      and (c.expires_at is null or c.expires_at > extract(epoch from now())::bigint)
+      and (c.expires_at is null or c.expires_at > (extract(epoch from now()) * 1000)::bigint)
     order by c.expires_at asc nulls last, c.created_at asc, c.id asc
     for update of c
   ),

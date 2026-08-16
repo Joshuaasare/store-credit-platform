@@ -41,9 +41,9 @@ export default function CreditCard({
       validityTone = theme.colors.warning;
     } else {
       validityText = `${formatGhs(soonest.remaining)} expires ${distance}`;
-      // `expires_at` arrives in seconds from the backend; promote to ms
-      // before comparing against `Date.now()` (ms).
-      const msUntilExpiry = soonest.expires_at * 1000 - Date.now();
+      // `expires_at` arrives in milliseconds from the backend (same unit
+      // as `Date.now()`), so no promotion is needed.
+      const msUntilExpiry = soonest.expires_at - Date.now();
       if (msUntilExpiry <= 1000 * 60 * 60 * 48) {
         validityTone = theme.colors.warning;
       }

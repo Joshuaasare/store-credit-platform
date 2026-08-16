@@ -129,7 +129,7 @@ export class BranchService {
 
         const candidateMs: number[] = [];
         if (lastPurchase.data?.transaction_date) {
-          candidateMs.push(Number(lastPurchase.data.transaction_date) * 1000);
+          candidateMs.push(Number(lastPurchase.data.transaction_date));
         }
         if (lastCredit.data?.created_at) {
           candidateMs.push(new Date(lastCredit.data.created_at).getTime());
