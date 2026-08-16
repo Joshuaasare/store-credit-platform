@@ -86,7 +86,7 @@ describe("BranchService", () => {
           { count: 4 },
           { count: 9 },
           [{ credit_generated: 50 }, { credit_generated: 25 }],
-          { transaction_date: 1756500000 },
+          { transaction_date: 1756500000000 },
         ];
         const idx = (call - 2) % 4;
         return chainable(() => perBranchResults[idx]);

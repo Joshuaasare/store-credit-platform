@@ -1,5 +1,8 @@
 import {
   createCustomerAuthService,
+  createCustomerCreditsService,
+  createCustomerActivitiesService,
+  createCustomerRedemptionsService,
   type ApiClientConfig,
 } from "@store-credit-platform/api-services";
 import * as SecureStore from "expo-secure-store";
@@ -62,3 +65,26 @@ const rnConfig: ApiClientConfig = {
 };
 
 export const customerAuthService = createCustomerAuthService(rnConfig);
+
+/**
+ * Customer-app credits service. Shares the same RN-injected transport
+ * (access-token getter/setter + refresh handler) as the auth service, so
+ * authenticated requests automatically attach the customer JWT and trigger
+ * a refresh cycle on 401.
+ */
+export const customerCreditsService = createCustomerCreditsService(rnConfig);
+
+/**
+ * Customer-app activities service. Backs the Home tab's Recent Activity
+ * feed (issuances + approved redemptions, cursor-paginated). Shares the
+ * same RN-injected transport as the other customer services.
+ */
+export const customerActivitiesService = createCustomerActivitiesService(rnConfig);
+
+/**
+ * Customer-app redemptions service. Backs the "Credits Redeemed" tab on
+ * the merchant detail screen (pending + approved + rejected redemptions
+ * at a single merchant, plus soft-cancel). Shares the same RN-injected
+ * transport as the other customer services.
+ */
+export const customerRedemptionsService = createCustomerRedemptionsService(rnConfig);

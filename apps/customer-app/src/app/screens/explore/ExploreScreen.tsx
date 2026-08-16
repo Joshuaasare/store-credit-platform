@@ -1,21 +1,44 @@
 import { StyleSheet, Text, View } from "react-native";
-import { ScreenBackground } from "../../components/ScreenBackground";
-import { GlassCard } from "../../components/GlassCard";
-import { GlassTransition } from "../../components/GlassTransition";
+import ScreenBackground from "../../shared/components/ScreenBackground";
+import ScreenBody from "../../shared/components/ScreenBody";
+import GlassCard from "../../shared/components/GlassCard";
+import GlassTransition from "../../shared/components/GlassTransition";
+import { useThemeTokens } from "../../shared/theme/ThemeContext";
 
 export function ExploreScreen() {
+  const theme = useThemeTokens();
   return (
     <ScreenBackground>
+      <ScreenBody>
       <GlassTransition>
         <View style={styles.container}>
-          <Text style={styles.title}>Explore</Text>
+          <Text
+            style={[
+              styles.title,
+              {
+                color: theme.colors.text,
+                fontFamily: theme.typography.fontFamilyBold,
+              },
+            ]}
+          >
+            Explore
+          </Text>
           <GlassCard style={styles.card}>
-            <Text style={styles.placeholder}>
+            <Text
+              style={[
+                styles.placeholder,
+                {
+                  color: theme.colors.textSecondary,
+                  fontFamily: theme.typography.fontFamilyRegular,
+                },
+              ]}
+            >
               A map of nearby merchants accepting StoreCredit will appear here.
             </Text>
           </GlassCard>
         </View>
       </GlassTransition>
+      </ScreenBody>
     </ScreenBackground>
   );
 }
@@ -26,9 +49,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   title: {
-    color: "#ffffff",
     fontSize: 28,
-    fontFamily: "Inter_700Bold",
     textAlign: "center",
     marginBottom: 24,
   },
@@ -36,9 +57,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 0,
   },
   placeholder: {
-    color: "rgba(255,255,255,0.7)",
     fontSize: 15,
-    fontFamily: "Inter_400Regular",
     textAlign: "center",
   },
 });

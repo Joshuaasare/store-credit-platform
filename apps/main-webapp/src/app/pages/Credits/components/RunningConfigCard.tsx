@@ -26,8 +26,8 @@ import {
   successToastProperties,
 } from "@shared/utils/misc.utils";
 import { formatGHS, formatGHSCompact } from "@shared/utils/format";
-import { ConfirmDialog } from "../../../components/ConfirmDialog/ConfirmDialog";
-import { FlipCard } from "../../../components/FlipCard/FlipCard";
+import { ConfirmDialog } from "@shared/components/ConfirmDialog/ConfirmDialog";
+import { FlipCard } from "@shared/components/FlipCard/FlipCard";
 import { RunningConfigSummary } from "./ConfigSummary";
 import { RunningConfigDialog } from "./RunningConfigDialog";
 import {

@@ -121,6 +121,139 @@ Reference implementation: see `apps/main-webapp/src/app/pages/MyStore/components
 
 Do not ship a form whose submit button stays enabled and unlabeled through a network round-trip — that is a regression.
 
+## Customer-app: Component File Structure
+
+When implementing frontend components in `apps/customer-app` (the Expo/React Native customer mobile app), follow this file structure rule — one component per file, with screen-specific and reusable components in different directories:
+
+- **Reusable components** (used by 2+ screens or generic UI primitives): `apps/customer-app/src/app/shared/components/<ComponentName>.tsx`. Examples: `GlassCard`, `GlassInput`, `GlassSegmentedControl`, `GlassTransition`, `PhoneInput`, `PrimaryButton`, `ScreenBackground`, `ActivityRow`.
+- **Screen-specific components** (used by exactly one screen): `apps/customer-app/src/app/screens/<screen>/components/<ComponentName>.tsx`. Examples: `Home/components/{ActivitiesModal, Header, HeroBalanceCard, ListHeader, NearbyOffersSection, OfferCard, RecentActivitySection}`, `Credits/components/{CreditCard, EmptyState, ErrorState, LoadingState}`.
+- **Pure utilities** (date formatting, currency formatting, string helpers): `apps/customer-app/src/app/shared/utils/<name>.ts`. Examples: `formatGhs`, `computeInitials`.
+- **Screen-specific hooks / derivation helpers**: `apps/customer-app/src/app/screens/<screen>/<name>.ts` (sibling to the screen file, NOT inside `components/`). Examples: `screens/home/useActivitiesFeed.ts`, `screens/home/deriveOffers.ts`.
+
+Decision tree for placement:
+
+1. Is the file a pure utility (no JSX, returns a primitive/string/number)? → `shared/utils/`.
+2. Is it used by more than one screen, OR is it a generic UI primitive (themed button, glass card, gradient background)? → `shared/components/`.
+3. Is it used by exactly one screen and tightly coupled to that screen's data? → `screens/<screen>/components/`.
+4. Is it a screen-specific React Query hook or data-derivation helper? → `screens/<screen>/` (sibling to the screen file).
+
+Default exports vs named exports:
+
+- React components → **default export**. `export default function Foo(...)`. Importers: `import Foo from "..."`.
+- Hooks, utilities, types → **named export**. `export function useFoo()`, `export type X = ...`, `export function fooBar()`. Importers: `import { useFoo, fooBar, type X } from "..."`.
+
+When the screen file itself stays slim. Do NOT inline 3+ sub-components in a screen file — extract them to `screens/<screen>/components/`. The screen file should orchestrate data (queries, derived state) and render a tree of imported components.
+
+Reference implementation: read `apps/customer-app/src/app/screens/home/HomeScreen.tsx` (224 lines — the post-refactor version) and the co-located `screens/home/components/`. The structure is the canonical pattern.
+
+## Customer-app: Theme Tokens Only (No Hardcoded Hex)
+
+Every color, typography, and radius value in `apps/customer-app` MUST be read from `useThemeTokens()` (`theme.colors.*`, `theme.typography.*`, `theme.radii.*`). Never write a hex literal (`#1e40af`, `#fff`, etc.) inside a component, screen, navigation file, or stylesheet. The **only** file allowed to contain hex values is `apps/customer-app/src/app/theme/colors.ts`.
+
+Specific rules:
+
+- Brand colors (`primary` / `primaryActive` / `textOnPrimary`) drive every CTA, every link, the active state of the tab bar, the brand-color "credit card" hero surface, and inline brand accents.
+- Semantic tokens (`surface` / `surfaceBorder` / `text` / `textSecondary` / `textMuted` / `textPlaceholder` / `success` / `error` / `warning` / `sheet` / `sheetText` / `sheetInput` / `sheetSeparator` / `navCard` / `navBorder`) drive every neutral surface and every status indicator.
+- Light/dark parity is automatic via the existing `ThemeContext` — read both palettes from `colors.ts`; do not duplicate the logic in components.
+
+When a surface genuinely needs a brand-derived background (e.g. the hero "credit card" whose fill IS the brand color), bind it inline via `style={{ backgroundColor: theme.colors.primary }}` — do not move it into the static `StyleSheet.create`. The static stylesheet is for layout-only properties (sizes, gaps, paddings, flex directions).
+
+Decorative white-on-card tints (e.g. `rgba(255,255,255,0.06)` for an orb, `rgba(255,255,255,0.72)` for a label) are acceptable inside a static `LinearGradient` overlay because they are *not* brand colors — they describe white-on-brand-card layering, which doesn't change when the brand does. They are never used as a fill, border, text, or icon color.
+
+**Why:** the theme is the single source of truth. A rebrand (orange → blue → maroon, light/dark token swap) must be achievable by editing only `colors.ts`. Any hardcoded hex breaks the visual contract and blocks light/dark parity.
+
+**How to apply:**
+- Before declaring any UI feature in `apps/customer-app` complete, run `grep -rn "#[0-9a-fA-F]\{3,6\}\b" apps/customer-app/src/app/` and confirm every match is either (a) inside `theme/colors.ts`, or (b) inside a clearly justified `LinearGradient` decorative overlay (white-on-card). Never as a fill, border, text, or icon color.
+- If you find a hex outside those two cases, replace it with the matching `theme.colors.*` token (or, if the token doesn't exist, add a new one to `ColorTokens` in `colors.ts` and apply it to both `lightColors` and `darkColors`).
+- This rule applies to existing components too — when you touch any file in `apps/customer-app/src/app/` for a feature, audit that file for stray hexes and migrate them.
+
+## Customer-app: Always Use `expo-image` for Remote Images
+
+In `apps/customer-app`, **never** import `Image` from `react-native` for any component that renders a remote URL. Use `Image` from `expo-image` instead. The stock `Image` re-fetches on every screen mount, which is exactly the "images reload on every visit" complaint that triggered this rule.
+
+`expo-image` gives the customer-app:
+
+- Persistent disk + memory cache across screen visits (the avatar renders from cache on the second visit instead of re-fetching the merchant logo).
+- Progressive loading with cross-fade transitions.
+- Blurhash / thumbhash placeholders for slow networks.
+- First-class Fabric / new-architecture support, which `react-native-fast-image` lacks.
+
+Specific rules:
+
+- Import: `import { Image } from "expo-image";`. Never `import { Image } from "react-native"` for remote URLs.
+- API mapping: `resizeMode="cover"` → `contentFit="cover"`. `source={{ uri }}` → `source={{ uri }}` (unchanged). Always pass `transition={150}` for a soft fade-in.
+- Use a layered placeholder (gradient + initials behind the image) rather than the `placeholder` JSX prop — `expo-image`'s `placeholder` only accepts serialized sources (URI / blurhash string), not JSX. Layered placeholders also avoid the empty-square flash while the image is in flight.
+- For merchant avatars, use the shared `MerchantAvatar` component (`apps/customer-app/src/app/shared/components/MerchantAvatar.tsx`) — it already handles the gradient + initials fallback, the `expo-image` migration, and the layered placeholder. Don't write a new avatar from scratch in a screen.
+- Local-only assets (static `require('./foo.png')` inside the bundle, not a remote URL) still work with the stock `Image` from `react-native` if you really need it, but `expo-image` handles them too — prefer consistency.
+
+**Why:** the original `react-native` `Image` re-fetches on every screen mount, which is jarring on the home screen (merchants' logos flicker every time you switch tabs back to Home). `expo-image`'s disk cache survives across mounts and app launches, so the second visit is instant.
+
+**How to apply:**
+- Before declaring any UI feature in `apps/customer-app` complete, run `grep -rn "from \"react-native\"" apps/customer-app/src/app/ | xargs grep -l "Image"` and confirm the result is empty. Any match means a stray `Image` import that needs to be migrated.
+- If you find a stray `Image` import, replace it with `import { Image } from "expo-image"`, swap `resizeMode` → `contentFit`, and add a `transition={150}` for the soft fade.
+- This rule applies to existing components too — when you touch any file in `apps/customer-app/src/app/` for a feature, audit that file for `Image` imports from `react-native` and migrate them.
+
+## Customer-app: No Bottom Pop-Up Modals — Centered Modals Only (with a long-list exception)
+
+Every confirm-modal / dialog / short-form overlay in `apps/customer-app` MUST be a centered modal — never a bottom slide-up sheet. The customer app's confirm-modal contract is a centered `Modal` with `animationType="none"`, `justifyContent: "center"`, `alignItems: "center"`, `maxWidth: 420`, and `radii.md` (8px) corners — no grabber bar, no `flex-end` anchor, no `slide` animation, no iOS-style bottom-sheet surface. The native `Modal` animation is disabled — the inner surface is wrapped in `Animated.View` from `react-native-reanimated` and animates with a scale-up + fade (scale 0.92 → 1.0, opacity 0 → 1, 180ms in / 120ms out, spring on the scale).
+
+**Exception — long scroll-view surfaces stay as bottom sheets.** A modal whose body is a paginated list or a long scroll area (e.g. `ActivitiesModal.tsx`) is allowed to keep `animationType="slide"`, `justifyContent: "flex-end"`, a grabber pill, and rounded top corners — it behaves like a scroll view, not a dialog, and would cramp at `maxWidth: 420`. The user explicitly approved this for the activity list feed. The content container should fill ~50% of the screen height (it's a scroll view, not a dialog) so the user can scroll the list inside the surface and glance back at the home screen for context.
+
+Specific rules:
+
+- **No `justifyContent: "flex-end"` on a modal overlay.** Anchoring a modal to the bottom of the screen is forbidden — the centered modal is the canonical confirm surface.
+- **No `animationType="slide"` on a `Modal`**, and the native `Modal` animation is disabled (`animationType="none"`) — the scale + fade is driven by `react-native-reanimated` on the inner `Animated.View` only, so the surface "opens" into place rather than fades alone or slides up from below.
+- **No grabber bar.** Bottom sheets use a 4px pill above the surface to suggest drag-to-dismiss; centered modals don't, so no grabber element.
+- **No `radii.xl` rounded top corners.** Centered modals use `radii.md` (8px) uniformly on all four corners.
+- **No iOS Done accessory bar on text inputs.** Don't pass `returnKeyType="done"` or any keyboard accessory that would render a bottom toolbar in the modal — the modal is the surface, not a sheet.
+- **Centered modal style block** (canonical, copy-pasteable):
+  ```tsx
+  const opacity = useSharedValue(visible ? 1 : 0);
+  const scale = useSharedValue(visible ? 1 : 0.92);
+  useEffect(() => {
+    if (visible) {
+      opacity.value = withTiming(1, { duration: DURATION_IN, easing: Easing.out(Easing.cubic) });
+      scale.value = withSpring(1, { damping: 45, stiffness: 500 });
+    } else {
+      opacity.value = withTiming(0, { duration: DURATION_OUT, easing: Easing.in(Easing.cubic) });
+      scale.value = withTiming(0.92, { duration: DURATION_OUT });
+    }
+  }, [visible, opacity, scale]);
+  const sheetAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: opacity.value,
+    transform: [{ scale: scale.value }],
+  }));
+
+  <Modal
+    visible={visible}
+    transparent
+    animationType="none"
+    onRequestClose={isPending ? undefined : onDismiss}
+    statusBarTranslucent
+  >
+    <Pressable style={styles.overlay} onPress={isPending ? undefined : onDismiss}>
+      <Animated.View
+        style={[styles.sheet, { backgroundColor: theme.colors.sheet, borderRadius: theme.radii.md }, sheetAnimatedStyle]}
+      >
+        <Pressable onPress={(e) => e.stopPropagation()}>
+          { /* content */ }
+        </Pressable>
+      </Animated.View>
+    </Pressable>
+  </Modal>
+  ```
+  With `overlay: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: "rgba(0,0,0,0.45)", paddingHorizontal: 24 }` and `sheet: { width: "100%", maxWidth: 420, paddingTop: 24, paddingBottom: 24, paddingHorizontal: 20 }`. Add a `KeyboardAvoidingView` wrapper only if the modal contains a `TextInput`. The inner `Pressable` only exists to gate `onPress={(e) => e.stopPropagation()}` so the child content doesn't trigger the overlay's dismiss handler — the `Animated.View` itself doesn't accept a press handler cleanly.
+- **Body copy inside the modal: 13px `fontFamilyRegular`, `lineHeight: 19`** — matches the `RedemptionAmountSheet` copy scale so customers read the same size text across all centered modals.
+- **Two CTAs sit on a single row** (`flexDirection: "row", gap: 12`), each `flex: 1, height: 48, borderRadius: 8`. The destructive CTA uses `theme.colors.error`, the safe CTA uses `theme.colors.surface` + a `theme.colors.surfaceBorder` hairline. Reference: `MerchantRedemptionConfirmSheet.tsx`.
+- **Anchor the cancel/dismiss affordance to the bottom of the modal** (a single labeled "Cancel" tap-link, or the destructive CTA left in the actions row) — the modal's overlay is the backdrop, not a tap-to-dismiss anywhere on the surface.
+
+**Why:** the customer kept asking for bottom pop-ups to be converted to centered modals because the slide-up affordance felt too quick to dismiss — they tapped a destructive action and the customer-app briefly slid the confirm sheet up before the request landed, which made confirmation moments feel like they skipped the actual confirm step. The centered modal freezes the surface in the middle of the screen, gives the user a calm moment to read the headline copy, and matches the rest of the redemption flow's centered dialogs (amount entry, confirm cancel). The scale + fade entry animation feels centered-modal-canonical (iOS-style) — the surface "opens" into place rather than fades alone or slides up from below.
+
+**How to apply:**
+- Before declaring any UI feature in `apps/customer-app` complete, run `grep -rn "justifyContent.*flex-end" apps/customer-app/src/app/` and `grep -rn "animationType.*slide" apps/customer-app/src/app/`. For each match, classify it: confirm-modal matches (short copy + ≤2 CTAs) MUST be migrated to the centered modal style. Scroll-view matches (a `Modal` whose body is a `FlatList` or a long scroll surface) MAY remain a bottom sheet.
+- If you find a stray bottom-sheet modal, refactor it: drop the grabber, change `justifyContent: "flex-end"` → `justifyContent: "center"`, change `animationType="slide"` → `animationType="none"` (or `fade` if the modal doesn't need the scale-up entry), wrap the surface in `Animated.View` with scale + fade from `react-native-reanimated` (the project already depends on `react-native-reanimated@^4.x` — see `apps/customer-app/src/app/shared/components/GlassTransition.tsx` for the canonical animation primitives), change `borderTopLeftRadius/borderTopRightRadius: radii.xl` → `borderRadius: radii.md` uniformly, normalize body copy to 13px, and remove any `KeyboardAvoidingView` bottom-anchor (only keep it when there's a `TextInput`).
+- This rule applies to existing components too — when you touch any file in `apps/customer-app/src/app/` for a feature, audit that file for `flex-end` modal anchors and migrate them. Since the cancel confirm modal (`MerchantRedemptionConfirmSheet.tsx`) is the canonical centered example with the scale + fade enter animation, when migrating a bottom-sheet modal, mirror its style block exactly.
+
 ## Decision Framework: New File vs. Existing File
 
 When implementing routes or services, you must decide whether to create a new file or add to an existing one:

@@ -11,7 +11,7 @@ import { formatDistanceToNow } from "date-fns";
 import { useState } from "react";
 import { BranchWithAggregates } from "@shared/types/api.types";
 import { getCountryByCode } from "@shared/utils/countries";
-import { CountryFlag } from "../../../components/CountryFlag/CountryFlag";
+import { CountryFlag } from "@shared/components/CountryFlag/CountryFlag";
 import { formatGHSCompact } from "@shared/utils/format";
 import { BranchEditDialog } from "./BranchEditDialog";
 
@@ -38,7 +38,7 @@ export function BranchCard({
   return (
     <>
       <Card
-        className="group flex h-full cursor-pointer flex-col border-primary/60 p-5 transition-all hover:-translate-y-0.5 hover:shadow-md hover:border-primary"
+        className="border-primary/60 hover:border-primary group flex h-full cursor-pointer flex-col p-5 transition-all hover:-translate-y-0.5 hover:shadow-md"
         onClick={onOpenDetail}
       >
         {/* Caption */}

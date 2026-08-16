@@ -1,6 +1,6 @@
 /**
  * Auto-generated API Types
- * Generated on: 2026-08-12T05:02:21.138Z
+ * Generated on: 2026-08-16T14:14:47.970Z
  * 
  * ⚠️ DO NOT EDIT MANUALLY
  * Source: apps/smartschool-api/src/app/types/
@@ -105,7 +105,6 @@ export interface BaseCustomerTransaction {
   id: number;
   customer_id: number;
   branch_id: number;
-  recorded_by_staff_id: number | null;
   amount: number;
   transaction_date: number;
   transaction_type: TransactionTypeValues;
@@ -113,7 +112,6 @@ export interface BaseCustomerTransaction {
   
   
   
-  credit_id?: number | null;
 }
 
 
@@ -149,11 +147,25 @@ export interface BaseStaff {
   deleted_at: string | null;
 }
 
+
+
+
+
+
+
+
+
+
+
+
 export interface BaseCustomerCredit {
   id: number;
   customer_id: number;
   branch_id: number;
   credit_amount: number;
+  pending_redemption_amount: number | null;
+  approved_redemption_amount: number | null;
+  redemption_approval_staff_id: number | null;
   expires_at: number | null;
   revoked_at: string | null;
   revoked_by_user_id: string | null;
@@ -173,19 +185,25 @@ export interface BaseCustomerCredit {
 
 
 
+
 export interface BaseCustomerCreditRedemption {
   id: number;
-  credit_id: number;
   customer_id: number;
-  branch_id: number;
+  
+  
+  
+  
+  
+  
+  merchant_id: number | null;
   amount_redeemed: number;
   approved_at: string | null;
   approved_by_staff_id: number | null;
-  recorded_by_staff_id: number | null;
   rejected_at: string | null;
   created_at: string;
   updated_at: string | null;
   deleted_at: string | null;
+  branch_id: number;
 }
 
 export interface BaseRunningCreditConfig {
@@ -262,6 +280,8 @@ export interface AuthUser {
   role: StaffRoleValues | null;
   merchant_id: number | null;
   branch_id: number | null;
+
+  staff_id: number | null;
 }
 
 export interface AuthSession {
@@ -622,6 +642,173 @@ export type CustomerRegisterServiceResponse = {
 
 export type CustomerRefreshServiceResponse = CustomerRegisterServiceResponse;
 
+export type CustomerActivityKind = "credit_issued" | "credit_redeemed";
+
+export interface CustomerActivityIssued {
+  kind: "credit_issued";
+  id: number;
+  amount: number;
+  merchant: BaseMerchant;
+  branch: BaseBranch;
+  created_at: string;
+  credit_id: number;
+}
+
+export interface CustomerActivityRedeemed {
+  kind: "credit_redeemed";
+  id: number;
+  amount: number;
+  merchant: BaseMerchant;
+  branch: BaseBranch;
+  created_at: string;
+  credit_id: number;
+
+  purchase_id: number | null;
+}
+
+export type CustomerActivity =
+  | CustomerActivityIssued
+  | CustomerActivityRedeemed;
+
+export interface CustomerActivitiesPage {
+  items: CustomerActivity[];
+
+  nextCursor: number | null;
+}
+
+export interface CustomerActivitiesResponse {
+  success: true;
+  data: CustomerActivitiesPage;
+}
+
+export type CustomerActivitiesApiResponse =
+  | CustomerActivitiesResponse
+  | ApiErrorResponse;
+
+export type CustomerCreditStatus = "live" | "expired" | "revoked";
+
+export type CustomerCreditType = "running" | "fixed" | null;
+
+export interface CustomerCreditWithBranch extends BaseCustomerCredit {
+
+  branch: BaseBranch & { merchant: BaseMerchant };
+
+  redeemed_total: number;
+
+  pending_total: number;
+
+  remaining: number;
+  
+  status: CustomerCreditStatus;
+  
+  credit_type: CustomerCreditType;
+}
+
+export interface CustomerCredits {
+  live: CustomerCreditWithBranch[];
+  expired: CustomerCreditWithBranch[];
+}
+
+export interface CustomerCreditsResponse {
+  success: true;
+  data: CustomerCredits;
+}
+
+export type CustomerCreditsApiResponse =
+  | CustomerCreditsResponse
+  | ApiErrorResponse;
+
+export interface CustomerMerchantBranchesResponse {
+  success: true;
+  data: BaseBranch[];
+}
+
+export type CustomerMerchantBranchesApiResponse =
+  | CustomerMerchantBranchesResponse
+  | ApiErrorResponse;
+
+export interface CustomerPendingRedemption {
+  redemption_code: number;
+  redemption_id: number;
+  branch_id: number;
+  branch_name: string | null;
+  amount_redeemed: number;
+  requested_date: number;
+  requested_at: string;
+}
+
+export interface CustomerPendingRedemptionResponse {
+  success: true;
+  data: CustomerPendingRedemption | null;
+}
+
+export type CustomerPendingRedemptionApiResponse =
+  | CustomerPendingRedemptionResponse
+  | ApiErrorResponse;
+
+export interface CustomerRedemptionRequestBody {
+  amount: number;
+  branchId: number;
+}
+
+export interface CustomerRedemptionRequestResult {
+  audit_id: number;
+  redemption_code: number;
+  requested_date: number;
+  branch_id: number;
+  amount_redeemed: number;
+  requested_at: string;
+}
+
+export interface CustomerRedemptionRequestMutationResponse {
+  success: true;
+  data: CustomerRedemptionRequestResult;
+}
+
+export type CustomerRedemptionRequestMutationApiResponse =
+  | CustomerRedemptionRequestMutationResponse
+  | ApiErrorResponse;
+
+export interface CustomerRedemptionCancelResult {
+  cancelled: boolean;
+}
+
+export interface CustomerRedemptionCancelResponse {
+  success: true;
+  data: CustomerRedemptionCancelResult;
+}
+
+export type CustomerRedemptionCancelApiResponse =
+  | CustomerRedemptionCancelResponse
+  | ApiErrorResponse;
+
+export interface CustomerApprovedRedemption {
+  redemption_id: number;
+  amount_redeemed: number;
+  branch_id: number;
+  branch_name: string | null;
+  approved_at: number;
+}
+
+export interface CustomerApprovedRedemptionPage {
+  items: CustomerApprovedRedemption[];
+  nextCursor: number | null;
+}
+
+export interface CustomerApprovedRedemptionResponse {
+  success: true;
+  data: CustomerApprovedRedemptionPage;
+}
+
+export type CustomerApprovedRedemptionApiResponse =
+  | CustomerApprovedRedemptionResponse
+  | ApiErrorResponse;
+
+export interface CustomerApprovedRedemptionQuerystring {
+  cursor?: string | number;
+  limit?: number;
+}
+
 export type LeaderboardSort =
   | "purchases"
   | "credits_issued"
@@ -715,6 +902,7 @@ export interface CustomerListResponse {
 
 export interface CustomerDetailCreditRow extends BaseCustomerCredit {
   redeemed_total: number;
+  pending_total: number;
   remaining: number;
   branch: BaseBranch;
 }
@@ -775,49 +963,100 @@ export type MerchantMutationApiResponse =
   | MerchantMutationResponse
   | ApiErrorResponse;
 
-export type RedemptionStatus = "pending" | "approved" | "rejected";
-
-export interface RedemptionCustomer extends BaseCustomer {
-  users: BaseUserProfile | null;
+export interface MerchantPendingRequest {
+  redemption_id: number;
+  customer_id: number;
+  branch_id: number;
+  branch_name: string | null;
+  amount_redeemed: number;
+  requested_date: number;
+  requested_at: string;
+  customer: BaseCustomer & { users: BaseUserProfile | null };
+  merchant: BaseMerchant;
 }
 
-export interface RedemptionRow extends BaseCustomerCreditRedemption {
-  customer: RedemptionCustomer | null;
-  branch: BaseBranch | null;
-  credit: BaseCustomerCredit | null;
-  remaining: number;
-}
-
-export interface RedemptionsFilters {
-  
-  status: RedemptionStatus;
-  branch_id?: number | null;
-  limit?: number;
-  offset?: number;
-}
-
-export interface RedemptionsPage {
-  rows: RedemptionRow[];
+export interface MerchantPendingRequestsPage {
+  rows: MerchantPendingRequest[];
   total: number;
   offset: number;
   limit: number;
 }
 
-export type RedemptionsQuerystring = RedemptionsFilters;
-
-export interface RedemptionsResponse {
-  success: true;
-  data: RedemptionsPage;
+export interface MerchantApprovedRedemption extends BaseCustomerCreditRedemption {
+  customer: BaseCustomer & { users: BaseUserProfile | null };
+  merchant: BaseMerchant;
+  approved_by_staff: BaseStaff | null;
+  branch: BaseBranch | null;
 }
 
-export interface RedemptionMutationResponse {
-  success: true;
-  data: RedemptionRow;
+export interface MerchantRejectedRedemption extends BaseCustomerCreditRedemption {
+  customer: BaseCustomer & { users: BaseUserProfile | null };
+  merchant: BaseMerchant;
+  branch: BaseBranch | null;
 }
 
-export type RedemptionsApiResponse = RedemptionsResponse | ApiErrorResponse;
-export type RedemptionMutationApiResponse =
-  | RedemptionMutationResponse
+export interface MerchantRedemptionActionBody {
+  redemption_code: number;
+  redemption_id: number;
+}
+
+export interface MerchantPendingRequestFilters {
+  branch_id?: number | null;
+  limit?: number;
+  offset?: number;
+}
+
+export interface MerchantAuditFeedFilters {
+  branch_id?: number | null;
+  limit?: number;
+  offset?: number;
+}
+
+export interface MerchantAuditFeedPage<T> {
+  rows: T[];
+  total: number;
+  offset: number;
+  limit: number;
+}
+
+export type MerchantPendingRequestsQuerystring = MerchantPendingRequestFilters;
+export type MerchantApprovedRedemptionsQuerystring = MerchantAuditFeedFilters;
+export type MerchantRejectedRedemptionsQuerystring = MerchantAuditFeedFilters;
+
+export interface MerchantPendingRequestsResponse {
+  success: true;
+  data: MerchantPendingRequestsPage;
+}
+
+export interface MerchantApprovedRedemptionsResponse {
+  success: true;
+  data: MerchantAuditFeedPage<MerchantApprovedRedemption>;
+}
+
+export interface MerchantRejectedRedemptionsResponse {
+  success: true;
+  data: MerchantAuditFeedPage<MerchantRejectedRedemption>;
+}
+
+export interface MerchantRedemptionMutationResponse {
+  success: true;
+  data: {
+    audit_id: number;
+    amount_redeemed: number;
+  };
+}
+
+export type MerchantPendingRequestsApiResponse =
+  | MerchantPendingRequestsResponse
+  | ApiErrorResponse;
+export type MerchantApprovedRedemptionsApiResponse =
+  | MerchantApprovedRedemptionsResponse
+  | ApiErrorResponse;
+export type MerchantRejectedRedemptionsApiResponse =
+  | MerchantRejectedRedemptionsResponse
+  | ApiErrorResponse;
+export type MerchantRedemptionMutationApiResponse =
+  | MerchantRedemptionMutationResponse
   | ApiErrorResponse;
 
 export interface Staff extends BaseStaff {
@@ -900,8 +1139,8 @@ export interface CustomerWithUser extends BaseCustomer {
 export interface CustomerTransactions extends BaseCustomerTransaction {
   customer: CustomerWithUser;
   branch: BaseBranch;
-  recorded_by_staff: BaseStaff | null;
-  approved_by_staff: BaseStaff | null;
+  recorded_by_staff?: BaseStaff | null;
+  approved_by_staff?: BaseStaff | null;
 }
 
 export type TransactionTypeFilter =

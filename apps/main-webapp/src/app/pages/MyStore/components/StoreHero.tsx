@@ -16,7 +16,7 @@ import {
 } from "@shared/types/api.types";
 import { createStorageService } from "@store-credit-platform/api-services";
 import { getCountryByCode } from "@shared/utils/countries";
-import { CountryFlag } from "../../../components/CountryFlag/CountryFlag";
+import { CountryFlag } from "@shared/components/CountryFlag/CountryFlag";
 import { compressImage } from "@shared/utils/imageCompression.utils";
 import { useStoreStore } from "@shared/stores/storeStore";
 import { MerchantEditDialog } from "./MerchantEditDialog";

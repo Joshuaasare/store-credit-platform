@@ -2872,6 +2872,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@expo-google-fonts/nunito@npm:^0.4.2":
+  version: 0.4.2
+  resolution: "@expo-google-fonts/nunito@npm:0.4.2"
+  checksum: 10c0/b22712e9892d47561b0d96bfb625fea24eeda3f34531bee88e781827892740e063dcde1ddf4615b097ba0b436e765f5101fbc4788430574369b6e5f4c8860eb3
+  languageName: node
+  linkType: hard
+
 "@expo/cli@npm:55.0.21":
   version: 55.0.21
   resolution: "@expo/cli@npm:55.0.21"
@@ -9297,6 +9304,7 @@ __metadata:
     expo-blur: "npm:~55.0.16"
     expo-dev-client: "npm:~55.0.18"
     expo-font: "npm:~55.0.8"
+    expo-image: "npm:~55.0.11"
     expo-linear-gradient: "npm:~55.0.16"
     expo-secure-store: "npm:~55.0.16"
     expo-splash-screen: "npm:~31.0.13"
@@ -9358,6 +9366,7 @@ __metadata:
     "@eslint/eslintrc": "npm:^2.1.1"
     "@eslint/js": "npm:^9.8.0"
     "@expo-google-fonts/inter": "npm:^0.4.2"
+    "@expo-google-fonts/nunito": "npm:^0.4.2"
     "@expo/cli": "npm:~54.0.16"
     "@expo/metro-config": "npm:~54.0.9"
     "@expo/metro-runtime": "npm:~6.1.2"
@@ -16586,6 +16595,23 @@ __metadata:
     react: "*"
     react-native: "*"
   checksum: 10c0/561c5c6a3661b0103fd010ee36867bc6d4ea8dbd9771a899d62bcd16f7d27af587034971a080ad4e7d42e1bbb5f6f18ad8ed715bcd11b04e6acbb3ba19a128bc
+  languageName: node
+  linkType: hard
+
+"expo-image@npm:~55.0.11":
+  version: 55.0.11
+  resolution: "expo-image@npm:55.0.11"
+  dependencies:
+    sf-symbols-typescript: "npm:^2.2.0"
+  peerDependencies:
+    expo: "*"
+    react: "*"
+    react-native: "*"
+    react-native-web: "*"
+  peerDependenciesMeta:
+    react-native-web:
+      optional: true
+  checksum: 10c0/6e31ebe8fd18cafa202f5a66542e71ba0762ba810956f9ce5cc193cf7dd8b22f51462292542c9c3959ef5dc691be8356eae1117ac7315fe90c3b1c46165ceb93
   languageName: node
   linkType: hard
 
@@ -25898,7 +25924,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"sf-symbols-typescript@npm:^2.1.0":
+"sf-symbols-typescript@npm:^2.1.0, sf-symbols-typescript@npm:^2.2.0":
   version: 2.2.0
   resolution: "sf-symbols-typescript@npm:2.2.0"
   checksum: 10c0/3f3bbf33aaad19e619d6f169899b39e9fe9c5fd21f0d6d511100e36887606ad349109ddc6ff82933f2b8cbf437dd7105c2ae6b0059b291dc47f143b30c2074cc

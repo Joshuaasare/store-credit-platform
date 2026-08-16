@@ -24,7 +24,7 @@ import {
 import { transactionService } from "@store-credit-platform/api-services";
 import { useStoreStore } from "@shared/stores/storeStore";
 import { useAuthStore } from "@shared/stores/authStore";
-import { PhoneInput } from "../../../components/PhoneInput/PhoneInput";
+import { PhoneInput } from "@shared/components/PhoneInput/PhoneInput";
 import {
   errorToastProperties,
   successToastProperties,

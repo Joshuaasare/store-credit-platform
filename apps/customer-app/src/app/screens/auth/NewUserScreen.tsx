@@ -1,13 +1,16 @@
 import { useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
-import { ScreenBackground } from "../../components/ScreenBackground";
-import { GlassCard } from "../../components/GlassCard";
-import { GlassInput } from "../../components/GlassInput";
-import { PrimaryButton } from "../../components/PrimaryButton";
+import ScreenBackground from "../../shared/components/ScreenBackground";
+import ScreenBody from "../../shared/components/ScreenBody";
+import GlassCard from "../../shared/components/GlassCard";
+import GlassInput from "../../shared/components/GlassInput";
+import PrimaryButton from "../../shared/components/PrimaryButton";
 import { customerAuthService } from "../../api/client";
-import { useAuthStore } from "../../store/useAuthStore";
+import { useAuthStore } from "../../shared/store/useAuthStore";
+import { useThemeTokens } from "../../shared/theme/ThemeContext";
 
 export function NewUserScreen() {
+  const theme = useThemeTokens();
   const [surname, setSurname] = useState("");
   const [otherNames, setOtherNames] = useState("");
   const [loading, setLoading] = useState(false);
@@ -52,13 +55,42 @@ export function NewUserScreen() {
 
   return (
     <ScreenBackground>
+      <ScreenBody>
       <View style={styles.container}>
-        <Text style={styles.title}>You're new here</Text>
-        <Text style={styles.subtitle}>
+        <Text
+          style={[
+            styles.title,
+            {
+              color: theme.colors.text,
+              fontFamily: theme.typography.fontFamilyBold,
+            },
+          ]}
+        >
+          You're new here
+        </Text>
+        <Text
+          style={[
+            styles.subtitle,
+            {
+              color: theme.colors.textSecondary,
+              fontFamily: theme.typography.fontFamilyRegular,
+            },
+          ]}
+        >
           Let's set up your account. We just need your name.
         </Text>
         <GlassCard style={styles.card}>
-          <Text style={styles.label}>Surname</Text>
+          <Text
+            style={[
+              styles.label,
+              {
+                color: theme.colors.textSecondary,
+                fontFamily: theme.typography.fontFamilyMedium,
+              },
+            ]}
+          >
+            Surname
+          </Text>
           <GlassInput
             value={surname}
             onChangeText={setSurname}
@@ -66,7 +98,18 @@ export function NewUserScreen() {
             autoCapitalize="words"
             autoCorrect={false}
           />
-          <Text style={[styles.label, { marginTop: 16 }]}>Other names</Text>
+          <Text
+            style={[
+              styles.label,
+              {
+                marginTop: 16,
+                color: theme.colors.textSecondary,
+                fontFamily: theme.typography.fontFamilyMedium,
+              },
+            ]}
+          >
+            Other names
+          </Text>
           <GlassInput
             value={otherNames}
             onChangeText={setOtherNames}
@@ -74,15 +117,29 @@ export function NewUserScreen() {
             autoCapitalize="words"
             autoCorrect={false}
           />
-          {error ? <Text style={styles.error}>{error}</Text> : null}
+          {error ? (
+            <Text
+              style={[
+                styles.error,
+                {
+                  color: theme.colors.error,
+                  fontFamily: theme.typography.fontFamilyRegular,
+                },
+              ]}
+            >
+              {error}
+            </Text>
+          ) : null}
           <PrimaryButton
             title="Create account"
             onPress={create}
             loading={loading}
+            fullWidth
             style={styles.button}
           />
         </GlassCard>
       </View>
+      </ScreenBody>
     </ScreenBackground>
   );
 }
@@ -93,16 +150,12 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   title: {
-    color: "#ffffff",
     fontSize: 28,
-    fontFamily: "Inter_700Bold",
     textAlign: "center",
     marginBottom: 8,
   },
   subtitle: {
-    color: "rgba(255,255,255,0.7)",
     fontSize: 15,
-    fontFamily: "Inter_400Regular",
     textAlign: "center",
     marginBottom: 32,
   },
@@ -110,18 +163,14 @@ const styles = StyleSheet.create({
     marginHorizontal: 0,
   },
   label: {
-    color: "rgba(255,255,255,0.7)",
     fontSize: 13,
-    fontFamily: "Inter_500Medium",
     marginBottom: 8,
   },
   button: {
     marginTop: 24,
   },
   error: {
-    color: "#fecaca",
     fontSize: 13,
-    fontFamily: "Inter_400Regular",
     marginTop: 12,
   },
 });

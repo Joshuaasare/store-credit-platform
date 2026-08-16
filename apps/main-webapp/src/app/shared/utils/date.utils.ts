@@ -2,35 +2,34 @@
  * Shared date / epoch conversion helpers.
  *
  * The backend stores timestamps (`transaction_date`, etc.) as Unix epoch
- * **seconds** (bigint). These helpers centralize the seconds ⇄ Date math so
- * call sites don't sprinkle `Math.floor(t / 1000)` and `new Date(epoch * 1000)`
- * inline.
+ * **milliseconds** (number). These helpers centralize the ms ⇄ Date math so
+ * call sites don't sprinkle `getTime()` and `new Date(ms)` inline.
  */
 
-/** Convert a Date to Unix epoch seconds (the format the backend stores). */
-export function toEpochSeconds(date: Date): number {
-  return Math.floor(date.getTime() / 1000);
+/** Convert a Date to Unix epoch milliseconds (the format the backend stores). */
+export function toEpochMs(date: Date): number {
+  return date.getTime();
 }
 
 /**
- * Convert a Unix epoch seconds value back to a Date.
+ * Convert a Unix epoch milliseconds value back to a Date.
  * Returns `undefined` for null/undefined/0 so callers can treat "no value"
  * uniformly (e.g. when a filter's end bound is unset).
  */
-export function fromEpochSeconds(
+export function fromEpochMs(
   epoch: number | null | undefined,
 ): Date | undefined {
-  if (!epoch) return undefined;
-  return new Date(epoch * 1000);
+  if (epoch == null || epoch === 0) return undefined;
+  return new Date(epoch);
 }
 
 /**
- * Epoch seconds for Jan 1 of the given date's year (defaults to now).
+ * Epoch ms for Jan 1 of the given date's year (defaults to now).
  * Used by the "This year" filter preset to scope the window from the start
  * of the current calendar year onwards.
  */
-export function startOfYearEpoch(date: Date = new Date()): number {
-  return toEpochSeconds(new Date(date.getFullYear(), 0, 1));
+export function startOfYearEpochMs(date: Date = new Date()): number {
+  return new Date(date.getFullYear(), 0, 1).getTime();
 }
 
 /**
@@ -39,4 +38,27 @@ export function startOfYearEpoch(date: Date = new Date()): number {
  */
 export function startOfMonth(date: Date): Date {
   return new Date(date.getFullYear(), date.getMonth(), 1);
+}
+
+/**
+ * Epoch ms for the *end* of the picked calendar day (23:59:59.999 local).
+ *
+ * Date pickers return the day at midnight (00:00:00). When that day is used
+ * as the upper bound of an inclusive range filter (`<= end`), any timestamp
+ * later in the day gets cut off. Bumping it to the last millisecond of the
+ * day makes "selected day" mean "selected day, all of it".
+ *
+ * Use this for the `end` side of any user-picked date range that feeds an
+ * inclusive `<=` filter on a millisecond-precision epoch column.
+ */
+export function endOfDayEpochMs(date: Date): number {
+  return new Date(
+    date.getFullYear(),
+    date.getMonth(),
+    date.getDate(),
+    23,
+    59,
+    59,
+    999,
+  ).getTime();
 }

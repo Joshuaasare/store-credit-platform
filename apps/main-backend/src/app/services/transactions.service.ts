@@ -9,6 +9,7 @@ import {
   CustomerTransactions,
   TransactionTypeFilter,
 } from "../schemas/transactions.schema";
+
 import { issueRunningCreditsForPurchase } from "./creditConfig.service";
 import { normalizePhone } from "../utils/phone.utils";
 
@@ -33,14 +34,9 @@ export class TransactionService {
 
   /**
    * Merchant-scoped activity feed, ordered by transaction_date desc.
-   * Built from a union of:
-   *   - customer_purchases   (transaction_type = "purchase")
-   *   - customer_credit      (transaction_type = "credit_issue")
-   *   - customer_credit_redemptions (transaction_type = "credit_redeem", only approved)
-   *
-   * `type` filters the union to a single kind before pagination, so `total`
-   * and the returned page reflect only that kind. `type = "all"` (default)
-   * returns the full union.
+   * Union of customer_purchases / customer_credit / approved
+   * customer_credit_redemptions. `type` filters the union before pagination
+   * so total + page reflect only that kind; "all" returns everything.
    */
   async getTransactions(
     merchantId: number,
@@ -49,206 +45,163 @@ export class TransactionService {
     const limit = filters.limit ?? TransactionService.DEFAULT_LIMIT;
     const offset = filters.offset ?? 0;
     const typeFilter: TransactionTypeFilter = filters.type ?? "all";
+    const branchId = filters.branch_id;
+    const branchIds = await this.resolveMerchantBranchIds(merchantId);
 
-    const { data: branchRows, error: branchError } = await supabaseAdmin
+    if (branchIds.length === 0) {
+      return { rows: [], total: 0, offset, limit };
+    }
+    const filteredBranchIds =
+      branchId && branchIds.includes(branchId) ? [branchId] : branchIds;
+
+    const AddPurchases = typeFilter === "all" || typeFilter === "purchase";
+    const AddCredits = typeFilter === "all" || typeFilter === "credit_issue";
+    const AddRedemptions =
+      typeFilter === "all" || typeFilter === "credit_redeem";
+
+    const [purchases, credits, redemptions] = await Promise.all([
+      AddPurchases
+        ? this.fetchPurchases(filteredBranchIds)
+        : Promise.resolve([]),
+      AddCredits ? this.fetchCredits(filteredBranchIds) : Promise.resolve([]),
+      AddRedemptions
+        ? this.fetchRedemptions(filteredBranchIds)
+        : Promise.resolve([]),
+    ]);
+
+    const purchaseData: CustomerTransactions[] = purchases.map((r) => ({
+      ...r,
+      transaction_type: "purchase",
+    }));
+
+    const creditData: CustomerTransactions[] = credits.map((r) => ({
+      ...r,
+      transaction_type: "credit_issue",
+      amount: Number(r.credit_amount),
+    }));
+
+    const redemptionData: CustomerTransactions[] = redemptions.map((r) => ({
+      ...r,
+      transaction_type: "credit_redeem",
+      amount: Number(r.amount_redeemed),
+    }));
+
+    const merged = purchaseData
+      .concat(creditData, redemptionData)
+      .sort((a, b) => b.transaction_date - a.transaction_date);
+
+    return {
+      rows: merged.slice(offset, offset + limit),
+      total: merged.length,
+      offset,
+      limit,
+    };
+  }
+
+  private async resolveMerchantBranchIds(
+    merchantId: number,
+  ): Promise<number[]> {
+    const { data, error } = await supabaseAdmin
       .from("branches")
       .select("id")
       .eq("merchant_id", merchantId)
       .is("deleted_at", null);
-
-    if (branchError) {
-      throw new Error(`Failed to resolve branches: ${branchError.message}`);
+    if (error) {
+      throw new Error(`Failed to resolve branches: ${error.message}`);
     }
-    const branchIds = (branchRows ?? []).map((b) => b.id);
-    if (branchIds.length === 0) {
-      return { rows: [], total: 0, offset, limit };
+    return (data ?? []).map((b) => b.id);
+  }
+
+  private async fetchPurchases(
+    branchIds: number[],
+    dateRange?: {
+      from: number;
+      to: number;
+    },
+  ) {
+    let query = supabaseAdmin
+      .from("customer_purchases")
+      .select(
+        `${QueryFragments.BASE_CUSTOMER_PURCHASE},
+         customer:customers(${QueryFragments.BASE_CUSTOMER}, 
+         users(${QueryFragments.BASE_USER_PROFILE})),
+         branch:branches(${QueryFragments.BASE_BRANCH}),
+         recorded_by_staff:staff(${QueryFragments.BASE_STAFF})`,
+      )
+      .in("branch_id", branchIds)
+      .is("deleted_at", null)
+      .order("transaction_date", { ascending: false });
+
+    if (dateRange?.to && dateRange?.from) {
+      query = query
+        .gte("transaction_date", dateRange.from)
+        .lte("transaction_date", dateRange.to);
     }
+    const { data, error } = await query;
 
-    // Fetch the merchant's branch IDs to filter on (preserves branch filter).
-    const filteredBranchIds =
-      filters.branch_id != null && branchIds.includes(filters.branch_id)
-        ? [filters.branch_id]
-        : branchIds;
+    if (error) throw new Error(`Failed to load purchases: ${error.message}`);
+    return data;
+  }
 
-    const startEpoch = filters.start ?? null;
-    const endEpoch = filters.end ?? null;
+  private async fetchCredits(
+    branchIds: number[],
+    dateRange?: {
+      from: number;
+      to: number;
+    },
+  ) {
+    let query = supabaseAdmin
+      .from("customer_credit")
+      .select(
+        `id, customer_id, branch_id, credit_amount, created_at,transaction_date,
+         customer:customers(${QueryFragments.BASE_CUSTOMER}, users(${QueryFragments.BASE_USER_PROFILE})),
+         branch:branches(${QueryFragments.BASE_BRANCH})`,
+      )
+      .in("branch_id", branchIds)
+      .is("deleted_at", null)
+      .is("revoked_at", null)
+      .order("created_at", { ascending: false });
 
-    // Skip source queries that can't contribute to the requested type. Each
-    // source query is only run if its rows could pass the type filter.
-    const needPurchases = typeFilter === "all" || typeFilter === "purchase";
-    const needCredits =
-      typeFilter === "all" || typeFilter === "credit_issue";
-    const needRedemptions =
-      typeFilter === "all" || typeFilter === "credit_redeem";
-
-    // Run purchases + credits in parallel. Redemptions are fetched in a
-    // follow-up query scoped to the credit IDs returned by the credits query
-    // (customer_credit_redemptions has no denormalized customer_id/branch_id —
-    // we reach them via credit_id → customer_credit).
-    const [purchasesRes, creditsRes] = await Promise.all([
-      needPurchases
-        ? supabaseAdmin
-            .from("customer_purchases")
-            .select(
-              `id, customer_id, branch_id, recorded_by_staff_id, amount, transaction_date, created_at,
-               customer:customers(${QueryFragments.BASE_CUSTOMER}, users(${QueryFragments.BASE_USER_PROFILE})),
-               branch:branches(${QueryFragments.BASE_BRANCH}),
-               recorded_by_staff:staff(${QueryFragments.BASE_STAFF})`,
-            )
-            .in("branch_id", filteredBranchIds)
-            .is("deleted_at", null)
-            .order("transaction_date", { ascending: false })
-        : Promise.resolve({ data: [], error: null as any }),
-      needCredits
-        ? supabaseAdmin
-            .from("customer_credit")
-            .select(
-              `id, customer_id, branch_id, credit_amount, created_at,
-               customer:customers(${QueryFragments.BASE_CUSTOMER}, users(${QueryFragments.BASE_USER_PROFILE})),
-               branch:branches(${QueryFragments.BASE_BRANCH})`,
-            )
-            .in("branch_id", filteredBranchIds)
-            .is("deleted_at", null)
-            .is("revoked_at", null)
-            .order("created_at", { ascending: false })
-        : Promise.resolve({ data: [], error: null as any }),
-    ]);
-
-    if (purchasesRes.error) {
-      throw new Error(`Failed to load purchases: ${purchasesRes.error.message}`);
-    }
-    if (creditsRes.error) {
-      throw new Error(`Failed to load credits: ${creditsRes.error.message}`);
+    if (dateRange?.to && dateRange?.from) {
+      query = query
+        .gte("transaction_date", dateRange.from)
+        .lte("transaction_date", dateRange.to);
     }
 
-    // Fetch approved redemptions for the credits we just loaded. The redemption
-    // table has no denormalized customer_id / branch_id — we reach them via
-    // credit_id → customer_credit.
-    const creditIds = ((creditsRes.data ?? []) as any[]).map((c) => c.id);
-    let redemptionsRes: { data: any[] | null; error: any } = {
-      data: [],
-      error: null,
-    };
-    if (needRedemptions && creditIds.length > 0) {
-      redemptionsRes = await supabaseAdmin
-        .from("customer_credit_redemptions")
-        .select(
-          `id, credit_id, amount_redeemed, approved_at, approved_by_staff_id, recorded_by_staff_id, created_at,
-           credit:customer_credit(id, customer_id, branch_id,
-             customer:customers(${QueryFragments.BASE_CUSTOMER}, users(${QueryFragments.BASE_USER_PROFILE})),
-             branch:branches(${QueryFragments.BASE_BRANCH})),
-           approved_by_staff:staff!approved_by_staff_id(${QueryFragments.BASE_STAFF})`,
-        )
-        .in("credit_id", creditIds)
-        .is("deleted_at", null)
-        .not("approved_at", "is", null)
-        .order("created_at", { ascending: false });
-    }
-    if (redemptionsRes.error) {
-      throw new Error(
-        `Failed to load redemptions: ${redemptionsRes.error.message}`,
-      );
-    }
+    const { data, error } = await query;
+    if (error) throw new Error(`Failed to load credits: ${error.message}`);
+    return data;
+  }
 
-    type UnionRow = {
-      id: number;
-      customer_id: number;
-      branch_id: number;
-      recorded_by_staff_id: number | null;
-      amount: number;
-      transaction_date: number;
-      transaction_type: "purchase" | "credit_issue" | "credit_redeem";
-      created_at: string;
-      credit_id: number | null;
-      customer: any;
-      branch: any;
-      recorded_by_staff: any;
-      approved_by_staff: any;
-    };
+  private async fetchRedemptions(
+    branchIds: number[],
+    dateRange?: {
+      from: number;
+      to: number;
+    },
+  ) {
+    let query = supabaseAdmin
+      .from("customer_credit_redemptions")
+      .select(
+        `${QueryFragments.BASE_CUSTOMER_CREDIT_REDEMPTION},
+         customer:customers(${QueryFragments.BASE_CUSTOMER}, users(${QueryFragments.BASE_USER_PROFILE})),
+         branch:branches(${QueryFragments.BASE_BRANCH}),
+         approved_by_staff:staff!approved_by_staff_id(${QueryFragments.BASE_STAFF})`,
+      )
+      .in("branch_id", branchIds)
+      .is("deleted_at", null)
+      .not("approved_at", "is", null)
+      .order("approved_at", { ascending: false });
 
-    const unioned: UnionRow[] = [];
-
-    if (needPurchases) {
-      for (const r of (purchasesRes.data ?? []) as any[]) {
-        const td = Number(r.transaction_date);
-        if (startEpoch != null && td < startEpoch) continue;
-        if (endEpoch != null && td > endEpoch) continue;
-        unioned.push({
-          id: r.id,
-          customer_id: r.customer_id,
-          branch_id: r.branch_id,
-          recorded_by_staff_id: r.recorded_by_staff_id ?? null,
-          amount: Number(r.amount),
-          transaction_date: td,
-          transaction_type: "purchase",
-          created_at: r.created_at,
-          credit_id: null,
-          customer: r.customer,
-          branch: r.branch,
-          recorded_by_staff: r.recorded_by_staff ?? null,
-          approved_by_staff: null,
-        });
-      }
+    if (dateRange?.to && dateRange?.from) {
+      query = query
+        .gte("transaction_date", dateRange.from)
+        .lte("transaction_date", dateRange.to);
     }
 
-    if (needCredits) {
-      for (const r of (creditsRes.data ?? []) as any[]) {
-        const td = Math.floor(new Date(r.created_at).getTime() / 1000);
-        if (startEpoch != null && td < startEpoch) continue;
-        if (endEpoch != null && td > endEpoch) continue;
-        unioned.push({
-          id: r.id,
-          customer_id: r.customer_id,
-          branch_id: r.branch_id,
-          recorded_by_staff_id: null,
-          amount: Number(r.credit_amount),
-          transaction_date: td,
-          transaction_type: "credit_issue",
-          created_at: r.created_at,
-          credit_id: r.id,
-          customer: r.customer,
-          branch: r.branch,
-          recorded_by_staff: null,
-          approved_by_staff: null,
-        });
-      }
-    }
-
-    if (needRedemptions) {
-      for (const r of (redemptionsRes.data ?? []) as any[]) {
-        const td = Math.floor(new Date(r.created_at).getTime() / 1000);
-        if (startEpoch != null && td < startEpoch) continue;
-        if (endEpoch != null && td > endEpoch) continue;
-        const credit = (r.credit ?? null) as any;
-        unioned.push({
-          id: r.id,
-          customer_id: credit?.customer_id,
-          branch_id: credit?.branch_id,
-          recorded_by_staff_id: r.recorded_by_staff_id ?? null,
-          amount: Number(r.amount_redeemed),
-          transaction_date: td,
-          transaction_type: "credit_redeem",
-          created_at: r.created_at,
-          credit_id: r.credit_id,
-          customer: credit?.customer,
-          branch: credit?.branch,
-          recorded_by_staff: null,
-          approved_by_staff: r.approved_by_staff ?? null,
-        });
-      }
-    }
-
-    unioned.sort((a, b) => b.transaction_date - a.transaction_date);
-
-    const total = unioned.length;
-    const pageRows = unioned.slice(offset, offset + limit);
-
-    return {
-      rows: pageRows as unknown as CustomerTransactions[],
-      total,
-      offset,
-      limit,
-    };
+    const { data, error } = await query;
+    if (error) throw new Error(`Failed to load redemptions: ${error.message}`);
+    return data;
   }
 
   /**
@@ -300,8 +253,8 @@ export class TransactionService {
       customerId = created.id;
     }
 
+    const transactionDate = new Date().getTime();
     // 2. Insert the purchase row.
-    const nowEpoch = Math.floor(Date.now() / 1000);
     const { data: txRow, error: txErr } = await supabaseAdmin
       .from("customer_purchases")
       .insert({
@@ -309,10 +262,10 @@ export class TransactionService {
         branch_id: branchId,
         recorded_by_staff_id: user.staff_id ?? null,
         amount: payload.amount,
-        transaction_date: nowEpoch,
+        transaction_date: transactionDate,
       })
       .select(
-        `id, customer_id, branch_id, recorded_by_staff_id, amount, transaction_date, created_at,
+        `${QueryFragments.BASE_CUSTOMER_PURCHASE},
          customer:customers(${QueryFragments.BASE_CUSTOMER}, users(${QueryFragments.BASE_USER_PROFILE})),
          branch:branches(${QueryFragments.BASE_BRANCH}),
          recorded_by_staff:staff(${QueryFragments.BASE_STAFF})`,
@@ -334,22 +287,23 @@ export class TransactionService {
         customerId,
         branchId,
         payload.amount,
-        nowEpoch,
+        transactionDate,
       );
     } catch (err) {
-      if (log) log.error(err, "issueRunningCreditsForPurchase failed (non-fatal)");
-      else console.error("issueRunningCreditsForPurchase failed (non-fatal)", err);
+      if (log)
+        log.error(err, "issueRunningCreditsForPurchase failed (non-fatal)");
+      else
+        console.error("issueRunningCreditsForPurchase failed (non-fatal)", err);
     }
 
     // Reshape to the existing CustomerTransactions shape so the frontend stays
     // unchanged. transaction_type is synthesized as "purchase"; credit_id is
     // null because purchases don't reference a customer_credit row.
-    const synthesized = {
-      ...((txRow as any) as object),
-      transaction_type: "purchase" as const,
-      credit_id: null,
+    return {
+      ...txRow,
+      transaction_type: "purchase",
+      amount: Number(txRow.amount),
     };
-    return synthesized as unknown as CustomerTransactions;
   }
 }
 

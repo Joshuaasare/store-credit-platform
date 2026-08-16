@@ -91,6 +91,7 @@ export type Database = {
       }
       customer_credit: {
         Row: {
+          approved_redemption_amount: number | null
           branch_id: number
           created_at: string
           credit_amount: number
@@ -98,11 +99,15 @@ export type Database = {
           deleted_at: string | null
           expires_at: number | null
           id: number
+          pending_redemption_amount: number | null
+          redemption_approval_staff_id: number | null
           revoked_at: string | null
           revoked_by_user_id: string | null
+          transaction_date: number
           updated_at: string | null
         }
         Insert: {
+          approved_redemption_amount?: number | null
           branch_id: number
           created_at?: string
           credit_amount: number
@@ -110,11 +115,15 @@ export type Database = {
           deleted_at?: string | null
           expires_at?: number | null
           id?: number
+          pending_redemption_amount?: number | null
+          redemption_approval_staff_id?: number | null
           revoked_at?: string | null
           revoked_by_user_id?: string | null
+          transaction_date: number
           updated_at?: string | null
         }
         Update: {
+          approved_redemption_amount?: number | null
           branch_id?: number
           created_at?: string
           credit_amount?: number
@@ -122,8 +131,11 @@ export type Database = {
           deleted_at?: string | null
           expires_at?: number | null
           id?: number
+          pending_redemption_amount?: number | null
+          redemption_approval_staff_id?: number | null
           revoked_at?: string | null
           revoked_by_user_id?: string | null
+          transaction_date?: number
           updated_at?: string | null
         }
         Relationships: [
@@ -142,6 +154,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "customer_credit_redemption_approval_staff_id_fkey"
+            columns: ["redemption_approval_staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "customer_credit_revoked_by_user_id_fkey"
             columns: ["revoked_by_user_id"]
             isOneToOne: false
@@ -157,12 +176,14 @@ export type Database = {
           approved_by_staff_id: number | null
           branch_id: number
           created_at: string
-          credit_id: number
           customer_id: number
           deleted_at: string | null
           id: number
-          recorded_by_staff_id: number | null
+          merchant_id: number | null
+          redemption_code: number
           rejected_at: string | null
+          requested_date: number
+          transaction_date: number
           updated_at: string | null
         }
         Insert: {
@@ -171,12 +192,14 @@ export type Database = {
           approved_by_staff_id?: number | null
           branch_id: number
           created_at?: string
-          credit_id: number
           customer_id: number
           deleted_at?: string | null
           id?: number
-          recorded_by_staff_id?: number | null
+          merchant_id?: number | null
+          redemption_code: number
           rejected_at?: string | null
+          requested_date: number
+          transaction_date: number
           updated_at?: string | null
         }
         Update: {
@@ -185,12 +208,14 @@ export type Database = {
           approved_by_staff_id?: number | null
           branch_id?: number
           created_at?: string
-          credit_id?: number
           customer_id?: number
           deleted_at?: string | null
           id?: number
-          recorded_by_staff_id?: number | null
+          merchant_id?: number | null
+          redemption_code?: number
           rejected_at?: string | null
+          requested_date?: number
+          transaction_date?: number
           updated_at?: string | null
         }
         Relationships: [
@@ -209,13 +234,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "customer_credit_redemptions_credit_id_fkey"
-            columns: ["credit_id"]
-            isOneToOne: false
-            referencedRelation: "customer_credit"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "customer_credit_redemptions_customer_id_fkey"
             columns: ["customer_id"]
             isOneToOne: false
@@ -223,10 +241,10 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "customer_credit_redemptions_recorded_by_staff_id_fkey"
-            columns: ["recorded_by_staff_id"]
+            foreignKeyName: "customer_credit_redemptions_merchant_id_fkey"
+            columns: ["merchant_id"]
             isOneToOne: false
-            referencedRelation: "staff"
+            referencedRelation: "merchants"
             referencedColumns: ["id"]
           },
         ]
@@ -796,6 +814,88 @@ export type Database = {
       get_distinct_customer_count: {
         Args: { p_branch_id?: number; p_merchant_id: number }
         Returns: number
+      }
+      redemption_approve:
+        | {
+            Args: {
+              p_customer_id: number
+              p_merchant_id: number
+              p_staff_id: number
+            }
+            Returns: {
+              amount_redeemed: number
+              audit_id: number
+            }[]
+          }
+        | {
+            Args: {
+              p_customer_id: number
+              p_merchant_id: number
+              p_redemption_code: number
+              p_staff_id: number
+            }
+            Returns: {
+              amount_redeemed: number
+              audit_id: number
+            }[]
+          }
+      redemption_fan_out: {
+        Args: { p_amount: number; p_customer_id: number; p_merchant_id: number }
+        Returns: {
+          credit_id: number
+          pending_redemption_amount: number
+        }[]
+      }
+      redemption_reject:
+        | {
+            Args: { p_customer_id: number; p_merchant_id: number }
+            Returns: {
+              amount_redeemed: number
+              audit_id: number
+            }[]
+          }
+        | {
+            Args: {
+              p_customer_id: number
+              p_merchant_id: number
+              p_redemption_code: number
+            }
+            Returns: {
+              amount_redeemed: number
+              audit_id: number
+            }[]
+          }
+      redemption_request_cancel: {
+        Args: { p_redemption_id: number }
+        Returns: undefined
+      }
+      redemption_request_create: {
+        Args: {
+          p_amount: number
+          p_branch_id: number
+          p_customer_id: number
+          p_merchant_id: number
+          p_requested_date_ms: number
+        }
+        Returns: {
+          amount_redeemed: number
+          audit_id: number
+          branch_id: number
+          redemption_code: number
+          requested_at: string
+          requested_date: number
+        }[]
+      }
+      redemption_request_update: {
+        Args: { p_amount: number; p_branch_id: number; p_redemption_id: number }
+        Returns: {
+          amount_redeemed: number
+          audit_id: number
+          branch_id: number
+          redemption_code: number
+          requested_at: string
+          requested_date: number
+        }[]
       }
     }
     Enums: {

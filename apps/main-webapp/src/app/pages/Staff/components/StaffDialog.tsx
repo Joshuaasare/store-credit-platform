@@ -22,7 +22,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@store-credit-platform/web-components";
-import { PhoneInput } from "../../../components/PhoneInput/PhoneInput";
+import { PhoneInput } from "@shared/components/PhoneInput/PhoneInput";
 import { CountryCode } from "@shared/utils/countries";
 import { staffService } from "@store-credit-platform/api-services";
 import { isApiError } from "@shared/utils/api.utils";
@@ -65,7 +65,8 @@ export function StaffDialog({
   onSaved,
 }: StaffDialogProps) {
   const isEdit = !!staff;
-  const isSelf = isEdit && staff?.user.id != null && staff.user.id === currentUserId;
+  const isSelf =
+    isEdit && staff?.user.id != null && staff.user.id === currentUserId;
   const { branches } = useStoreStore();
 
   const {
@@ -97,7 +98,7 @@ export function StaffDialog({
       surname: staff?.surname ?? "",
       other_names: staff?.other_names ?? "",
       role: (staff?.role as "manager" | "cashier") ?? "cashier",
-      branch_id: staff?.branch_id ?? (branches[0]?.id ?? 0),
+      branch_id: staff?.branch_id ?? branches[0]?.id ?? 0,
       access_granted: staff?.access_granted ?? true,
       address: staff?.address ?? "",
       notes: staff?.notes ?? "",
@@ -170,9 +171,15 @@ export function StaffDialog({
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label htmlFor="staff-surname">Surname *</Label>
-              <Input id="staff-surname" {...register("surname")} placeholder="e.g. Asare" />
+              <Input
+                id="staff-surname"
+                {...register("surname")}
+                placeholder="e.g. Asare"
+              />
               {errors.surname && (
-                <p className="text-destructive text-xs">{errors.surname.message}</p>
+                <p className="text-destructive text-xs">
+                  {errors.surname.message}
+                </p>
               )}
             </div>
             <div className="space-y-1.5">
@@ -206,7 +213,9 @@ export function StaffDialog({
                 </SelectContent>
               </Select>
               {errors.role && (
-                <p className="text-destructive text-xs">{errors.role.message}</p>
+                <p className="text-destructive text-xs">
+                  {errors.role.message}
+                </p>
               )}
               {isSelf && (
                 <p className="text-muted-foreground text-xs">

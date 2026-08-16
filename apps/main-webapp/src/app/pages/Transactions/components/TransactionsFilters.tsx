@@ -18,10 +18,11 @@ import {
 import { BranchWithAggregates } from "@shared/types/api.types";
 import { LeaderboardSort } from "@shared/types/api.types";
 import {
-  fromEpochSeconds,
+  endOfDayEpochMs,
+  fromEpochMs,
   startOfMonth,
-  startOfYearEpoch,
-  toEpochSeconds,
+  startOfYearEpochMs,
+  toEpochMs,
 } from "@shared/utils/date.utils";
 
 export type DatePreset = "this_year" | "custom" | "all";
@@ -97,15 +98,15 @@ export function TransactionsFilters({
 }: TransactionsFiltersProps) {
   const [customOpen, setCustomOpen] = useState(false);
   const [customRange, setCustomRange] = useState<DateRange | undefined>(() => ({
-    from: fromEpochSeconds(value.start),
-    to: fromEpochSeconds(value.end),
+    from: fromEpochMs(value.start),
+    to: fromEpochMs(value.end),
   }));
   const [fromMonth, setFromMonth] = useState<Date>(() => {
-    const f = fromEpochSeconds(value.start) ?? new Date();
+    const f = fromEpochMs(value.start) ?? new Date();
     return startOfMonth(f);
   });
   const [toMonth, setToMonth] = useState<Date>(() => {
-    const t = fromEpochSeconds(value.end);
+    const t = fromEpochMs(value.end);
     if (t) return startOfMonth(t);
     const d = new Date();
     return startOfMonth(new Date(d.getFullYear(), d.getMonth() + 1, 1));
@@ -129,8 +130,8 @@ export function TransactionsFilters({
     onChange({
       ...value,
       datePreset: "custom",
-      start: from ? toEpochSeconds(from) : null,
-      end: to ? toEpochSeconds(to) : null,
+      start: from ? toEpochMs(from) : null,
+      end: to ? endOfDayEpochMs(to) : null,
     });
     setCustomOpen(false);
   };
@@ -145,7 +146,7 @@ export function TransactionsFilters({
       onChange({
         ...value,
         datePreset: preset,
-        start: startOfYearEpoch(),
+        start: startOfYearEpochMs(),
         end: null,
       });
     } else if (preset === "all") {
@@ -156,8 +157,8 @@ export function TransactionsFilters({
       // The actual start/end update when the user applies a range; if they
       // cancel, datePreset remains "custom" with the previous range.
       setCustomRange({
-        from: fromEpochSeconds(value.start),
-        to: fromEpochSeconds(value.end),
+        from: fromEpochMs(value.start),
+        to: fromEpochMs(value.end),
       });
       if (value.datePreset !== "custom") {
         onChange({ ...value, datePreset: "custom" });
@@ -228,8 +229,8 @@ export function TransactionsFilters({
                   onOpenChange={(open) => {
                     setCustomOpen(open);
                     if (open) {
-                      const f = fromEpochSeconds(value.start);
-                      const t = fromEpochSeconds(value.end);
+                      const f = fromEpochMs(value.start);
+                      const t = fromEpochMs(value.end);
                       setCustomRange({ from: f, to: t });
                       setFromMonth(startOfMonth(f ?? new Date()));
                       setToMonth(

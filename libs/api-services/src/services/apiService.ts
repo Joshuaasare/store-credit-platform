@@ -122,11 +122,25 @@ export function createApiClient(config?: ApiClientConfig) {
     }
 
     const url = `${baseUrl}${endpoint}`;
-    const headers = {
-      "Content-Type": "application/json",
+    // Only set `Content-Type: application/json` when we're actually
+    // sending a JSON body. Sending the header with an empty body on
+    // verbs like DELETE causes Fastify's body parser to reject the
+    // request with "Body cannot be empty when content-type is set to
+    // 'application/json'" before the handler runs — the route never
+    // fires and the customer's cancel/cancel-like actions silently no-op.
+    const hasJsonBody =
+      options.body !== undefined &&
+      options.body !== null &&
+      (typeof options.body === "string"
+        ? options.body.length > 0
+        : typeof options.body === "object");
+    const headers: Record<string, string> = {
       Authorization: `Bearer ${accessToken}`,
-      ...options.headers,
+      ...(options.headers as Record<string, string> | undefined),
     };
+    if (hasJsonBody && !("Content-Type" in headers)) {
+      headers["Content-Type"] = "application/json";
+    }
 
     const config: RequestInit = {
       ...options,
@@ -172,10 +186,21 @@ export function createApiClient(config?: ApiClientConfig) {
     options: RequestOptions = {},
   ): Promise<T> {
     const url = `${baseUrl}${endpoint}`;
-    const headers = {
-      "Content-Type": "application/json",
-      ...options.headers,
+    // Same guard as `apiRequest`: only declare JSON content-type when
+    // we're actually sending a JSON body. Empty DELETE / GET requests
+    // shouldn't carry a content-type header.
+    const hasJsonBody =
+      options.body !== undefined &&
+      options.body !== null &&
+      (typeof options.body === "string"
+        ? options.body.length > 0
+        : typeof options.body === "object");
+    const headers: Record<string, string> = {
+      ...(options.headers as Record<string, string> | undefined),
     };
+    if (hasJsonBody && !("Content-Type" in headers)) {
+      headers["Content-Type"] = "application/json";
+    }
 
     const config: RequestInit = {
       ...options,

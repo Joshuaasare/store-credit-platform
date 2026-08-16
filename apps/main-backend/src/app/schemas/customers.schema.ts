@@ -152,6 +152,7 @@ data: CustomerListPage
 export type CustomerDetailCreditRow = Static<typeof CustomerDetailCreditRow>
 export const CustomerDetailCreditRow = Type.Composite([BaseCustomerCredit, Type.Object({
 redeemed_total: Type.Number(),
+pending_total: Type.Number(),
 remaining: Type.Number(),
 branch: BaseBranch
 })])

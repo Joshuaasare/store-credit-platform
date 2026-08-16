@@ -69,4 +69,7 @@ cache/
 
 # CocoaPods
 *Pods/
+
+#misc
 .claude/*.local.json
+.mcp.json

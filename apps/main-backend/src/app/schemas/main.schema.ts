@@ -148,18 +148,10 @@ export const BaseCustomerTransaction = Type.Object({
 id: Type.Number(),
 customer_id: Type.Number(),
 branch_id: Type.Number(),
-recorded_by_staff_id: Type.Union([
-Type.Number(),
-Type.Null()
-]),
 amount: Type.Number(),
 transaction_date: Type.Number(),
 transaction_type: TransactionTypeValues,
-created_at: Type.String(),
-credit_id: Type.Optional(Type.Union([
-Type.Number(),
-Type.Null()
-]))
+created_at: Type.String()
 })
 
 export type BaseUserProfile = Static<typeof BaseUserProfile>
@@ -220,6 +212,18 @@ id: Type.Number(),
 customer_id: Type.Number(),
 branch_id: Type.Number(),
 credit_amount: Type.Number(),
+pending_redemption_amount: Type.Union([
+Type.Number(),
+Type.Null()
+]),
+approved_redemption_amount: Type.Union([
+Type.Number(),
+Type.Null()
+]),
+redemption_approval_staff_id: Type.Union([
+Type.Number(),
+Type.Null()
+]),
 expires_at: Type.Union([
 Type.Number(),
 Type.Null()
@@ -246,19 +250,17 @@ Type.Null()
 export type BaseCustomerCreditRedemption = Static<typeof BaseCustomerCreditRedemption>
 export const BaseCustomerCreditRedemption = Type.Object({
 id: Type.Number(),
-credit_id: Type.Number(),
 customer_id: Type.Number(),
-branch_id: Type.Number(),
+merchant_id: Type.Union([
+Type.Number(),
+Type.Null()
+]),
 amount_redeemed: Type.Number(),
 approved_at: Type.Union([
 Type.String(),
 Type.Null()
 ]),
 approved_by_staff_id: Type.Union([
-Type.Number(),
-Type.Null()
-]),
-recorded_by_staff_id: Type.Union([
 Type.Number(),
 Type.Null()
 ]),
@@ -274,7 +276,8 @@ Type.Null()
 deleted_at: Type.Union([
 Type.String(),
 Type.Null()
-])
+]),
+branch_id: Type.Number()
 })
 
 export type BaseRunningCreditConfig = Static<typeof BaseRunningCreditConfig>

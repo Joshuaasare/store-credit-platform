@@ -10,15 +10,15 @@ import {
   DialogContent,
   DialogHeader,
 } from "@store-credit-platform/web-components";
-import InfiniteScroll from "../../components/InfiniteScroll/InfiniteScroll";
+import InfiniteScroll from "@shared/components/InfiniteScroll/InfiniteScroll";
 import { customerService } from "@store-credit-platform/api-services";
 import { useStoreStore } from "@shared/stores/storeStore";
 import { useAuthStore } from "@shared/stores/authStore";
 import { CustomerListRow } from "@shared/types/api.types";
 import { CustomerCard } from "./components/CustomerCard";
 import useDebounce from "@shared/hooks/useDebounce";
-import SearchInput from "../../components/SearchInput/SearchInput";
-import { FilterBar } from "../../components/FilterBar/FilterBar";
+import SearchInput from "@shared/components/SearchInput/SearchInput";
+import { FilterBar } from "@shared/components/FilterBar/FilterBar";
 import { isEmpty } from "@shared/utils/misc.utils";
 import { allBranchOption } from "@shared/utils/options.utils";
 

@@ -1,10 +1,13 @@
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
-import { useAuthStore } from "../store/useAuthStore";
+import { useAuthStore } from "../shared/store/useAuthStore";
 import { LoginScreen } from "../screens/auth/LoginScreen";
 import { OtpVerifyScreen } from "../screens/auth/OtpVerifyScreen";
 import { NewUserScreen } from "../screens/auth/NewUserScreen";
 import { TabNavigator } from "./TabNavigator";
+import { MerchantCreditsScreen } from "../screens/credits/MerchantCreditsScreen";
+import { useThemeTokens } from "../shared/theme/ThemeContext";
+import { buildNavTheme } from "../shared/theme/navTheme";
 
 export type AuthStackParamList = {
   Login: undefined;
@@ -14,6 +17,10 @@ export type AuthStackParamList = {
 
 export type AppStackParamList = {
   Tabs: undefined;
+  CreditsMerchantDetail: {
+    merchantId: number;
+    autoOpenRedemption?: boolean;
+  };
 };
 
 const AuthStack = createNativeStackNavigator<AuthStackParamList>();
@@ -36,6 +43,10 @@ function AppStackNavigator() {
   return (
     <AppStack.Navigator screenOptions={{ headerShown: false }}>
       <AppStack.Screen name="Tabs" component={TabNavigator} />
+      <AppStack.Screen
+        name="CreditsMerchantDetail"
+        component={MerchantCreditsScreen}
+      />
     </AppStack.Navigator>
   );
 }
@@ -48,8 +59,9 @@ function AppStackNavigator() {
  */
 export function RootNavigator() {
   const status = useAuthStore((s) => s.status);
+  const theme = useThemeTokens();
   return (
-    <NavigationContainer>
+    <NavigationContainer theme={buildNavTheme(theme)}>
       {status === "authenticated" ? (
         <AppStackNavigator />
       ) : (
