@@ -176,11 +176,12 @@ export class CustomerService {
       .filter((id): id is string => id != null);
     const usersById = new Map<string, BaseUserProfile>();
     if (userIds.length > 0) {
+      const USER_COLS = `${QueryFragments.BASE_USER_PROFILE}` as const;
       const { data: userRows } = await supabaseAdmin
         .from("users")
-        .select(QueryFragments.BASE_USER_PROFILE)
+        .select(USER_COLS)
         .in("id", userIds);
-      for (const u of (userRows ?? []) as unknown as BaseUserProfile[]) {
+      for (const u of userRows ?? []) {
         usersById.set(u.id, u);
       }
     }
@@ -263,18 +264,15 @@ export class CustomerService {
     if (!customer) {
       throw new Error("Customer not found");
     }
-    const linkedUser = (customer as unknown as {
-      users: BaseUserProfile | null;
-    }).users;
+    const linkedUser = customer.users;
 
     // 3. Live credit rows joined to their branch (merchant-wide). Use the
     //    BASE_CUSTOMER_CREDIT + BASE_BRANCH fragments so column additions
     //    auto-propagate; the merchant_id on branch is used for scoping.
+    const CREDIT_COLS = `${QueryFragments.BASE_CUSTOMER_CREDIT},branch:branches(${QueryFragments.BASE_BRANCH})` as const;
     const { data: creditRows, error: creditErr } = await supabaseAdmin
       .from("customer_credit")
-      .select(
-        `${QueryFragments.BASE_CUSTOMER_CREDIT},branch:branches(${QueryFragments.BASE_BRANCH})`,
-      )
+      .select(CREDIT_COLS)
       .eq("customer_id", customerId)
       .is("deleted_at", null)
       .is("revoked_at", null);
@@ -283,13 +281,7 @@ export class CustomerService {
     }
 
     const nowEpoch = Math.floor(Date.now());
-    const merchantCredits = ((creditRows ?? []) as unknown as Array<
-      CustomerDetailCreditRow & {
-        branch: { merchant_id: number };
-        expires_at: number | null;
-        created_at: string;
-      }
-    >).filter((row) => {
+    const merchantCredits = (creditRows ?? []).filter((row) => {
       const branchMerchantId = row.branch?.merchant_id ?? null;
       if (branchMerchantId !== merchantId) return false;
       const expiresAt = row.expires_at;

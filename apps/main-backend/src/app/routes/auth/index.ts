@@ -1,5 +1,5 @@
 import crypto from "crypto";
-import { FastifyInstance, FastifyReply } from "fastify";
+import { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { AuthService } from "../../services/auth.service";
 import { TokenService } from "../../services/token.service";
 import { requireAuth } from "../../middleware/auth.middleware";
@@ -37,7 +37,7 @@ function clearRefreshTokenCookie(reply: FastifyReply): void {
   });
 }
 
-function getRefreshTokenHashFromCookie(request: any): string | undefined {
+function getRefreshTokenHashFromCookie(request: FastifyRequest): string | undefined {
   const rawToken = request.cookies[REFRESH_TOKEN_COOKIE_NAME];
   if (!rawToken) return undefined;
   return crypto.createHash("sha256").update(rawToken).digest("hex");

@@ -42,14 +42,13 @@ export interface RefreshTokenRecord {
   token_hash: string;
   family_id: string;
   device_fingerprint: string | null;
-  ip_address: string | null;
+  ip_address: unknown;
   expires_at: string;
   revoked_at: string | null;
   replaced_at: string | null;
   replaced_by_jti: string | null;
   parent_jti: string | null;
   issued_at: string | null;
-  created_at: string;
 }
 
 export class TokenService {
@@ -202,7 +201,7 @@ export class TokenService {
     );
     const issuedAt = new Date().toISOString();
 
-    const { error } = await (supabaseAdmin as any)
+    const { error } = await supabaseAdmin
       .from("refresh_tokens")
       .insert({
         jti,
@@ -227,7 +226,7 @@ export class TokenService {
   static async findRefreshToken(
     tokenHash: string,
   ): Promise<RefreshTokenRecord | null> {
-    const { data, error } = await (supabaseAdmin as any)
+    const { data, error } = await supabaseAdmin
       .from("refresh_tokens")
       .select("*")
       .eq("token_hash", tokenHash)
@@ -237,7 +236,7 @@ export class TokenService {
       return null;
     }
 
-    return data as unknown as RefreshTokenRecord;
+    return data;
   }
 
   /**
@@ -246,7 +245,7 @@ export class TokenService {
   static async findRefreshTokenByJti(
     jti: string,
   ): Promise<RefreshTokenRecord | null> {
-    const { data, error } = await (supabaseAdmin as any)
+    const { data, error } = await supabaseAdmin
       .from("refresh_tokens")
       .select("*")
       .eq("jti", jti)
@@ -256,14 +255,14 @@ export class TokenService {
       return null;
     }
 
-    return data as unknown as RefreshTokenRecord;
+    return data;
   }
 
   /**
    * Revoke a single refresh token by its JTI.
    */
   static async revokeRefreshTokenByJti(jti: string): Promise<void> {
-    const { error } = await (supabaseAdmin as any)
+    const { error } = await supabaseAdmin
       .from("refresh_tokens")
       .update({ revoked_at: new Date().toISOString() })
       .eq("jti", jti);
@@ -337,7 +336,7 @@ export class TokenService {
     oldJti: string,
     newJti: string,
   ): Promise<void> {
-    const { error } = await (supabaseAdmin as any)
+    const { error } = await supabaseAdmin
       .from("refresh_tokens")
       .update({
         replaced_at: new Date().toISOString(),
@@ -354,7 +353,7 @@ export class TokenService {
    * Revoke a single refresh token by its hash.
    */
   static async revokeRefreshToken(tokenHash: string): Promise<void> {
-    const { error } = await (supabaseAdmin as any)
+    const { error } = await supabaseAdmin
       .from("refresh_tokens")
       .update({ revoked_at: new Date().toISOString() })
       .eq("token_hash", tokenHash);
@@ -368,7 +367,7 @@ export class TokenService {
    * Revoke all tokens in a family (used on theft detection).
    */
   static async revokeTokenFamily(familyId: string): Promise<void> {
-    const { error } = await (supabaseAdmin as any)
+    const { error } = await supabaseAdmin
       .from("refresh_tokens")
       .update({ revoked_at: new Date().toISOString() })
       .eq("family_id", familyId)
@@ -383,7 +382,7 @@ export class TokenService {
    * Revoke all refresh tokens for a user (e.g., on logout from all devices).
    */
   static async revokeAllUserTokens(userId: string): Promise<void> {
-    const { error } = await (supabaseAdmin as any)
+    const { error } = await supabaseAdmin
       .from("refresh_tokens")
       .update({ revoked_at: new Date().toISOString() })
       .eq("user_id", userId)
@@ -411,32 +410,25 @@ export class TokenService {
       is_current: boolean;
     }>
   > {
-    const { data, error } = await (supabaseAdmin as any)
+    const { data, error } = await supabaseAdmin
       .from("refresh_tokens")
       .select(
-        "jti, token_hash, device_fingerprint, created_at, expires_at, revoked_at",
+        "jti, token_hash, device_fingerprint, issued_at, expires_at, revoked_at",
       )
       .eq("user_id", userId)
       .gt("expires_at", new Date().toISOString())
-      .order("created_at", { ascending: false });
+      .order("issued_at", { ascending: false });
 
     if (error) {
       throw new Error(`Failed to list sessions: ${error.message}`);
     }
 
-    const rows = (data || []) as Array<{
-      jti: string;
-      token_hash: string;
-      device_fingerprint: string | null;
-      created_at: string;
-      expires_at: string;
-      revoked_at: string | null;
-    }>;
+    const rows = data || [];
 
     return rows.map((row) => ({
       id: row.jti,
       device_fingerprint: row.device_fingerprint,
-      created_at: row.created_at,
+      created_at: row.issued_at ?? row.expires_at,
       expires_at: row.expires_at,
       revoked_at: row.revoked_at,
       is_current: currentTokenHash
@@ -449,7 +441,7 @@ export class TokenService {
    * Clean up expired refresh tokens from the database.
    */
   static async cleanupExpiredTokens(): Promise<number> {
-    const { error, count } = await (supabaseAdmin as any)
+    const { error, count } = await supabaseAdmin
       .from("refresh_tokens")
       .delete({ count: "exact" })
       .lt("expires_at", new Date().toISOString());

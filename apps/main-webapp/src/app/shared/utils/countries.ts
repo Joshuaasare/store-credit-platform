@@ -79,7 +79,8 @@ export function getCountryByDialCode(dialCode: string): Country | undefined {
   return countries.find((c) => c.dialCode === dialCode);
 }
 
-export function getCountryByCode(code: CountryCode): Country | undefined {
+export function getCountryByCode(code: string): Country | undefined {
+  if (!Object.values(CountryCode).includes(code as CountryCode)) return undefined;
   return countries.find((c) => c.code === code);
 }
 

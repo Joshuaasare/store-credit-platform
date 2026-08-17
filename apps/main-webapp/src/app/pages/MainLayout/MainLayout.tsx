@@ -9,6 +9,7 @@ import {
   Users,
   UserCog,
   Ticket,
+  type LucideIcon,
 } from "lucide-react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import {
@@ -29,7 +30,7 @@ import { useAuthStore } from "@shared/stores/authStore";
 export type MenuItem = {
   title: string;
   url: string;
-  icon?: any;
+  icon?: LucideIcon;
   items?: MenuItem[];
   permissions?: StaffRoleValues[];
   roleRestrictions?: RoleRestriction[];
@@ -146,6 +147,7 @@ export default function MainLayout() {
 
   const renderRoute = (item: MenuItem, index: number) => {
     const isActive = index === activeIndex;
+    if (!item.icon) return null;
     const Icon = item.icon;
     return (
       isActionOrRoutePermitted(user?.role, item.permissions) && (
@@ -284,6 +286,7 @@ export default function MainLayout() {
           />
           {navItems.map((item, index) => {
             const isActive = index === activeIndex;
+            if (!item.icon) return null;
             const Icon = item.icon;
 
             if (!isActionOrRoutePermitted(user?.role, item.permissions))

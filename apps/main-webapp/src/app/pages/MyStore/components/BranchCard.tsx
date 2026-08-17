@@ -27,7 +27,7 @@ export function BranchCard({
   onOpenDetail,
 }: BranchCardProps) {
   const [editOpen, setEditOpen] = useState(false);
-  const country = getCountryByCode(branch.country_code as any);
+  const country = getCountryByCode(branch.country_code);
   const displayName = branch.name?.trim() || "Unnamed branch";
   const lastActivity = branch.last_activity_date
     ? formatDistanceToNow(new Date(branch.last_activity_date), {

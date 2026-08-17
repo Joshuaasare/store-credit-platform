@@ -419,7 +419,7 @@ export class StaffService {
       .select(
         `${QueryFragments.BASE_STAFF},
          branch:branches!inner(${QueryFragments.BASE_BRANCH}),
-         user:users!inner(${QueryFragments.BASE_USER_PROFILE})`,
+         user:users!inner(${QueryFragments.BASE_USER_PROFILE})` as const,
       )
       .eq("user_id", userId)
       .eq("branch.merchant_id", merchantId)
@@ -432,9 +432,11 @@ export class StaffService {
     if (error || !data) return null;
 
     // `.not("role", "is", null)` guarantees role is non-null at runtime; the
-    // supabase client infers enum columns as `unknown`, so one boundary cast
-    // narrows to the composed `Staff` shape.
-    return data as unknown as Staff;
+    // supabase client infers enum columns as `unknown` until `as const`
+    // narrows the select string back to a literal — at that point the typed
+    // builder resolves `role` to its enum union and this assign lands
+    // directly on the composed `Staff` shape without an `as` cast.
+    return data;
   }
 }
 

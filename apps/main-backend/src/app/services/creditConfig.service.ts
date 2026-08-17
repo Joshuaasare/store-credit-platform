@@ -3,7 +3,6 @@ import { SupabaseClient } from "@supabase/supabase-js";
 import { supabaseAdmin } from "../utils/supabase.client";
 import { Database } from "../types/database.types";
 import { QueryFragments } from "../constants/queryFragments";
-import { BaseCustomerCredit } from "../schemas/main.schema";
 import {
   CreateRunningCreditConfigRequest,
   UpdateRunningCreditConfigRequest,
@@ -12,37 +11,46 @@ import {
   UpdateFixedCreditConfigRequest,
   FixedCreditConfigGroup,
 } from "../schemas/creditConfig.schema";
+import type { BaseBranch } from "../schemas/main.schema";
 
 // The new customer_credit row stores only the calculated GHS amount plus
-// expiry/revocation metadata. We insert via `any` because the typed Insert
-// shape from database.types.ts already reflects credit_amount (no longer
-// credit_type / credit_precentage / max_credit_amount).
+// expiry/revocation metadata. The Insert shape from database.types.ts
+// already reflects credit_amount (no longer credit_type / credit_precentage /
+// max_credit_amount).
+//
+// Row shapes flow from database.types.ts. The typed Supabase builder's
+// `select()` does NOT auto-infer nested `branch:branches(...)` joins unless
+// the select string is preserved as a string-literal type — interpolating
+// `QueryFragments.*` into a template literal widens it to plain `string`,
+// so we re-narrow with `as const` at the constant declaration. The typed
+// builder then resolves the joined branch shape (BaseBranch subset of the
+// branches table) automatically. The `*WithBranch` intersection types
+// below declare the full row + joined-branch shape for the helpers that
+// aggregate the rows into config groups. If a future migration adds a
+// column to either table, regenerate (`yarn generate:types`) keeps the
+// base Row in lockstep and the intersection type surfaces the new column
+// automatically — no `as any` or `as unknown` is used to widen.
 
-// Migration 20260720000000 adds config_group_id (uuid), cumulative_scope
-// (enum), and merchants.credit_stacking_policy. Until that migration is
-// applied to dev Supabase and `database.types.ts` is regenerated, the typed
-// Row shape does not include those columns — read them through `any` casts.
-type RunningConfigRow =
+type RunningConfigWithBranch =
   Database["public"]["Tables"]["running_credit_config"]["Row"] & {
-    config_group_id: string;
-    cumulative_scope: "per_branch" | "merchant_wide";
-    branch: Database["public"]["Tables"]["branches"]["Row"];
+    branch: BaseBranch;
   };
 
-type FixedConfigRow =
+type FixedConfigWithBranch =
   Database["public"]["Tables"]["fixed_credit_config"]["Row"] & {
-    config_group_id: string;
-    branch: Database["public"]["Tables"]["branches"]["Row"];
+    branch: BaseBranch;
   };
 
-const RUNNING_CONFIG_COLUMNS = `${QueryFragments.BASE_RUNNING_CREDIT_CONFIG},branch:branches(${QueryFragments.BASE_BRANCH})`;
+const RUNNING_CONFIG_COLUMNS =
+  `${QueryFragments.BASE_RUNNING_CREDIT_CONFIG},branch:branches(${QueryFragments.BASE_BRANCH})` as const;
 
-const FIXED_CONFIG_COLUMNS = `${QueryFragments.BASE_FIXED_CREDIT_CONFIG},branch:branches(${QueryFragments.BASE_BRANCH})`;
+const FIXED_CONFIG_COLUMNS =
+  `${QueryFragments.BASE_FIXED_CREDIT_CONFIG},branch:branches(${QueryFragments.BASE_BRANCH})` as const;
 
 function groupRunningRows(
-  rows: RunningConfigRow[],
+  rows: RunningConfigWithBranch[],
 ): RunningCreditConfigGroup[] {
-  const map = new Map<string, RunningConfigRow>();
+  const map = new Map<string, RunningConfigWithBranch>();
   for (const row of rows) {
     const existing = map.get(row.config_group_id);
     if (!existing) {
@@ -74,8 +82,10 @@ function groupRunningRows(
     .sort((a, b) => (b.created_at > a.created_at ? 1 : -1));
 }
 
-function groupFixedRows(rows: FixedConfigRow[]): FixedCreditConfigGroup[] {
-  const map = new Map<string, FixedConfigRow>();
+function groupFixedRows(
+  rows: FixedConfigWithBranch[],
+): FixedCreditConfigGroup[] {
+  const map = new Map<string, FixedConfigWithBranch>();
   for (const row of rows) {
     const existing = map.get(row.config_group_id);
     if (!existing) {
@@ -114,7 +124,7 @@ async function fetchRunningGroup(
     .eq("config_group_id", groupId)
     .is("deleted_at", null);
   if (error) throw new Error(`Failed to fetch group: ${error.message}`);
-  const rows = (data ?? []) as unknown as RunningConfigRow[];
+  const rows = data ?? [];
   const grouped = groupRunningRows(rows);
   if (grouped.length === 0) throw new Error("Config group not found");
   return grouped[0];
@@ -129,7 +139,7 @@ async function fetchFixedGroup(
     .eq("config_group_id", groupId)
     .is("deleted_at", null);
   if (error) throw new Error(`Failed to fetch group: ${error.message}`);
-  const rows = (data ?? []) as unknown as FixedConfigRow[];
+  const rows = data ?? [];
   const grouped = groupFixedRows(rows);
   if (grouped.length === 0) throw new Error("Config group not found");
   return grouped[0];
@@ -219,7 +229,7 @@ export class CreditConfigService {
       .filter("branch.deleted_at", "is", null);
     if (error)
       throw new Error(`Failed to list running configs: ${error.message}`);
-    const rows = (data ?? []) as unknown as RunningConfigRow[];
+    const rows = data ?? [];
     return groupRunningRows(rows);
   }
 
@@ -241,7 +251,7 @@ export class CreditConfigService {
     }));
     const { error } = await supabaseAdmin
       .from("running_credit_config")
-      .insert(rows as any[]);
+      .insert(rows);
     if (error)
       throw new Error(`Failed to create running config: ${error.message}`);
     return fetchRunningGroup(groupId);
@@ -291,7 +301,7 @@ export class CreditConfigService {
     if (kept.length > 0) {
       const { error } = await supabaseAdmin
         .from("running_credit_config")
-        .update({ ...values } as any)
+        .update(values)
         .eq("config_group_id", groupId)
         .in("branch_id", kept);
       if (error) throw new Error(`Failed to update branches: ${error.message}`);
@@ -305,7 +315,7 @@ export class CreditConfigService {
       }));
       const { error } = await supabaseAdmin
         .from("running_credit_config")
-        .insert(addRows as any[]);
+        .insert(addRows);
       if (error) throw new Error(`Failed to add branches: ${error.message}`);
     }
 
@@ -334,7 +344,7 @@ export class CreditConfigService {
     const merchantBranchIds = await getMerchantBranchIds(merchantId);
     const { error } = await supabaseAdmin
       .from("running_credit_config")
-      .update({ is_active: isActive } as any)
+      .update({ is_active: isActive })
       .eq("config_group_id", groupId)
       .in("branch_id", merchantBranchIds);
     if (error)
@@ -355,7 +365,7 @@ export class CreditConfigService {
       .filter("branch.deleted_at", "is", null);
     if (error)
       throw new Error(`Failed to list fixed configs: ${error.message}`);
-    const rows = (data ?? []) as unknown as FixedConfigRow[];
+    const rows = data ?? [];
     return groupFixedRows(rows);
   }
 
@@ -377,7 +387,7 @@ export class CreditConfigService {
     }));
     const { error } = await supabaseAdmin
       .from("fixed_credit_config")
-      .insert(rows as any[]);
+      .insert(rows);
     if (error)
       throw new Error(`Failed to create fixed config: ${error.message}`);
     return fetchFixedGroup(groupId);
@@ -427,7 +437,7 @@ export class CreditConfigService {
     if (kept.length > 0) {
       const { error } = await supabaseAdmin
         .from("fixed_credit_config")
-        .update({ ...values } as any)
+        .update({ ...values })
         .eq("config_group_id", groupId)
         .in("branch_id", kept);
       if (error) throw new Error(`Failed to update branches: ${error.message}`);
@@ -441,7 +451,7 @@ export class CreditConfigService {
       }));
       const { error } = await supabaseAdmin
         .from("fixed_credit_config")
-        .insert(addRows as any[]);
+        .insert(addRows);
       if (error) throw new Error(`Failed to add branches: ${error.message}`);
     }
 
@@ -467,7 +477,7 @@ export class CreditConfigService {
     const merchantBranchIds = await getMerchantBranchIds(merchantId);
     const { error } = await supabaseAdmin
       .from("fixed_credit_config")
-      .update({ is_active: isActive } as any)
+      .update({ is_active: isActive })
       .eq("config_group_id", groupId)
       .in("branch_id", merchantBranchIds);
     if (error)
@@ -505,7 +515,7 @@ export async function issueRunningCreditsForPurchase(
   branchId: number,
   purchaseAmount: number,
   transactionDateEpoch: number,
-): Promise<BaseCustomerCredit[]> {
+): Promise<Database["public"]["Tables"]["customer_credit"]["Row"][]> {
   if (!(purchaseAmount > 0)) return [];
 
   const { data: merchant } = await supabase
@@ -533,10 +543,10 @@ export async function issueRunningCreditsForPurchase(
     .is("deleted_at", null);
   const merchantBranchIds = (merchantBranchRows ?? []).map((b) => b.id);
 
-  type Plan = { config: any; creditValue: number };
+  type Plan = { config: (typeof configs)[number]; creditValue: number };
   const plans: Plan[] = [];
 
-  for (const row of configs as any[]) {
+  for (const row of configs) {
     if (row.branch?.deleted_at) continue;
 
     const threshold = row.threshold_amount ?? 0;
@@ -567,10 +577,7 @@ export async function issueRunningCreditsForPurchase(
         q = q.in("branch_id", merchantBranchIds);
       }
       const { data: txs } = await q;
-      priorCumulative = (txs ?? []).reduce(
-        (s, t) => s + Number((t as any).amount),
-        0,
-      );
+      priorCumulative = (txs ?? []).reduce((s, t) => s + Number(t.amount), 0);
     }
 
     let rewardable: number;
@@ -627,5 +634,5 @@ export async function issueRunningCreditsForPurchase(
     .insert(inserts)
     .select("*");
   if (error) throw new Error(`credit insert failed: ${error.message}`);
-  return (inserted ?? []) as unknown as BaseCustomerCredit[];
+  return inserted ?? [];
 }

@@ -284,7 +284,7 @@ export class AuthService {
    * DEV session builder — delete before production.
    */
   private async buildDevSession(
-    user: any,
+    user: { id: string; phone: string | null; email: string | null },
     userAgent?: string,
     clientIp?: string,
   ): Promise<{

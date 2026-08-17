@@ -2,7 +2,6 @@ import { supabaseAdmin } from "../utils/supabase.client";
 import { QueryFragments } from "../constants/queryFragments";
 import { AccessTokenPayload } from "../schemas/auth.schema";
 import {
-  MerchantApprovedRedemption,
   MerchantApprovedRedemptionsResponse,
   MerchantAuditFeedFilters,
   MerchantPendingRequest,
@@ -11,7 +10,6 @@ import {
   MerchantPendingRequestsResponse,
   MerchantRedemptionActionBody,
   MerchantRedemptionMutationResponse,
-  MerchantRejectedRedemption,
   MerchantRejectedRedemptionsResponse,
 } from "../schemas/redemptions.schema";
 
@@ -183,7 +181,7 @@ export class RedemptionService {
          merchant:merchants!inner(${QueryFragments.BASE_MERCHANT}),
          customer:customers(${QueryFragments.BASE_CUSTOMER}, users(${QueryFragments.BASE_USER_PROFILE})),
          branch:branches(${QueryFragments.BASE_BRANCH}),
-         approved_by_staff:staff(${QueryFragments.BASE_STAFF})`,
+         approved_by_staff:staff(${QueryFragments.BASE_STAFF})` as const,
         { count: "exact" },
       )
       .eq("merchant_id", merchantId)
@@ -196,7 +194,7 @@ export class RedemptionService {
       throw new Error(`Failed to load approved redemptions: ${error.message}`);
     }
     return {
-      rows: (data ?? []) as unknown as MerchantApprovedRedemption[],
+      rows: data ?? [],
       total: count ?? 0,
       offset,
       limit,
@@ -220,7 +218,7 @@ export class RedemptionService {
         `${QueryFragments.BASE_CUSTOMER_CREDIT_REDEMPTION},
          merchant:merchants!inner(${QueryFragments.BASE_MERCHANT}),
          customer:customers(${QueryFragments.BASE_CUSTOMER}, users(${QueryFragments.BASE_USER_PROFILE})),
-         branch:branches(${QueryFragments.BASE_BRANCH})`,
+         branch:branches(${QueryFragments.BASE_BRANCH})` as const,
         { count: "exact" },
       )
       .eq("merchant_id", merchantId)
@@ -233,7 +231,7 @@ export class RedemptionService {
       throw new Error(`Failed to load rejected redemptions: ${error.message}`);
     }
     return {
-      rows: (data ?? []) as unknown as MerchantRejectedRedemption[],
+      rows: data ?? [],
       total: count ?? 0,
       offset,
       limit,

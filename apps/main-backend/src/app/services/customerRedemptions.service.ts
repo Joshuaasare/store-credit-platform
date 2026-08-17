@@ -89,19 +89,11 @@ export class CustomerRedemptionsService {
     }
     if (!data) return null;
 
-    // Cast the nested branch join into the right shape — Supabase infers
-    // a wide row type that includes the join. We pull only the fields
-    // the customer-facing view needs.
-    const branch = data.branch as unknown as {
-      id: number;
-      name: string | null;
-    } | null;
-
     return {
       redemption_code: Number(data.redemption_code),
       redemption_id: Number(data.id),
       branch_id: Number(data.branch_id),
-      branch_name: branch?.name ?? null,
+      branch_name: data.branch?.name ?? null,
       amount_redeemed: Number(data.amount_redeemed),
       requested_date: Number(data.requested_date),
       requested_at: String(data.created_at),
@@ -165,11 +157,10 @@ export class CustomerRedemptionsService {
     const rows = data ?? [];
 
     const items: CustomerApprovedRedemption[] = rows.map((row) => {
-      const branch = row.branch as unknown as { name: string | null } | null;
       return {
         redemption_id: Number(row.id),
         branch_id: Number(row.branch_id),
-        branch_name: branch?.name ?? null,
+        branch_name: row.branch?.name ?? null,
         amount_redeemed: Number(row.amount_redeemed),
         approved_at: new Date(String(row.approved_at)).getTime(),
       };

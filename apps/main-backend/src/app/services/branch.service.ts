@@ -42,20 +42,18 @@ export class BranchService {
 
         // customer_count — distinct customers who have transacted at this branch
         // (server-side aggregate via RPC; the branch_customer junction is gone).
-        const { data: custCountRes, error: custCountErr } = await supabaseAdmin.rpc(
-          "get_distinct_customer_count",
-          {
+        const { data: custCountRes, error: custCountErr } =
+          await supabaseAdmin.rpc("get_distinct_customer_count", {
             p_merchant_id: merchantId,
             p_branch_id: b.id,
-          },
-        );
+          });
         if (custCountErr) {
           throw new Error(
             `Failed to load branch customer count: ${custCountErr.message}`,
           );
         }
         const customerCount =
-          custCountRes == null ? 0 : Number(custCountRes as unknown);
+          custCountRes == null ? 0 : Number(custCountRes);
 
         // credit_issued_this_month — sum of customer_credit.credit_amount
         // issued this month at this branch. The old customer_transactions
@@ -70,7 +68,7 @@ export class BranchService {
           .is("revoked_at", null);
 
         const creditIssuedThisMonth = (issuedRows || []).reduce(
-          (sum, r) => sum + Number((r as any).credit_amount ?? 0),
+          (sum, r) => sum + Number(r.credit_amount ?? 0),
           0,
         );
 
@@ -109,9 +107,9 @@ export class BranchService {
         ]);
 
         const branchCreditIdList = (branchCreditIds.data ?? []).map(
-          (c: any) => c.id as number,
+          (c) => c.id,
         );
-        let lastRedemption: { data: any | null; error: any } = {
+        let lastRedemption: { data: { created_at: string } | null; error: { message: string } | null } = {
           data: null,
           error: null,
         };

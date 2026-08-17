@@ -93,7 +93,7 @@ export class MerchantService {
       .select("id")
       .eq("merchant_id", merchantId)
       .is("deleted_at", null);
-    const merchantBranchIds = (branchIdRows ?? []).map((b) => (b as any).id);
+    const merchantBranchIds = (branchIdRows ?? []).map((b) => b.id);
 
     let lifetimeCreditIssued = 0;
     if (merchantBranchIds.length > 0) {
@@ -104,7 +104,7 @@ export class MerchantService {
         .is("deleted_at", null)
         .is("revoked_at", null);
       lifetimeCreditIssued = (issuedRows ?? []).reduce(
-        (sum, r) => sum + Number((r as any).credit_amount ?? 0),
+        (sum, r) => sum + Number(r.credit_amount ?? 0),
         0,
       );
     }

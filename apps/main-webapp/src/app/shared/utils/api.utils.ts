@@ -8,10 +8,7 @@
 export function isApiError(
   value: unknown,
 ): value is { success: false; error: string } {
-  return (
-    !!value &&
-    typeof value === "object" &&
-    (value as any).success === false &&
-    typeof (value as any).error === "string"
-  );
+  if (!value || typeof value !== "object") return false;
+  const candidate = value as { success?: unknown; error?: unknown };
+  return candidate.success === false && typeof candidate.error === "string";
 }
