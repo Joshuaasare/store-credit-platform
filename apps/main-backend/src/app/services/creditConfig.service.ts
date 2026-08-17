@@ -514,7 +514,7 @@ export async function issueRunningCreditsForPurchase(
     .eq("id", merchantId)
     .maybeSingle();
   const policy: "stack" | "best_only" =
-    (merchant as any)?.credit_stacking_policy ?? "stack";
+    merchant?.credit_stacking_policy ?? "stack";
 
   const { data: configs } = await supabase
     .from("running_credit_config")
@@ -545,7 +545,12 @@ export async function issueRunningCreditsForPurchase(
 
     let priorCumulative = 0;
     if (windowDays != null) {
-      const lowerBound = transactionDateEpoch - windowDays * 86400;
+      // transaction_date is epoch MILLISECONDS (bigint) — windowDays * 86_400_000
+      // converts days→ms. Using * 86400 (seconds) would shrink the lookback
+      // to ~windowDays milliseconds and the priorCumulative walk would
+      // always be 0, so credits never issue. See commit 7a68501 which
+      // converted the codebase to ms and missed these two multiplications.
+      const lowerBound = transactionDateEpoch - windowDays * 86_400_000;
       // Read prior purchases from customer_purchases. The lookback is
       // retroactive: any purchase within the window counts, even if it
       // predates this config's created_at (decision 10).
@@ -605,15 +610,21 @@ export async function issueRunningCreditsForPurchase(
     customer_id: customerId,
     branch_id: branchId,
     credit_amount: Number(creditValue),
+    transaction_date: transactionDateEpoch,
     expires_at:
       config.credit_validity == null
         ? null
-        : transactionDateEpoch + config.credit_validity * 86400,
+        : // credit_validity is in DAYS; transaction_date is epoch MILLISECONDS,
+          // so multiply by 86_400_000 (ms/day) — * 86400 (s/day) was a units
+          // miss in the same ms-conversion commit that broke the lookback
+          // above. Without this fix, expires_at lands only seconds after the
+          // purchase timestamp instead of N days.
+          transactionDateEpoch + config.credit_validity * 86_400_000,
   }));
 
   const { data: inserted, error } = await supabase
     .from("customer_credit")
-    .insert(inserts as any[])
+    .insert(inserts)
     .select("*");
   if (error) throw new Error(`credit insert failed: ${error.message}`);
   return (inserted ?? []) as unknown as BaseCustomerCredit[];
