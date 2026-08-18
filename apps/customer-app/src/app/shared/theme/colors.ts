@@ -105,6 +105,16 @@ export interface ColorTokens {
   error: string;
   /** Error surface fill — soft tinted background for error badges. */
   errorSurface: string;
+  /**
+   * Notification badge fill — sits on top of brand surfaces (page
+   * header bell) so it must be a strong red that pops against both
+   * the light berry and dark pink primaries. The badge text reads in
+   * `onBadge` (always white) so the label is unambiguous in both
+   * themes.
+   */
+  badge: string;
+  /** Text rendered on top of the notification badge fill. */
+  onBadge: string;
   /** Warning accent (dev login, cautionary UI). */
   warning: string;
   /** Warning surface fill. */
@@ -192,6 +202,8 @@ export const lightColors: ColorTokens = {
 
   error: "#dc2626",
   errorSurface: "rgba(220,38,38,0.10)",
+  badge: "#dc2626",
+  onBadge: "#ffffff",
   warning: "#b45309",
   warningSurface: "rgba(251,191,36,0.18)",
   warningBorder: "rgba(251,191,36,0.45)",
@@ -255,6 +267,8 @@ export const darkColors: ColorTokens = {
 
   error: "#fecaca",
   errorSurface: "rgba(254,202,202,0.15)",
+  badge: "#ef4444",
+  onBadge: "#ffffff",
   warning: "#fcd34d",
   warningSurface: "rgba(251,191,36,0.15)",
   warningBorder: "rgba(251,191,36,0.40)",

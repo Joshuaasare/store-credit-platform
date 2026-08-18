@@ -164,16 +164,6 @@ export function MerchantCreditsScreen() {
     return aggregateLiveByMerchant(live)[0] ?? null;
   }, [creditsQuery.data, merchantId]);
 
-  const headerMeta = bucket
-    ? (() => {
-        const firstBranch = bucket.credits[0]?.branch;
-        const label = firstBranch
-          ? formatBranchLabel(firstBranch.name, firstBranch.city)
-          : "All branches";
-        return `${label} `;
-      })()
-    : null;
-
   const [tab, setTab] = useState<MerchantTab>("available");
 
   const tabOptions = useMemo<{ value: MerchantTab; label: string }[]>(
@@ -298,7 +288,6 @@ export function MerchantCreditsScreen() {
         <DetailHeader
           merchantName={bucket?.merchantName ?? null}
           logoUrl={bucket?.logoUrl ?? null}
-          meta={headerMeta}
           total={bucket?.totalRemaining ?? null}
           onBack={() => navigation.goBack()}
         />
@@ -389,13 +378,11 @@ export function MerchantCreditsScreen() {
 function DetailHeader({
   merchantName,
   logoUrl,
-  meta,
   total,
   onBack,
 }: {
   merchantName: string | null;
   logoUrl: string | null;
-  meta: string | null;
   total: number | null;
   onBack: () => void;
 }) {
@@ -405,11 +392,6 @@ function DetailHeader({
       edges={["top"]}
       style={[styles.header, { backgroundColor: theme.colors.primary }]}
     >
-      {/* Decorative coupon layer — sits behind the row of content.
-          A rotated ticket-style rectangle with a dashed perforation
-          stripe + a circular discount badge, both at low opacity.
-          Mirrors the hero card's soft-orb treatment so the brand
-          surface carries the same energy on both screens. */}
       <View style={styles.headerDecoration} pointerEvents="none">
         <View style={styles.couponTicket} />
         <View style={styles.couponPerforation} />
@@ -418,10 +400,6 @@ function DetailHeader({
         </View>
       </View>
 
-      {/* Row 1 — back arrow on its own row, sitting above everything.
-          Pushed to the left edge so it reads as the universal 'leave
-          this screen' affordance without competing with the merchant
-          info beneath. */}
       <TouchableOpacity
         onPress={onBack}
         style={styles.headerBackRow}
@@ -451,42 +429,17 @@ function DetailHeader({
               styles.headerTitle,
               {
                 color: theme.colors.textOnPrimary,
-                fontFamily: theme.typography.fontFamilyBold,
+                fontFamily: theme.typography.fontFamilyRegular,
               },
             ]}
             numberOfLines={2}
           >
             {merchantName ?? "Merchant"}
           </Text>
-          {meta !== null ? (
-            <Text
-              style={[
-                styles.headerMeta,
-                {
-                  color: theme.colors.textOnPrimary,
-                  fontFamily: theme.typography.fontFamilyMedium,
-                },
-              ]}
-              numberOfLines={1}
-            >
-              {meta}
-            </Text>
-          ) : null}
         </View>
 
         {total !== null ? (
           <View style={styles.headerTotalWrap}>
-            <Text
-              style={[
-                styles.headerTotalLabel,
-                {
-                  color: theme.colors.textOnPrimary,
-                  fontFamily: theme.typography.fontFamilyMedium,
-                },
-              ]}
-            >
-              Available
-            </Text>
             <Text
               style={[
                 styles.headerTotalValue,
@@ -498,6 +451,17 @@ function DetailHeader({
               accessibilityLabel={`Total ${formatGhs(total)}`}
             >
               {formatGhs(total)}
+            </Text>
+            <Text
+              style={[
+                styles.headerTotalLabel,
+                {
+                  color: theme.colors.textOnPrimary,
+                  fontFamily: theme.typography.fontFamilyMedium,
+                },
+              ]}
+            >
+              Total Available
             </Text>
           </View>
         ) : null}
@@ -589,9 +553,10 @@ const styles = StyleSheet.create({
   headerText: {
     flex: 1,
     minWidth: 0,
+    paddingRight: 30,
   },
   headerTitle: {
-    fontSize: 14,
+    fontSize: 16,
     letterSpacing: -0.2,
     lineHeight: 22,
   },
@@ -612,7 +577,7 @@ const styles = StyleSheet.create({
     opacity: 0.78,
   },
   headerTotalValue: {
-    fontSize: 20,
+    fontSize: 24,
     letterSpacing: -0.3,
     marginTop: 2,
   },

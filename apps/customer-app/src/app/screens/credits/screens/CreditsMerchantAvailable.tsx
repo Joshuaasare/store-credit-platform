@@ -169,15 +169,28 @@ export function CreditsMerchantAvailable({
               <CreditRow credit={item.credit} />
             )
           }
-          ItemSeparatorComponent={() => (
-            <View
-              style={{
-                height: 1,
-                backgroundColor: theme.colors.surfaceBorder,
-                marginHorizontal: 16,
-              }}
-            />
-          )}
+          ItemSeparatorComponent={({ leadingItem, trailingItem }) => {
+            const trailingIsSection =
+              (trailingItem as DetailRow | null)?.kind === "section";
+            const leadingIsSection =
+              (leadingItem as DetailRow | null)?.kind === "section";
+            // Within a branch (header → credit, or credit → credit) keep the
+            // existing 1px hairline. Between branches (credit → next section
+            // header, or section → section) open up so the next section
+            // breathes.
+            if (leadingIsSection || trailingIsSection) {
+              return <View style={styles.sectionGap} />;
+            }
+            return (
+              <View
+                style={{
+                  height: 1,
+                  backgroundColor: theme.colors.surfaceBorder,
+                  marginHorizontal: 16,
+                }}
+              />
+            );
+          }}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
         />
@@ -267,8 +280,7 @@ function CreditRow({
 }) {
   const remaining = Number(credit.remaining) || 0;
   const chip = creditStatusChip(credit.expires_at);
-  const title =
-    credit.branch.name ?? `Branch #${String(credit.branch.id)}`;
+  const title = credit.branch.name ?? `Branch #${String(credit.branch.id)}`;
 
   return (
     <MerchantActivityRow
@@ -341,5 +353,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 16,
     paddingBottom: 6,
+  },
+  sectionGap: {
+    height: 5,
   },
 });

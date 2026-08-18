@@ -24,7 +24,11 @@ export default function ScreenBody({
   return (
     <SafeAreaView
       edges={edges ?? EDGES}
-      style={{ flex: 1, padding: padding ?? 24 }}
+      style={{
+        flex: 1,
+        paddingHorizontal: padding ?? 24,
+        paddingBottom: padding ?? 24,
+      }}
     >
       {children}
     </SafeAreaView>

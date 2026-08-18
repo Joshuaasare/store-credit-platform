@@ -5,6 +5,7 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useNavigation } from "@react-navigation/native";
 import ScreenBackground from "../../shared/components/ScreenBackground";
 import ScreenBody from "../../shared/components/ScreenBody";
+import PageHeader from "../../shared/components/PageHeader";
 import GlassTransition from "../../shared/components/GlassTransition";
 import GlassCard from "../../shared/components/GlassCard";
 import MerchantActivityRow from "../../shared/components/MerchantActivityRow";
@@ -65,21 +66,10 @@ export function CreditsScreen() {
 
   return (
     <ScreenBackground>
-      <ScreenBody>
+      <PageHeader />
+      <ScreenBody edges={["bottom"]}>
       <GlassTransition>
         <View style={styles.container}>
-          <Text
-            style={[
-              styles.title,
-              {
-                color: theme.colors.text,
-                fontFamily: theme.typography.fontFamilyBold,
-              },
-            ]}
-          >
-            Credits
-          </Text>
-
           <View style={styles.listArea}>
             {query.isLoading ? (
               <LoadingState />
@@ -216,11 +206,7 @@ function merchantRow(bucket: MerchantCreditBucket): {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-  },
-  title: {
-    fontSize: 28,
-    letterSpacing: -0.3,
-    marginBottom: 16,
+    paddingTop: 16,
   },
   listArea: {
     flex: 1,
