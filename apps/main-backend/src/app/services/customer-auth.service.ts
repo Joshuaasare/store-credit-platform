@@ -1,14 +1,8 @@
 import crypto from "crypto";
 import { supabaseAdmin } from "../utils/supabase.client";
-import { PasswordService } from "../utils/password.service";
-import { MessagingService, SMSTemplates } from "../utils/messaging.service";
-import {
-  setOtp,
-  getOtp,
-  deleteOtp,
-  incrementAttempts,
-} from "../utils/otp.store";
+import { SMSTemplates } from "../utils/messaging.service";
 import { normalizePhone } from "../utils/phone.utils";
+import { OtpService } from "../utils/otp.service";
 import { QueryFragments } from "../constants/queryFragments";
 import { CustomerAuthUser } from "../types/main.types";
 import {
@@ -22,9 +16,8 @@ import {
   CustomerRegisterRequest,
 } from "../schemas/auth.schema";
 import { TokenService } from "./token.service";
-import { RateLimitService } from "./rateLimit.service";
+import { deleteOtp } from "../utils/otp.store";
 
-const MAX_OTP_ATTEMPTS = 5;
 const ACCESS_TOKEN_TTL_SECONDS = 15 * 60; // 15 minutes — matches signAccessToken default.
 
 /**
@@ -57,61 +50,12 @@ export class CustomerAuthService {
     clientIp?: string,
   ): Promise<{ message: string }> {
     const normalizedPhone = normalizePhone(data.phone);
-
-    // Rate limit (same limits as staff).
-    const rateLimit = RateLimitService.checkOtpSendLimits(
-      normalizedPhone,
-      clientIp,
-    );
-    if (!rateLimit.allowed) {
-      const error = new Error(rateLimit.reason || "Rate limit exceeded");
-      (error as Error & { statusCode?: number }).statusCode = 429;
-      throw error;
-    }
-
-    // DEV bypass — skip the SMS send for the mock customer phone. The verify
-    // step's dev bypass auto-provisions a session so the customer-app dev
-    // login button always lands on HomeScreen without DB seeding.
-    const isDevMock =
-      process.env.NODE_ENV === "development" &&
-      normalizedPhone === process.env.DEV_MOCK_CUSTOMER_PHONE;
-
-    if (isDevMock) {
-      // Still record a placeholder OTP hash in the in-memory store so the
-      // verify dev-bypass path can find an entry (defensive — the bypass
-      // checks the env value directly, but consistency with the staff flow
-      // avoids surprises).
-      const otp = process.env.DEV_MOCK_CUSTOMER_OTP || "123456";
-      const otpHash = PasswordService.hashOTP(otp);
-      const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
-      setOtp(normalizedPhone, otpHash, expiresAt);
-      return { message: "OTP sent successfully" };
-    }
-
-    // Generate + store OTP.
-    const otp = PasswordService.generateOTP();
-    const otpHash = PasswordService.hashOTP(otp);
-    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
-
-    setOtp(normalizedPhone, otpHash, expiresAt);
-
-    // Defensive: persist OTP fields on the users row IF one exists. For
-    // flow 1 (brand-new phone) there is no users row yet — skip silently.
-    await supabaseAdmin
-      .from("users")
-      .update({
-        otp: otpHash,
-        otp_expires_at: expiresAt.toISOString(),
-        otp_attempts: 0,
-      })
-      .eq("phone", normalizedPhone)
-      .is("deleted_at", null);
-
-    await MessagingService.sendSMSMessage({
+    await OtpService.issueAndSend({
       phone: normalizedPhone,
-      message: SMSTemplates.loginOTP(otp),
+      clientIp,
+      smsTemplate: SMSTemplates.loginOTP,
+      devBypassPhone: process.env.DEV_MOCK_CUSTOMER_PHONE,
     });
-
     return { message: "OTP sent successfully" };
   }
 
@@ -141,23 +85,9 @@ export class CustomerAuthService {
       return this.buildDevCustomerSession(normalizedPhone, userAgent, clientIp);
     }
 
-    const otpEntry = getOtp(normalizedPhone);
-    if (!otpEntry) {
-      throw new Error(
-        "OTP not found or has expired. Please request a new OTP.",
-      );
-    }
-    if (otpEntry.expiresAt <= new Date()) {
-      deleteOtp(normalizedPhone);
-      throw new Error("OTP has expired. Please request a new OTP.");
-    }
-    const attempts = incrementAttempts(normalizedPhone);
-    if (attempts > MAX_OTP_ATTEMPTS) {
-      deleteOtp(normalizedPhone);
-      throw new Error("Too many failed attempts. Please request a new OTP.");
-    }
-    if (!PasswordService.verifyOTP(otp, otpEntry.otpHash)) {
-      throw new Error("Invalid OTP. Please try again.");
+    const result = OtpService.verifyAndConsume({ phone: normalizedPhone, otp });
+    if (!result.valid) {
+      throw new Error(result.error);
     }
 
     // OTP verified — look up DB state.
@@ -175,9 +105,8 @@ export class CustomerAuthService {
         // Edge case: users row exists but no customers row. Treat as
         // needs_profile — the register flow will link a fresh customers row.
         deleteOtp(normalizedPhone);
-        const pendingToken = await TokenService.signPendingToken(
-          normalizedPhone,
-        );
+        const pendingToken =
+          await TokenService.signPendingToken(normalizedPhone);
         return { status: "needs_profile", pending_token: pendingToken };
       }
 
@@ -190,6 +119,7 @@ export class CustomerAuthService {
         customer_id: customer.id,
         surname: customer.surname,
         other_names: customer.other_names,
+        avatar_url: customer.avatar_url,
       };
       const session = await this.issueSession(authUser, userAgent, clientIp);
       return { status: "logged_in", ...session };
@@ -273,6 +203,10 @@ export class CustomerAuthService {
       .maybeSingle();
 
     let customerId: number;
+    // Capture avatar_url from whichever branch actually wrote the row —
+    // null for a brand-new customer, the existing photo for a walk-in
+    // being linked. Neither branch touches avatar_url on the write.
+    let customerAvatarUrl: string | null = null;
 
     if (existingCustomer) {
       // Flow 2: walk-in customer (cashier-created) — link + write the name.
@@ -293,6 +227,7 @@ export class CustomerAuthService {
         );
       }
       customerId = updated.id;
+      customerAvatarUrl = updated.avatar_url;
     } else {
       // Flow 1: brand-new — insert a fresh customers row.
       const { data: created, error: insertError } = await supabaseAdmin
@@ -312,6 +247,7 @@ export class CustomerAuthService {
         );
       }
       customerId = created.id;
+      customerAvatarUrl = created.avatar_url;
     }
 
     await this.stampLogin(newUser.id);
@@ -322,6 +258,7 @@ export class CustomerAuthService {
       customer_id: customerId,
       surname: data.surname.trim() || null,
       other_names: data.other_names.trim() || null,
+      avatar_url: customerAvatarUrl,
     };
 
     return this.issueSession(authUser, userAgent, clientIp);
@@ -353,6 +290,7 @@ export class CustomerAuthService {
       customer_id: customer.id,
       surname: customer.surname,
       other_names: customer.other_names,
+      avatar_url: customer.avatar_url,
     };
   }
 
@@ -486,6 +424,7 @@ export class CustomerAuthService {
       customer_id: customer.id,
       surname: customer.surname,
       other_names: customer.other_names,
+      avatar_url: customer.avatar_url,
     };
     const session = await this.issueSession(authUser, userAgent, clientIp);
     return { status: "logged_in", ...session };
@@ -496,12 +435,11 @@ export class CustomerAuthService {
    * created by a cashier have user_id = null until they register, so this
    * only matches post-registration (or post-link in `register`).
    */
-  private async findCustomerByUserId(
-    userId: string,
-  ): Promise<{
+  private async findCustomerByUserId(userId: string): Promise<{
     id: number;
     surname: string | null;
     other_names: string | null;
+    avatar_url: string | null;
   } | null> {
     const { data } = await supabaseAdmin
       .from("customers")
@@ -515,6 +453,7 @@ export class CustomerAuthService {
           id: data.id,
           surname: data.surname,
           other_names: data.other_names,
+          avatar_url: data.avatar_url,
         }
       : null;
   }

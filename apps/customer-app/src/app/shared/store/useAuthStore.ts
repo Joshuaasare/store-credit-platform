@@ -28,6 +28,7 @@ interface AuthState {
   setPending: (token: string) => void;
   clearPending: () => void;
   setError: (message: string | null) => void;
+  setUser: (user: CustomerAuthUser) => void;
   logout: () => Promise<void>;
 }
 
@@ -99,6 +100,10 @@ export const useAuthStore = create<AuthState>((set, get) => {
 
     setError(message) {
       set({ error: message });
+    },
+
+    setUser(user) {
+      set({ user });
     },
 
     async logout() {

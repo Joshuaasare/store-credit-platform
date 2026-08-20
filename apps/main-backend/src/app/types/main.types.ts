@@ -62,6 +62,7 @@ export interface BaseCustomer {
   user_id: string | null;
   surname: string | null;
   other_names: string | null;
+  avatar_url: string | null;
   created_at: string;
   deleted_at: string | null;
 }
@@ -77,6 +78,7 @@ export interface CustomerAuthUser {
   customer_id: number;
   surname: string | null;
   other_names: string | null;
+  avatar_url: string | null;
 }
 
 export interface BaseCustomerTransaction {

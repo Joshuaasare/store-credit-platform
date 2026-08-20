@@ -19,6 +19,15 @@ const PENDING_TOKEN_TTL_MINUTES = parseInt(
   process.env.PENDING_TOKEN_TTL_MINUTES || "5",
   10,
 );
+// Phone-verified token — issued after the customer-app phone-change OTP
+// succeeds. Carries `(customerId, newPhone)` for the subsequent
+// PATCH /me/profile so the profile update can prove the customer owns
+// the new phone without re-sending an OTP. 10-minute expiry matches the
+// user's expectation that verification is short-lived.
+const PHONE_VERIFIED_TOKEN_TTL_MINUTES = parseInt(
+  process.env.PHONE_VERIFIED_TOKEN_TTL_MINUTES || "10",
+  10,
+);
 const TOKEN_ISSUER = process.env.TOKEN_ISSUER || "storecredit-api";
 const TOKEN_AUDIENCE = process.env.TOKEN_AUDIENCE || "storecredit-app";
 
@@ -179,6 +188,68 @@ export class TokenService {
         return null;
       }
       return { phone: payload.phone as string };
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Sign a 10-minute phone-verified token. Stateless JWT — no DB row, no
+   * in-memory store. Carries `(customerId, newPhone)` and a `type:
+   * 'phone_verified'` claim so it CANNOT be mistaken for a pending
+   * registration token (`purpose: 'customer_register'`) or an access
+   * token. The subsequent `PATCH /me/profile` verifies this to authorize
+   * updating `users.phone` without re-sending an OTP.
+   *
+   * Signed with the same key as `signPendingToken` — the `type` claim is
+   * the cross-use guard, not the secret.
+   */
+  static async signPhoneVerifiedToken(
+    customerId: number,
+    newPhone: string,
+  ): Promise<string> {
+    const now = Math.floor(Date.now() / 1000);
+    const jti = crypto.randomUUID();
+
+    return new SignJWT({
+      type: "phone_verified",
+      customerId,
+      newPhone,
+      jti,
+    })
+      .setProtectedHeader({ alg: "HS256" })
+      .setIssuedAt(now)
+      .setExpirationTime(`${PHONE_VERIFIED_TOKEN_TTL_MINUTES}m`)
+      .setIssuer(TOKEN_ISSUER)
+      .setAudience(TOKEN_AUDIENCE)
+      .sign(pendingTokenKey);
+  }
+
+  /**
+   * Verify a phone-verified token. Returns `{ customerId, newPhone }` on
+   * success, or null if the token is invalid, expired, or not a
+   * `phone_verified` token (e.g. a replayed pending_token).
+   */
+  static async verifyPhoneVerifiedToken(
+    token: string,
+  ): Promise<{ customerId: number; newPhone: string } | null> {
+    try {
+      const { payload } = await jwtVerify(token, pendingTokenKey, {
+        issuer: TOKEN_ISSUER,
+        audience: TOKEN_AUDIENCE,
+        clockTolerance: 5,
+      });
+      if (
+        payload.type !== "phone_verified" ||
+        typeof payload.customerId !== "number" ||
+        typeof payload.newPhone !== "string"
+      ) {
+        return null;
+      }
+      return {
+        customerId: payload.customerId,
+        newPhone: payload.newPhone,
+      };
     } catch {
       return null;
     }

@@ -1,10 +1,14 @@
-import { createApiClient } from "./apiService.js";
+import { createApiClient, ApiClientConfig } from "./apiService.js";
 
 /**
  * Storage service — talks to the backend storage endpoints. No Supabase keys
  * are used on the client: the backend mints short-lived signed URLs with the
  * service-role key, and this service PUTs the (optionally compressed) file
  * directly to that signed URL. Compression stays in the webapp.
+ *
+ * Accepts an optional `ApiClientConfig` so the React Native customer-app
+ * can plug in its own access-token source and refresh handler, matching the
+ * `createCustomerProfileService(config)` pattern.
  */
 
 export interface CreateUploadUrlRequest {
@@ -58,8 +62,8 @@ function unwrap<T>(res: ApiSuccess<T> | ApiError): T {
   return res.data;
 }
 
-export function createStorageService() {
-  const { apiRequest } = createApiClient();
+export function createStorageService(config?: ApiClientConfig) {
+  const { apiRequest } = createApiClient(config);
 
   /** POST /storage/upload-url — mint a short-lived signed upload URL + public URL. */
   async function getUploadUrl(

@@ -6,6 +6,7 @@ import { OtpVerifyScreen } from "../screens/auth/OtpVerifyScreen";
 import { NewUserScreen } from "../screens/auth/NewUserScreen";
 import { TabNavigator } from "./TabNavigator";
 import { MerchantCreditsScreen } from "../screens/credits/MerchantCreditsScreen";
+import { EditProfileScreen } from "../screens/edit-profile/EditProfileScreen";
 import { useThemeTokens } from "../shared/theme/ThemeContext";
 import { buildNavTheme } from "../shared/theme/navTheme";
 
@@ -21,6 +22,7 @@ export type AppStackParamList = {
     merchantId: number;
     autoOpenRedemption?: boolean;
   };
+  EditProfile: undefined;
 };
 
 const AuthStack = createNativeStackNavigator<AuthStackParamList>();
@@ -46,6 +48,11 @@ function AppStackNavigator() {
       <AppStack.Screen
         name="CreditsMerchantDetail"
         component={MerchantCreditsScreen}
+      />
+      <AppStack.Screen
+        name="EditProfile"
+        component={EditProfileScreen}
+        options={{ animation: "slide_from_left" }}
       />
     </AppStack.Navigator>
   );

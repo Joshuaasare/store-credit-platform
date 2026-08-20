@@ -1,6 +1,6 @@
 /**
  * Auto-generated API Types
- * Generated on: 2026-08-16T14:14:47.970Z
+ * Generated on: 2026-08-19T18:12:32.545Z
  * 
  * ⚠️ DO NOT EDIT MANUALLY
  * Source: apps/smartschool-api/src/app/types/
@@ -84,6 +84,7 @@ export interface BaseCustomer {
   user_id: string | null;
   surname: string | null;
   other_names: string | null;
+  avatar_url: string | null;
   created_at: string;
   deleted_at: string | null;
 }
@@ -99,6 +100,7 @@ export interface CustomerAuthUser {
   customer_id: number;
   surname: string | null;
   other_names: string | null;
+  avatar_url: string | null;
 }
 
 export interface BaseCustomerTransaction {
@@ -716,6 +718,54 @@ export interface CustomerCreditsResponse {
 
 export type CustomerCreditsApiResponse =
   | CustomerCreditsResponse
+  | ApiErrorResponse;
+
+export interface CustomerPhoneChangeSendOtpRequest {
+  newPhone: string;
+}
+
+export interface CustomerPhoneChangeSendOtpResponse {
+  success: true;
+  data: { message: string };
+}
+
+export type CustomerPhoneChangeSendOtpApiResponse =
+  | CustomerPhoneChangeSendOtpResponse
+  | ApiErrorResponse;
+
+export interface CustomerPhoneChangeVerifyRequest {
+  newPhone: string;
+  otp: string;
+}
+
+export interface CustomerPhoneChangeVerifyResult {
+  phoneVerifiedToken: string;
+}
+
+export interface CustomerPhoneChangeVerifyResponse {
+  success: true;
+  data: CustomerPhoneChangeVerifyResult;
+}
+
+export type CustomerPhoneChangeVerifyApiResponse =
+  | CustomerPhoneChangeVerifyResponse
+  | ApiErrorResponse;
+
+export interface CustomerProfileUpdateRequest {
+  surname?: string;
+  other_names?: string;
+  avatar_url?: string | null;
+  newPhone?: string;
+  phoneVerifiedToken?: string;
+}
+
+export interface CustomerProfileUpdateResponse {
+  success: true;
+  data: { user: CustomerAuthUser };
+}
+
+export type CustomerProfileUpdateApiResponse =
+  | CustomerProfileUpdateResponse
   | ApiErrorResponse;
 
 export interface CustomerMerchantBranchesResponse {

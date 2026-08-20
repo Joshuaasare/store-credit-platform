@@ -3,6 +3,8 @@ import {
   createCustomerCreditsService,
   createCustomerActivitiesService,
   createCustomerRedemptionsService,
+  createCustomerProfileService,
+  createStorageService,
   type ApiClientConfig,
 } from "@store-credit-platform/api-services";
 import * as SecureStore from "expo-secure-store";
@@ -88,3 +90,22 @@ export const customerActivitiesService = createCustomerActivitiesService(rnConfi
  * transport as the other customer services.
  */
 export const customerRedemptionsService = createCustomerRedemptionsService(rnConfig);
+
+/**
+ * Customer-app profile service. Backs the EditProfile screen — phone-change
+ * OTP send/verify and the final PATCH that commits surname / other_names /
+ * avatar_url / phone in one request. Shares the same RN-injected transport
+ * as the other customer services.
+ */
+export const customerProfileService = createCustomerProfileService(rnConfig);
+
+/**
+ * Customer-app storage service. Backs the EditProfile avatar upload —
+ * `storage.uploadFile(blob, { bucket, folder, id, contentType })` mints
+ * a signed URL via POST /storage/upload-url and PUTs the compressed
+ * image bytes to Supabase Storage, returning the public URL the
+ * EditProfile screen then PATCHes onto `customers.avatar_url`. Same
+ * path the webapp uses for vendor logos — no customer-specific avatar
+ * endpoint. Shares the same RN-injected transport as the other services.
+ */
+export const storage = createStorageService(rnConfig);

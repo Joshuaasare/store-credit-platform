@@ -45,7 +45,7 @@ function buildPath(
   return folder ? `${folder}/${fileName}` : fileName;
 }
 
-function extractPathFromUrl(bucket: string, publicUrl: string): string | null {
+export function extractPathFromUrl(bucket: string, publicUrl: string): string | null {
   try {
     const url = new URL(publicUrl);
     const parts = url.pathname.split(`/${bucket}/`);

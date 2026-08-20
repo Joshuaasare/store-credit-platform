@@ -6,6 +6,7 @@ import { customerService } from "../../services/customers.service";
 import { customerCreditsService } from "../../services/customerCredits.service";
 import { customerActivitiesService } from "../../services/customerActivities.service";
 import { customerRedemptionsService } from "../../services/customerRedemptions.service";
+import { customerProfileService } from "../../services/customerProfile.service";
 import {
   LeaderboardQuerystring,
   LeaderboardApiResponse,
@@ -25,6 +26,14 @@ import {
   CustomerApprovedRedemptionApiResponse,
   CustomerApprovedRedemptionQuerystring,
 } from "../../schemas/customerRedemptions.schema";
+import {
+  CustomerPhoneChangeSendOtpRequest,
+  CustomerPhoneChangeSendOtpApiResponse,
+  CustomerPhoneChangeVerifyRequest,
+  CustomerPhoneChangeVerifyApiResponse,
+  CustomerProfileUpdateRequest,
+  CustomerProfileUpdateApiResponse,
+} from "../../schemas/customerProfile.schema";
 
 // Querystring for the customer-app Home tab Recent Activity feed.
 // `cursor` is the numeric id of the last item from the previous page
@@ -738,6 +747,197 @@ export default async function (fastify: FastifyInstance) {
           "DELETE /customers/me/merchants/:merchantId/redemptions failed",
         );
         reply.status(400);
+        return { success: false, error: message };
+      }
+    },
+  });
+
+  // ────────────────────────────────────────────────────────────────────────
+  // Customer profile-edit endpoints (`/customers/me/*`)
+  // ────────────────────────────────────────────────────────────────────────
+  // Three routes that back the EditProfile screen on the customer mobile
+  // app. Customer-token only — `customerId` is derived from the JWT,
+  // never trusted from the client. Same `customer_id != null` gate as
+  // the other `/me/*` endpoints above.
+  //
+  // Avatar uploads go through the generic `POST /storage/upload-url`
+  // endpoint (same path the webapp uses for vendor logos) — the
+  // customer-app calls `storage.uploadFile()` from `api-services`, then
+  // PATCHes `avatar_url` here.
+
+  /**
+   * POST /customers/me/phone-change/send-otp
+   *
+   * Send an OTP to a candidate new phone. Guards: no-op (same as
+   * current), uniqueness clash, rate limit. The OTP is stored in the
+   * in-memory otp.store keyed by the new phone.
+   */
+  fastify.post<{
+    Body: Static<typeof CustomerPhoneChangeSendOtpRequest>;
+    Reply: CustomerPhoneChangeSendOtpApiResponse;
+  }>("/me/phone-change/send-otp", {
+    preHandler: [requireAuth],
+    schema: {
+      body: CustomerPhoneChangeSendOtpRequest,
+      response: {
+        200: CustomerPhoneChangeSendOtpApiResponse,
+        400: CustomerPhoneChangeSendOtpApiResponse,
+        401: CustomerPhoneChangeSendOtpApiResponse,
+        403: CustomerPhoneChangeSendOtpApiResponse,
+        429: CustomerPhoneChangeSendOtpApiResponse,
+      },
+    },
+    handler: async (request, reply) => {
+      try {
+        const customerId = request.user?.customer_id;
+        if (customerId == null) {
+          reply.status(403);
+          return {
+            success: false,
+            error: "Forbidden: this endpoint is for customer accounts only",
+          };
+        }
+        const newPhone = request.body?.newPhone;
+        if (typeof newPhone !== "string" || newPhone.trim() === "") {
+          reply.status(400);
+          return { success: false, error: "newPhone is required" };
+        }
+        const clientIp =
+          (request.ip as string | undefined) ??
+          (request.ips?.[0] as string | undefined);
+        const data = await customerProfileService.sendPhoneChangeOtp(
+          customerId,
+          newPhone,
+          clientIp,
+        );
+        return { success: true, data };
+      } catch (error) {
+        const message =
+          error instanceof Error
+            ? error.message
+            : "Failed to send phone-change OTP";
+        const statusCode =
+          (error as Error & { statusCode?: number }).statusCode ?? 400;
+        request.log.error(
+          error,
+          "POST /customers/me/phone-change/send-otp failed",
+        );
+        reply.status(statusCode);
+        return { success: false, error: message };
+      }
+    },
+  });
+
+  /**
+   * POST /customers/me/phone-change/verify
+   *
+   * Verify the OTP the customer entered for the phone change. On
+   * success: returns a 10-minute phone-verified JWT the customer-app
+   * includes in the subsequent PATCH /me/profile body. Same
+   * MAX_OTP_ATTEMPTS=5 logic as `/customer-auth/verify-otp`.
+   */
+  fastify.post<{
+    Body: Static<typeof CustomerPhoneChangeVerifyRequest>;
+    Reply: CustomerPhoneChangeVerifyApiResponse;
+  }>("/me/phone-change/verify", {
+    preHandler: [requireAuth],
+    schema: {
+      body: CustomerPhoneChangeVerifyRequest,
+      response: {
+        200: CustomerPhoneChangeVerifyApiResponse,
+        400: CustomerPhoneChangeVerifyApiResponse,
+        401: CustomerPhoneChangeVerifyApiResponse,
+        403: CustomerPhoneChangeVerifyApiResponse,
+      },
+    },
+    handler: async (request, reply) => {
+      try {
+        const customerId = request.user?.customer_id;
+        if (customerId == null) {
+          reply.status(403);
+          return {
+            success: false,
+            error: "Forbidden: this endpoint is for customer accounts only",
+          };
+        }
+        const newPhone = request.body?.newPhone;
+        const otp = request.body?.otp;
+        if (typeof newPhone !== "string" || newPhone.trim() === "") {
+          reply.status(400);
+          return { success: false, error: "newPhone is required" };
+        }
+        if (typeof otp !== "string" || otp.trim() === "") {
+          reply.status(400);
+          return { success: false, error: "otp is required" };
+        }
+        const data = await customerProfileService.verifyPhoneChangeOtp(
+          customerId,
+          newPhone,
+          otp.trim(),
+        );
+        return { success: true, data };
+      } catch (error) {
+        const message =
+          error instanceof Error
+            ? error.message
+            : "Failed to verify phone-change OTP";
+        request.log.error(
+          error,
+          "POST /customers/me/phone-change/verify failed",
+        );
+        reply.status(400);
+        return { success: false, error: message };
+      }
+    },
+  });
+
+  /**
+   * PATCH /customers/me/profile
+   *
+   * Commit a profile update. All fields optional. `newPhone` requires
+   * `phoneVerifiedToken`. Returns the full post-update `CustomerAuthUser`
+   * so the customer-app can call `setUser` on the auth store and
+   * re-render every surface that reads `user` (PageHeader, etc.).
+   */
+  fastify.patch<{
+    Body: Static<typeof CustomerProfileUpdateRequest>;
+    Reply: CustomerProfileUpdateApiResponse;
+  }>("/me/profile", {
+    preHandler: [requireAuth],
+    schema: {
+      body: CustomerProfileUpdateRequest,
+      response: {
+        200: CustomerProfileUpdateApiResponse,
+        400: CustomerProfileUpdateApiResponse,
+        401: CustomerProfileUpdateApiResponse,
+        403: CustomerProfileUpdateApiResponse,
+      },
+    },
+    handler: async (request, reply) => {
+      try {
+        const customerId = request.user?.customer_id;
+        if (customerId == null) {
+          reply.status(403);
+          return {
+            success: false,
+            error: "Forbidden: this endpoint is for customer accounts only",
+          };
+        }
+        const body = request.body ?? {};
+        const user = await customerProfileService.updateProfile(
+          customerId,
+          body,
+        );
+        return { success: true, data: { user } };
+      } catch (error) {
+        const message =
+          error instanceof Error
+            ? error.message
+            : "Failed to update profile";
+        const statusCode =
+          (error as Error & { statusCode?: number }).statusCode ?? 400;
+        request.log.error(error, "PATCH /customers/me/profile failed");
+        reply.status(statusCode);
         return { success: false, error: message };
       }
     },

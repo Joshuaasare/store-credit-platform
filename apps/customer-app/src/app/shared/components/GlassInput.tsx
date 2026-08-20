@@ -29,8 +29,8 @@ export default function GlassInput(props: TextInputProps) {
 const styles = StyleSheet.create({
   input: {
     borderWidth: 1,
-    paddingHorizontal: 16,
-    height: 56,
-    fontSize: 16,
+    paddingHorizontal: 14,
+    height: 48,
+    fontSize: 15,
   },
 });
