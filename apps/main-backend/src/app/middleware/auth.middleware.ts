@@ -2,20 +2,12 @@ import { FastifyReply, FastifyRequest } from "fastify";
 import { TokenService } from "../services/token.service";
 import { AccessTokenPayload } from "../schemas/auth.schema";
 
-/**
- * Custom request type with authenticated user payload
- */
-
 declare module "fastify" {
   interface FastifyRequest {
     user?: AccessTokenPayload;
   }
 }
 
-/**
- * Verify JWT access token from Authorization header and attach user to request.
- * This should be used on ALL protected routes.
- */
 export async function requireAuth(
   request: FastifyRequest,
   reply: FastifyReply,
@@ -50,9 +42,6 @@ export async function requireAuth(
   }
 }
 
-/**
- * Check if the authenticated user has at least one of the required roles.
- */
 export function requireRoles(...allowedRoles: string[]) {
   return async (
     request: FastifyRequest,

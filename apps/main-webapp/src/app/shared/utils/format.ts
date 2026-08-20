@@ -1,10 +1,3 @@
-/**
- * Currency formatting helpers shared across pages.
- *
- * `formatGHS` uses `Intl.NumberFormat("en-GH", { style: "currency", currency: "GHS" })`
- * — produces "GH₵1,234.50". Use for any customer-facing cedi amount.
- */
-
 import { fromEpochMs } from "./date.utils";
 
 const cediFormatter = new Intl.NumberFormat("en-GH", {
@@ -19,9 +12,6 @@ export function formatGHS(amount: number): string {
   return cediFormatter.format(amount);
 }
 
-/**
- * Compact cedi formatting for stat cards (no fractional trailing zeros).
- */
 export function formatGHSCompact(amount: number): string {
   if (!Number.isFinite(amount)) return "GH₵0";
   return `GH₵${amount.toLocaleString(undefined, {
@@ -30,19 +20,12 @@ export function formatGHSCompact(amount: number): string {
   })}`;
 }
 
-/**
- * Generic numeric formatter for stat cards: integers stay bare, large
- * numbers get locale grouping, and small decimals keep up to 2 places.
- */
 export function formatStatValue(value: number): string {
   if (value >= 1000) return value.toLocaleString();
   if (Number.isInteger(value)) return String(value);
   return value.toFixed(2);
 }
 
-/**
- * Format a Unix epoch (milliseconds) as a readable date string.
- */
 export function formatEpochDate(epochMs: number): string {
   const d = fromEpochMs(epochMs);
   if (!d) return "—";
@@ -53,9 +36,6 @@ export function formatEpochDate(epochMs: number): string {
   });
 }
 
-/**
- * Format a Unix epoch (milliseconds) as a readable date + time string.
- */
 export function formatEpochDateTime(epochMs: number): string {
   const d = fromEpochMs(epochMs);
   if (!d) return "—";
@@ -68,11 +48,7 @@ export function formatEpochDateTime(epochMs: number): string {
   });
 }
 
-/**
- * Format an ISO 8601 timestamp (the format Postgres timestamptz serializes
- * to) as a readable date string. Returns "—" for null/undefined. Used for
- * columns like `users.last_login_at` that are NOT stored as epoch ms.
- */
+// For columns like `users.last_login_at` that are NOT stored as epoch ms.
 export function formatIsoDate(iso: string | null | undefined): string {
   if (!iso) return "—";
   const d = new Date(iso);

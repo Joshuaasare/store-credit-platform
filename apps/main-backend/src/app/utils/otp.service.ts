@@ -9,36 +9,15 @@ import {
 import { RateLimitService } from "../services/rateLimit.service";
 
 const MAX_OTP_ATTEMPTS = 5;
-const OTP_TTL_MS = 10 * 60 * 1000; // 10 minutes — shared by login + phone-change.
+const OTP_TTL_MS = 10 * 60 * 1000; // shared by login + phone-change.
 
-/**
- * Shared OTP issue/verify orchestration over the in-memory `otp.store`.
- *
- * `CustomerAuthService` (login) and `CustomerProfileService` (phone-change)
- * both call this so the OTP policy — attempt cap, expiry window, dev-bypass,
- * rate-limit — lives in one place. The two services stay separate (login
- * owns session issuance, profile-edit owns the phone-verified token); only
- * the OTP mechanics are shared.
- *
- * Callers own:
- *   - `normalizePhone` (run before calling)
- *   - flow-specific guards (no-op check, uniqueness check)
- *   - the SMS template (login vs phone-change copy differ on purpose)
- *   - the dev-bypass short-circuit in `verifyAndConsume` (the success
- *     outcome differs per flow — login auto-provisions a session,
- *     phone-change auto-issues a token — so the caller runs the dev-bypass
- *     branch BEFORE calling `verifyAndConsume`)
- */
+// Shared OTP issue/verify orchestration over the in-memory otp.store. CustomerAuthService (login) and CustomerProfileService (phone-change) both call this so the OTP policy — attempt cap, expiry window, dev-bypass, rate-limit — lives in one place. The two services stay separate (login owns session issuance, profile-edit owns the phone-verified token); only the OTP mechanics are shared. Callers run normalizePhone + flow-specific guards + the dev-bypass short-circuit BEFORE calling verifyAndConsume (the success outcome differs per flow).
 export class OtpService {
-  /**
-   * Rate-limit, generate, hash, store, and SMS-send an OTP. Throws a
-   * 429-tagged Error on rate-limit failure (the route surfaces the message).
-   */
+  // Throws a 429-tagged Error on rate-limit failure (the route surfaces the message).
   static async issueAndSend(opts: {
     phone: string;
     clientIp?: string;
     smsTemplate: (otp: string) => string;
-    /** When set and `phone` matches, skip the SMS send and store the mock OTP. */
     devBypassPhone?: string;
   }): Promise<void> {
     const rateLimit = RateLimitService.checkOtpSendLimits(
@@ -75,12 +54,7 @@ export class OtpService {
     });
   }
 
-  /**
-   * Verify and consume an OTP. Returns `{ valid: true }` on success or
-   * `{ valid: false, error }` on any failure. The entry is deleted on
-   * success, expiry, and lockout; a wrong-but-not-locked-out attempt
-   * leaves the entry in place so the customer can retry.
-   */
+  // Entry is deleted on success, expiry, and lockout; a wrong-but-not-locked-out attempt leaves the entry in place so the customer can retry.
   static verifyAndConsume(opts: {
     phone: string;
     otp: string;

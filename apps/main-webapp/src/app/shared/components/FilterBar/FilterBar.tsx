@@ -101,7 +101,6 @@ export function FilterBar({ filters = [], onFilterChange }: FilterBarProps) {
         </MultiSelectContent>
       </MultiSelect>
     );
-    // Placeholder for multiselect rendering logic
   };
 
   const renderComboBoxFilter = (filter: FilterOption, index?: number) => {

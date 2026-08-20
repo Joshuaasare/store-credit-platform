@@ -58,12 +58,8 @@ function AppStackNavigator() {
   );
 }
 
-/**
- * Conditional root — renders <AuthStack/> or <AppStack/> based on the auth
- * store's status. When the session flips (login completes, refresh fails,
- * logout), the whole subtree unmounts/mounts so auth screens never linger
- * in the post-auth back stack.
- */
+// Conditional root — when the session flips, the whole subtree unmounts/mounts
+// so auth screens never linger in the post-auth back stack.
 export function RootNavigator() {
   const status = useAuthStore((s) => s.status);
   const theme = useThemeTokens();

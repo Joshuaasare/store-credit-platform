@@ -124,12 +124,7 @@ export type FixedCreditConfigDeleteApiResponse =
   | FixedCreditConfigDeleteResponse
   | ApiErrorResponse;
 
-// customer_credit row type is now `BaseCustomerCredit` in main.types.ts —
-// the composed nested shape propagates column changes via QueryFragments.
-
-// Credit row augmented with the live "remaining" = credit_amount −
-// SUM(approved redemptions). Used by the redemption dialog and any
-// credit-list endpoint.
+// Augmented with live remaining = credit_amount − SUM(approved redemptions). Used by the redemption dialog and credit-list endpoints.
 export interface CustomerCreditWithRemaining extends BaseCustomerCredit {
   remaining: number;
   redeemed_total: number;

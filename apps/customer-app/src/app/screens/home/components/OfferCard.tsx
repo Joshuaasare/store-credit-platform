@@ -12,25 +12,19 @@ import { Ionicons } from "@expo/vector-icons";
 import { computeInitials } from "../../../shared/utils/computeInitials";
 import { useThemeTokens } from "../../../shared/theme/ThemeContext";
 
-/**
- * Build a stable two-color pastel gradient from a merchant name. Soft tones
- * that read as "photo placeholder" (think Wearify's product tile) and stay
- * visually distinct between merchants without being noisy.
- */
 function pickPhotoGradient(merchantName: string): [string, string] {
   const palettes: Array<[string, string]> = [
-    ["#e0e7ff", "#c7d2fe"], // sky
-    ["#fce7f3", "#fbcfe8"], // rose
-    ["#d1fae5", "#a7f3d0"], // emerald
-    ["#fef3c7", "#fde68a"], // amber
-    ["#ede9fe", "#ddd6fe"], // violet
-    ["#cffafe", "#a5f3fc"], // cyan
+    ["#e0e7ff", "#c7d2fe"],
+    ["#fce7f3", "#fbcfe8"],
+    ["#d1fae5", "#a7f3d0"],
+    ["#fef3c7", "#fde68a"],
+    ["#ede9fe", "#ddd6fe"],
+    ["#cffafe", "#a5f3fc"],
   ];
   const idx = hashString(merchantName) % palettes.length;
   return palettes[idx] ?? ["#e0e7ff", "#c7d2fe"];
 }
 
-/** Tiny djb2-style hash — stable across reloads, fits in a 32-bit int. */
 function hashString(s: string): number {
   let h = 5381;
   for (let i = 0; i < s.length; i++) {
@@ -78,13 +72,7 @@ export default function OfferCard({
     >
       <View style={[styles.card]}>
         <View style={[styles.photo, { borderRadius: theme.radii.lg }]}>
-          {/* Logo fills the entire photo section. The gradient + initials
-              placeholder always renders beneath so the card never flashes
-              blank while the logo is in flight; the expo-image logo then
-              fades over the placeholder via `transition={150}`. When no
-              logo is supplied we keep the same gradient + initials as the
-              fallback — the card looks the same as before from the user's
-              perspective. */}
+          {/* Gradient + initials always render beneath so the card never flashes blank. */}
           <LinearGradient
             colors={[photoStart, photoEnd]}
             start={{ x: 0, y: 0 }}
@@ -176,7 +164,6 @@ const styles = StyleSheet.create({
   card: {
     borderWidth: 0,
     overflow: "hidden",
-    // Single-tier elevation, like Airbnb's property card.
     shadowColor: "#000",
     shadowOpacity: 0.04,
     shadowRadius: 8,

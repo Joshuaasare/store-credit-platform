@@ -1,16 +1,8 @@
-/**
- * CORS Plugin
- *
- * Configures Cross-Origin Resource Sharing (CORS) for the API.
- * Allows frontend applications to make requests to this API.
- */
-
 import fp from "fastify-plugin";
 import cors from "@fastify/cors";
 import type { FastifyInstance } from "fastify";
 
 async function corsPlugin(fastify: FastifyInstance) {
-  // Get allowed origins from environment
   const allowedOrigins = fastify.config.ALLOWED_ORIGINS.split(",").map(
     (origin) => origin.trim(),
   );
@@ -23,22 +15,18 @@ async function corsPlugin(fastify: FastifyInstance) {
         return;
       }
 
-      // Check if origin is in allowed list (exact match or wildcard)
       const isAllowed = allowedOrigins.some((allowedOrigin) => {
-        // Global wildcard
         if (allowedOrigin === "*") {
           return true;
         }
 
-        // Exact match
         if (allowedOrigin === origin) {
           return true;
         }
 
-        // Subdomain wildcard (e.g., *.example.com)
+        // Subdomain wildcard (e.g., *.example.com) — match on dotted suffix to avoid partial matches.
         if (allowedOrigin.startsWith("*.")) {
-          const domain = allowedOrigin.slice(2); // Remove "*."
-          // Check if origin ends with the domain (with a dot to avoid partial matches)
+          const domain = allowedOrigin.slice(2);
           return (
             origin === `https://${domain}` ||
             origin === `http://${domain}` ||
@@ -56,7 +44,7 @@ async function corsPlugin(fastify: FastifyInstance) {
         callback(new Error("Not allowed by CORS"), false);
       }
     },
-    credentials: true, // Allow cookies
+    credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
     allowedHeaders: [
       "Content-Type",
@@ -71,5 +59,5 @@ async function corsPlugin(fastify: FastifyInstance) {
 
 export default fp(corsPlugin, {
   name: "cors",
-  dependencies: ["env"], // Requires env plugin to be loaded first
+  dependencies: ["env"],
 });

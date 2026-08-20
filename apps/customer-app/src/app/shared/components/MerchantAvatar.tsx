@@ -11,22 +11,6 @@ import { LinearGradient } from "expo-linear-gradient";
 import { computeInitials } from "../utils/computeInitials";
 import { pickAvatarGradient, pickAvatarGradientById } from "../utils/avatarPalette";
 
-/**
- * Merchant avatar — preferred: the merchant's logo URL (rendered via
- * `expo-image` for disk + memory cache + progressive loading). Fallback:
- * a pastel gradient with the merchant initials watermarked on top.
- *
- * `expo-image` gives us persistent disk caching across screen visits, so
- * the avatar renders from cache on the second visit instead of re-fetching
- * the merchant logo. The pastel gradient + initials block lives behind
- * the network image so the row never shows a blank square while the
- * image is in flight — once the image loads, it fades over the placeholder.
- *
- * Square by default; the caller controls the size via the `size` prop.
- * The gradient picks a stable palette from the merchant name so the same
- * merchant always gets the same colours (matches the wider "merchant
- * identity" visual used in `OfferCard`).
- */
 export default function MerchantAvatar({
   merchantName,
   logoUrl,
@@ -40,17 +24,11 @@ export default function MerchantAvatar({
   logoUrl: string | null;
   size?: number;
   initials?: string;
-  /** Override the default initials font size — useful for the larger
-   *  offer-card photo (40px) versus the activity-row avatar (40px keeps
-   *  the same weight). */
   initialsFontSize?: number;
   style?: StyleProp<ViewStyle | ImageStyle>;
-  /** Stable numeric ID used to pick the placeholder palette. When
-   *  supplied the same ID always renders the same gradient — this
-   *  keeps a single branch / merchant visually consistent across every
-   *  tab and screen, regardless of the merchant name's casing or
-   *  wording at that surface. Falls back to name-based hashing when
-   *  nullish (legacy callers without a stable ID, e.g. OfferCard). */
+  // Stable ID for the placeholder palette so a branch/merchant renders the
+  // same gradient across every tab/screen regardless of name casing. Falls
+  // back to name-based hashing when nullish.
   idSeed?: number | string | null;
 }) {
   const [photoStart, photoEnd] = idSeed != null
@@ -58,9 +36,6 @@ export default function MerchantAvatar({
     : pickAvatarGradient(merchantName);
   const radius = size / 2;
 
-  // Fallback placeholder — gradient + initials watermark. Used as the
-  // entire avatar when no logo URL is provided, and as the layered
-  // background while a network image is loading.
   const placeholder = (
     <View
       style={[
@@ -99,10 +74,7 @@ export default function MerchantAvatar({
         style,
       ]}
     >
-      {/* Placeholder layer — always rendered, covered by the image once
-          it loads. Reads from the same gradient palette as the no-logo
-          fallback so the avatar visually anchors before the network
-          image arrives. */}
+      {/* Placeholder layer, covered by the image once it loads. */}
       <View
         style={[
           StyleSheet.absoluteFill,
@@ -134,8 +106,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   image: {
-    // Transparent background so the gradient placeholder bleeds through
-    // any rounded-corner anti-aliasing seams while the image is loading.
     backgroundColor: "transparent",
   },
   initials: {

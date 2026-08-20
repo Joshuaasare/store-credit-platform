@@ -1,15 +1,10 @@
 import { lightColors, darkColors, type ColorTokens } from "./colors";
 
-/**
- * Radii tokens (px). Shared across themes — shape language doesn't change
- * between light and dark.
- */
 export interface RadiusTokens {
   sm: number;
   md: number;
   lg: number;
   xl: number;
-  /** Fully rounded pill. */
   pill: number;
 }
 
@@ -21,9 +16,6 @@ export const radii: RadiusTokens = {
   pill: 32,
 };
 
-/**
- * Spacing tokens (px). 4px base scale.
- */
 export interface SpacingTokens {
   xs: number;
   sm: number;
@@ -44,10 +36,6 @@ export const spacing: SpacingTokens = {
   xxl: 48,
 };
 
-/**
- * Typography tokens. Font families are the loaded Inter weights; sizes/weights
- * are shared across themes (only color changes).
- */
 export interface TypographyTokens {
   fontFamilyRegular: string;
   fontFamilyMedium: string;

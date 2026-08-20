@@ -1,13 +1,8 @@
-/**
- * Country data for phone number country selector
- * Focused on African countries initially, with Ghana as default
- */
-
 export interface Country {
-  code: CountryCode; // Country code (e.g., "GH")
-  dialCode: string; // Dial code without + (e.g., "233")
-  name: string; // Country name
-  flag: string; // Flag emoji
+  code: CountryCode;
+  dialCode: string;
+  name: string;
+  flag: string;
 }
 
 export enum CountryCode {
@@ -73,7 +68,7 @@ export const countries: Country[] = [
   { code: CountryCode.CA, dialCode: "1", name: "Canada", flag: "🇨🇦" },
 ];
 
-export const defaultCountry: Country = countries[0]; // Ghana
+export const defaultCountry: Country = countries[0];
 
 export function getCountryByDialCode(dialCode: string): Country | undefined {
   return countries.find((c) => c.dialCode === dialCode);
@@ -91,20 +86,16 @@ export function formatPhoneWithCountry(
   const country = getCountryByCode(countryCode);
   if (!country) return phone;
 
-  // Remove any non-digits and spaces
   let cleanPhone = phone.replace(/\D/g, "");
 
-  // If already has country code, return as-is
   if (cleanPhone.startsWith(country.dialCode)) {
     return cleanPhone;
   }
 
-  // Remove leading 0 if present
   if (cleanPhone.startsWith("0")) {
     cleanPhone = cleanPhone.substring(1);
   }
 
-  // Return country code + phone (no +)
   return `${country.dialCode}${cleanPhone}`;
 }
 
@@ -112,10 +103,9 @@ export function parsePhoneNumber(fullNumber: string): {
   country: Country | undefined;
   localNumber: string;
 } {
-  // Remove any + prefix
   const cleanNumber = fullNumber.replace(/^\+/, "").replace(/\D/g, "");
 
-  // Try to match country code (longest match first)
+  // Longest dial-code match first so "1" doesn't shadow "233".
   const sortedCountries = [...countries].sort(
     (a, b) => b.dialCode.length - a.dialCode.length,
   );

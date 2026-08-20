@@ -2,11 +2,6 @@ import type { Theme } from "@react-navigation/native";
 
 import type { Theme as AppTheme } from "./theme";
 
-/**
- * Build a React Navigation `Theme` from the app's token system so the nav
- * chrome (header backgrounds, card surfaces, default text) stays in sync with
- * `useTheme()` on screen contents. Pass the result to `NavigationContainer`.
- */
 export function buildNavTheme(theme: AppTheme): Theme {
   return {
     dark: theme.dark,

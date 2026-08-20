@@ -6,12 +6,6 @@ import {
   CreatePurchaseApiResponse,
 } from "../types/api.types.js";
 
-/**
- * Transaction service — wraps the Transactions backend endpoints
- * (activity feed + purchase recording). Mirrors the createCustomerService
- * factory pattern. Credit redemption + remaining live on customerService
- * since they operate on a customer's credit row.
- */
 export function createTransactionService() {
   const { apiRequest } = createApiClient();
 
@@ -25,7 +19,6 @@ export function createTransactionService() {
   }
 
   return {
-    /** GET /transactions — paginated, merchant-scoped activity feed. `type` filters the union. */
     async getTransactions(
       params: TransactionsQuerystring,
     ): Promise<TransactionsApiResponse> {
@@ -35,7 +28,6 @@ export function createTransactionService() {
       });
     },
 
-    /** POST /transactions/purchase — record a purchase (auto-issues matching running credits). */
     async createPurchase(
       payload: CreatePurchaseRequest,
     ): Promise<CreatePurchaseApiResponse> {

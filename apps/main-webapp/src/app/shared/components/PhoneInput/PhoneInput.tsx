@@ -48,7 +48,6 @@ export function PhoneInput<T extends FieldValues>({
     fieldState: { error },
   } = useController({ name, control });
 
-  // Parse initial value to get country and local number
   const initialParsed = field.value
     ? parsePhoneNumber(field.value)
     : {
@@ -67,7 +66,6 @@ export function PhoneInput<T extends FieldValues>({
     label: country.name,
     value: country.code,
   }));
-  // Update form value when local number or country changes
   const updateFormValue = (newLocalNumber: string, newCountry: Country) => {
     if (!newLocalNumber || newLocalNumber.trim() === "") {
       field.onChange("");
@@ -75,11 +73,11 @@ export function PhoneInput<T extends FieldValues>({
     }
 
     if (storeInternationalFormat) {
-      // Store as: "233501234567" (international format without +)
+      // International format without +, e.g. "233501234567".
       const formatted = formatPhoneWithCountry(newLocalNumber, newCountry.code);
       field.onChange(formatted);
     } else {
-      // Store as: "0501234567" (local format)
+      // Local format, e.g. "0501234567".
       const cleanLocal = newLocalNumber.startsWith("0")
         ? newLocalNumber
         : `0${newLocalNumber}`;
@@ -89,7 +87,6 @@ export function PhoneInput<T extends FieldValues>({
 
   const handleLocalNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
-    // Allow only digits and ensure reasonable length
     const cleaned = value.replace(/\D/g, "");
     if (cleaned.length <= 15) {
       setLocalNumber(cleaned);
@@ -152,7 +149,6 @@ export function PhoneInput<T extends FieldValues>({
           }}
         />
 
-        {/* Phone Number Input */}
         <div className="flex-1">
           <Input
             id={name}

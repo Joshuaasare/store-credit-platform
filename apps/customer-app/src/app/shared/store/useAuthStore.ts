@@ -33,8 +33,8 @@ interface AuthState {
 }
 
 export const useAuthStore = create<AuthState>((set, get) => {
-  // Wire the access-token source into the API client so 401-triggered
-  // refreshes read/write the store's token. Runs once at store creation.
+  // Wire the access-token source into the API client so 401-triggered refreshes
+  // read/write the store's token. Runs once at store creation.
   wireAccessToken(
     () => get().accessToken,
     (t) => set({ accessToken: t }),

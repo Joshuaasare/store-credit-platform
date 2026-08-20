@@ -95,36 +95,31 @@ export default function MainLayout() {
   const { user } = useAuthStore();
   const ensureStoreLoaded = useStoreStore((s) => s.ensureStoreLoaded);
 
-  // Bootstrap shared store data once per authenticated session so every
-  // child route (My Store, Customers, etc.) sees populated merchant + branches
-  // regardless of which route is the entry point.
+  // Bootstrap shared store data once per authenticated session so child routes
+  // see populated merchant + branches regardless of entry point.
   useEffect(() => {
     void ensureStoreLoaded();
   }, [ensureStoreLoaded]);
 
   const isLight = theme === "light";
-  // "/" should match only when exactly on the index route; sub-paths fall back to no match.
+  // "/" matches only the index route; sub-paths fall back to no match.
   const activeIndex = navItems.findIndex((i) =>
     i.url === "/"
       ? location.pathname === "/"
       : location.pathname.startsWith(i.url),
   );
 
-  // Shared surface treatment — mirrors the StoreHero: primary-tinted gradient,
-  // ring, blur, and a decorative primary blob. Token-driven so it adapts to both
-  // light and slate themes automatically.
+  // Mirrors the StoreHero treatment — token-driven so it adapts to both themes.
   const surfaceGradient = "bg-gradient-to-br from-primary/10 via-card to-card";
   const surfaceRing = "ring-1 ring-primary/10";
   const shadow = isLight
     ? "shadow-[0_8px_30px_rgba(0,0,0,0.12)]"
     : "shadow-[0_8px_30px_rgba(0,0,0,0.45)]";
 
-  // Close the mobile menu on route change.
   useEffect(() => {
     setMobileOpen(false);
   }, [location.pathname]);
 
-  // Close on Escape.
   useEffect(() => {
     if (!mobileOpen) return;
     const onKey = (e: KeyboardEvent) => {
@@ -264,7 +259,6 @@ export default function MainLayout() {
           </nav>
         </>
       ) : (
-        /* Web: modern floating left-side navigator — hero-styled */
         <nav
           className={cn(
             "group/nav fixed left-4 top-5 z-50",

@@ -51,8 +51,7 @@ const TYPE_FILTERS: { value: TransactionTypeFilter; label: string }[] = [
   { value: "credit_redeem", label: "Credit Redeemed" },
 ];
 
-// Empty-state copy adapts to the active filter. Credit-only filters hide the
-// "record a new purchase" CTA since purchases don't directly produce those.
+// Credit-only filters hide the "record a new purchase" CTA — purchases don't produce credits.
 const EMPTY_COPY: Record<
   TransactionTypeFilter,
   { title: string; hint?: string }
@@ -81,8 +80,7 @@ export default function TransactionsList() {
     branchId: null,
     datePreset: "this_year",
     start: startOfYearEpochMs(),
-    // end=null → "no upper bound". Keeps newly-created transactions in-window
-    // so they appear immediately on refetch after a purchase is added.
+    // end=null keeps newly-created transactions in-window across refetches.
     end: null,
   }));
   const [typeFilter, setTypeFilter] = useState<TransactionTypeFilter>("all");

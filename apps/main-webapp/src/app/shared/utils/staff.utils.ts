@@ -1,10 +1,6 @@
 import { Staff } from "@shared/types/api.types";
 
-/**
- * Display name for a staff row — `surname + " " + other_names`, trimmed.
- * Names live on the staff row directly (not on the user). Returns
- * "Unnamed staff" if both are empty (rare but possible).
- */
+// Names live on the staff row directly (not on the user).
 export function staffDisplayName(
   s: Pick<Staff, "surname" | "other_names">,
 ): string {
@@ -14,12 +10,6 @@ export function staffDisplayName(
   return name || "Unnamed staff";
 }
 
-/**
- * 1-2 char initials for a staff Monogram avatar. First letter of surname +
- * first letter of first word of other_names; single-word fallback takes the
- * first two chars of surname. Falls back to the last 2 digits of phone when
- * no name is available.
- */
 export function staffInitials(
   s: Pick<Staff, "surname" | "other_names" | "user">,
 ): string {

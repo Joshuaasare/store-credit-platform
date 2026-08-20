@@ -2,11 +2,6 @@ import { StyleSheet, Text, View } from "react-native";
 import GlassCard from "../../../shared/components/GlassCard";
 import { useThemeTokens } from "../../../shared/theme/ThemeContext";
 
-/**
- * Empty state for the Credits screen — a glass card with a title and
- * supporting subtitle. Used when the customer's live or expired credit list
- * is empty.
- */
 export default function EmptyState({
   title,
   subtitle,

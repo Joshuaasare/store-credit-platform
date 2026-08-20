@@ -1,29 +1,4 @@
-// ────────────────────────────────────────────────────────────────────────────
-// Merchant-side redemption approval queue (`/redemptions/*`)
-// ────────────────────────────────────────────────────────────────────────────
-// Three views on the customer-initiated redemption flow at a merchant:
-//
-//   1. Pending  — rows from `customer_credit_redemptions` where
-//                 `approved_at IS NULL AND rejected_at IS NULL AND
-//                 deleted_at IS NULL`, scoped to the merchant via the
-//                 audit row's `merchant_id` column. Each row carries a
-//                 4-digit `redemption_code` (NOT exposed to the
-//                 webapp — see `MerchantPendingRequest` for the
-//                 webapp-safe view) and a fan-out via the
-//                 `customer_credit.pending_redemption_amount` slices.
-//
-//   2. Approved — audit feed from `customer_credit_redemptions` where
-//                 `approved_at IS NOT NULL`. One row per merchant
-//                 approval, joined to customer + merchant + the
-//                 approving staff.
-//
-//   3. Rejected — audit feed from `customer_credit_redemptions` where
-//                 `rejected_at IS NOT NULL`. Same shape as approved.
-//
-// Approve / reject are atomic single-call RPCs (`redemption_approve` /
-// `redemption_reject`) that verify the customer-supplied
-// `redemption_code` and stamp approved_at / rejected_at + mutate the
-// customer_credit fan-out rows in one transaction.
+// Merchant-side redemption approval queue (/redemptions/*). Pending/Approved/Rejected views; approve+reject are atomic RPCs that verify the customer-supplied 4-digit code and stamp the audit row + fan-out in one transaction.
 
 import {
   ApiErrorResponse,
@@ -35,20 +10,7 @@ import {
   BaseUserProfile,
 } from "./main.types";
 
-// ────────────────────────────────────────────────────────────────────────────
-// Pending view
-// ────────────────────────────────────────────────────────────────────────────
-
-// One pending audit row at the merchant, joined to the customer (for
-// display name + phone) and the merchant. The audit row carries
-// `redemption_code` (4-digit), `branch_id` (the branch the customer
-// picked), and `amount_redeemed` (the customer's requested total).
-//
-// IMPORTANT: `redemption_code` is INTENTIONALLY OMITTED from this type
-// — the code is customer-only and never returned to the webapp. The
-// SQL `customer_credit_redemptions` row has it, but the merchant
-// service's response shape never carries it. The merchant app reads
-// the code via a separate code-entry dialog that the customer shows.
+// redemption_code is INTENTIONALLY OMITTED — the code is customer-only and never returned to the webapp. The merchant reads it via a separate code-entry dialog.
 export interface MerchantPendingRequest {
   redemption_id: number;
   customer_id: number;
@@ -68,13 +30,7 @@ export interface MerchantPendingRequestsPage {
   limit: number;
 }
 
-// ────────────────────────────────────────────────────────────────────────────
-// Approved / Rejected view (audit feed)
-// ────────────────────────────────────────────────────────────────────────────
-
-// One audit row joined to the customer, the merchant, and the
-// approving staff. The audit row carries `branch_id` (the branch the
-// customer picked on the redemption sheet).
+// One audit row joined to customer + merchant + the approving staff. Carries the branch the customer picked.
 export interface MerchantApprovedRedemption extends BaseCustomerCreditRedemption {
   customer: BaseCustomer & { users: BaseUserProfile | null };
   merchant: BaseMerchant;
@@ -88,22 +44,11 @@ export interface MerchantRejectedRedemption extends BaseCustomerCreditRedemption
   branch: BaseBranch | null;
 }
 
-// ────────────────────────────────────────────────────────────────────────────
-// Approve / Reject request body
-// ────────────────────────────────────────────────────────────────────────────
-
-// Body for `POST /redemptions/customers/:customerId/approve` and
-// `.../reject`. The merchant staff enters the 4-digit code the
-// customer shows them; the SQL RPC verifies it matches the pending
-// audit row at this merchant.
+// The merchant staff enters the 4-digit code the customer shows; the RPC verifies it matches the pending audit row.
 export interface MerchantRedemptionActionBody {
   redemption_code: number;
   redemption_id: number;
 }
-
-// ────────────────────────────────────────────────────────────────────────────
-// Filters + responses
-// ────────────────────────────────────────────────────────────────────────────
 
 export interface MerchantPendingRequestFilters {
   branch_id?: number | null;
@@ -143,9 +88,7 @@ export interface MerchantRejectedRedemptionsResponse {
   data: MerchantAuditFeedPage<MerchantRejectedRedemption>;
 }
 
-// Approve / Reject response: the audit row id + the total amount that
-// was approved / rejected. The `redemption_code` is intentionally NOT
-// echoed back (the merchant already supplied it).
+// redemption_code is intentionally not echoed back (the merchant already supplied it).
 export interface MerchantRedemptionMutationResponse {
   success: true;
   data: {

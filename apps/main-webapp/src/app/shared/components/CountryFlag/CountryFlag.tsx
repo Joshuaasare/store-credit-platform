@@ -8,10 +8,7 @@ interface CountryFlagProps {
   title?: string;
 }
 
-/**
- * Renders a country flag as an image from flagcdn so it displays reliably
- * across platforms (flag emoji render as tofu on iOS Simulator and Windows).
- */
+// flagcdn image — flag emoji render as tofu on iOS Simulator and Windows.
 export function CountryFlag({
   code,
   className,

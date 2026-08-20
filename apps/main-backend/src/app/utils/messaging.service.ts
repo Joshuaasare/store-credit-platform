@@ -50,10 +50,7 @@ export class SMSTemplates {
     return `Your StoreCredit login code is: ${otp}. Valid for 10 minutes. Do not share this code with anyone.`;
   }
 
-  // Phone-change OTP — sent when a customer is updating the phone number
-  // on their existing account. Distinct copy so the customer can tell
-  // the SMS apart from a login code (and so a phishing attempt that
-  // asks for a "login code" can't reuse a phone-change SMS).
+  // Distinct copy so the customer can tell a phone-change SMS apart from a login code — a phishing attempt that asks for a "login code" can't reuse a phone-change SMS.
   static phoneChangeOTP(otp: string): string {
     return `Your StoreCredit phone-change code is: ${otp}. Valid for 10 minutes. Do not share this code with anyone.`;
   }

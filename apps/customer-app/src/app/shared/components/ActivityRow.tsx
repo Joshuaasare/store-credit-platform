@@ -6,22 +6,6 @@ import { useThemeTokens } from "../theme/ThemeContext";
 import { formatGhs } from "../utils/formatGhs";
 import { formatRelativeTimestamp } from "../utils/date.utils";
 
-/**
- * Recent-Activity row — one entry from the unified credit activity feed
- * (issuance or approved redemption).
- *
- * Visual hierarchy (left → right):
- *   1. Direction arrow — green up-arrow for credit issued, red down-arrow
- *      for credit redeemed. No background, sits tight against the avatar.
- *   2. Merchant avatar (circled) — the merchant's logo if available,
- *      otherwise a pastel gradient with initials. A soft surface-ring
- *      border ties it back to the card's surface.
- *   3. Merchant name + location/timestamp block.
- *   4. Coloured amount sitting in the top line, right-aligned.
- *
- * Light and dark themes are handled entirely through `useThemeTokens()` —
- * no hardcoded hex colors.
- */
 export default function ActivityRow({
   activity,
 }: {
@@ -35,9 +19,6 @@ export default function ActivityRow({
   const amountPrefix = isIssued ? "+" : "−";
   const amountText = formatGhs(activity.amount);
 
-  // Issuer — prefer the merchant name (the brand the customer recognizes).
-  // Branch name (if any) is shown underneath in muted caption, since it
-  // identifies the specific location.
   const merchantName = activity.merchant.name;
   const logoUrl = activity.merchant.logo_url ?? null;
   const branchName = activity.branch.name;
@@ -51,7 +32,6 @@ export default function ActivityRow({
       accessibilityRole="text"
       accessibilityLabel={`${isIssued ? "Credit issued" : "Credit redeemed"} ${amountText} at ${merchantName}, ${timestamp}`}
     >
-      {/* Direction arrow — bare, no fill, sits tight against the avatar. */}
       <Ionicons name={iconName} size={18} color={tintColor} />
 
       <View
@@ -114,10 +94,6 @@ export default function ActivityRow({
   );
 }
 
-/**
- * Compact timestamp — delegates to the shared `formatRelativeTimestamp`
- * helper so the relative-vs-absolute logic lives in one place.
- */
 function formatTimestamp(iso: string): string {
   return formatRelativeTimestamp(iso);
 }

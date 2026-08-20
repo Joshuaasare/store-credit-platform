@@ -11,14 +11,8 @@ import Animated, {
 const DURATION_IN = 110;
 const DURATION_OUT = 60;
 
-/**
- * Glass-style cross-fade between tab screens. Wraps a tab's content and
- * animates opacity + a subtle scale lift on focus change. Pair with
- * `detachInactiveScreens: false` on the Tab.Navigator so the outgoing tab
- * stays mounted and fades out while the incoming tab fades in — the two
- * overlaps read as a soft glass transition over the constant teal gradient
- * background.
- */
+// Pair with `detachInactiveScreens: false` on Tab.Navigator so the outgoing tab
+// stays mounted and fades out while the incoming tab fades in.
 export default function GlassTransition({ children }: { children: ReactNode }) {
   const isFocused = useIsFocused();
 

@@ -8,10 +8,6 @@ import {
   CustomerDetailApiResponse,
 } from "../types/api.types.js";
 
-/**
- * Customer service — wraps the Customers backend endpoints.
- * Mirrors the createAuthService / createStoreService factory pattern.
- */
 export function createCustomerService() {
   const { apiRequest } = createApiClient();
 
@@ -25,7 +21,6 @@ export function createCustomerService() {
   }
 
   return {
-    /** GET /customers — paginated, searchable customer directory. */
     async listCustomers(
       params: CustomerListQuerystring,
     ): Promise<CustomerListApiResponse> {
@@ -35,10 +30,6 @@ export function createCustomerService() {
       });
     },
 
-    /**
-     * GET /customers/:customerId — single-customer detail with merchant-wide
-     * totals + every live credit row (per-credit remaining / expiry).
-     */
     async getCustomerDetail(
       customerId: number,
     ): Promise<CustomerDetailApiResponse> {
@@ -48,7 +39,6 @@ export function createCustomerService() {
       );
     },
 
-    /** GET /customers/leaderboard — paginated, sorted, merchant-scoped. */
     async getLeaderboard(
       params: LeaderboardQuerystring,
     ): Promise<LeaderboardApiResponse> {
@@ -58,7 +48,6 @@ export function createCustomerService() {
       });
     },
 
-    /** GET /customers/leaderboard-stats — hero stats row. */
     async getLeaderboardStats(
       params: Omit<LeaderboardQuerystring, "sort" | "limit" | "offset">,
     ): Promise<LeaderboardStatsApiResponse> {

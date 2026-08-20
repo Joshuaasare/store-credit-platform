@@ -19,12 +19,6 @@ async function resolveMerchantId(
 }
 
 export default async function (fastify: FastifyInstance) {
-  /**
-   * GET /transactions
-   * Merchant-scoped activity feed (purchases + credit issued + credit redeemed),
-   * ordered by transaction_date desc, offset-paginated. `type` query param
-   * filters the union to a single kind before pagination.
-   */
   fastify.get<{
     Querystring: TransactionsQuerystring;
     Reply: TransactionsApiResponse;
@@ -70,13 +64,7 @@ export default async function (fastify: FastifyInstance) {
     },
   });
 
-  /**
-   * POST /transactions/purchase
-   * Records a purchase in customer_purchases. Auto-creates the customer (by
-   * phone) if missing. Matching running credit configs are auto-issued after
-   * the purchase is persisted; issuance failures are logged but do not fail
-   * the purchase.
-   */
+  // Auto-creates the customer by phone if missing; matching running configs are auto-issued after the purchase — issuance failures are logged but do not fail the purchase.
   fastify.post<{
     Body: CreatePurchaseRequest;
     Reply: CreatePurchaseApiResponse;

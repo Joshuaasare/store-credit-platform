@@ -24,32 +24,6 @@ import type { AppStackParamList } from "../../navigation/RootNavigator";
 const CREDITS_QUERY_KEY = ["customer", "credits"] as const;
 const MS_PER_DAY = 1000 * 60 * 60 * 24;
 
-/**
- * Credits screen — the customer's money view of their store credit.
- *
- * The screen shows ONLY live credits (expired/redeemed credits never
- * reappear on this surface). Live credits are aggregated by merchant —
- * one row per merchant, total = sum of `remaining` across every branch
- * the customer has a live credit at. Tapping a row opens the per-merchant
- * detail screen.
- *
- * Layout follows the same compact-row pattern used on the merchant-
- * detail's Approved tab: a single shared `GlassCard` with hairline-
- * divided `MerchantActivityRow` cells — one per merchant — so the
- * whole list reads as one coherent transaction log rather than N
- * stacked hero cards.
- *
- *   ┌────────────────────────────────────────────────────┐
- *   │  ↑  [logo ring]   Merchant name           GH 12.00  │
- *   │                    Earliest expiry in 5 days       │
- *   └────────────────────────────────────────────────────┘
- *
- * `soonest` drives the meta line — see `merchantRow` for the full
- * copy matrix (lifetime / soon / today / 1 day / N days / date).
- *
- * Backend: single `/customers/me/credits` call returns `live` + `expired`;
- * only `live` is read.
- */
 export function CreditsScreen() {
   const theme = useThemeTokens();
   const navigation =
@@ -133,21 +107,8 @@ export function CreditsScreen() {
   );
 }
 
-/**
- * Build the row payload for the main list. Meta text comes from
- * `bucket.soonest`:
- *
- *   - `expires_at === null`        → "Lifetime credit" (no expiry)
- *   - already past / within 60s   → "Earliest expiry soon" (warning tone)
- *   - later today (same calendar day, > 60s out) → "Earliest expiry today"
- *   - within 1 day                → "Earliest expiry in 1 day"
- *   - N days out                  → "Earliest expiry in {N} days"
- *   - far future (months/years)   → "Earliest expiry on 14 Aug 2027"
- *
- * Tone flips to warning when the credit is "soon" — either already
- * past, later today, or within the next 48 hours — so the row scans
- * as urgent without needing a separate chip.
- */
+// Meta text from `bucket.soonest`. Tone flips to warning when expiry is
+// already past, today, or within 48h — urgent without a separate chip.
 function merchantRow(bucket: MerchantCreditBucket): {
   key: string;
   initials: string;
@@ -179,8 +140,7 @@ function merchantRow(bucket: MerchantCreditBucket): {
       meta = `Earliest expiry in ${days} days`;
       tone = msUntil <= 1000 * 60 * 60 * 48 ? "warning" : "muted";
     } else {
-      // Months/years out — fall back to absolute date so the meta
-      // line never reads "in 27 days" for far-future expiry.
+      // Far-future expiry falls back to absolute date so the meta never reads "in 27 days".
       meta = `Earliest expiry on ${formatShortDate(soonest.expires_at)}`;
     }
   }

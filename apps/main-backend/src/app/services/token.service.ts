@@ -19,11 +19,7 @@ const PENDING_TOKEN_TTL_MINUTES = parseInt(
   process.env.PENDING_TOKEN_TTL_MINUTES || "5",
   10,
 );
-// Phone-verified token — issued after the customer-app phone-change OTP
-// succeeds. Carries `(customerId, newPhone)` for the subsequent
-// PATCH /me/profile so the profile update can prove the customer owns
-// the new phone without re-sending an OTP. 10-minute expiry matches the
-// user's expectation that verification is short-lived.
+// Phone-verified token — issued after the customer-app phone-change OTP succeeds. Carries (customerId, newPhone) for the subsequent PATCH /me/profile so the update can prove ownership of the new phone without re-sending an OTP.
 const PHONE_VERIFIED_TOKEN_TTL_MINUTES = parseInt(
   process.env.PHONE_VERIFIED_TOKEN_TTL_MINUTES || "10",
   10,
@@ -38,11 +34,7 @@ if (!ACCESS_TOKEN_SECRET || !REFRESH_TOKEN_SECRET) {
 }
 
 const accessTokenKey = new TextEncoder().encode(ACCESS_TOKEN_SECRET);
-// Dedicated pending-token key. Falls back to REFRESH_TOKEN_SECRET so dev
-// environments without PENDING_TOKEN_SECRET still work, but production should
-// set a distinct secret so a pending (registration) token can never be
-// mistaken for an access token — the `purpose: "customer_register"` claim is
-// the secondary guard.
+// Falls back to REFRESH_TOKEN_SECRET so dev environments without PENDING_TOKEN_SECRET still work; production should set a distinct secret so a pending (registration) token can never be mistaken for an access token — the `purpose: "customer_register"` claim is the secondary guard.
 const pendingTokenKey = new TextEncoder().encode(PENDING_TOKEN_SECRET);
 
 export interface RefreshTokenRecord {
@@ -61,10 +53,6 @@ export interface RefreshTokenRecord {
 }
 
 export class TokenService {
-  /**
-   * Generate a cryptographically secure opaque refresh token.
-   * Returns the raw token, its SHA-256 hash, and a JTI (UUID).
-   */
   static generateOpaqueToken(): {
     token: string;
     tokenHash: string;
@@ -76,9 +64,6 @@ export class TokenService {
     return { token, tokenHash, jti };
   }
 
-  /**
-   * Compute a device fingerprint from user-agent and IP address.
-   */
   static computeDeviceFingerprint(
     userAgent: string | undefined,
     ip: string | undefined,
@@ -91,13 +76,7 @@ export class TokenService {
       .digest("hex");
   }
 
-  /**
-   * Sign a short-lived JWT access token.
-   *
-   * `customerId` is null for staff logins and set to the `customers.id` for
-   * customer-app logins. Handlers assert `request.user.customer_id != null`
-   * to gate customer-only endpoints — no `persona` claim.
-   */
+  // customerId is null for staff logins, set to customers.id for customer-app logins. Handlers assert request.user.customer_id != null to gate customer-only endpoints — no `persona` claim.
   static async signAccessToken(
     userId: string,
     phone: string | null,
@@ -130,9 +109,6 @@ export class TokenService {
     return jwt;
   }
 
-  /**
-   * Verify a JWT access token and return its payload.
-   */
   static async verifyAccessToken(token: string): Promise<AccessTokenPayload> {
     const { payload } = await jwtVerify(token, accessTokenKey, {
       issuer: TOKEN_ISSUER,
@@ -144,15 +120,7 @@ export class TokenService {
     return payload as unknown as AccessTokenPayload;
   }
 
-  /**
-   * Sign a 5-minute pending registration token. Stateless — no DB row, no
-   * in-memory store. Carries the verified phone (post-OTP) and a `purpose`
-   * claim so it can't be mistaken for an access token. The `/register`
-   * endpoint verifies this to authorize creating the `users` + `customers`
-   * rows without a separate pre-lookup. Replay-safe via natural idempotency:
-   * a replayed register finds a `users` row already exists and errors
-   * "already registered".
-   */
+  // Stateless 5-minute token — no DB row, no in-memory store. Carries the verified phone (post-OTP) and a `purpose` claim so it can't be mistaken for an access token. Replay-safe via natural idempotency: a replayed register finds the users row already exists and errors "already registered".
   static async signPendingToken(phone: string): Promise<string> {
     const now = Math.floor(Date.now() / 1000);
     const jti = crypto.randomUUID();
@@ -170,11 +138,6 @@ export class TokenService {
       .sign(pendingTokenKey);
   }
 
-  /**
-   * Verify a pending registration token. Returns the verified phone on
-   * success, or null if the token is invalid, expired, or not a
-   * customer_register pending token.
-   */
   static async verifyPendingToken(
     token: string,
   ): Promise<{ phone: string } | null> {
@@ -193,17 +156,7 @@ export class TokenService {
     }
   }
 
-  /**
-   * Sign a 10-minute phone-verified token. Stateless JWT — no DB row, no
-   * in-memory store. Carries `(customerId, newPhone)` and a `type:
-   * 'phone_verified'` claim so it CANNOT be mistaken for a pending
-   * registration token (`purpose: 'customer_register'`) or an access
-   * token. The subsequent `PATCH /me/profile` verifies this to authorize
-   * updating `users.phone` without re-sending an OTP.
-   *
-   * Signed with the same key as `signPendingToken` — the `type` claim is
-   * the cross-use guard, not the secret.
-   */
+  // Stateless 10-minute token carrying (customerId, newPhone) and a `type: 'phone_verified'` claim so it CANNOT be mistaken for a pending_token (`purpose: 'customer_register'`) or an access token. Signed with the same key as signPendingToken — the `type` claim is the cross-use guard, not the secret.
   static async signPhoneVerifiedToken(
     customerId: number,
     newPhone: string,
@@ -225,11 +178,6 @@ export class TokenService {
       .sign(pendingTokenKey);
   }
 
-  /**
-   * Verify a phone-verified token. Returns `{ customerId, newPhone }` on
-   * success, or null if the token is invalid, expired, or not a
-   * `phone_verified` token (e.g. a replayed pending_token).
-   */
   static async verifyPhoneVerifiedToken(
     token: string,
   ): Promise<{ customerId: number; newPhone: string } | null> {
@@ -255,9 +203,6 @@ export class TokenService {
     }
   }
 
-  /**
-   * Store a refresh token in the database.
-   */
   static async storeRefreshToken(
     tokenHash: string,
     jti: string,
@@ -291,9 +236,6 @@ export class TokenService {
     }
   }
 
-  /**
-   * Find a refresh token by its hash.
-   */
   static async findRefreshToken(
     tokenHash: string,
   ): Promise<RefreshTokenRecord | null> {
@@ -310,9 +252,6 @@ export class TokenService {
     return data;
   }
 
-  /**
-   * Find a refresh token by its JTI.
-   */
   static async findRefreshTokenByJti(
     jti: string,
   ): Promise<RefreshTokenRecord | null> {
@@ -329,9 +268,6 @@ export class TokenService {
     return data;
   }
 
-  /**
-   * Revoke a single refresh token by its JTI.
-   */
   static async revokeRefreshTokenByJti(jti: string): Promise<void> {
     const { error } = await supabaseAdmin
       .from("refresh_tokens")
@@ -343,10 +279,7 @@ export class TokenService {
     }
   }
 
-  /**
-   * Rotate a refresh token: verify the old one, revoke it, and issue a new one.
-   * Returns the new raw refresh token.
-   */
+  // Verify the old token, revoke it, and issue a new one in the same family. A token already marked replaced is reuse — don't nuke the family, just require re-auth.
   static async rotateRefreshToken(
     oldTokenHash: string,
     deviceFingerprint: string,
@@ -363,7 +296,6 @@ export class TokenService {
     }
 
     if (existing.replaced_at) {
-      // Token was already rotated — likely reuse. Don't nuke the family; just require re-auth.
       throw new Error("Session expired. Please sign in again.");
     }
 
@@ -375,10 +307,8 @@ export class TokenService {
       throw new Error("Refresh token has expired");
     }
 
-    // Generate a new token in the same family
     const { token, tokenHash, jti } = this.generateOpaqueToken();
 
-    // Store new token with parent linkage
     await this.storeRefreshToken(
       tokenHash,
       jti,
@@ -389,7 +319,6 @@ export class TokenService {
       existing.jti,
     );
 
-    // Mark old token as replaced
     await this.markTokenAsReplaced(existing.jti, jti);
 
     return {
@@ -400,9 +329,6 @@ export class TokenService {
     };
   }
 
-  /**
-   * Mark a token as replaced by another (used during rotation).
-   */
   static async markTokenAsReplaced(
     oldJti: string,
     newJti: string,
@@ -420,9 +346,6 @@ export class TokenService {
     }
   }
 
-  /**
-   * Revoke a single refresh token by its hash.
-   */
   static async revokeRefreshToken(tokenHash: string): Promise<void> {
     const { error } = await supabaseAdmin
       .from("refresh_tokens")
@@ -434,9 +357,6 @@ export class TokenService {
     }
   }
 
-  /**
-   * Revoke all tokens in a family (used on theft detection).
-   */
   static async revokeTokenFamily(familyId: string): Promise<void> {
     const { error } = await supabaseAdmin
       .from("refresh_tokens")
@@ -449,9 +369,6 @@ export class TokenService {
     }
   }
 
-  /**
-   * Revoke all refresh tokens for a user (e.g., on logout from all devices).
-   */
   static async revokeAllUserTokens(userId: string): Promise<void> {
     const { error } = await supabaseAdmin
       .from("refresh_tokens")
@@ -464,10 +381,7 @@ export class TokenService {
     }
   }
 
-  /**
-   * List active refresh token sessions for a user.
-   * Exposes `jti` as `id` in the returned objects for API compatibility.
-   */
+  // Exposes `jti` as `id` in the returned objects for API compatibility.
   static async listUserSessions(
     userId: string,
     currentTokenHash?: string,
@@ -508,9 +422,6 @@ export class TokenService {
     }));
   }
 
-  /**
-   * Clean up expired refresh tokens from the database.
-   */
   static async cleanupExpiredTokens(): Promise<number> {
     const { error, count } = await supabaseAdmin
       .from("refresh_tokens")

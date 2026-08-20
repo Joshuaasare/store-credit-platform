@@ -1,22 +1,10 @@
-/**
- * Environment Configuration Plugin
- *
- * This plugin validates and loads environment variables using @fastify/env.
- * The server will fail to start if any required variables are missing.
- *
- * Environment variables are validated on startup and made available via:
- * fastify.config.VARIABLE_NAME
- */
-
 import fp from "fastify-plugin";
 import fastifyEnv from "@fastify/env";
 import type { FastifyInstance } from "fastify";
 
-// Environment variable schema
 const schema = {
   type: "object",
   properties: {
-    // Server Configuration
     NODE_ENV: {
       type: "string",
       default: "development",
@@ -30,8 +18,6 @@ const schema = {
       type: "string",
       default: "3000",
     },
-
-    // Supabase Configuration (Required)
     SUPABASE_URL: {
       type: "string",
       description: "Supabase project URL",
@@ -44,8 +30,6 @@ const schema = {
       type: "string",
       description: "Supabase service role key (for admin operations)",
     },
-
-    // SMS Configuration (Optional)
     SMS_PROVIDER: {
       type: "string",
       default: "twilio",
@@ -75,8 +59,6 @@ const schema = {
       type: "string",
       default: "SmartSchool",
     },
-
-    // Security
     JWT_SECRET: {
       type: "string",
       default: "change-this-in-production",
@@ -86,15 +68,11 @@ const schema = {
       default: "",
       description: "API key for authenticating client applications",
     },
-
-    // Logging
     LOG_LEVEL: {
       type: "string",
       default: "info",
       enum: ["debug", "info", "warn", "error"],
     },
-
-    // CORS
     ALLOWED_ORIGINS: {
       type: "string",
       default:
@@ -104,7 +82,6 @@ const schema = {
   },
 };
 
-// TypeScript interface for environment variables
 declare module "fastify" {
   interface FastifyInstance {
     config: {
@@ -129,18 +106,13 @@ declare module "fastify" {
   }
 }
 
-/**
- * Environment configuration plugin
- */
 async function envPlugin(fastify: FastifyInstance) {
-  // Load environment variables from .env file
   await fastify.register(fastifyEnv, {
     schema,
-    dotenv: true, // Load from .env file
-    confKey: "config", // Access via fastify.config
+    dotenv: true,
+    confKey: "config",
   });
 
-  // Log successful configuration (hide sensitive values)
   fastify.log.info(
     {
       NODE_ENV: fastify.config.NODE_ENV,
@@ -152,16 +124,15 @@ async function envPlugin(fastify: FastifyInstance) {
     "Environment configuration loaded",
   );
 
-  // Warn if in production with default values
   if (fastify.config.NODE_ENV === "production") {
     if (fastify.config.JWT_SECRET === "change-this-in-production") {
       fastify.log.warn(
-        "⚠️  Using default JWT_SECRET in production! Please set a secure value.",
+        "Using default JWT_SECRET in production! Please set a secure value.",
       );
     }
     if (!fastify.config.API_KEY) {
       fastify.log.warn(
-        "⚠️  No API_KEY set in production! Client authentication will be disabled.",
+        "No API_KEY set in production! Client authentication will be disabled.",
       );
     }
   }

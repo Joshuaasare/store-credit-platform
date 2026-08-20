@@ -82,12 +82,8 @@ const InfiniteScroll: React.FC<PropsWithChildren<Props>> = ({
     };
   }, [trottleScroll]);
 
-  /**
-   * when the first page's content is less than the viewport height,
-   * scroll events won't be triggered, so up until the page is scrollable,
-   * we need to trigger the next load by checking the scroll height
-   * against the viewport height.
-   */
+  // If the first page doesn't fill the viewport, no scroll event fires —
+  // trigger the next load by checking scrollHeight against innerHeight.
   useEffect(() => {
     if (!(document.documentElement.scrollHeight > window.innerHeight)) {
       next(() => {

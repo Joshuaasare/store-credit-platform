@@ -19,33 +19,16 @@ export type ApiRequestFunction = <T>(
   options?: RequestOptions,
 ) => Promise<T>;
 
-/**
- * Injected configuration for a platform-agnostic API client.
- *
- * - `getAccessToken`: reads the current access token (web: in-memory module
- *   singleton; RN: zustand store).
- * - `setAccessToken`: writes a refreshed access token back to the source so
- *   subsequent requests pick it up.
- * - `refreshTokenHandler`: performs a refresh cycle and returns true on
- *   success. Web: POST /auth/refresh with browser cookies; RN: POST
- *   /customer-auth/refresh with the refresh token from SecureStore.
- * - `baseUrl`: API base URL (web: VITE_API_URL; RN: app.json extra.apiBaseUrl).
- * - `fetchImpl`: fetch implementation (defaults to global fetch; RN provides
- *   the same global, but the indirection makes the client testable).
- */
 export interface ApiClientConfig {
   getAccessToken: () => string | null;
   setAccessToken: (token: string | null) => void;
   refreshTokenHandler: () => Promise<boolean>;
   baseUrl: string;
   fetchImpl?: typeof fetch;
-  /** Send credentials (cookies) with requests — web true, RN false. */
   withCredentials?: boolean;
 }
 
-// Guard against concurrent refresh attempts across multiple 401s (web only).
-// RN builds create their own client with their own handler; the shared guard
-// would serialize their refreshes too, which is fine.
+// Guards against concurrent refresh attempts across multiple 401s.
 let refreshPromise: Promise<boolean> | null = null;
 
 async function webDoRefresh(): Promise<boolean> {
@@ -78,16 +61,6 @@ export async function refreshAccessToken(): Promise<boolean> {
   }
 }
 
-/**
- * Factory function to create API request functions.
- *
- * With no config: web defaults (in-memory `accessTokenStorage`, cookie-based
- * `refreshAccessToken`, `VITE_API_URL` base, `credentials: "include"`).
- * With a config: the injected transport — used by the React Native customer
- * app, which reads the access token from a zustand store and refreshes via
- * the `/customer-auth/refresh` endpoint with the refresh token from
- * `expo-secure-store`.
- */
 export function createApiClient(config?: ApiClientConfig) {
   const getAccessToken = config?.getAccessToken ?? accessTokenStorage.getAccessToken;
   const refreshToken = config?.refreshTokenHandler ?? refreshAccessToken;
@@ -95,8 +68,7 @@ export function createApiClient(config?: ApiClientConfig) {
   const fetchImpl = config?.fetchImpl ?? fetch;
   const credentials = config?.withCredentials === false ? undefined : "include";
 
-  // Per-client refresh serialization so concurrent 401s on the RN side don't
-  // fan out multiple refresh calls.
+  // Serializes refresh so concurrent 401s on the same client don't fan out.
   let clientRefreshPromise: Promise<boolean> | null = null;
   async function serializedRefresh(): Promise<boolean> {
     if (clientRefreshPromise) return clientRefreshPromise;
@@ -108,9 +80,6 @@ export function createApiClient(config?: ApiClientConfig) {
     }
   }
 
-  /**
-   * Authenticated API request - requires valid custom JWT access token
-   */
   async function apiRequest<T>(
     endpoint: string,
     options: RequestOptions = {},
@@ -122,12 +91,8 @@ export function createApiClient(config?: ApiClientConfig) {
     }
 
     const url = `${baseUrl}${endpoint}`;
-    // Only set `Content-Type: application/json` when we're actually
-    // sending a JSON body. Sending the header with an empty body on
-    // verbs like DELETE causes Fastify's body parser to reject the
-    // request with "Body cannot be empty when content-type is set to
-    // 'application/json'" before the handler runs — the route never
-    // fires and the customer's cancel/cancel-like actions silently no-op.
+    // Declaring JSON content-type on an empty body makes Fastify reject
+    // the request before the handler runs — silent no-op on DELETE.
     const hasJsonBody =
       options.body !== undefined &&
       options.body !== null &&
@@ -178,17 +143,12 @@ export function createApiClient(config?: ApiClientConfig) {
     return data as T;
   }
 
-  /**
-   * Public API request (no authentication required)
-   */
   async function publicApiRequest<T>(
     endpoint: string,
     options: RequestOptions = {},
   ): Promise<T> {
     const url = `${baseUrl}${endpoint}`;
-    // Same guard as `apiRequest`: only declare JSON content-type when
-    // we're actually sending a JSON body. Empty DELETE / GET requests
-    // shouldn't carry a content-type header.
+    // Same Fastify guard as apiRequest: don't send a JSON content-type with no body.
     const hasJsonBody =
       options.body !== undefined &&
       options.body !== null &&
@@ -225,9 +185,6 @@ export function createApiClient(config?: ApiClientConfig) {
     return data as T;
   }
 
-  /**
-   * Authenticated API request that returns a raw Blob (e.g. for PDF downloads)
-   */
   async function apiBlobRequest(
     endpoint: string,
     options: RequestOptions = {},

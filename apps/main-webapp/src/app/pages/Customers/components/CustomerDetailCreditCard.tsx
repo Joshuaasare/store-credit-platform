@@ -7,27 +7,13 @@ interface CustomerDetailCreditCardProps {
   row: CustomerDetailCreditRow;
 }
 
-/**
- * One live credit row on the customer detail page. Shows the credit amount
- * as the headline, a redeemed-progress bar, redeemed + remaining beneath,
- * and the expiry / issued date / branch as a meta footer.
- *
- * Fully-redeemed credits (remaining = 0) are still listed — they're rendered
- * greyed so the history is visible without being mistaken for spendable
- * credit. Brand voltage: ONE teal accent on the progress fill + remaining
- * number when > 0.
- */
 export function CustomerDetailCreditCard({
   row,
 }: CustomerDetailCreditCardProps) {
   const isFullyRedeemed = row.remaining <= 0;
   const isExpired =
     row.expires_at != null && row.expires_at <= Math.floor(Date.now());
-  // Bar represents the redeemed slice of the credit's principal. 100% fill
-  // → fully consumed; 0% fill → untouched. Clamped 0–1 so a rounding
-  // overshoot on `redeemed_total` doesn't render a >100% fill. Unredeemed
-  // credits (redeemed = 0) hide the bar entirely — the empty track would
-  // just be visual noise.
+  // Clamp 0–1 so a rounding overshoot on `redeemed_total` can't render >100%.
   const creditAmount = Number(row.credit_amount) || 0;
   const redeemedTotal = Number(row.redeemed_total) || 0;
   const fillRatio =

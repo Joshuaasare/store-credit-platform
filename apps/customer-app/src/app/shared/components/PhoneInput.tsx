@@ -19,29 +19,19 @@ import {
 } from "../utils/countries";
 import { useThemeTokens } from "../theme/ThemeContext";
 
-/**
- * Flag emoji don't render on Android (the system font lacks the
- * regional-indicator glyph pair → shows as "??" or tofu). Use a PNG from
- * flagcdn.com instead — 40px wide, works cross-platform, no local assets.
- */
+// Flag emoji don't render on Android (system font lacks the regional-indicator
+// pair → tofu). Use a flagcdn.com PNG instead — cross-platform, no local assets.
 function flagUrl(code: CountryCode): string {
   return `https://flagcdn.com/w40/${code.toLowerCase()}.png`;
 }
 
 interface PhoneInputProps {
-  /** Full international format without `+` (e.g. "233244444444"). Empty string when cleared. */
   value: string;
   onChange: (full: string) => void;
   placeholder?: string;
   defaultCountryCode?: CountryCode;
 }
 
-/**
- * Glass-styled phone input with a tappable country picker (flag + dial code)
- * and a local-number field. Mirrors the webapp's PhoneInput component: the
- * caller stores the full international format (no `+`), the component
- * internally splits it into country + local number for display.
- */
 export default function PhoneInput({
   value,
   onChange,

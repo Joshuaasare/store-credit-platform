@@ -10,15 +10,8 @@ import {
 import * as SecureStore from "expo-secure-store";
 import { API_BASE_URL, SECURE_STORE_KEYS } from "../config";
 
-/**
- * Platform-specific API client wiring for the customer app.
- *
- * The access-token getter/setter are injected by the auth store via
- * `wireAccessToken` at store-creation time. This breaks what would otherwise
- * be a circular import (store imports the service to call endpoints; the
- * service config imports the store to read the access token). The wiring
- * runs once before any request fires.
- */
+// Access-token getter/setter are injected by the auth store via `wireAccessToken`
+// at store-creation time to break what would otherwise be a circular import.
 let accessTokenGetter: () => string | null = () => null;
 let accessTokenSetter: (token: string | null) => void = () => null;
 
@@ -30,13 +23,8 @@ export function wireAccessToken(
   accessTokenSetter = setter;
 }
 
-/**
- * Refresh handler: read the refresh token from SecureStore, POST
- * /customer-auth/refresh, persist the rotated refresh token, and push the
- * new access token into the auth store. Returns false on any failure so the
- * api client falls through to a 401 (which the caller surfaces as auth
- * failure → the store flips to `unauthenticated`).
- */
+// Returns false on any failure so the api client falls through to a 401 and the
+// store flips to `unauthenticated`.
 async function refreshTokenHandler(): Promise<boolean> {
   const currentRefresh = await SecureStore.getItemAsync(
     SECURE_STORE_KEYS.REFRESH_TOKEN,
@@ -63,49 +51,17 @@ const rnConfig: ApiClientConfig = {
   setAccessToken: (t) => accessTokenSetter(t),
   refreshTokenHandler,
   baseUrl: API_BASE_URL,
-  withCredentials: false, // RN has no httpOnly cookies.
+  withCredentials: false,
 };
 
 export const customerAuthService = createCustomerAuthService(rnConfig);
 
-/**
- * Customer-app credits service. Shares the same RN-injected transport
- * (access-token getter/setter + refresh handler) as the auth service, so
- * authenticated requests automatically attach the customer JWT and trigger
- * a refresh cycle on 401.
- */
 export const customerCreditsService = createCustomerCreditsService(rnConfig);
 
-/**
- * Customer-app activities service. Backs the Home tab's Recent Activity
- * feed (issuances + approved redemptions, cursor-paginated). Shares the
- * same RN-injected transport as the other customer services.
- */
 export const customerActivitiesService = createCustomerActivitiesService(rnConfig);
 
-/**
- * Customer-app redemptions service. Backs the "Credits Redeemed" tab on
- * the merchant detail screen (pending + approved + rejected redemptions
- * at a single merchant, plus soft-cancel). Shares the same RN-injected
- * transport as the other customer services.
- */
 export const customerRedemptionsService = createCustomerRedemptionsService(rnConfig);
 
-/**
- * Customer-app profile service. Backs the EditProfile screen — phone-change
- * OTP send/verify and the final PATCH that commits surname / other_names /
- * avatar_url / phone in one request. Shares the same RN-injected transport
- * as the other customer services.
- */
 export const customerProfileService = createCustomerProfileService(rnConfig);
 
-/**
- * Customer-app storage service. Backs the EditProfile avatar upload —
- * `storage.uploadFile(blob, { bucket, folder, id, contentType })` mints
- * a signed URL via POST /storage/upload-url and PUTs the compressed
- * image bytes to Supabase Storage, returning the public URL the
- * EditProfile screen then PATCHes onto `customers.avatar_url`. Same
- * path the webapp uses for vendor logos — no customer-specific avatar
- * endpoint. Shares the same RN-injected transport as the other services.
- */
 export const storage = createStorageService(rnConfig);

@@ -15,38 +15,12 @@ import { useThemeTokens } from "../../../shared/theme/ThemeContext";
 import ActivityRow from "../../../shared/components/ActivityRow";
 import type { ActivitiesFeedQuery } from "../useActivitiesFeed";
 
-/**
- * Bottom-sheet modal that owns the full "See all activity" list.
- *
- * The screen pre-fetches the feed query (so the cache is hot by the time
- * the user taps "See all"). This modal just renders the cached pages,
- * drives the FlatList's `onEndReached → fetchNextPage` plumbing, and
- * shows the "Loading more…" / "That's all your activity." footer.
- *
- * Visual model: bottom sheet (NOT a centered modal). The list surface
- * anchors to the bottom of the screen and grows up to half the screen
- * height — the user can scroll the list inside the surface or glance
- * back at the home screen for context. The surface carries a grabber
- * pill at the top so it reads as a sheet, not a centered dialog.
- *
- * This is intentionally a separate idiom from the centered modals
- * (`RedemptionAmountSheet`, `MerchantRedemptionConfirmSheet`) which are
- * for short-form confirm moments. A long paginated list behaves like a
- * scroll view, not a dialog, so the centered pattern would cramp it.
- *
- * The scrim is hardcoded `rgba(0,0,0,0.45)` because it's a one-off dim
- * layer (not a themed surface) and adding a `scrim` token is a separate
- * theme change.
- */
+// Bottom sheet (not a centered modal) — a long paginated list behaves like a
+// scroll view, so the centered confirm-dialog pattern would cramp it.
 type ActivitiesModalProps = {
   visible: boolean;
   onClose: () => void;
   feedQuery: ActivitiesFeedQuery;
-  /**
-   * Number of items shown in the in-section preview. Reserved for a
-   * future "Showing N items" sub-header — currently unused at the call
-   * site, but kept in the contract so the screen-side wiring is stable.
-   */
   previewItemCount: number;
 };
 
@@ -58,8 +32,6 @@ export default function ActivitiesModal({
 }: ActivitiesModalProps) {
   const theme = useThemeTokens();
 
-  // Flatten the paginated pages into a single item list. Re-derived
-  // whenever the underlying pages array changes.
   const items = useMemo<CustomerActivity[]>(() => {
     const pages = feedQuery.data?.pages ?? [];
     const out: CustomerActivity[] = [];
@@ -78,7 +50,6 @@ export default function ActivitiesModal({
     [],
   );
 
-  // Same inset hairline as the preview card — clears the icon disc + gap.
   const ItemSeparator = useCallback(
     () => (
       <View
@@ -91,10 +62,8 @@ export default function ActivitiesModal({
     [theme],
   );
 
-  // Footer: hide entirely until we've tried to paginate at least once
-  // (so a short history doesn't show a premature end-of-feed banner).
-  // Once more than one page has loaded, show "Loading more…" mid-fetch
-  // and "That's all your activity." when the feed is exhausted.
+  // Hide the footer until we've paginated once so a short history doesn't show
+  // a premature end-of-feed banner.
   const hasMultiplePages = (feedQuery.data?.pages.length ?? 0) > 1;
   const ListFooter = useCallback(() => {
     if (!hasMultiplePages) return null;
@@ -138,7 +107,6 @@ export default function ActivitiesModal({
     theme,
   ]);
 
-  // Initial-load state — first page in flight, no items yet.
   if (feedQuery.isLoading && items.length === 0) {
     return (
       <Modal
@@ -209,7 +177,6 @@ export default function ActivitiesModal({
     );
   }
 
-  // Empty state — query succeeded, no items.
   if (feedQuery.isSuccess && items.length === 0) {
     return (
       <Modal
@@ -387,7 +354,7 @@ const styles = StyleSheet.create({
   },
   rowSeparator: {
     height: StyleSheet.hairlineWidth,
-    marginLeft: 68, // clears the arrow + avatar ring + gaps
+    marginLeft: 68,
   },
   centerFill: {
     paddingVertical: 64,

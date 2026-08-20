@@ -1,15 +1,7 @@
 import { createApiClient, ApiClientConfig } from "./apiService.js";
 
-/**
- * Storage service — talks to the backend storage endpoints. No Supabase keys
- * are used on the client: the backend mints short-lived signed URLs with the
- * service-role key, and this service PUTs the (optionally compressed) file
- * directly to that signed URL. Compression stays in the webapp.
- *
- * Accepts an optional `ApiClientConfig` so the React Native customer-app
- * can plug in its own access-token source and refresh handler, matching the
- * `createCustomerProfileService(config)` pattern.
- */
+// No Supabase keys on the client: the backend mints short-lived signed URLs
+// with the service-role key; this service PUTs the file directly to that URL.
 
 export interface CreateUploadUrlRequest {
   bucket: string;
@@ -42,7 +34,6 @@ export interface UploadFileOptions {
   bucket: string;
   folder?: string;
   id?: string | number;
-  /** Defaults to the File's detected type, or application/octet-stream. */
   contentType?: string;
   upsert?: boolean;
   expiresIn?: number;
@@ -65,7 +56,6 @@ function unwrap<T>(res: ApiSuccess<T> | ApiError): T {
 export function createStorageService(config?: ApiClientConfig) {
   const { apiRequest } = createApiClient(config);
 
-  /** POST /storage/upload-url — mint a short-lived signed upload URL + public URL. */
   async function getUploadUrl(
     req: CreateUploadUrlRequest,
   ): Promise<UploadUrlData> {
@@ -76,10 +66,7 @@ export function createStorageService(config?: ApiClientConfig) {
     return unwrap(res);
   }
 
-  /**
-   * PUT the file body to a signed upload URL. This hits Supabase Storage
-   * directly (the signed URL is the auth); it does not go through apiRequest.
-   */
+  // PUTs directly to Supabase Storage via the signed URL — bypasses apiRequest.
   async function uploadToSignedUrl(
     signedUrl: string,
     body: Blob,
@@ -95,10 +82,6 @@ export function createStorageService(config?: ApiClientConfig) {
     }
   }
 
-  /**
-   * Convenience: mint a signed URL and PUT the (optionally pre-compressed)
-   * file in one call. Returns the object path and public URL.
-   */
   async function uploadFile(
     file: File | Blob,
     options: UploadFileOptions,
@@ -118,7 +101,6 @@ export function createStorageService(config?: ApiClientConfig) {
     return { path, publicUrl };
   }
 
-  /** POST /storage/download-url — mint a short-lived signed download URL. */
   async function getDownloadUrl(
     req: CreateDownloadUrlRequest,
   ): Promise<string> {
@@ -129,7 +111,6 @@ export function createStorageService(config?: ApiClientConfig) {
     return unwrap(res).url;
   }
 
-  /** POST /storage/delete — delete by paths or by a single public URL. */
   async function deleteFiles(req: DeleteStorageRequest): Promise<boolean> {
     const res = await apiRequest<ApiSuccess<{ deleted: boolean }> | ApiError>(
       "/storage/delete",
@@ -138,7 +119,6 @@ export function createStorageService(config?: ApiClientConfig) {
     return unwrap(res).deleted;
   }
 
-  /** GET /storage/public-url?bucket=&path= — public URL (no network call server-side). */
   async function getPublicUrl(bucket: string, path: string): Promise<string> {
     const res = await apiRequest<ApiSuccess<{ publicUrl: string }> | ApiError>(
       `/storage/public-url?bucket=${encodeURIComponent(bucket)}&path=${encodeURIComponent(path)}`,

@@ -16,22 +16,11 @@ import {
   CustomerGetCurrentUserApiResponse,
 } from "../../schemas/auth.schema";
 
-/**
- * Customer-app auth routes (`/api/customer-auth/*`).
- *
- * Mirror the staff `/api/auth/*` shape but with refresh tokens in the JSON
- * body (React Native has no httpOnly cookies) and a discriminated
- * `otp/verify` response (`logged_in` vs `needs_profile`) that drives the
- * mobile flow. See docs/plans/customer_app_auth_feature.md.
- */
+// Refresh tokens travel in the JSON body (React Native has no httpOnly cookies); otp/verify returns a discriminated logged_in vs needs_profile response.
 export default async function (fastify: FastifyInstance) {
   const customerAuthService = new CustomerAuthService();
 
-  /**
-   * POST /api/customer-auth/otp/send
-   * Always sends an OTP (no anti-enumeration — phone ownership must be
-   * proven for brand-new phones). Rate-limited.
-   */
+  // Always sends an OTP — no anti-enumeration, since phone ownership must be proven for brand-new phones.
   fastify.post<{
     Body: CustomerOtpSendRequest;
     Reply: CustomerOtpSendApiResponse;
@@ -63,12 +52,6 @@ export default async function (fastify: FastifyInstance) {
     },
   });
 
-  /**
-   * POST /api/customer-auth/otp/verify
-   * Verifies the OTP and returns either a full session (flow 3) or a
-   * pending_token (flows 1+2). The refresh token is in the JSON body, not
-   * a cookie.
-   */
   fastify.post<{
     Body: CustomerOtpVerifyRequest;
     Reply: CustomerOtpVerifyApiResponse;
@@ -122,12 +105,6 @@ export default async function (fastify: FastifyInstance) {
     },
   });
 
-  /**
-   * POST /api/customer-auth/register
-   * Consumes the pending_token (carrying the OTP-verified phone) and the
-   * submitted name, creates/links the users + customers rows, issues the
-   * real session.
-   */
   fastify.post<{
     Body: CustomerRegisterRequest;
     Reply: CustomerRegisterApiResponse;
@@ -164,11 +141,6 @@ export default async function (fastify: FastifyInstance) {
     },
   });
 
-  /**
-   * POST /api/customer-auth/refresh
-   * Rotates the refresh token from the JSON body and issues a new access
-   * token. The new refresh token is returned in the JSON body.
-   */
   fastify.post<{
     Body: CustomerRefreshRequest;
     Reply: CustomerRefreshApiResponse;
@@ -203,11 +175,6 @@ export default async function (fastify: FastifyInstance) {
     },
   });
 
-  /**
-   * POST /api/customer-auth/logout
-   * Revokes the refresh token from the JSON body. Access token is stateless
-   * and expires naturally (15 min).
-   */
   fastify.post<{
     Body: CustomerRefreshRequest;
     Reply: CustomerLogoutApiResponse;
@@ -236,11 +203,6 @@ export default async function (fastify: FastifyInstance) {
     },
   });
 
-  /**
-   * GET /api/customer-auth/me
-   * Returns the current customer. Gated to customer tokens
-   * (customer_id != null) — staff tokens are rejected.
-   */
   fastify.get<{
     Reply: CustomerGetCurrentUserApiResponse;
   }>("/me", {

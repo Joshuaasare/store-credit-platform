@@ -24,33 +24,6 @@ const DURATION_IN = 180;
 const DURATION_OUT = 120;
 const RESEND_COOLDOWN_SECONDS = 30;
 
-/**
- * Centered modal that mirrors the auth `OtpVerifyScreen` for the
- * phone-change sub-flow on EditProfile.
- *
- * Content:
- *   - "Enter your code" headline + "We sent a verification code to
- *     {displayPhone}" subtitle.
- *   - 6-digit GlassInput + inline error.
- *   - Single "Verify" CTA (full-width).
- *   - "Resend code" tap-link that appears after a 30-second cooldown.
- *     Before the cooldown elapses, the slot renders a countdown
- *     ("Resend in 0:29") so the customer can see the link is armed.
- *
- * Error contract:
- *   - Wrong code: the parent surfaces `error` from the backend
- *     ("Invalid code. N attempts remaining" / "Too many failed
- *     attempts. Please request a new code.").
- *   - At 0 attempts, the only path forward is the Resend link.
- *
- * Dismissal:
- *   - Backdrop tap → `onDismiss`. Dismissing cancels the sub-flow —
- *     the phone field keeps the new string but loses the checkmark
- *     (the parent owns that reset on dismiss).
- *   - Hardware back → `onDismiss` (via `onRequestClose`).
- *   - While `isPending`, both dismissal paths are disabled so the
- *     customer can't drop the in-flight verify.
- */
 export default function OtpVerifyModal({
   visible,
   displayPhone,
@@ -96,7 +69,6 @@ export default function OtpVerifyModal({
     transform: [{ scale: scale.value }],
   }));
 
-  // Reset the OTP input + cooldown every time the modal is (re)opened.
   useEffect(() => {
     if (visible) {
       setOtp("");
@@ -104,8 +76,7 @@ export default function OtpVerifyModal({
     }
   }, [visible]);
 
-  // Countdown ticker — runs while the modal is visible. Hits 0 and
-  // stops so the Resend link appears.
+  // Countdown ticker; stops at 0 so the Resend link appears.
   useEffect(() => {
     if (!visible) return;
     if (secondsLeft <= 0) return;
@@ -253,10 +224,7 @@ export default function OtpVerifyModal({
                 {canResend ? (
                   <Pressable
                     onPress={() => {
-                      // Re-arm the cooldown the moment the customer
-                      // taps Resend — not only when `visible` flips —
-                      // so the link can't be spammed after the first
-                      // 30-second window elapses.
+                      // Re-arm on tap (not on `visible` flip) so the link can't be spammed.
                       setSecondsLeft(RESEND_COOLDOWN_SECONDS);
                       onResend();
                     }}

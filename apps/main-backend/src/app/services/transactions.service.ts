@@ -13,31 +13,10 @@ import {
 import { issueRunningCreditsForPurchase } from "./creditConfig.service";
 import { normalizePhone } from "../utils/phone.utils";
 
-// ────────────────────────────────────────────────────────────────────────────
-// Service
-// ────────────────────────────────────────────────────────────────────────────
-
-/**
- * Transaction service — merchant-scoped activity feed (union of
- * customer_purchases + customer_credit + customer_credit_redemptions) and
- * purchase recording (auto-creates customer by phone, auto-issues matching
- * running credit configs).
- *
- * The activity feed synthesizes a single `CustomerTransactions`-shaped row
- * from the union so the frontend doesn't have to change its row type. The
- * `type` filter (`all` | `purchase` | `credit_issue` | `credit_redeem`) is
- * applied after the union so the total + pagination reflect only the
- * requested type.
- */
+// Merchant-scoped activity feed (union of customer_purchases + customer_credit + approved customer_credit_redemptions) and purchase recording (auto-creates customer by phone, auto-issues matching running credit configs). The union is synthesized into a single CustomerTransactions-shaped row so the frontend row type doesn't change; the `type` filter is applied before pagination so total + page reflect only the requested kind.
 export class TransactionService {
   private static readonly DEFAULT_LIMIT = 20;
 
-  /**
-   * Merchant-scoped activity feed, ordered by transaction_date desc.
-   * Union of customer_purchases / customer_credit / approved
-   * customer_credit_redemptions. `type` filters the union before pagination
-   * so total + page reflect only that kind; "all" returns everything.
-   */
   async getTransactions(
     merchantId: number,
     filters: TransactionsFilters,
@@ -123,7 +102,7 @@ export class TransactionService {
       .from("customer_purchases")
       .select(
         `${QueryFragments.BASE_CUSTOMER_PURCHASE},
-         customer:customers(${QueryFragments.BASE_CUSTOMER}, 
+         customer:customers(${QueryFragments.BASE_CUSTOMER},
          users(${QueryFragments.BASE_USER_PROFILE})),
          branch:branches(${QueryFragments.BASE_BRANCH}),
          recorded_by_staff:staff(${QueryFragments.BASE_STAFF})`,
@@ -204,17 +183,7 @@ export class TransactionService {
     return data;
   }
 
-  /**
-   * Record a purchase in `customer_purchases` and auto-issue any matching
-   * running credit configs. Auto-creates the customer (by phone) if missing.
-   * Branch resolution order: explicit `payload.branch_id` (must belong to the
-   * caller's merchant), then the caller's JWT `branch_id`. Credit-issuance
-   * failures are logged but never fail the purchase — the purchase row is the
-   * source of truth.
-   *
-   * Returns the purchase row shaped as the existing `CustomerTransactions`
-   * type so the frontend can drop it straight into the activity feed.
-   */
+  // Auto-creates the customer by phone if missing; matching running configs are auto-issued after the purchase — issuance failures are logged but do not fail the purchase (the purchase row is the source of truth). Branch resolution: explicit payload.branch_id (must belong to the caller's merchant), then the caller's JWT branch_id. Returns the purchase row shaped as CustomerTransactions so the frontend can drop it into the feed.
   async createPurchase(
     user: AccessTokenPayload,
     payload: CreatePurchaseRequest,
@@ -228,7 +197,6 @@ export class TransactionService {
 
     const phone = normalizePhone(payload.phone);
 
-    // 1. Lookup existing customer by phone (deleted_at IS NULL).
     const { data: existing } = await supabaseAdmin
       .from("customers")
       .select(QueryFragments.BASE_CUSTOMER)
@@ -254,7 +222,6 @@ export class TransactionService {
     }
 
     const transactionDate = new Date().getTime();
-    // 2. Insert the purchase row.
     const { data: txRow, error: txErr } = await supabaseAdmin
       .from("customer_purchases")
       .insert({
@@ -278,8 +245,6 @@ export class TransactionService {
       );
     }
 
-    // Non-fatal: auto-issue running credits. The purchase row is the source of
-    // truth; any issuance error is logged and swallowed.
     try {
       await issueRunningCreditsForPurchase(
         supabaseAdmin,
@@ -296,9 +261,6 @@ export class TransactionService {
         console.error("issueRunningCreditsForPurchase failed (non-fatal)", err);
     }
 
-    // Reshape to the existing CustomerTransactions shape so the frontend stays
-    // unchanged. transaction_type is synthesized as "purchase"; credit_id is
-    // null because purchases don't reference a customer_credit row.
     return {
       ...txRow,
       transaction_type: "purchase",

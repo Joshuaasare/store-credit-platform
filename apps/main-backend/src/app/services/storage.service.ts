@@ -1,15 +1,6 @@
 import { supabaseAdmin } from "../utils/supabase.client";
 
-/**
- * Storage service — generates short-lived presigned URLs and deletes objects
- * using the service-role client. Keys never leave the server; the frontend
- * receives only signed URLs (and the public URL for reads).
- *
- * NOTE: path-level ownership checks (e.g. that a given staff member may only
- * write under their merchant's folder) are deferred. Buckets should be
- * organised by folder convention (e.g. `merchant-<id>/avatars/...`) and RLS
- * policies applied at the storage-bucket level for hard isolation.
- */
+// Generates short-lived presigned URLs and deletes objects via the service-role client. Keys never leave the server; the frontend receives only signed URLs (and the public URL for reads). Path-level ownership checks (e.g. a staff member may only write under their merchant's folder) are deferred — buckets should be organised by folder convention and RLS policies applied at the storage-bucket level for hard isolation.
 
 export interface CreateUploadUrlInput {
   bucket: string;
@@ -56,10 +47,7 @@ export function extractPathFromUrl(bucket: string, publicUrl: string): string | 
 }
 
 export const storageService = {
-  /**
-   * Create a short-lived signed upload URL. The frontend PUTs the file
-   * directly to this URL; no keys are exposed.
-   */
+  // Object path is generated server-side — clients can't pick arbitrary paths.
   async createUploadUrl(input: CreateUploadUrlInput): Promise<UploadUrlResult> {
     const path = buildPath(input.contentType, input.folder, input.id);
 
@@ -82,7 +70,6 @@ export const storageService = {
     };
   },
 
-  /** Create a short-lived signed download URL for a private object. */
   async createDownloadUrl(
     bucket: string,
     path: string,
@@ -95,13 +82,11 @@ export const storageService = {
     return data.signedUrl;
   },
 
-  /** Delete one or more objects by their bucket-relative paths. */
   async deleteFiles(bucket: string, paths: string[]): Promise<void> {
     const { error } = await supabaseAdmin.storage.from(bucket).remove(paths);
     if (error) throw error;
   },
 
-  /** Delete a single object by its public URL. Returns false if the URL is invalid. */
   async deleteFileByUrl(bucket: string, publicUrl: string): Promise<boolean> {
     const path = extractPathFromUrl(bucket, publicUrl);
     if (!path) return false;
@@ -109,7 +94,6 @@ export const storageService = {
     return true;
   },
 
-  /** Public URL for an object (no network call — just URL construction). */
   getPublicUrl(bucket: string, path: string): string {
     return supabaseAdmin.storage.from(bucket).getPublicUrl(path).data.publicUrl;
   },

@@ -12,27 +12,6 @@ import { useThemeTokens } from "../../../shared/theme/ThemeContext";
 const DURATION_IN = 180;
 const DURATION_OUT = 120;
 
-/**
- * Cancel-confirm dialog for a pending redemption.
- *
- * Centered modal (NOT a bottom sheet) — matches the
- * `RedemptionAmountSheet` style so confirm moments look like
- * confirm moments across the redemption flow. The customer app
- * enforces no bottom pop-up modals; the centered modal is the
- * canonical confirm surface.
- *
- * The enter animation is a scale-up + fade (iOS-style centered
- * modal feel): the surface scales from 0.92 → 1.0 and fades in over
- * 180ms, then springs to settle. The exit reverses the scale and
- * fades out over 120ms. We animate the content view rather than the
- * `Modal` itself so the backdrop fades via the `Modal`'s native
- * animationType="none" path while the inner surface animates with
- * Reanimated.
- *
- * The sheet is controlled by the parent (the parent owns
- * `pendingCancel` state and the `useMutation` for the DELETE call).
- * `onConfirm` fires only after the user taps the destructive CTA.
- */
 export default function MerchantRedemptionConfirmSheet({
   visible,
   onDismiss,

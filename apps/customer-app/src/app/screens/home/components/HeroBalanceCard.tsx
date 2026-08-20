@@ -10,16 +10,6 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useThemeTokens } from "../../../shared/theme/ThemeContext";
 import { formatGhs } from "../../../shared/utils/formatGhs";
 
-/**
- * Finance-app style hero "credit card" — the brand color as the surface,
- * white type, oversized balance as the dominant element, and an
- * "across N stores" subline that frames the number as a wallet total (not a
- * balance on a single account). The CTA is a white pill on the card surface.
- *
- * Every brand-derived color is read from the theme so the card re-skins
- * when the brand changes. The static stylesheet only carries layout + the
- * white decorative tints.
- */
 export default function HeroBalanceCard({
   totalRemaining,
   storeCount,
@@ -35,9 +25,6 @@ export default function HeroBalanceCard({
   const formattedAmount = formatGhs(totalRemaining);
   return (
     <View style={[styles.card, { backgroundColor: theme.colors.heroSurface }]}>
-      {/* Soft white highlight at the top so the gradient doesn't read as a flat
-          block. Pure white at low alpha gives the card a "lit edge" without
-          committing to a photo or pattern. */}
       <LinearGradient
         colors={["rgba(255,255,255,0.14)", "rgba(255,255,255,0)"]}
         start={{ x: 0, y: 0 }}
@@ -45,8 +32,6 @@ export default function HeroBalanceCard({
         style={styles.highlight}
         pointerEvents="none"
       />
-      {/* Decorative orb bottom-right — gives the surface some movement so it
-          doesn't feel like a flat slab. Matches the credit-card aesthetic. */}
       <View style={styles.orb} pointerEvents="none" />
 
       <View style={styles.topRow}>
@@ -109,8 +94,6 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     paddingHorizontal: 20,
     paddingVertical: 20,
-    // Subtle elevation — credit cards have very little shadow because they
-    // are themselves the brand surface, not a panel on top of one.
     shadowColor: "#000",
     shadowOpacity: 0.12,
     shadowRadius: 12,

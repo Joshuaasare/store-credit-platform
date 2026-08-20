@@ -37,8 +37,7 @@ export function EditProfileScreen({ navigation }: Props) {
   const user = useAuthStore((s) => s.user);
   const setUser = useAuthStore((s) => s.setUser);
 
-  // Strip the leading `+` from the stored E.164 phone so PhoneInput's
-  // value prop matches the "233XXXXXXXXX" wire format it expects.
+  // Strip leading `+` so PhoneInput's value matches its "233XXXXXXXXX" wire format.
   const currentPhone = useMemo(() => {
     if (!user?.phone) return "";
     return user.phone.replace(/^\+/, "");
@@ -48,26 +47,16 @@ export function EditProfileScreen({ navigation }: Props) {
   const [otherNames, setOtherNames] = useState(user?.other_names ?? "");
   const [phone, setPhone] = useState(currentPhone);
 
-  // Avatar upload-in-flight flag. Picking a photo auto-commits (compress
-  // → upload → PATCH), mirroring the webapp's StoreHero flow — no
-  // separate "Update" tap for the avatar. The spinner overlays the
-  // avatar while this is true.
   const [avatarUploading, setAvatarUploading] = useState(false);
 
-  // Phone-change sub-flow state.
   const [phoneVerifiedToken, setPhoneVerifiedToken] = useState<string | null>(
     null,
   );
-  // The exact phone string the customer verified. Bound to the field —
-  // if the customer edits the phone after verify, the checkmark
-  // disappears and the Verify button returns.
+  // The exact phone the customer verified; editing the field after verify drops the token.
   const [verifiedPhone, setVerifiedPhone] = useState<string | null>(null);
 
-  // Modal visibility.
   const [pickerVisible, setPickerVisible] = useState(false);
-  // Avatar screen rect, measured on tap via `measureInWindow`. Passed
-  // to `react-native-popover-view` as the `from` anchor so the source
-  // dropdown floats just below the avatar.
+  // Avatar rect from `measureInWindow`, used to anchor the source popover.
   const [pickerAnchor, setPickerAnchor] = useState<{
     x: number;
     y: number;
@@ -80,25 +69,13 @@ export function EditProfileScreen({ navigation }: Props) {
   const [otpPending, setOtpPending] = useState(false);
   const [sendOtpPending, setSendOtpPending] = useState(false);
 
-  // Page-level submit state + error.
   const [submitting, setSubmitting] = useState(false);
   const [pageError, setPageError] = useState<string | null>(null);
 
-  // ─── Derived verification state ──────────────────────────────────────
-  // Three states:
-  //   - phone === currentPhone → no Verify button, no checkmark (the
-  //     field is unchanged).
-  //   - phone === verifiedPhone → checkmark shown, phone field read-only
-  //     for the verify lifecycle (the customer can still edit it; doing
-  //     so resets verification per the spec — see `handlePhoneChange`).
-  //   - else → Verify button shown, Update disabled.
   const phoneUnchanged = phone === currentPhone;
   const phoneVerified = !phoneUnchanged && phone === verifiedPhone;
   const needsVerify = !phoneUnchanged && !phoneVerified;
 
-  // The Update button activates when:
-  //   - the customer has a non-empty surname, AND
-  //   - either the phone is unchanged, OR the phone is verified.
   const surnameTrimmed = surname.trim();
   const canSubmit =
     !submitting &&
@@ -107,34 +84,19 @@ export function EditProfileScreen({ navigation }: Props) {
     surnameTrimmed.length > 0 &&
     (phoneUnchanged || phoneVerified);
 
-  // The avatar URL to display — straight from the auth store. Picking
-  // a photo auto-commits (upload + PATCH + setUser), so there's no
-  // local staging state: the moment the PATCH succeeds, every surface
-  // that reads `user` re-renders with the new URL.
   const displayAvatarUri: string | null = user?.avatar_url ?? null;
   const fullName =
     [user?.surname, user?.other_names].filter(Boolean).join(" ").trim() ||
     "Customer";
   const initials = computeInitials(fullName);
-  // "Remove photo" link appears only when there's an avatar set to
-  // remove. Disabled mid-upload so a remove can't race the in-flight
-  // PATCH from a just-picked photo.
   const hasAvatarToRemove = displayAvatarUri != null && !avatarUploading;
-
-  // ─── Handlers ────────────────────────────────────────────────────────
 
   const handlePhoneChange = (next: string) => {
     setPhone(next);
-    // Editing the phone after verify resets verification — the
-    // checkmark disappears, the Verify button returns, the
-    // phone-verified token is dropped.
     if (verifiedPhone !== null && next !== verifiedPhone) {
       setVerifiedPhone(null);
       setPhoneVerifiedToken(null);
     }
-    // Editing the phone back to the current phone also clears any
-    // stale verification (no-op semantically — the customer can't
-    // "verify" their current phone).
     if (next === currentPhone) {
       setVerifiedPhone(null);
       setPhoneVerifiedToken(null);
@@ -210,19 +172,8 @@ export function EditProfileScreen({ navigation }: Props) {
   const handleOtpDismiss = () => {
     setOtpVisible(false);
     setOtpError(null);
-    // Per spec: dismissing cancels the sub-flow — the phone field keeps
-    // the new string but loses the checkmark. The customer can tap
-    // Verify again to restart.
   };
 
-  // Auto-commit an avatar change — the webapp's StoreHero pattern. No
-  // staging, no "Update profile" tap: compress (already done by the
-  // caller for pick, or null for remove) → upload via the generic
-  // /storage/upload-url endpoint → PATCH /me/profile with the new
-  // publicUrl (or null) → setUser so every surface re-renders. The
-  // spinner overlays the avatar while in flight; `pageError` surfaces
-  // any failure. Mid-flight, the avatar tap + Remove link are
-  // disabled so two uploads can't race.
   const commitAvatarChange = async (localUri: string | null) => {
     setAvatarUploading(true);
     setPageError(null);
@@ -256,9 +207,6 @@ export function EditProfileScreen({ navigation }: Props) {
   };
 
   const handleTakePhoto = async () => {
-    // Permission request — iOS silently fails the launch if not granted,
-    // Android auto-grants at install. We ask first so the customer
-    // understands why the camera opens.
     const perm = await ImagePicker.requestCameraPermissionsAsync();
     if (!perm.granted) {
       setPickerVisible(false);
@@ -273,11 +221,8 @@ export function EditProfileScreen({ navigation }: Props) {
         aspect: [1, 1],
         quality: 1,
       });
-      // Close the source popover AFTER the picker dismisses — closing
-      // before `launch*Async` creates a modal-dismiss-vs-present race
-      // on iOS that silently drops the picker (react-native-popover-view
-      // uses an animated Modal whose fade-out is in flight when the
-      // picker tries to present).
+      // Close the popover AFTER launch*Async returns — closing first races the
+      // popover's Modal fade-out against the picker present on iOS and drops it.
       setPickerVisible(false);
       if (result.canceled || !result.assets?.[0]?.uri) return;
       const compressed = await compressImageToLocalFile(result.assets[0].uri);
@@ -302,8 +247,7 @@ export function EditProfileScreen({ navigation }: Props) {
         aspect: [1, 1],
         quality: 1,
       });
-      // Close the source popover AFTER the picker dismisses — see
-      // `handleTakePhoto` for the modal-stacking race rationale.
+      // Close the popover AFTER the picker dismisses — see handleTakePhoto.
       setPickerVisible(false);
       if (result.canceled || !result.assets?.[0]?.uri) return;
       const compressed = await compressImageToLocalFile(result.assets[0].uri);
@@ -318,9 +262,6 @@ export function EditProfileScreen({ navigation }: Props) {
     commitAvatarChange(null);
   };
 
-  // Measure the avatar's screen rect, then open the source popover
-  // anchored to it. `measureInWindow` gives viewport coordinates;
-  // `react-native-popover-view` handles placement + edge clamping.
   const handleAvatarPress = () => {
     avatarRef.current?.measureInWindow((x, y, width, height) => {
       setPickerAnchor({ x, y, width, height });
@@ -328,10 +269,6 @@ export function EditProfileScreen({ navigation }: Props) {
     });
   };
 
-  // Read a local file URI into a Blob for the PUT to the signed
-  // Supabase URL. `fetch(fileUri)` works on both iOS and Android in
-  // the Expo / React Native runtime — the result is a Blob whose
-  // size matches the compressed bytes.
   const readLocalUriAsBlob = async (uri: string): Promise<Blob> => {
     const response = await fetch(uri);
     return response.blob();
@@ -346,9 +283,6 @@ export function EditProfileScreen({ navigation }: Props) {
     setSubmitting(true);
     setPageError(null);
     try {
-      // Build the PATCH body — only the name/phone fields that changed.
-      // Avatar is handled separately by `commitAvatarChange` (auto-
-      // commits on photo pick, webapp-style).
       const body: {
         surname?: string;
         other_names?: string;
@@ -364,7 +298,6 @@ export function EditProfileScreen({ navigation }: Props) {
         body.phoneVerifiedToken = phoneVerifiedToken;
       }
 
-      // No-op guard — if nothing changed, just stay on the page.
       if (
         body.surname === undefined &&
         body.other_names === undefined &&
@@ -375,35 +308,23 @@ export function EditProfileScreen({ navigation }: Props) {
       }
 
       const res = await customerProfileService.updateProfile(body);
-      // apiService throws on non-2xx, so this branch is unreachable at
-      // runtime — but it's the union narrowing TS needs to allow
-      // `res.data.user` below, and it's a cheap defensive guard.
+      // apiService throws on non-2xx so this is unreachable at runtime;
+      // the branch is the union narrowing TS needs for `res.data.user`.
       if (!res.success) {
         setPageError(res.error);
         return;
       }
 
-      // Commit to the auth store — the PageHeader and every other
-      // surface that reads `user` re-renders with the new data. The
-      // page stays on screen (no auto-navigate back) per the spec.
       setUser(res.data.user);
 
-      // Reset the phone-change sub-flow — the new baseline is the
-      // server's view, so the verified token + verifiedPhone are
-      // dropped. `phone` state stays as the new phone (which is now
-      // currentPhone for the next render cycle).
       setPhoneVerifiedToken(null);
       setVerifiedPhone(null);
     } catch (e) {
       const message =
         e instanceof Error ? e.message : "Failed to update profile";
       setPageError(message);
-      // If the phone verification expired between verify and Update,
-      // reset the verification so the customer has to re-verify —
-      // otherwise the "Verified" chip stays on with no Verify button
-      // and the customer is stuck. (apiService throws on non-2xx, so
-      // the reset has to live in the catch block, not a `!res.success`
-      // branch.)
+      // If verification expired between verify and Update, reset so the
+      // customer can re-verify — otherwise the Verified chip sticks with no Verify button.
       const lower = message.toLowerCase();
       if (lower.includes("phone verification") || lower.includes("expired")) {
         setVerifiedPhone(null);
@@ -424,9 +345,6 @@ export function EditProfileScreen({ navigation }: Props) {
           contentContainerStyle={styles.scrollBody}
           keyboardShouldPersistTaps="handled"
         >
-          {/* Avatar block — centered, 100px circular. Tapping opens the
-              source popover anchored below the avatar. The camera badge
-              sits bottom-right. */}
           <View style={styles.avatarBlock}>
             <TouchableOpacity
               ref={avatarRef}
@@ -487,9 +405,6 @@ export function EditProfileScreen({ navigation }: Props) {
                     {initials}
                   </Text>
                 )}
-                {/* Upload-in-flight spinner overlay — dims the avatar
-                    and shows a centered spinner while the compress →
-                    upload → PATCH round-trip is in flight. */}
                 {avatarUploading ? (
                   <View
                     style={[
@@ -507,7 +422,6 @@ export function EditProfileScreen({ navigation }: Props) {
                     />
                   </View>
                 ) : null}
-                {/* Camera badge — small chip anchored bottom-right. */}
               </View>
               <View
                 style={[
@@ -565,7 +479,6 @@ export function EditProfileScreen({ navigation }: Props) {
             ) : null}
           </View>
 
-          {/* Form card — mirrors NewUserScreen's styling. */}
           <Text
             style={[
               styles.label,
@@ -736,15 +649,8 @@ export function EditProfileScreen({ navigation }: Props) {
   );
 }
 
-// ────────────────────────────────────────────────────────────────────────────
-// PrimarySubmitButton — local variant of PrimaryButton that takes a
-// `disabled` + `loading` and uses the theme's primary fill. We don't
-// reuse the shared `PrimaryButton` because that component's `disabled`
-// styling is a static 0.5 opacity; we want the gating to come from
-// `canSubmit` (which already factors in submit + send-otp + otp-pending
-// + surname + phone verification). The shared component is fine for
-// simple forms; this screen has more gating dimensions.
-// ────────────────────────────────────────────────────────────────────────────
+// Local variant of PrimaryButton: the shared component's disabled style is a
+// static 0.5 opacity, but this screen gates on `canSubmit` directly.
 function PrimarySubmitButton({
   label,
   loading,

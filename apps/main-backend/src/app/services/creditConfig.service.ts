@@ -13,23 +13,7 @@ import {
 } from "../schemas/creditConfig.schema";
 import type { BaseBranch } from "../schemas/main.schema";
 
-// The new customer_credit row stores only the calculated GHS amount plus
-// expiry/revocation metadata. The Insert shape from database.types.ts
-// already reflects credit_amount (no longer credit_type / credit_precentage /
-// max_credit_amount).
-//
-// Row shapes flow from database.types.ts. The typed Supabase builder's
-// `select()` does NOT auto-infer nested `branch:branches(...)` joins unless
-// the select string is preserved as a string-literal type — interpolating
-// `QueryFragments.*` into a template literal widens it to plain `string`,
-// so we re-narrow with `as const` at the constant declaration. The typed
-// builder then resolves the joined branch shape (BaseBranch subset of the
-// branches table) automatically. The `*WithBranch` intersection types
-// below declare the full row + joined-branch shape for the helpers that
-// aggregate the rows into config groups. If a future migration adds a
-// column to either table, regenerate (`yarn generate:types`) keeps the
-// base Row in lockstep and the intersection type surfaces the new column
-// automatically — no `as any` or `as unknown` is used to widen.
+// select() doesn't infer nested branch:branches(...) joins when QueryFragments.* is interpolated into a template literal — re-narrow with as const at the constant declaration. Regenerate (yarn generate:types) keeps the base Row in lockstep.
 
 type RunningConfigWithBranch =
   Database["public"]["Tables"]["running_credit_config"]["Row"] & {
@@ -216,8 +200,6 @@ function normalizeFixedValues(
 }
 
 export class CreditConfigService {
-  // ── Running configs ─────────────────────────────────────
-
   async listRunningConfigs(
     merchantId: number,
   ): Promise<RunningCreditConfigGroup[]> {
@@ -351,8 +333,6 @@ export class CreditConfigService {
       throw new Error(`Failed to toggle running config: ${error.message}`);
     return fetchRunningGroup(groupId);
   }
-
-  // ── Fixed configs ───────────────────────────────────────
 
   async listFixedConfigs(
     merchantId: number,
@@ -488,26 +468,7 @@ export class CreditConfigService {
 
 export const creditConfigService = new CreditConfigService();
 
-// ── Auto-issuance ──────────────────────────────────────────
-//
-// Threshold overshoot algorithm (decision 1):
-//   - If prior cumulative spend already crossed threshold, the full current
-//     purchase is rewardable.
-//   - Otherwise, only the slice of the current purchase that pushed (or
-//     reached) the threshold counts. We never reward spend below the line.
-//   - Null threshold ⇒ 0 (every purchase qualifies); null window ⇒ no
-//     lookback (prior = 0); null cap ⇒ uncapped percentage reward.
-//
-// After the re-architecture:
-//   - Prior purchases are read from `customer_purchases` (not the dropped
-//     `customer_transactions`).
-//   - The calculated GHS amount is stored in `customer_credit.credit_amount`.
-//     We no longer denormalize credit_type / percentage / cap onto the row —
-//     those stay on the issuing running_credit_config.
-//   - Retroactivity (decision 10): the lookback includes purchases made
-//     before the config's created_at as long as they fall inside the
-//     eligible_window ending at the current purchase's transaction_date.
-
+// Threshold overshoot: full purchase rewardable if prior cumulative already crossed threshold, else only the overshoot slice. Null threshold=0, null window=no lookback, null cap=uncapped. Lookback is retroactive (includes purchases before the config's created_at).
 export async function issueRunningCreditsForPurchase(
   supabase: SupabaseClient<Database>,
   merchantId: number,
@@ -555,15 +516,8 @@ export async function issueRunningCreditsForPurchase(
 
     let priorCumulative = 0;
     if (windowDays != null) {
-      // transaction_date is epoch MILLISECONDS (bigint) — windowDays * 86_400_000
-      // converts days→ms. Using * 86400 (seconds) would shrink the lookback
-      // to ~windowDays milliseconds and the priorCumulative walk would
-      // always be 0, so credits never issue. See commit 7a68501 which
-      // converted the codebase to ms and missed these two multiplications.
+      // transaction_date is epoch MS — windowDays * 86_400_000 converts days→ms. * 86400 (s/day) was a units miss that shrank the lookback to ~windowDays ms (credits never issued).
       const lowerBound = transactionDateEpoch - windowDays * 86_400_000;
-      // Read prior purchases from customer_purchases. The lookback is
-      // retroactive: any purchase within the window counts, even if it
-      // predates this config's created_at (decision 10).
       let q = supabase
         .from("customer_purchases")
         .select("amount")
@@ -609,10 +563,7 @@ export async function issueRunningCreditsForPurchase(
     issued = [plans.reduce((a, b) => (b.creditValue > a.creditValue ? b : a))];
   }
 
-  // Insert the calculated GHS amount into customer_credit.credit_amount.
-  // The new schema only stores credit_amount + expires_at (epoch) + revocation
-  // metadata; the originating config is identified by the branch_id + the
-  // merchant's running_credit_config rows.
+  // credit_validity is in DAYS; transaction_date is epoch MS — multiply by 86_400_000 (ms/day). * 86400 (s/day) was the same units miss as the lookback above.
   const inserts = issued.map(({ config, creditValue }) => ({
     customer_id: customerId,
     branch_id: branchId,
@@ -621,12 +572,7 @@ export async function issueRunningCreditsForPurchase(
     expires_at:
       config.credit_validity == null
         ? null
-        : // credit_validity is in DAYS; transaction_date is epoch MILLISECONDS,
-          // so multiply by 86_400_000 (ms/day) — * 86400 (s/day) was a units
-          // miss in the same ms-conversion commit that broke the lookback
-          // above. Without this fix, expires_at lands only seconds after the
-          // purchase timestamp instead of N days.
-          transactionDateEpoch + config.credit_validity * 86_400_000,
+        : transactionDateEpoch + config.credit_validity * 86_400_000,
   }));
 
   const { data: inserted, error } = await supabase

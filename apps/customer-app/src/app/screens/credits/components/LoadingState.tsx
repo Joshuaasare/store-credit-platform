@@ -1,10 +1,6 @@
 import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 import { useThemeTokens } from "../../../shared/theme/ThemeContext";
 
-/**
- * Loading state for the Credits screen — a centered spinner + caption. Used
- * while the `useQuery` against `/customers/me/credits` is in flight.
- */
 export default function LoadingState() {
   const theme = useThemeTokens();
   return (

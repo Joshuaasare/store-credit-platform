@@ -8,11 +8,6 @@ import {
 } from "react-native";
 import { useThemeTokens } from "../theme/ThemeContext";
 
-/**
- * Solid brand CTA — pill shape by default. Self-sizes around its label so it
- * sits comfortably inside marketing surfaces; opt into `fullWidth` for the
- * onboarding / auth flows that want a full-width primary.
- */
 export default function PrimaryButton({
   title,
   onPress,
@@ -25,8 +20,6 @@ export default function PrimaryButton({
   onPress: () => void;
   loading?: boolean;
   disabled?: boolean;
-  /** When true, the button stretches to fill its parent (used in onboarding /
-   * auth where the CTA needs to dominate). Defaults to a self-sizing pill. */
   fullWidth?: boolean;
   style?: StyleProp<ViewStyle>;
 }) {

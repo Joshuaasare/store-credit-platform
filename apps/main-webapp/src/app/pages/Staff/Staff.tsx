@@ -90,7 +90,7 @@ export default function Staff() {
 
   const invalidateStaff = () => {
     void queryClient.invalidateQueries({ queryKey: ["staff"] });
-    // MyStore's staff_count stat should refresh too.
+    // MyStore's staff_count stat derives from this, so refresh it too.
     void queryClient.invalidateQueries({ queryKey: ["merchant"] });
     void queryClient.invalidateQueries({ queryKey: ["store"] });
   };

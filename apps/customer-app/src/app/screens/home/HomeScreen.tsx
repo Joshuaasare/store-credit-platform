@@ -25,7 +25,6 @@ import HeroBalanceCard from "./components/HeroBalanceCard";
 
 const PREVIEW_ROWS = 4;
 
-// Query keys — colocated so invalidation logic has a single source of truth.
 const CREDITS_QUERY_KEY = ["customer", "credits"] as const;
 const ACTIVITIES_PREVIEW_KEY = ["customer", "activities", "preview"] as const;
 
@@ -33,9 +32,7 @@ export function HomeScreen() {
   const navigation =
     useNavigation<BottomTabNavigationProp<TabStackParamList>>();
 
-  // Hero balance — derived from the credits query (already cached). Sum the
-  // `remaining` field on every credit row, not just live ones — the
-  // customer sees their total wallet position at a glance.
+  // Sum remaining on every credit row, not just live — total wallet position at a glance.
   const creditsQuery = useQuery<CustomerCreditsApiResponse>({
     queryKey: CREDITS_QUERY_KEY,
     queryFn: () => customerCreditsService.getMyCredits(),
@@ -71,14 +68,10 @@ export function HomeScreen() {
 
   const [modalVisible, setModalVisible] = useState(false);
 
-  // Derive offers from the credits data — each live credit's branch +
-  // merchant gives a real entry point. This beats placeholder copy.
   const offers = useMemo(
     () => deriveOffers(creditsQuery.data),
     [creditsQuery.data],
   );
-
-  // ─── Render ─────────────────────────────────────────────────────────────
 
   const goToCredits = useCallback(() => {
     navigation.navigate("Credits");
@@ -132,7 +125,7 @@ export function HomeScreen() {
 
 const styles = StyleSheet.create({
   scrollContent: {
-    paddingBottom: 96, // clears the floating tab bar
+    paddingBottom: 96,
   },
   bottomSpacer: {
     height: 16,

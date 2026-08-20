@@ -1,10 +1,5 @@
-/**
- * Date / time formatting helpers for the customer app.
- *
- * All formats use en-GB to match the rest of the app (e.g. "14 Aug 2025").
- * Time math runs in milliseconds — callers pass Unix epoch milliseconds
- * directly (e.g. `customer_credit.expires_at`, `created_at` epoch columns).
- */
+// All formats use en-GB to match the rest of the app. Time math runs in
+// milliseconds — callers pass Unix epoch milliseconds directly.
 
 const SHORT_DATE_OPTIONS: Intl.DateTimeFormatOptions = {
   day: "2-digit",
@@ -23,45 +18,22 @@ const LONG_DATE_OPTIONS: Intl.DateTimeFormatOptions = {
   year: "numeric",
 };
 
-/**
- * Short absolute date — "14 Aug 2025". Used by credit rows and the
- * merchant header for issued-on dates and similar.
- */
 export function formatShortDate(epochMs: number): string {
   if (!Number.isFinite(epochMs)) return "";
   return new Date(epochMs).toLocaleDateString("en-GB", SHORT_DATE_OPTIONS);
 }
 
-/**
- * Short date without year — "14 Aug". Used by recent-activity rows
- * where the year is implied (the row is always from the current year).
- */
 export function formatShortDayMonth(epochMs: number): string {
   if (!Number.isFinite(epochMs)) return "";
   return new Date(epochMs).toLocaleDateString("en-GB", SHORT_DAY_MONTH_OPTIONS);
 }
 
-/**
- * Long absolute date — "14 August 2025". Used by urgency fallbacks
- * for far-future expiry (> 1 year out) where the relative phrase
- * would be unhelpful.
- */
 export function formatLongDate(epochMs: number): string {
   if (!Number.isFinite(epochMs)) return "";
   return new Date(epochMs).toLocaleDateString("en-GB", LONG_DATE_OPTIONS);
 }
 
-/**
- * Compact "X ago" timestamp for recent-activity rows. Falls back to
- * `formatShortDayMonth` for anything older than yesterday so the row
- * stays one line.
- *
- *   - < 60s        → "Just now"
- *   - < 60min      → "5m ago"
- *   - < 24h        → "2h ago"
- *   - yesterday    → "Yesterday"
- *   - older        → "14 Aug" (year omitted — always the current year)
- */
+// Falls back to `formatShortDayMonth` for anything older than yesterday.
 export function formatRelativeTimestamp(iso: string | number): string {
   const then = typeof iso === "number" ? iso : new Date(iso).getTime();
   if (!Number.isFinite(then)) return "";
@@ -69,8 +41,7 @@ export function formatRelativeTimestamp(iso: string | number): string {
   const now = Date.now();
   const diffMs = now - then;
   if (diffMs < 0) {
-    // Future timestamp — display the absolute short form rather than a
-    // confusing negative-relative string.
+    // Future timestamp — show the absolute short form, not a negative-relative string.
     return formatShortDayMonth(then);
   }
 

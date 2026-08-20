@@ -19,35 +19,6 @@ import { getInitials } from "../../../shared/utils/ui.utils";
 const CREDITS_QUERY_KEY = ["customer", "credits"] as const;
 const PENDING_REQUEST_KEY = ["customer", "pendingRequest"] as const;
 
-/**
- * "Pending" tab body. After the row-state collapse there is at most one
- * pending request per (customer, merchant) pair — the per-credit
- * breakdown is visible on the Available tab.
- *
- * Renders ONE `GlassCard` containing every piece of pending content so
- * the whole pending state reads as a single bordered surface, not three
- * loose blocks. Inside the card, hairline dividers separate four stacked
- * sections that share the same card padding:
- *
- *   ┌────────────────────────────────────────────────┐
- *   │  ↓  [store ring]   Pending at Branch A   GH X  │  ← row
- *   │                     Waiting for merchant       │
- *   │ ───────────────────────────────────────────────│
- *   │              YOUR CODE                         │
- *   │                 [ 4827 ]                       │  ← code chip
- *   │  Share this code with ... to confirm.          │
- *   │ ───────────────────────────────────────────────│
- *   │  [ Edit request ]    [ Cancel request ]        │  ← actions
- *   └────────────────────────────────────────────────┘
- *
- * Two queries are read:
- *   - `["customer", "credits"]` — drives the amount total + the tab's
- *     loading/error empty state (this is also the source of truth for
- *     "is there a pending row" via the rolled-up total).
- *   - `["customer", "pendingRequest", merchantId]` — drives the
- *     `redemption_code` + branch name display. Returns `data: null`
- *     when the audit row is missing (race with cancel).
- */
 export function CreditsMerchantPending({
   merchantId,
   merchantName,
@@ -67,18 +38,14 @@ export function CreditsMerchantPending({
   });
 
   const pendingQuery = useQuery<CustomerPendingRedemptionApiResponse>({
-    // Shares its cache with the parent screen's `pendingQuery` —
-    // TanStack de-dupes by queryKey, so the network call only fires
-    // once even though both hooks subscribe.
+    // Shares cache with the parent screen's `pendingQuery` — TanStack de-dupes
+    // by queryKey, so the network call only fires once.
     queryKey: [...PENDING_REQUEST_KEY, merchantId],
     queryFn: () => customerRedemptionsService.getMyPendingRequest(merchantId),
   });
 
-  // Roll up the merchant's `pending_redemption_amount` across every
-  // live customer_credit row at this merchant. The credits query
-  // returns both `live` and `expired` — pending is always live (the
-  // fan-out zero-touches a row on revoke / expire via the auto-shrink
-  // trigger), so we only sum live.
+  // Pending is always live — the auto-shrink trigger zero-touches a row on
+  // revoke/expire — so we sum only the live rows at this merchant.
   const total = useMemo(() => {
     if (!creditsQuery.data?.success) return 0;
     let sum = 0;
@@ -170,9 +137,8 @@ export function CreditsMerchantPending({
               : "Pending request",
             meta: "Waiting for merchant",
             amount: total,
-            // Fall back to the merchant id while the pending audit row
-            // is still loading — the row's branch_id is the stable
-            // signal once it's fetched.
+            // Fall back to merchantId while the pending row loads;
+            // branch_id is the stable signal once it's fetched.
             idSeed: pendingRow?.branch_id ?? merchantId,
           }}
         />
@@ -187,11 +153,6 @@ export function CreditsMerchantPending({
   );
 }
 
-/**
- * Hairline divider that matches the Approved tab's inset-by-16 visual.
- * Full-width within the card padding so the dividers frame the row +
- * the code block + the actions as one column.
- */
 function Divider() {
   const theme = useThemeTokens();
   return (
@@ -205,13 +166,6 @@ function Divider() {
   );
 }
 
-/**
- * Code block — eyebrow label, the 4-digit code chip (or a dashed
- * placeholder while the audit row loads), and the share caption. All
- * centered so the code reads as the focal point. Sits inside the
- * bordered `GlassCard` so the chip is visually bounded by the card's
- * own outline.
- */
 function PendingCodeBlock({
   pendingRow,
   merchantName,
@@ -295,12 +249,6 @@ function PendingCodeBlock({
   );
 }
 
-/**
- * Edit + Cancel action row. Fills the card edge-to-edge with a 10px
- * gutter between the two. Edit is the primary fill; Cancel is an
- * outline button for the destructive action — the same visual split
- * the prior version used, just moved inside the bordered card.
- */
 function PendingActions({
   onEdit,
   onCancel,

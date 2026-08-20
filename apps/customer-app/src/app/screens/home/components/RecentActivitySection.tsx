@@ -32,8 +32,6 @@ export default function RecentActivitySection({
 }) {
   const theme = useThemeTokens();
 
-  // Hairline rendered between rows (not above the first or below the last).
-  // Drawn absolutely so it doesn't disturb the row's vertical rhythm.
   const ItemSeparator = () => (
     <View
       style={[
@@ -46,7 +44,6 @@ export default function RecentActivitySection({
   return (
     <View style={styles.section}>
       <GlassCard padding={20}>
-        {/* Card header — sits inside the card on its own row */}
         <View style={styles.cardHeader}>
           <Text
             style={{

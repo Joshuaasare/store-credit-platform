@@ -13,52 +13,11 @@ import {
   MerchantRejectedRedemptionsResponse,
 } from "../schemas/redemptions.schema";
 
-// ────────────────────────────────────────────────────────────────────────────
-// Service
-// ────────────────────────────────────────────────────────────────────────────
-
-/**
- * Merchant-side redemption approval queue.
- *
- * Three views on the customer-initiated flow:
- *
- *   1. Pending  — rows from `customer_credit_redemptions` where
- *                 `approved_at IS NULL AND rejected_at IS NULL AND
- *                 deleted_at IS NULL`, scoped to the merchant via the
- *                 row's `merchant_id` column. Sorted by `requested_date`
- *                 ASC so the longest-waiting request surfaces first.
- *                 NOTE: the `redemption_code` column is INTENTIONALLY
- *                 NOT projected — the code is customer-only, the
- *                 merchant staff reads it from the customer's screen
- *                 and types it into the approve dialog.
- *
- *   2. Approved — audit feed from `customer_credit_redemptions` where
- *                 `approved_at IS NOT NULL`.
- *
- *   3. Rejected — audit feed from `customer_credit_redemptions` where
- *                 `rejected_at IS NOT NULL`.
- *
- * Approve / reject are atomic single-call SQL RPCs
- * (`redemption_approve`, `redemption_reject`) that verify the supplied
- * `redemption_code` matches the pending audit row at the merchant,
- * stamp approved_at / rejected_at, and move / zero the fan-out slices
- * in one transaction.
- */
+// Merchant-side redemption approval queue. Pending/approved/rejected views all read `customer_credit_redemptions` scoped by `merchant_id`. The `redemption_code` column is INTENTIONALLY never projected — the code is customer-only; merchant staff read it off the customer's screen and type it into the approve dialog. Approve/reject are atomic SQL RPCs that verify the supplied code, stamp approved_at/rejected_at, and move/zero the fan-out slices in one transaction.
 export class RedemptionService {
   private static readonly DEFAULT_LIMIT = 20;
 
-  /**
-   * Pending requests at the merchant. One row per (customer, merchant)
-   * pair that has a `customer_credit_redemptions` row in the pending
-   * state. The pending state lives in the audit table — there's
-   * exactly one row per (customer, merchant) pair in pending, so the
-   * row count is the pending count.
-   *
-   * Sorted by `requested_date` ASC (longest-waiting first), then by
-   * `id` ASC for stability. The `branch` join supplies the human-
-   * readable branch name; `branch_id` on the audit row is the source
-   * of truth.
-   */
+  // One pending row per (customer, merchant) pair, so the row count is the pending count. Sorted by requested_date ASC (longest-waiting first), then id ASC for stability. The branch join supplies the display name; branch_id on the audit row is the source of truth.
   async listPendingRedemptions(
     merchantId: number,
     filters: MerchantPendingRequestFilters,
@@ -66,12 +25,6 @@ export class RedemptionService {
     const limit = filters.limit ?? RedemptionService.DEFAULT_LIMIT;
     const offset = filters.offset ?? 0;
 
-    // Pull the pending audit rows at this merchant, joined to branch
-    // (for the display name) and to the customer (for surname /
-    // other_names / phone) and the merchant. The redemption_code is
-    // intentionally omitted from the SELECT — the merchant service
-    // never returns the code; the customer app shows it on the
-    // Pending card.
     const { data, error, count } = await supabaseAdmin
       .from("customer_credit_redemptions")
       .select(
@@ -145,10 +98,6 @@ export class RedemptionService {
         merchant: r.merchant,
       }));
 
-    // Filter by branch_id when the caller requested a branch. We apply
-    // the filter in JS (after the SQL fetch) because the audit row's
-    // branch_id is a single column — the SQL filter would be just as
-    // fast but adding it complicates the query string.
     const filtered = filters.branch_id != null
       ? composed.filter((r) => r.branch_id === filters.branch_id)
       : composed;
@@ -161,12 +110,6 @@ export class RedemptionService {
     };
   }
 
-  /**
-   * Approved audit feed — rows from `customer_credit_redemptions` with
-   * `approved_at IS NOT NULL`, scoped to the merchant via the audit
-   * row's `merchant_id` column, joined to customer + merchant + branch
-   * + the approving staff.
-   */
   async listApprovedRedemptions(
     merchantId: number,
     filters: MerchantAuditFeedFilters,
@@ -201,10 +144,6 @@ export class RedemptionService {
     };
   }
 
-  /**
-   * Rejected audit feed — rows from `customer_credit_redemptions` with
-   * `rejected_at IS NOT NULL`, scoped to the merchant via `merchant_id`.
-   */
   async listRejectedRedemptions(
     merchantId: number,
     filters: MerchantAuditFeedFilters,
@@ -238,18 +177,7 @@ export class RedemptionService {
     };
   }
 
-  /**
-   * Approve the pending request for a (customer, merchant) pair.
-   * Atomic via the SQL RPC: verifies `redemption_code`, stamps
-   * `approved_at` + `approved_by_staff_id` on the existing audit row,
-   * moves `pending → approved` on every touched credit, stamps
-   * `redemption_approval_staff_id`. Manager-only (enforced at the
-   * route via `requireRoles("manager")`).
-   *
-   * The response deliberately does NOT echo the code back — the
-   * merchant already supplied it. Mismatched codes raise a 400 (the
-   * SQL RPC raises `P0001`).
-   */
+  // Atomic RPC: verifies redemption_code, stamps approved_at + approved_by_staff_id, moves pending→approved on every touched credit, stamps redemption_approval_staff_id. Manager-only (enforced at the route). Response deliberately does NOT echo the code — the merchant already supplied it. Mismatched code → 400 (RPC raises P0001).
   async approveRequest(
     user: AccessTokenPayload,
     merchantId: number,
@@ -282,14 +210,7 @@ export class RedemptionService {
     };
   }
 
-  /**
-   * Reject the pending request for a (customer, merchant) pair.
-   * Atomic via the SQL RPC: verifies `redemption_code`, stamps
-   * `rejected_at` on the audit row, zeroes `pending_redemption_amount`
-   * on every touched credit. Manager-only.
-   *
-   * The response deliberately does NOT echo the code back.
-   */
+  // Atomic RPC: verifies redemption_code, stamps rejected_at, zeroes pending_redemption_amount on every touched credit. Manager-only. Response does NOT echo the code.
   async rejectRequest(
     merchantId: number,
     customerId: number,
@@ -315,10 +236,6 @@ export class RedemptionService {
       },
     };
   }
-
-  // ──────────────────────────────────────────────────────────────────────────
-  // Response builders (kept for routes that need the wrapped success shape)
-  // ──────────────────────────────────────────────────────────────────────────
 
   buildPendingResponse(page: MerchantPendingRequestsPage): MerchantPendingRequestsResponse {
     return { success: true, data: page };

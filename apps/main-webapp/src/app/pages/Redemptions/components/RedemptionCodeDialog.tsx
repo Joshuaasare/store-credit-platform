@@ -17,26 +17,6 @@ import type { MerchantRedemptionActionBody } from "@shared/types/api.types";
 
 const CODE_LENGTH = 4;
 
-/**
- * Code-entry dialog for the merchant approve / reject flow.
- *
- * Layout: centered modal (`Dialog` from web-components, `max-w-lg`),
- * headline "Approve redemption" / "Reject redemption", body copy
- * explaining the customer shows a 4-digit code at the till, a single
- * numeric input with `inputMode="numeric" maxLength=4`, primary CTA
- * "Confirm" + secondary "Cancel".
- *
- * On submit the dialog calls `onConfirm({ redemption_code, redemption_id })`
- * with the parsed numeric code. The parent wires the result to the
- * approve / reject mutation; the dialog surfaces the mutation's
- * pending + error state back into the form so the user sees a clear
- * "Saving..." label and an inline error message on mismatch.
- *
- * The input is auto-focused on open and re-focused on every render so
- * a manager can rapidly type the code from the customer's screen. We
- * also auto-select-all on focus for the same reason — most managers
- * will clear-and-type rather than append.
- */
 export default function RedemptionCodeDialog({
   open,
   kind,
@@ -57,20 +37,15 @@ export default function RedemptionCodeDialog({
   const inputRef = useRef<HTMLInputElement>(null);
   const [code, setCode] = useState("");
 
-  // Reset the input every time the dialog opens so a stale value from
-  // a previous attempt doesn't leak across open/close cycles.
+  // Reset the input on each open so a stale value doesn't leak across cycles.
   useEffect(() => {
     if (open) {
       setCode("");
     }
   }, [open]);
 
-  // Auto-focus the input on open (NOT on every keystroke — the previous
-  // version had `code` in the dep array, which re-fired `select()` on
-  // each character and made the next keystroke overwrite the entire
-  // field, causing "typing one digit eats the previous one" bugs).
-  // Auto-select-all on open is still useful — a manager can clear-and-
-  // type from the customer's screen in one motion.
+  // Don't put `code` in the dep array — re-firing `select()` on each
+  // keystroke makes the next digit overwrite the whole field.
   useEffect(() => {
     if (!open) return;
     const id = window.setTimeout(() => {
@@ -80,9 +55,6 @@ export default function RedemptionCodeDialog({
     return () => window.clearTimeout(id);
   }, [open]);
 
-  // The action label / icon swap by kind. The visual treatment is the
-  // same (centered modal, single input) — only the CTA copy + intent
-  // changes. Keeping it consistent reduces the surface for user error.
   const isApprove = kind === "approve";
   const headline = isApprove ? "Approve redemption" : "Reject redemption";
   const ctaLabel = isPending
@@ -93,10 +65,7 @@ export default function RedemptionCodeDialog({
       ? "Approve"
       : "Reject";
 
-  // Submit is disabled when the code is not exactly 4 digits. We
-  // intentionally don't accept partial codes — the SQL RPC verifies
-  // an exact integer match, so 3 digits or 5 digits would always
-  // mismatch anyway.
+  // The SQL RPC verifies an exact integer match, so partial codes always mismatch.
   const submitDisabled =
     isPending ||
     code.length !== CODE_LENGTH ||
@@ -107,27 +76,18 @@ export default function RedemptionCodeDialog({
     if (submitDisabled) return;
     onConfirm({
       redemption_code: Number(code),
-      // The dialog doesn't carry redemption_id directly — the parent
-      // resolves it from `dialog.redemptionId`. We surface the code +
-      // a placeholder id of 0; the parent ignores the id and uses
-      // its own captured value.
+      // Parent owns redemption_id (from `dialog.redemptionId`); 0 is a placeholder.
       redemption_id: 0,
     } as MerchantRedemptionActionBody);
   };
 
   const handleOpenChange = (next: boolean) => {
     if (next) return;
-    if (isPending) {
-      // Don't dismiss mid-submit.
-      return;
-    }
+    if (isPending) return;
     onDismiss();
   };
 
-  // Surface the dialog-side error as a toast too, so a manager whose
-  // eyes are on the code field (not the inline error) still gets a
-  // clear mismatch signal. We watch `errorMessage` and toast once per
-  // distinct non-null value.
+  // Toast the mismatch so a manager watching the code field still sees it.
   useEffect(() => {
     if (!errorMessage) return;
     toast.error(errorMessage, errorToastProperties);
@@ -167,8 +127,6 @@ export default function RedemptionCodeDialog({
               value={code}
               disabled={isPending}
               onChange={(e) => {
-                // Strip non-digits + cap at CODE_LENGTH so the field
-                // never holds stray characters.
                 const cleaned = e.target.value
                   .replace(/\D/g, "")
                   .slice(0, CODE_LENGTH);

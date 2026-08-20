@@ -68,10 +68,6 @@ export function createAuthService() {
   };
 }
 
-/**
- * Attempt to refresh the access token using the httpOnly cookie.
- * Returns true if successful, false otherwise.
- */
 export async function tryRefreshToken(): Promise<boolean> {
   try {
     return await refreshAccessToken();

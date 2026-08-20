@@ -15,16 +15,10 @@ import { ThemeProvider, useThemeTokens } from "./shared/theme/ThemeContext";
 
 SplashScreen.preventAutoHideAsync();
 
-// Single shared QueryClient for the customer app. Created once at module
-// scope so it survives re-renders. Defaults are fine for the credits screen
-// (stale-while-revalidate); tune per-query via the useQuery options.
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      // 1 minute before a background refetch is triggered — keeps the credits
-      // list snappy on tab switches without hammering the backend.
       staleTime: 60 * 1000,
-      // Don't auto-refetch on mount if we have data within the stale window.
       refetchOnWindowFocus: false,
       retry: 1,
     },

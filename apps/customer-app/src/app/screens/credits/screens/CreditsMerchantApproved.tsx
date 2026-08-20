@@ -8,22 +8,6 @@ import { formatRelativeTimestamp } from "../../../shared/utils/date.utils";
 import type { CustomerApprovedRedemption } from "@store-credit-platform/api-services";
 import { getInitials } from "../../../shared/utils/ui.utils";
 
-/**
- * "Approved" tab body. Cursor-paginated audit-trail from
- * `customer_credit_redemptions` (one row per approved request, ordered
- * `approved_at DESC`). The parent `MerchantCreditsScreen` owns the
- * `useInfiniteQuery` so the cache survives tab switches; this component
- * is purely presentational.
- *
- * The list reuses the shared `MerchantActivityRow` primitive so the
- * three credit surfaces (main list, per-merchant Available, approved
- * history) render with one coherent row shape. The whole list sits
- * inside one `GlassCard` so a stack of approved rows reads as a single
- * transaction log rather than N stacked cards.
- *
- * Loading / error / empty states mirror the Pending tab so the three
- * tabs stay a single coherent merchant detail surface.
- */
 export function CreditsMerchantApproved({
   items,
   isLoading,

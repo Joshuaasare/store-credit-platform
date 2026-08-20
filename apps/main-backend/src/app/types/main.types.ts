@@ -4,11 +4,10 @@ export type CreditTypeValues = "fixed" | "percentage";
 
 export type CumulativeScopeValues = "per_branch" | "merchant_wide";
 
-// SMS Message Types
 export type SendSMSMessageParams = {
-  phone: string; // Phone number in international format (e.g., +233501234567)
-  message: string; // SMS message body
-  sender?: string; // Sender ID (optional, max 11 characters)
+  phone: string; // international format, e.g. +233501234567
+  message: string;
+  sender?: string; // max 11 characters
 };
 
 export type SendSMSMessageResponse = {
@@ -67,11 +66,7 @@ export interface BaseCustomer {
   deleted_at: string | null;
 }
 
-// Customer-app auth identity — the user-facing projection returned by the
-// `/api/customer-auth/*` endpoints. Lives here (not in auth.types.ts) so both
-// auth.types.ts and customer-auth.types.ts can import it without the typegen
-// stripping the cross-file reference. `id` is the `users.id` (uuid); the
-// numeric `customer_id` is the linked `customers.id`.
+// Cross-file projection (lives here so auth + customer-auth types share it). id is users.id (uuid); customer_id is the linked numeric customers.id.
 export interface CustomerAuthUser {
   id: string;
   phone: string | null;
@@ -89,18 +84,10 @@ export interface BaseCustomerTransaction {
   transaction_date: number;
   transaction_type: TransactionTypeValues;
   created_at: string;
-  // Set for credit_issue and credit_redeem rows (the originating
-  // customer_credit.id). Null for purchase rows. Used by the frontend to
-  // open the redemption dialog against a specific credit.
+  // Set for credit_issue/credit_redeem (originating customer_credit.id); null for purchases. Frontend opens the redemption dialog against this id.
 }
 
-// Slim profile projection of users for customer / recorded-by joins.
-// Deliberately excludes otp / otp_expires_at from BASE_USER so those
-// sensitive fields are not shipped over the transactions API.
-// NOTE: names (surname / other_names) AND access_granted live on `staff` /
-// `customers`, NOT on `users` — a user is a phone-based OTP login identity.
-// Reads that need a display name or access flag join through to the staff /
-// customer row.
+// Excludes otp/otp_expires_at so sensitive fields don't ship over the transactions API. Names + access_granted live on staff/customers, not users — joins go through those.
 export interface BaseUserProfile {
   id: string;
   phone: string;
@@ -109,9 +96,7 @@ export interface BaseUserProfile {
   deleted_at: string | null;
 }
 
-// Base row types mirroring QueryFragments.* constants. Composed types in
-// feature *.types.ts files extend these + add nested joins (user, branch)
-// so a column added to a fragment + base type auto-propagates everywhere.
+// Mirrors QueryFragments.BASE_STAFF; composed types extend this + nested joins so a column added here + the fragment auto-propagates.
 export interface BaseStaff {
   id: number;
   user_id: string;
@@ -127,17 +112,7 @@ export interface BaseStaff {
   deleted_at: string | null;
 }
 
-// Base row type for customer_credit. Mirrors the BASE_CUSTOMER_CREDIT
-// query fragment. The redemption state lives on the row itself
-// (collapsed from the legacy customer_credit_redemptions rows): the
-// pending slice is `pending_redemption_amount`, the approved slice is
-// `approved_redemption_amount`, and the row's remaining is derived
-//   remaining = credit_amount − approved_redemption_amount − pending_redemption_amount
-// The two redemption slices are bounded by `credit_amount` (DB CHECK
-// constraint) so an over-redemption can never land. `revoked_at` /
-// `expires_at` still drive the customer-facing status bucket (live /
-// expired / revoked) and the auto-shrink trigger re-fans-out any
-// orphaned pending slice when a row is revoked or expires.
+// Redemption state collapsed onto the row: pending + approved slices, remaining = credit_amount − both (CHECK-bounded so over-redemption can't land). revoked_at/expires_at drive the live/expired/revoked bucket.
 export interface BaseCustomerCredit {
   id: number;
   customer_id: number;
@@ -154,27 +129,11 @@ export interface BaseCustomerCredit {
   deleted_at: string | null;
 }
 
-// Base row type for customer_credit_redemptions. Mirrors the
-// BASE_CUSTOMER_CREDIT_REDEMPTION query fragment. After the row-state
-// collapse this table is a thin append-only AUDIT log — one row per
-// approved or rejected fan-out at a (customer, merchant) pair, no
-// per-credit FK. The two terminal states are derived from approved_at /
-// rejected_at (no status enum):
-//   Approved → approved_at IS NOT NULL
-//   Rejected → rejected_at IS NOT NULL (implies approved_at IS NULL)
-// approved_at and rejected_at are mutually exclusive (enforced in the
-// service layer / RPC). Customer-initiated cancels write NO row —
-// cancelling is a `pending_redemption_amount := 0` on every touched
-// credit row, not an audit entry.
+// Append-only audit log — one row per approved/rejected fan-out at a (customer, merchant) pair, no per-credit FK. Approved↔approved_at, Rejected↔rejected_at (mutually exclusive); cancels write no row.
 export interface BaseCustomerCreditRedemption {
   id: number;
   customer_id: number;
-  // Set by every approve / reject write path so the activity feed and
-  // merchant audit feeds can join directly to merchants without going
-  // back through customer_credit → branches. Nullable for legacy audit
-  // rows written before this column existed; the activity feed drops
-  // those (orphan audit rows from a deleted merchant aren't surfacable
-  // anyway).
+  // Denormalized so audit/activity feeds join directly to merchants without customer_credit→branches. Nullable for legacy rows; the feed drops orphans.
   merchant_id: number | null;
   amount_redeemed: number;
   approved_at: string | null;

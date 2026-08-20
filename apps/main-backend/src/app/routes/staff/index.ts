@@ -13,11 +13,6 @@ import {
 } from "../../schemas/staff.schema";
 
 export default async function (fastify: FastifyInstance) {
-  /**
-   * GET /staff
-   * Manager-only. Lists staff for the calling merchant, with optional
-   * search / branch_id / role / include_disabled filters.
-   */
   fastify.get<{
     Querystring: StaffListQuerystring;
     Reply: StaffListApiResponse;
@@ -55,11 +50,7 @@ export default async function (fastify: FastifyInstance) {
     },
   });
 
-  /**
-   * POST /staff
-   * Manager-only. Create a new staff member (or auto-restore a soft-deleted
-   * phone — the service handles both paths).
-   */
+  // Soft-deleted phones auto-restore — the service handles both paths.
   fastify.post<{
     Body: CreateStaffRequest;
     Reply: StaffMutationApiResponse;
@@ -90,11 +81,6 @@ export default async function (fastify: FastifyInstance) {
     },
   });
 
-  /**
-   * PATCH /staff/:userId
-   * Manager-only. Full-replace edit of a staff member (name, phone, role,
-   * branch, access_granted, address, notes).
-   */
   fastify.patch<{
     Params: { userId: string };
     Body: UpdateStaffRequest;
@@ -131,11 +117,7 @@ export default async function (fastify: FastifyInstance) {
     },
   });
 
-  /**
-   * PATCH /staff/:userId/access
-   * Manager-only. Toggle access_granted. Reuses updateStaff so self-protection
-   * + last-manager guard both apply.
-   */
+  // Reuses updateStaff so the self-protection + last-manager guards both apply.
   fastify.patch<{
     Params: { userId: string };
     Body: SetStaffAccessRequest;
@@ -173,11 +155,7 @@ export default async function (fastify: FastifyInstance) {
     },
   });
 
-  /**
-   * DELETE /staff/:userId
-   * Manager-only. Soft-delete — tombstones users + linked staff + role rows.
-   * Self-protection + last-manager guard apply.
-   */
+  // Self-protection + last-manager guard apply.
   fastify.delete<{
     Params: { userId: string };
     Reply: StaffDeleteApiResponse;
@@ -211,11 +189,7 @@ export default async function (fastify: FastifyInstance) {
   });
 }
 
-/**
- * Map a service-layer error message to an HTTP status. Heuristics only —
- * the service throws Error with a stable substring ("not found", "Forbidden",
- * "already exists", "another staff member", "at least one manager").
- */
+// Heuristic mapping — the service throws Error with stable substrings ("not found", "Forbidden", "already exists", ...).
 function statusFor(message: string, fallback: number): number {
   const lower = message.toLowerCase();
   if (lower.includes("not found")) return 404;
