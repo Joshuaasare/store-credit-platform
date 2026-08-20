@@ -65,8 +65,7 @@ function formatRangeLabel(range: DateRange | undefined): string {
   return "Pick a date range";
 }
 
-// Days in the visible month that fall strictly between `from` and `to`,
-// used to highlight the in-range middle days on each single-mode calendar.
+// Highlights in-range middle days (excluding the bounds) on single-mode calendars.
 function inRangeDays(visibleMonth: Date, from?: Date, to?: Date): Date[] {
   if (!from || !to) return [];
   const first = startOfMonth(visibleMonth);
@@ -138,11 +137,7 @@ export function TransactionsFilters({
 
   const applyDatePreset = (preset: DatePreset) => {
     if (preset === "this_year") {
-      // "This year" = Jan 1 of the current year onwards, with no upper bound.
-      // Using end=null (instead of end=now) means transactions created after
-      // the preset is applied still fall in-window and appear immediately on
-      // refetch — otherwise a freshly-added purchase would be filtered out
-      // until the user manually re-applies the filter.
+      // end=null (not end=now) keeps freshly-added purchases in-window across refetches.
       onChange({
         ...value,
         datePreset: preset,
@@ -152,10 +147,8 @@ export function TransactionsFilters({
     } else if (preset === "all") {
       onChange({ ...value, datePreset: preset, start: null, end: null });
     } else {
-      // custom — persist the selection immediately so the tab stays active,
-      // then seed the picker with the current values and open the popover.
-      // The actual start/end update when the user applies a range; if they
-      // cancel, datePreset remains "custom" with the previous range.
+      // Seed the picker with the current range and open the popover. If the
+      // user cancels, datePreset remains "custom" with the previous range.
       setCustomRange({
         from: fromEpochMs(value.start),
         to: fromEpochMs(value.end),

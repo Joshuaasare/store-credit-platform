@@ -29,6 +29,18 @@ values ('store-assets', 'store-assets', true)
 on conflict (id) do nothing;
 
 -- ──────────────────────────────────────────────────────────────────────────
+-- 1b. Storage bucket for customer avatars
+-- ──────────────────────────────────────────────────────────────────────────
+-- Public bucket: objects are readable via their public URL without auth.
+-- Writes happen through the backend with the service-role key (bypasses RLS),
+-- so no public-write policy is needed. The backend resolves the customer's
+-- id from the JWT and builds the path as `customer-<id>/avatar-<timestamp>.<ext>`,
+-- so each customer can only write into their own folder (server-enforced).
+insert into storage.buckets (id, name, public)
+values ('customer-avatars', 'customer-avatars', true)
+on conflict (id) do nothing;
+
+-- ──────────────────────────────────────────────────────────────────────────
 -- 2. Enum types
 -- ──────────────────────────────────────────────────────────────────────────
 -- `transaction_type` is kept for backward compatibility with older deployments
@@ -355,7 +367,8 @@ alter table public.staff
 
 alter table public.customers
   add column if not exists surname text,
-  add column if not exists other_names text;
+  add column if not exists other_names text,
+  add column if not exists avatar_url text;
 
 alter table public.users
   drop column if exists surname,

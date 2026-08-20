@@ -11,34 +11,8 @@ import { useThemeTokens } from "../../../shared/theme/ThemeContext";
 
 const PILL_DURATION = 220;
 
-/**
- * Pill switcher for the merchant credit detail screen.
- *
- * Generic over the option value type — callers pass an array of
- * `{ value, label }` and the component renders N options with a single
- * sliding white pill that animates behind whichever one is active.
- *
- * Visual:
- *   - Outer container is a soft tinted "pill track" using
- *     `surfacePill` / `surfacePillBorder` with `borderRadius: 6` (more
- *     rectangular than the system pill so the switcher reads as a
- *     control, not a button).
- *   - The active option flips to a solid `surface` fill with stronger
- *     ink weight; inactive options stay transparent with subdued ink
- *     weight.
- *
- * Animation:
- *   - One absolutely-positioned `Animated.View` slides behind the
- *     active label. Its `left` and `width` are driven by reanimated
- *     shared values that spring on `value` change.
- *   - The label color tweens between `textSecondary` (inactive) and
- *     `text` (active) via `interpolateColor`.
- *
- * Deliberately distinct from the existing `GlassSegmentedControl`: the
- * segmented control uses a fully rounded pill and brand-coloured fills,
- * which is the wrong visual for this context — these tabs sit directly
- * under the tall pink detail header and need a quieter, neutral surface.
- */
+// Deliberately distinct from `GlassSegmentedControl`: that one uses a fully
+// rounded pill + brand fills, wrong visual under the tall pink detail header.
 export type MerchantTab = "available" | "pending" | "approved";
 
 export interface MerchantTabOption<T extends string> {
@@ -59,8 +33,6 @@ export default function MerchantTabSwitcher<T extends string>({
 }) {
   const theme = useThemeTokens();
 
-  // Track each option's measured layout (x position within the row,
-  // width) so we can drive the sliding pill.
   const [slots, setSlots] = useState<{ x: number; width: number }[]>(() =>
     options.map(() => ({ x: 0, width: 0 })),
   );
@@ -73,10 +45,8 @@ export default function MerchantTabSwitcher<T extends string>({
   const animatedWidth = useSharedValue(target.width);
   const progress = useSharedValue(safeIndex);
 
-  // Animate the sliding pill whenever the active option or its measured
-  // layout changes. The first render lands at the right position
-  // without an entrance animation because `useSharedValue` is seeded
-  // with the initial target.
+  // `useSharedValue` is seeded with the initial target so the first render
+  // lands in place without an entrance animation.
   useEffect(() => {
     if (target.width === 0) return;
     animatedLeft.value = withTiming(target.x, { duration: PILL_DURATION });
@@ -152,13 +122,9 @@ function Option({
   onLayout: (x: number, width: number) => void;
 }) {
   const theme = useThemeTokens();
-  // Animated text color — tweens between textSecondary (inactive) and
-  // text (active) as the shared `progress` value lands on this option's
-  // index.
   const animatedTextStyle = useAnimatedStyle(() => {
-    // Each option owns a small band of `progress` — when progress is at
-    // this option's index the band reports `1`, otherwise `0`. A flat
-    // step is fine because the indicator only stops on integer indices.
+    // Each option owns a band of `progress`; flat step is fine because the
+    // indicator only stops on integer indices.
     const t = progress.value >= optionIndex - 0.5 && progress.value <= optionIndex + 0.5 ? 1 : 0;
     return {
       color: interpolateColor(
@@ -212,9 +178,6 @@ const styles = StyleSheet.create({
     top: 4,
     bottom: 4,
     left: 0,
-    // Border is painted on the container, so the slider doesn't need
-    // its own border — keeps the indicator edge crisp on the
-    // `surfacePill` background.
   },
   option: {
     flex: 1,

@@ -1,9 +1,8 @@
 import Constants from "expo-constants";
 import { Platform } from "react-native";
 
-// Backend origin. The Android emulator can't reach the host's `localhost`
-// directly — it needs `10.0.2.2` (the emulator's alias for the host loopback).
-// The iOS simulator and physical devices on the same LAN use the host IP.
+// Android emulator needs `10.0.2.2` (its alias for the host loopback); iOS
+// sim + LAN devices use the host IP / localhost.
 const DEV_API_BASE_URL =
   Platform.OS === "android" ? "http://10.0.2.2:3001" : "http://localhost:3001";
 

@@ -27,39 +27,6 @@ import { useThemeTokens } from "../../../shared/theme/ThemeContext";
 const DURATION_IN = 180;
 const DURATION_OUT = 120;
 
-/**
- * Amount + branch entry sheet for the customer's redemption request.
- *
- * Two modes:
- *   - `create` — input is empty, copy says "Request redemption"
- *   - `edit`   — input is pre-filled with the current pending amount +
- *                pre-selected branch, copy says "Edit request"
- *
- * The cap (`available + currentPending`) is computed by the parent and
- * passed in as `maxAmount`. The sheet hard-clamps the input client-side
- * so the user can't type more than the cap.
- *
- * Branch picker:
- *   - `branches` comes from the parent (call to
- *     `customerRedemptionsService.getMyBranches(merchantId)`).
- *   - When there's exactly one branch, the picker is collapsed to a
- *     static label and the branch is auto-selected — there's nothing
- *     for the customer to choose.
- *   - When there are 2+ branches, the parent passes `initialBranchId`
- *     (from the existing pending row in edit mode, `null` in create
- *     mode). The branch block renders a CLOSED picker trigger — the
- *     selected branch label is shown, or a "Choose a branch…"
- *     placeholder if nothing is picked yet. Tapping the trigger opens
- *     a nested picker sheet that scrolls the full list. The submit
- *     button stays disabled until the user explicitly taps a branch
- *     in the picker — no default selection on multi-branch merchants.
- *
- * On submit: parent fires `onSubmit(amount, branchId)`, then awaits the
- * parent-supplied `isSubmitting` flag. The parent decides whether to
- * advance or auto-dismiss.
- *
- * The sheet is controlled: the parent owns `visible` + `mode`.
- */
 export default function RedemptionAmountSheet({
   visible,
   mode,
@@ -90,10 +57,6 @@ export default function RedemptionAmountSheet({
     initialAmount > 0 ? formatGhs(initialAmount).replace(/[^\d.]/g, "") : "",
   );
 
-  // Only collapse the picker when we KNOW the merchant has one branch
-  // — i.e. when the branches query has resolved with <=1 row. While the
-  // branches query is still in flight OR the merchant genuinely has 0
-  // branches, we render the loading placeholder (handled in the JSX).
   const onlyOneBranch = !branchesLoading && branches.length <= 1;
   const initialBranch = useMemo<BaseBranch | null>(() => {
     if (branches.length === 0) return null;
@@ -101,9 +64,8 @@ export default function RedemptionAmountSheet({
       const match = branches.find((b) => b.id === initialBranchId);
       if (match) return match;
     }
-    // Single-branch merchants auto-pin the only branch. Multi-branch
-    // merchants intentionally start with NO selection — the customer
-    // must explicitly pick a branch in the picker.
+    // Multi-branch merchants intentionally start with NO selection — the
+    // customer must explicitly pick a branch in the picker.
     if (onlyOneBranch) return branches[0] ?? null;
     return null;
   }, [branches, initialBranchId, onlyOneBranch]);
@@ -115,9 +77,7 @@ export default function RedemptionAmountSheet({
   // Picker visibility — only meaningful for multi-branch merchants.
   const [pickerOpen, setPickerOpen] = useState(false);
 
-  // Centered-modal scale + fade animation (matches MerchantRedemptionConfirmSheet).
-  // The native `Modal` animation is disabled; the inner surface is wrapped in
-  // `Animated.View` and animates with a scale-up + fade on visible.
+  // Centered-modal scale + fade; native Modal animation is disabled.
   const opacity = useSharedValue(visible ? 1 : 0);
   const scale = useSharedValue(visible ? 1 : 0.92);
 
@@ -142,11 +102,7 @@ export default function RedemptionAmountSheet({
     transform: [{ scale: scale.value }],
   }));
 
-  // Reset both the amount input and the selected branch every time the
-  // sheet is (re)opened so stale values don't leak across open/close
-  // cycles. In edit mode the selected branch comes from the existing
-  // pending row; in create mode it starts unselected on multi-branch
-  // merchants, or auto-selected when there's only one branch total.
+  // Reset the amount input + selected branch every time the sheet reopens.
   useEffect(() => {
     if (visible) {
       setText(
@@ -254,9 +210,7 @@ export default function RedemptionAmountSheet({
                   <TextInput
                     value={text}
                     onChangeText={(next) => {
-                      // Allow only digits + one decimal point. Strip the
-                      // rest so the input can't carry stray characters
-                      // (the parent computes the numeric value).
+                      // Allow only digits + one decimal point.
                       const cleaned = next
                         .replace(/[^0-9.]/g, "")
                         .replace(/(\..*?)\..*/g, "$1");
@@ -353,10 +307,6 @@ export default function RedemptionAmountSheet({
                     </Text>
                   </View>
                 ) : onlyOneBranch ? (
-                  // Single-branch merchants: the picker would be a
-                  // single-item list, so we collapse it to a static
-                  // label. The selected branch is auto-pinned at the
-                  // top of this component's state.
                   <View
                     style={[
                       styles.singleBranchRow,
@@ -479,12 +429,6 @@ export default function RedemptionAmountSheet({
   );
 }
 
-// ────────────────────────────────────────────────────────────────────────────
-// BranchPickerTrigger — closed-state tappable row. Shows the currently
-// selected branch label or a "Choose a branch…" placeholder. Tapping opens
-// the nested picker sheet so a long list of branches never overflows the
-// parent amount-entry sheet.
-// ────────────────────────────────────────────────────────────────────────────
 function BranchPickerTrigger({
   branches,
   selectedBranchId,
@@ -575,13 +519,6 @@ function BranchPickerTrigger({
   );
 }
 
-// ────────────────────────────────────────────────────────────────────────────
-// BranchPickerSheet — nested centered modal that lists every branch in a
-// scroll view. Picked branch fires `onPick` and auto-dismisses. The parent
-// amount-entry sheet stays mounted underneath; the nested sheet dims it via
-// its own backdrop. Matches the customer-app centered-modal contract:
-// animationType=fade + justifyContent=center + maxWidth=420 + radii.md.
-// ────────────────────────────────────────────────────────────────────────────
 function BranchPickerSheet({
   visible,
   branches,
@@ -697,10 +634,8 @@ function BranchScrollList({
   onPick: (id: number) => void;
   theme: ReturnType<typeof useThemeTokens>;
 }) {
-  // FlatList would be the "right" primitive here, but a plain ScrollView
-  // with mapped rows is simpler for this short list and avoids the
-  // native FlatList mount cost for the picker. If branch counts ever
-  // blow past a few hundred this should switch to FlatList.
+  // ScrollView over FlatList: short list, avoids the native FlatList mount cost.
+  // Switch to FlatList if branch counts ever reach the hundreds.
   return (
     <Animated.ScrollView
       showsVerticalScrollIndicator={false}

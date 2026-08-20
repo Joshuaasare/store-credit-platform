@@ -1,12 +1,5 @@
-/**
- * Country data for the phone number country selector.
- *
- * Mirrors apps/main-webapp/src/app/shared/utils/countries.ts so both apps
- * share the same dial codes + format/parse semantics. Kept as a parallel
- * copy (rather than imported from the webapp) because the webapp's version
- * isn't in a shared workspace lib — extract to libs/shared-utils if the
- * duplication grows.
- */
+// Mirrors apps/main-webapp/src/app/shared/utils/countries.ts. Extract to a shared
+// workspace lib if the duplication grows.
 export interface Country {
   code: CountryCode;
   dialCode: string;
@@ -78,11 +71,7 @@ export function getCountryByDialCode(dialCode: string): Country | undefined {
   return countries.find((c) => c.dialCode === dialCode);
 }
 
-/**
- * Compose the full international format (no `+`, no spaces) from a local
- * number + country. e.g. ("0244444444", GH) → "233244444444". The backend's
- * `normalizePhone` accepts this shape and canonicalizes to E.164.
- */
+// ("0244444444", GH) → "233244444444". Backend `normalizePhone` canonicalizes to E.164.
 export function formatPhoneWithCountry(
   phone: string,
   countryCode = CountryCode.GH,

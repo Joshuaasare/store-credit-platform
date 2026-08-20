@@ -1,5 +1,5 @@
 import crypto from "crypto";
-import { FastifyInstance, FastifyReply } from "fastify";
+import { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { AuthService } from "../../services/auth.service";
 import { TokenService } from "../../services/token.service";
 import { requireAuth } from "../../middleware/auth.middleware";
@@ -37,7 +37,7 @@ function clearRefreshTokenCookie(reply: FastifyReply): void {
   });
 }
 
-function getRefreshTokenHashFromCookie(request: any): string | undefined {
+function getRefreshTokenHashFromCookie(request: FastifyRequest): string | undefined {
   const rawToken = request.cookies[REFRESH_TOKEN_COOKIE_NAME];
   if (!rawToken) return undefined;
   return crypto.createHash("sha256").update(rawToken).digest("hex");
@@ -46,10 +46,6 @@ function getRefreshTokenHashFromCookie(request: any): string | undefined {
 export default async function (fastify: FastifyInstance) {
   const authService = new AuthService();
 
-  /**
-   * POST /api/auth/otp/send
-   * Send OTP to phone number
-   */
   fastify.post<{
     Body: SendOtpRequest;
     Reply: SendOtpApiResponse;
@@ -78,10 +74,6 @@ export default async function (fastify: FastifyInstance) {
     },
   });
 
-  /**
-   * POST /api/auth/otp/verify
-   * Verify OTP and sign user in with custom JWT
-   */
   fastify.post<{
     Body: VerifyOtpRequest;
     Reply: VerifyOtpApiResponse;
@@ -103,7 +95,6 @@ export default async function (fastify: FastifyInstance) {
           clientIp,
         );
 
-        // Set refresh token as httpOnly cookie
         setRefreshTokenCookie(reply, session.refresh_token);
 
         return {
@@ -126,10 +117,6 @@ export default async function (fastify: FastifyInstance) {
     },
   });
 
-  /**
-   * POST /api/auth/refresh
-   * Rotate refresh token from httpOnly cookie and issue new access token
-   */
   fastify.post<{
     Reply: RefreshTokenApiResponse;
   }>("/refresh", {
@@ -159,7 +146,6 @@ export default async function (fastify: FastifyInstance) {
           deviceFingerprint,
         );
 
-        // Set new refresh token as httpOnly cookie
         setRefreshTokenCookie(reply, rotated.token);
 
         const user = await authService.getCurrentUser(rotated.userId);
@@ -195,10 +181,6 @@ export default async function (fastify: FastifyInstance) {
     },
   });
 
-  /**
-   * POST /api/auth/logout
-   * Revoke refresh token from httpOnly cookie and clear it
-   */
   fastify.post<{
     Reply: LogoutApiResponse;
   }>("/logout", {
@@ -226,10 +208,6 @@ export default async function (fastify: FastifyInstance) {
     },
   });
 
-  /**
-   * GET /api/auth/sessions
-   * List active refresh token sessions for the authenticated user
-   */
   fastify.get<{
     Reply: SessionListApiResponse;
   }>("/sessions", {
@@ -259,10 +237,6 @@ export default async function (fastify: FastifyInstance) {
     },
   });
 
-  /**
-   * POST /api/auth/sessions/:id/revoke
-   * Revoke a specific session by its database row ID
-   */
   fastify.post<{
     Params: { id: string };
     Reply: SessionRevokeApiResponse;
@@ -297,10 +271,6 @@ export default async function (fastify: FastifyInstance) {
     },
   });
 
-  /**
-   * GET /auth/me
-   * Get current authenticated user
-   */
   fastify.get<{
     Reply: GetCurrentUserApiResponse;
   }>("/me", {

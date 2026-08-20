@@ -22,11 +22,7 @@ import { RateLimitService } from "./rateLimit.service";
 const MAX_OTP_ATTEMPTS = 5;
 
 export class AuthService {
-  /**
-   * Send OTP to user's phone number.
-   * If user doesn't exist, we still return success to prevent phone number enumeration,
-   * but we do not send an SMS to save credits and avoid spamming unregistered numbers.
-   */
+  // Anti-enumeration: return success even when the user doesn't exist, but skip the SMS to save credits.
   async sendOtp(
     data: SendOtpRequest,
     clientIp?: string,
@@ -34,7 +30,6 @@ export class AuthService {
     const { phone } = data;
     const normalizedPhone = normalizePhone(phone);
 
-    // Rate limiting
     const rateLimit = RateLimitService.checkOtpSendLimits(
       normalizedPhone,
       clientIp,
@@ -45,7 +40,6 @@ export class AuthService {
       throw error;
     }
 
-    // Check if user exists before generating OTP
     const { data: user } = await supabaseAdmin
       .from("users")
       .select("id")
@@ -55,19 +49,15 @@ export class AuthService {
     console.log("user", user, normalizedPhone);
 
     if (!user) {
-      // Anti-enumeration: return same success response even if user not found
       return { message: "OTP sent successfully" };
     }
 
-    // Generate OTP using cryptographically secure randomness
     const otp = PasswordService.generateOTP();
     const otpHash = PasswordService.hashOTP(otp);
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
-    // Store OTP in memory
     setOtp(normalizedPhone, otpHash, expiresAt);
 
-    // Update user's OTP fields in DB
     await supabaseAdmin
       .from("users")
       .update({
@@ -77,7 +67,6 @@ export class AuthService {
       })
       .eq("id", user.id);
 
-    // Send SMS
     await MessagingService.sendSMSMessage({
       phone: normalizedPhone,
       message: SMSTemplates.loginOTP(otp),
@@ -86,9 +75,6 @@ export class AuthService {
     return { message: "OTP sent successfully" };
   }
 
-  /**
-   * Verify OTP and issue custom JWT access + refresh tokens.
-   */
   async verifyOtp(
     data: VerifyOtpRequest,
     userAgent?: string,
@@ -104,7 +90,7 @@ export class AuthService {
     const { phone, otp } = data;
     const normalizedPhone = normalizePhone(phone);
 
-    // DEV bypass — delete before production
+    // DEV bypass — delete before production.
     if (
       process.env.NODE_ENV === "development" &&
       normalizedPhone === process.env.DEV_MOCK_PHONE &&
@@ -120,7 +106,6 @@ export class AuthService {
       return await this.buildDevSession(user, userAgent, clientIp);
     }
 
-    // Check in-memory OTP store first
     const otpEntry = getOtp(normalizedPhone);
 
     if (!otpEntry) {
@@ -134,19 +119,16 @@ export class AuthService {
       throw new Error("OTP has expired. Please request a new OTP.");
     }
 
-    // Increment attempts
     const attempts = incrementAttempts(normalizedPhone);
     if (attempts > MAX_OTP_ATTEMPTS) {
       deleteOtp(normalizedPhone);
       throw new Error("Too many failed attempts. Please request a new OTP.");
     }
 
-    // Verify OTP hash
     if (!PasswordService.verifyOTP(otp, otpEntry.otpHash)) {
       throw new Error("Invalid OTP. Please try again.");
     }
 
-    // OTP verified — look up user by phone
     const { data: user, error: userError } = await supabaseAdmin
       .from("users")
       .select(QueryFragments.BASE_USER)
@@ -158,7 +140,7 @@ export class AuthService {
       throw new Error("User not found.");
     }
 
-    // Also verify against DB-stored OTP (defense in depth)
+    // Defense in depth: also verify against the DB-stored OTP hash.
     if (
       user.otp !== otpEntry.otpHash ||
       !user.otp_expires_at ||
@@ -167,10 +149,6 @@ export class AuthService {
       throw new Error("Invalid or expired OTP.");
     }
 
-    // Resolve merchant_id / primary branch_id / role via staff → branches →
-    // merchants. Single role lives on staff.role (replaces the older
-    // staff_user_roles join table). Names + access_granted also live on the
-    // staff row — a user with no live staff row has no access.
     const staffAssignment = await this.resolveStaffAssignment(user.id);
 
     if (!staffAssignment || !staffAssignment.access_granted) {
@@ -190,7 +168,6 @@ export class AuthService {
       staff_id: staffAssignment.staff_id,
     };
 
-    // Issue custom JWT access token
     const accessToken = await TokenService.signAccessToken(
       user.id,
       user.phone,
@@ -200,7 +177,6 @@ export class AuthService {
       staffAssignment.staff_id,
     );
 
-    // Generate and store refresh token
     const deviceFingerprint = TokenService.computeDeviceFingerprint(
       userAgent,
       clientIp,
@@ -221,8 +197,7 @@ export class AuthService {
       clientIp,
     );
 
-    // Clear OTP after successful login and stamp last_login_at (surfaced on
-    // the Staff directory as "Last active").
+    // Stamp last_login_at — surfaced on the Staff directory as "Last active".
     deleteOtp(normalizedPhone);
     await supabaseAdmin
       .from("users")
@@ -247,9 +222,6 @@ export class AuthService {
     };
   }
 
-  /**
-   * Get current authenticated user with roles.
-   */
   async getCurrentUser(userId: string): Promise<AuthUser> {
     const { data: user, error } = await supabaseAdmin
       .from("users")
@@ -262,8 +234,6 @@ export class AuthService {
       throw new Error("User not found");
     }
 
-    // Resolve merchant_id / primary branch_id / role via staff → branches →
-    // merchants. Single role lives on staff.role.
     const staffAssignment = await this.resolveStaffAssignment(user.id);
 
     return {
@@ -280,11 +250,8 @@ export class AuthService {
     };
   }
 
-  /**
-   * DEV session builder — delete before production.
-   */
   private async buildDevSession(
-    user: any,
+    user: { id: string; phone: string | null; email: string | null },
     userAgent?: string,
     clientIp?: string,
   ): Promise<{
@@ -352,13 +319,7 @@ export class AuthService {
     };
   }
 
-  /**
-   * Resolve a user's primary merchant_id and branch_id via the staff table.
-   * Returns null if the user has no staff row (e.g. unassigned admin).
-   * Picks the first active staff row ordered by id for determinism. Also
-   * carries surname / other_names / access_granted — all live on `staff`,
-   * not `users`.
-   */
+  // Single role lives on staff.role; names + access_granted also live on the staff row. Picks the first active staff row (ordered by id) for determinism.
   private async resolveStaffAssignment(userId: string): Promise<{
     staff_id: number;
     role: Database["public"]["Enums"]["role"];

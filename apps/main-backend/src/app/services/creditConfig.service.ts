@@ -3,7 +3,6 @@ import { SupabaseClient } from "@supabase/supabase-js";
 import { supabaseAdmin } from "../utils/supabase.client";
 import { Database } from "../types/database.types";
 import { QueryFragments } from "../constants/queryFragments";
-import { BaseCustomerCredit } from "../schemas/main.schema";
 import {
   CreateRunningCreditConfigRequest,
   UpdateRunningCreditConfigRequest,
@@ -12,37 +11,30 @@ import {
   UpdateFixedCreditConfigRequest,
   FixedCreditConfigGroup,
 } from "../schemas/creditConfig.schema";
+import type { BaseBranch } from "../schemas/main.schema";
 
-// The new customer_credit row stores only the calculated GHS amount plus
-// expiry/revocation metadata. We insert via `any` because the typed Insert
-// shape from database.types.ts already reflects credit_amount (no longer
-// credit_type / credit_precentage / max_credit_amount).
+// select() doesn't infer nested branch:branches(...) joins when QueryFragments.* is interpolated into a template literal — re-narrow with as const at the constant declaration. Regenerate (yarn generate:types) keeps the base Row in lockstep.
 
-// Migration 20260720000000 adds config_group_id (uuid), cumulative_scope
-// (enum), and merchants.credit_stacking_policy. Until that migration is
-// applied to dev Supabase and `database.types.ts` is regenerated, the typed
-// Row shape does not include those columns — read them through `any` casts.
-type RunningConfigRow =
+type RunningConfigWithBranch =
   Database["public"]["Tables"]["running_credit_config"]["Row"] & {
-    config_group_id: string;
-    cumulative_scope: "per_branch" | "merchant_wide";
-    branch: Database["public"]["Tables"]["branches"]["Row"];
+    branch: BaseBranch;
   };
 
-type FixedConfigRow =
+type FixedConfigWithBranch =
   Database["public"]["Tables"]["fixed_credit_config"]["Row"] & {
-    config_group_id: string;
-    branch: Database["public"]["Tables"]["branches"]["Row"];
+    branch: BaseBranch;
   };
 
-const RUNNING_CONFIG_COLUMNS = `${QueryFragments.BASE_RUNNING_CREDIT_CONFIG},branch:branches(${QueryFragments.BASE_BRANCH})`;
+const RUNNING_CONFIG_COLUMNS =
+  `${QueryFragments.BASE_RUNNING_CREDIT_CONFIG},branch:branches(${QueryFragments.BASE_BRANCH})` as const;
 
-const FIXED_CONFIG_COLUMNS = `${QueryFragments.BASE_FIXED_CREDIT_CONFIG},branch:branches(${QueryFragments.BASE_BRANCH})`;
+const FIXED_CONFIG_COLUMNS =
+  `${QueryFragments.BASE_FIXED_CREDIT_CONFIG},branch:branches(${QueryFragments.BASE_BRANCH})` as const;
 
 function groupRunningRows(
-  rows: RunningConfigRow[],
+  rows: RunningConfigWithBranch[],
 ): RunningCreditConfigGroup[] {
-  const map = new Map<string, RunningConfigRow>();
+  const map = new Map<string, RunningConfigWithBranch>();
   for (const row of rows) {
     const existing = map.get(row.config_group_id);
     if (!existing) {
@@ -74,8 +66,10 @@ function groupRunningRows(
     .sort((a, b) => (b.created_at > a.created_at ? 1 : -1));
 }
 
-function groupFixedRows(rows: FixedConfigRow[]): FixedCreditConfigGroup[] {
-  const map = new Map<string, FixedConfigRow>();
+function groupFixedRows(
+  rows: FixedConfigWithBranch[],
+): FixedCreditConfigGroup[] {
+  const map = new Map<string, FixedConfigWithBranch>();
   for (const row of rows) {
     const existing = map.get(row.config_group_id);
     if (!existing) {
@@ -114,7 +108,7 @@ async function fetchRunningGroup(
     .eq("config_group_id", groupId)
     .is("deleted_at", null);
   if (error) throw new Error(`Failed to fetch group: ${error.message}`);
-  const rows = (data ?? []) as unknown as RunningConfigRow[];
+  const rows = data ?? [];
   const grouped = groupRunningRows(rows);
   if (grouped.length === 0) throw new Error("Config group not found");
   return grouped[0];
@@ -129,7 +123,7 @@ async function fetchFixedGroup(
     .eq("config_group_id", groupId)
     .is("deleted_at", null);
   if (error) throw new Error(`Failed to fetch group: ${error.message}`);
-  const rows = (data ?? []) as unknown as FixedConfigRow[];
+  const rows = data ?? [];
   const grouped = groupFixedRows(rows);
   if (grouped.length === 0) throw new Error("Config group not found");
   return grouped[0];
@@ -206,8 +200,6 @@ function normalizeFixedValues(
 }
 
 export class CreditConfigService {
-  // ── Running configs ─────────────────────────────────────
-
   async listRunningConfigs(
     merchantId: number,
   ): Promise<RunningCreditConfigGroup[]> {
@@ -219,7 +211,7 @@ export class CreditConfigService {
       .filter("branch.deleted_at", "is", null);
     if (error)
       throw new Error(`Failed to list running configs: ${error.message}`);
-    const rows = (data ?? []) as unknown as RunningConfigRow[];
+    const rows = data ?? [];
     return groupRunningRows(rows);
   }
 
@@ -241,7 +233,7 @@ export class CreditConfigService {
     }));
     const { error } = await supabaseAdmin
       .from("running_credit_config")
-      .insert(rows as any[]);
+      .insert(rows);
     if (error)
       throw new Error(`Failed to create running config: ${error.message}`);
     return fetchRunningGroup(groupId);
@@ -291,7 +283,7 @@ export class CreditConfigService {
     if (kept.length > 0) {
       const { error } = await supabaseAdmin
         .from("running_credit_config")
-        .update({ ...values } as any)
+        .update(values)
         .eq("config_group_id", groupId)
         .in("branch_id", kept);
       if (error) throw new Error(`Failed to update branches: ${error.message}`);
@@ -305,7 +297,7 @@ export class CreditConfigService {
       }));
       const { error } = await supabaseAdmin
         .from("running_credit_config")
-        .insert(addRows as any[]);
+        .insert(addRows);
       if (error) throw new Error(`Failed to add branches: ${error.message}`);
     }
 
@@ -334,15 +326,13 @@ export class CreditConfigService {
     const merchantBranchIds = await getMerchantBranchIds(merchantId);
     const { error } = await supabaseAdmin
       .from("running_credit_config")
-      .update({ is_active: isActive } as any)
+      .update({ is_active: isActive })
       .eq("config_group_id", groupId)
       .in("branch_id", merchantBranchIds);
     if (error)
       throw new Error(`Failed to toggle running config: ${error.message}`);
     return fetchRunningGroup(groupId);
   }
-
-  // ── Fixed configs ───────────────────────────────────────
 
   async listFixedConfigs(
     merchantId: number,
@@ -355,7 +345,7 @@ export class CreditConfigService {
       .filter("branch.deleted_at", "is", null);
     if (error)
       throw new Error(`Failed to list fixed configs: ${error.message}`);
-    const rows = (data ?? []) as unknown as FixedConfigRow[];
+    const rows = data ?? [];
     return groupFixedRows(rows);
   }
 
@@ -377,7 +367,7 @@ export class CreditConfigService {
     }));
     const { error } = await supabaseAdmin
       .from("fixed_credit_config")
-      .insert(rows as any[]);
+      .insert(rows);
     if (error)
       throw new Error(`Failed to create fixed config: ${error.message}`);
     return fetchFixedGroup(groupId);
@@ -427,7 +417,7 @@ export class CreditConfigService {
     if (kept.length > 0) {
       const { error } = await supabaseAdmin
         .from("fixed_credit_config")
-        .update({ ...values } as any)
+        .update({ ...values })
         .eq("config_group_id", groupId)
         .in("branch_id", kept);
       if (error) throw new Error(`Failed to update branches: ${error.message}`);
@@ -441,7 +431,7 @@ export class CreditConfigService {
       }));
       const { error } = await supabaseAdmin
         .from("fixed_credit_config")
-        .insert(addRows as any[]);
+        .insert(addRows);
       if (error) throw new Error(`Failed to add branches: ${error.message}`);
     }
 
@@ -467,7 +457,7 @@ export class CreditConfigService {
     const merchantBranchIds = await getMerchantBranchIds(merchantId);
     const { error } = await supabaseAdmin
       .from("fixed_credit_config")
-      .update({ is_active: isActive } as any)
+      .update({ is_active: isActive })
       .eq("config_group_id", groupId)
       .in("branch_id", merchantBranchIds);
     if (error)
@@ -478,26 +468,7 @@ export class CreditConfigService {
 
 export const creditConfigService = new CreditConfigService();
 
-// ── Auto-issuance ──────────────────────────────────────────
-//
-// Threshold overshoot algorithm (decision 1):
-//   - If prior cumulative spend already crossed threshold, the full current
-//     purchase is rewardable.
-//   - Otherwise, only the slice of the current purchase that pushed (or
-//     reached) the threshold counts. We never reward spend below the line.
-//   - Null threshold ⇒ 0 (every purchase qualifies); null window ⇒ no
-//     lookback (prior = 0); null cap ⇒ uncapped percentage reward.
-//
-// After the re-architecture:
-//   - Prior purchases are read from `customer_purchases` (not the dropped
-//     `customer_transactions`).
-//   - The calculated GHS amount is stored in `customer_credit.credit_amount`.
-//     We no longer denormalize credit_type / percentage / cap onto the row —
-//     those stay on the issuing running_credit_config.
-//   - Retroactivity (decision 10): the lookback includes purchases made
-//     before the config's created_at as long as they fall inside the
-//     eligible_window ending at the current purchase's transaction_date.
-
+// Threshold overshoot: full purchase rewardable if prior cumulative already crossed threshold, else only the overshoot slice. Null threshold=0, null window=no lookback, null cap=uncapped. Lookback is retroactive (includes purchases before the config's created_at).
 export async function issueRunningCreditsForPurchase(
   supabase: SupabaseClient<Database>,
   merchantId: number,
@@ -505,7 +476,7 @@ export async function issueRunningCreditsForPurchase(
   branchId: number,
   purchaseAmount: number,
   transactionDateEpoch: number,
-): Promise<BaseCustomerCredit[]> {
+): Promise<Database["public"]["Tables"]["customer_credit"]["Row"][]> {
   if (!(purchaseAmount > 0)) return [];
 
   const { data: merchant } = await supabase
@@ -533,10 +504,10 @@ export async function issueRunningCreditsForPurchase(
     .is("deleted_at", null);
   const merchantBranchIds = (merchantBranchRows ?? []).map((b) => b.id);
 
-  type Plan = { config: any; creditValue: number };
+  type Plan = { config: (typeof configs)[number]; creditValue: number };
   const plans: Plan[] = [];
 
-  for (const row of configs as any[]) {
+  for (const row of configs) {
     if (row.branch?.deleted_at) continue;
 
     const threshold = row.threshold_amount ?? 0;
@@ -545,15 +516,8 @@ export async function issueRunningCreditsForPurchase(
 
     let priorCumulative = 0;
     if (windowDays != null) {
-      // transaction_date is epoch MILLISECONDS (bigint) — windowDays * 86_400_000
-      // converts days→ms. Using * 86400 (seconds) would shrink the lookback
-      // to ~windowDays milliseconds and the priorCumulative walk would
-      // always be 0, so credits never issue. See commit 7a68501 which
-      // converted the codebase to ms and missed these two multiplications.
+      // transaction_date is epoch MS — windowDays * 86_400_000 converts days→ms. * 86400 (s/day) was a units miss that shrank the lookback to ~windowDays ms (credits never issued).
       const lowerBound = transactionDateEpoch - windowDays * 86_400_000;
-      // Read prior purchases from customer_purchases. The lookback is
-      // retroactive: any purchase within the window counts, even if it
-      // predates this config's created_at (decision 10).
       let q = supabase
         .from("customer_purchases")
         .select("amount")
@@ -567,10 +531,7 @@ export async function issueRunningCreditsForPurchase(
         q = q.in("branch_id", merchantBranchIds);
       }
       const { data: txs } = await q;
-      priorCumulative = (txs ?? []).reduce(
-        (s, t) => s + Number((t as any).amount),
-        0,
-      );
+      priorCumulative = (txs ?? []).reduce((s, t) => s + Number(t.amount), 0);
     }
 
     let rewardable: number;
@@ -602,10 +563,7 @@ export async function issueRunningCreditsForPurchase(
     issued = [plans.reduce((a, b) => (b.creditValue > a.creditValue ? b : a))];
   }
 
-  // Insert the calculated GHS amount into customer_credit.credit_amount.
-  // The new schema only stores credit_amount + expires_at (epoch) + revocation
-  // metadata; the originating config is identified by the branch_id + the
-  // merchant's running_credit_config rows.
+  // credit_validity is in DAYS; transaction_date is epoch MS — multiply by 86_400_000 (ms/day). * 86400 (s/day) was the same units miss as the lookback above.
   const inserts = issued.map(({ config, creditValue }) => ({
     customer_id: customerId,
     branch_id: branchId,
@@ -614,12 +572,7 @@ export async function issueRunningCreditsForPurchase(
     expires_at:
       config.credit_validity == null
         ? null
-        : // credit_validity is in DAYS; transaction_date is epoch MILLISECONDS,
-          // so multiply by 86_400_000 (ms/day) — * 86400 (s/day) was a units
-          // miss in the same ms-conversion commit that broke the lookback
-          // above. Without this fix, expires_at lands only seconds after the
-          // purchase timestamp instead of N days.
-          transactionDateEpoch + config.credit_validity * 86_400_000,
+        : transactionDateEpoch + config.credit_validity * 86_400_000,
   }));
 
   const { data: inserted, error } = await supabase
@@ -627,5 +580,5 @@ export async function issueRunningCreditsForPurchase(
     .insert(inserts)
     .select("*");
   if (error) throw new Error(`credit insert failed: ${error.message}`);
-  return (inserted ?? []) as unknown as BaseCustomerCredit[];
+  return inserted ?? [];
 }

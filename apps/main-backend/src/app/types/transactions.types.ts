@@ -18,9 +18,7 @@ export interface CustomerTransactions extends BaseCustomerTransaction {
   approved_by_staff?: BaseStaff | null;
 }
 
-// Server-side filter on the activity feed. "all" returns the full union;
-// the other values filter to a single kind before pagination so `total`
-// and the returned page reflect only that kind.
+// "all" returns the full union; other values filter to a single kind before pagination so total + page reflect only that kind.
 export type TransactionTypeFilter =
   | "all"
   | "purchase"

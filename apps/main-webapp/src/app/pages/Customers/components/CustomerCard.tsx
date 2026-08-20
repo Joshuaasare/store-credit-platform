@@ -17,16 +17,6 @@ interface CustomerCardProps {
   style?: React.CSSProperties;
 }
 
-/**
- * One customer in the directory grid. Identity (avatar + name/phone) sits
- * on the left, the two money totals (purchases + available credits) anchor
- * the middle, and a live-credit chip + last-activity date sit on the right.
- * The whole card is clickable and navigates to /customers/:customerId.
- *
- * Brand voltage: white card, ink type, ONE teal accent on the available
- * credits number and on hover (border + arrow). Fully-redeemed customers
- * (available_credits = 0) keep the chip greyed, not red.
- */
 export function CustomerCard({ row, className, style }: CustomerCardProps) {
   const navigate = useNavigate();
 

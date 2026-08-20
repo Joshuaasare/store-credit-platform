@@ -89,6 +89,13 @@ export interface ColorTokens {
   surfacePill: string;
   /** Pill hairline. */
   surfacePillBorder: string;
+  /**
+   * Semi-transparent dark scrim — the overlay over an image while an
+   * upload (or other in-flight action) is running. Dim the image, keep
+   * the spinner legible. Not a full opaque so the photo is still
+   * recognisable through it.
+   */
+  scrim: string;
 
   /** Primary text. */
   text: string;
@@ -105,6 +112,16 @@ export interface ColorTokens {
   error: string;
   /** Error surface fill — soft tinted background for error badges. */
   errorSurface: string;
+  /**
+   * Notification badge fill — sits on top of brand surfaces (page
+   * header bell) so it must be a strong red that pops against both
+   * the light berry and dark pink primaries. The badge text reads in
+   * `onBadge` (always white) so the label is unambiguous in both
+   * themes.
+   */
+  badge: string;
+  /** Text rendered on top of the notification badge fill. */
+  onBadge: string;
   /** Warning accent (dev login, cautionary UI). */
   warning: string;
   /** Warning surface fill. */
@@ -182,6 +199,9 @@ export const lightColors: ColorTokens = {
   surfaceBorder: "rgba(137, 2, 62, 0.15)",
   surfacePill: "rgba(137, 2, 62, 0.06)",
   surfacePillBorder: "rgba(137, 2, 62, 0.12)",
+  // Slate ink at 45% — dims the photo enough for a white spinner to
+  // pop while keeping the image recognisable underneath.
+  scrim: "rgba(15,23,42,0.45)",
 
   // Slate ink — body copy stays legible at all sizes.
   text: "#0f172a",
@@ -192,6 +212,8 @@ export const lightColors: ColorTokens = {
 
   error: "#dc2626",
   errorSurface: "rgba(220,38,38,0.10)",
+  badge: "#dc2626",
+  onBadge: "#ffffff",
   warning: "#b45309",
   warningSurface: "rgba(251,191,36,0.18)",
   warningBorder: "rgba(251,191,36,0.45)",
@@ -246,6 +268,9 @@ export const darkColors: ColorTokens = {
   surfaceBorder: "rgba(255,255,255,0.14)",
   surfacePill: "rgba(178, 58, 106, 0.14)",
   surfacePillBorder: "rgba(178, 58, 106, 0.22)",
+  // Black at 55% — darker than light mode so the spinner reads against
+  // the slate-gradient backdrop as well as over a photo.
+  scrim: "rgba(0,0,0,0.55)",
 
   text: "#ffffff",
   textSecondary: "rgba(255,255,255,0.70)",
@@ -255,6 +280,8 @@ export const darkColors: ColorTokens = {
 
   error: "#fecaca",
   errorSurface: "rgba(254,202,202,0.15)",
+  badge: "#ef4444",
+  onBadge: "#ffffff",
   warning: "#fcd34d",
   warningSurface: "rgba(251,191,36,0.15)",
   warningBorder: "rgba(251,191,36,0.40)",

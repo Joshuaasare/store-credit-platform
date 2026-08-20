@@ -60,6 +60,12 @@ See the `supabase-query-conventions` skill for the canonical patterns.
 - Improper React patterns (missing `useEffect` cleanup, stale closures, incorrect dependency arrays that cause bugs)
 - Circular dependencies between modules
 - Business logic mixed with presentation logic in a way that makes the code hard to test or maintain
+- **Excessive or unnecessary comments** (this repo enforces minimal comments — see below):
+  - WHAT-comments that restate what the code already says ("// increments the counter", "// sets the user", "// used by the X flow")
+  - Multi-paragraph docstrings or multi-line comment blocks (≤2 lines is the ceiling)
+  - Section-divider banner comments (`// ─── Handlers ───`) and file-header comment blocks describing what the file contains
+  - Comments referencing past tasks, issues, or callers ("// added for issue #123", "// the Y flow uses this") — these rot; the PR description is the right home
+  - A well-named identifier that makes a neighbouring comment redundant — flag the comment for removal
 
 ### Accessibility Issues (flag real barriers, not theoretical concerns)
 
@@ -87,7 +93,7 @@ See the `supabase-query-conventions` skill for the canonical patterns.
 - **Minor optimizations with negligible impact**: micro-optimizations that don't measurably affect performance.
 - **Hypothetical edge cases** with no realistic path to occurrence.
 - **Choice of library/framework**: unless it introduces a genuine security or compatibility risk.
-- **Comment style or docstring format**: unless the code is genuinely incomprehensible without better documentation.
+- **Comment *formatting* nitpicks** (spacing inside a comment line, exact wording of a warranted WHY-comment): this repo DOES flag excessive/unnecessary comments (see Design & Architecture above), but once a comment is warranted and concise, don't bikeshed its phrasing.
 - **Personal preference in file organization**: unless it creates actual confusion or import cycle issues.
 
 ## Review Process

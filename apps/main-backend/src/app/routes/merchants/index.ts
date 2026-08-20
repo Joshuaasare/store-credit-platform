@@ -8,11 +8,6 @@ import {
 } from "../../schemas/merchant.schema";
 
 export default async function (fastify: FastifyInstance) {
-  /**
-   * GET /merchants/me
-   * Returns the authenticated user's merchant + stats + pool, or null if
-   * the user has no staff row (no-merchant state).
-   */
   fastify.get<{
     Reply: MerchantMeApiResponse;
   }>("/me", {
@@ -26,7 +21,6 @@ export default async function (fastify: FastifyInstance) {
     handler: async (request, reply) => {
       try {
         const user = request.user!;
-        // Prefer the JWT-embedded merchant_id; fall back to staff lookup.
         let merchantId = user.merchant_id;
         if (merchantId == null) {
           const resolved = await merchantService.getMerchantIdForUser(user.sub);
@@ -53,10 +47,6 @@ export default async function (fastify: FastifyInstance) {
     },
   });
 
-  /**
-   * PATCH /merchants/me
-   * Manager-only. Updates editable merchant profile fields.
-   */
   fastify.patch<{
     Body: UpdateMerchantRequest;
     Reply: MerchantMutationApiResponse;

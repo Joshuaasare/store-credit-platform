@@ -19,6 +19,11 @@ const PENDING_TOKEN_TTL_MINUTES = parseInt(
   process.env.PENDING_TOKEN_TTL_MINUTES || "5",
   10,
 );
+// Phone-verified token — issued after the customer-app phone-change OTP succeeds. Carries (customerId, newPhone) for the subsequent PATCH /me/profile so the update can prove ownership of the new phone without re-sending an OTP.
+const PHONE_VERIFIED_TOKEN_TTL_MINUTES = parseInt(
+  process.env.PHONE_VERIFIED_TOKEN_TTL_MINUTES || "10",
+  10,
+);
 const TOKEN_ISSUER = process.env.TOKEN_ISSUER || "storecredit-api";
 const TOKEN_AUDIENCE = process.env.TOKEN_AUDIENCE || "storecredit-app";
 
@@ -29,11 +34,7 @@ if (!ACCESS_TOKEN_SECRET || !REFRESH_TOKEN_SECRET) {
 }
 
 const accessTokenKey = new TextEncoder().encode(ACCESS_TOKEN_SECRET);
-// Dedicated pending-token key. Falls back to REFRESH_TOKEN_SECRET so dev
-// environments without PENDING_TOKEN_SECRET still work, but production should
-// set a distinct secret so a pending (registration) token can never be
-// mistaken for an access token — the `purpose: "customer_register"` claim is
-// the secondary guard.
+// Falls back to REFRESH_TOKEN_SECRET so dev environments without PENDING_TOKEN_SECRET still work; production should set a distinct secret so a pending (registration) token can never be mistaken for an access token — the `purpose: "customer_register"` claim is the secondary guard.
 const pendingTokenKey = new TextEncoder().encode(PENDING_TOKEN_SECRET);
 
 export interface RefreshTokenRecord {
@@ -42,21 +43,16 @@ export interface RefreshTokenRecord {
   token_hash: string;
   family_id: string;
   device_fingerprint: string | null;
-  ip_address: string | null;
+  ip_address: unknown;
   expires_at: string;
   revoked_at: string | null;
   replaced_at: string | null;
   replaced_by_jti: string | null;
   parent_jti: string | null;
   issued_at: string | null;
-  created_at: string;
 }
 
 export class TokenService {
-  /**
-   * Generate a cryptographically secure opaque refresh token.
-   * Returns the raw token, its SHA-256 hash, and a JTI (UUID).
-   */
   static generateOpaqueToken(): {
     token: string;
     tokenHash: string;
@@ -68,9 +64,6 @@ export class TokenService {
     return { token, tokenHash, jti };
   }
 
-  /**
-   * Compute a device fingerprint from user-agent and IP address.
-   */
   static computeDeviceFingerprint(
     userAgent: string | undefined,
     ip: string | undefined,
@@ -83,13 +76,7 @@ export class TokenService {
       .digest("hex");
   }
 
-  /**
-   * Sign a short-lived JWT access token.
-   *
-   * `customerId` is null for staff logins and set to the `customers.id` for
-   * customer-app logins. Handlers assert `request.user.customer_id != null`
-   * to gate customer-only endpoints — no `persona` claim.
-   */
+  // customerId is null for staff logins, set to customers.id for customer-app logins. Handlers assert request.user.customer_id != null to gate customer-only endpoints — no `persona` claim.
   static async signAccessToken(
     userId: string,
     phone: string | null,
@@ -122,9 +109,6 @@ export class TokenService {
     return jwt;
   }
 
-  /**
-   * Verify a JWT access token and return its payload.
-   */
   static async verifyAccessToken(token: string): Promise<AccessTokenPayload> {
     const { payload } = await jwtVerify(token, accessTokenKey, {
       issuer: TOKEN_ISSUER,
@@ -136,15 +120,7 @@ export class TokenService {
     return payload as unknown as AccessTokenPayload;
   }
 
-  /**
-   * Sign a 5-minute pending registration token. Stateless — no DB row, no
-   * in-memory store. Carries the verified phone (post-OTP) and a `purpose`
-   * claim so it can't be mistaken for an access token. The `/register`
-   * endpoint verifies this to authorize creating the `users` + `customers`
-   * rows without a separate pre-lookup. Replay-safe via natural idempotency:
-   * a replayed register finds a `users` row already exists and errors
-   * "already registered".
-   */
+  // Stateless 5-minute token — no DB row, no in-memory store. Carries the verified phone (post-OTP) and a `purpose` claim so it can't be mistaken for an access token. Replay-safe via natural idempotency: a replayed register finds the users row already exists and errors "already registered".
   static async signPendingToken(phone: string): Promise<string> {
     const now = Math.floor(Date.now() / 1000);
     const jti = crypto.randomUUID();
@@ -162,11 +138,6 @@ export class TokenService {
       .sign(pendingTokenKey);
   }
 
-  /**
-   * Verify a pending registration token. Returns the verified phone on
-   * success, or null if the token is invalid, expired, or not a
-   * customer_register pending token.
-   */
   static async verifyPendingToken(
     token: string,
   ): Promise<{ phone: string } | null> {
@@ -185,9 +156,53 @@ export class TokenService {
     }
   }
 
-  /**
-   * Store a refresh token in the database.
-   */
+  // Stateless 10-minute token carrying (customerId, newPhone) and a `type: 'phone_verified'` claim so it CANNOT be mistaken for a pending_token (`purpose: 'customer_register'`) or an access token. Signed with the same key as signPendingToken — the `type` claim is the cross-use guard, not the secret.
+  static async signPhoneVerifiedToken(
+    customerId: number,
+    newPhone: string,
+  ): Promise<string> {
+    const now = Math.floor(Date.now() / 1000);
+    const jti = crypto.randomUUID();
+
+    return new SignJWT({
+      type: "phone_verified",
+      customerId,
+      newPhone,
+      jti,
+    })
+      .setProtectedHeader({ alg: "HS256" })
+      .setIssuedAt(now)
+      .setExpirationTime(`${PHONE_VERIFIED_TOKEN_TTL_MINUTES}m`)
+      .setIssuer(TOKEN_ISSUER)
+      .setAudience(TOKEN_AUDIENCE)
+      .sign(pendingTokenKey);
+  }
+
+  static async verifyPhoneVerifiedToken(
+    token: string,
+  ): Promise<{ customerId: number; newPhone: string } | null> {
+    try {
+      const { payload } = await jwtVerify(token, pendingTokenKey, {
+        issuer: TOKEN_ISSUER,
+        audience: TOKEN_AUDIENCE,
+        clockTolerance: 5,
+      });
+      if (
+        payload.type !== "phone_verified" ||
+        typeof payload.customerId !== "number" ||
+        typeof payload.newPhone !== "string"
+      ) {
+        return null;
+      }
+      return {
+        customerId: payload.customerId,
+        newPhone: payload.newPhone,
+      };
+    } catch {
+      return null;
+    }
+  }
+
   static async storeRefreshToken(
     tokenHash: string,
     jti: string,
@@ -202,7 +217,7 @@ export class TokenService {
     );
     const issuedAt = new Date().toISOString();
 
-    const { error } = await (supabaseAdmin as any)
+    const { error } = await supabaseAdmin
       .from("refresh_tokens")
       .insert({
         jti,
@@ -221,13 +236,10 @@ export class TokenService {
     }
   }
 
-  /**
-   * Find a refresh token by its hash.
-   */
   static async findRefreshToken(
     tokenHash: string,
   ): Promise<RefreshTokenRecord | null> {
-    const { data, error } = await (supabaseAdmin as any)
+    const { data, error } = await supabaseAdmin
       .from("refresh_tokens")
       .select("*")
       .eq("token_hash", tokenHash)
@@ -237,16 +249,13 @@ export class TokenService {
       return null;
     }
 
-    return data as unknown as RefreshTokenRecord;
+    return data;
   }
 
-  /**
-   * Find a refresh token by its JTI.
-   */
   static async findRefreshTokenByJti(
     jti: string,
   ): Promise<RefreshTokenRecord | null> {
-    const { data, error } = await (supabaseAdmin as any)
+    const { data, error } = await supabaseAdmin
       .from("refresh_tokens")
       .select("*")
       .eq("jti", jti)
@@ -256,14 +265,11 @@ export class TokenService {
       return null;
     }
 
-    return data as unknown as RefreshTokenRecord;
+    return data;
   }
 
-  /**
-   * Revoke a single refresh token by its JTI.
-   */
   static async revokeRefreshTokenByJti(jti: string): Promise<void> {
-    const { error } = await (supabaseAdmin as any)
+    const { error } = await supabaseAdmin
       .from("refresh_tokens")
       .update({ revoked_at: new Date().toISOString() })
       .eq("jti", jti);
@@ -273,10 +279,7 @@ export class TokenService {
     }
   }
 
-  /**
-   * Rotate a refresh token: verify the old one, revoke it, and issue a new one.
-   * Returns the new raw refresh token.
-   */
+  // Verify the old token, revoke it, and issue a new one in the same family. A token already marked replaced is reuse — don't nuke the family, just require re-auth.
   static async rotateRefreshToken(
     oldTokenHash: string,
     deviceFingerprint: string,
@@ -293,7 +296,6 @@ export class TokenService {
     }
 
     if (existing.replaced_at) {
-      // Token was already rotated — likely reuse. Don't nuke the family; just require re-auth.
       throw new Error("Session expired. Please sign in again.");
     }
 
@@ -305,10 +307,8 @@ export class TokenService {
       throw new Error("Refresh token has expired");
     }
 
-    // Generate a new token in the same family
     const { token, tokenHash, jti } = this.generateOpaqueToken();
 
-    // Store new token with parent linkage
     await this.storeRefreshToken(
       tokenHash,
       jti,
@@ -319,7 +319,6 @@ export class TokenService {
       existing.jti,
     );
 
-    // Mark old token as replaced
     await this.markTokenAsReplaced(existing.jti, jti);
 
     return {
@@ -330,14 +329,11 @@ export class TokenService {
     };
   }
 
-  /**
-   * Mark a token as replaced by another (used during rotation).
-   */
   static async markTokenAsReplaced(
     oldJti: string,
     newJti: string,
   ): Promise<void> {
-    const { error } = await (supabaseAdmin as any)
+    const { error } = await supabaseAdmin
       .from("refresh_tokens")
       .update({
         replaced_at: new Date().toISOString(),
@@ -350,11 +346,8 @@ export class TokenService {
     }
   }
 
-  /**
-   * Revoke a single refresh token by its hash.
-   */
   static async revokeRefreshToken(tokenHash: string): Promise<void> {
-    const { error } = await (supabaseAdmin as any)
+    const { error } = await supabaseAdmin
       .from("refresh_tokens")
       .update({ revoked_at: new Date().toISOString() })
       .eq("token_hash", tokenHash);
@@ -364,11 +357,8 @@ export class TokenService {
     }
   }
 
-  /**
-   * Revoke all tokens in a family (used on theft detection).
-   */
   static async revokeTokenFamily(familyId: string): Promise<void> {
-    const { error } = await (supabaseAdmin as any)
+    const { error } = await supabaseAdmin
       .from("refresh_tokens")
       .update({ revoked_at: new Date().toISOString() })
       .eq("family_id", familyId)
@@ -379,11 +369,8 @@ export class TokenService {
     }
   }
 
-  /**
-   * Revoke all refresh tokens for a user (e.g., on logout from all devices).
-   */
   static async revokeAllUserTokens(userId: string): Promise<void> {
-    const { error } = await (supabaseAdmin as any)
+    const { error } = await supabaseAdmin
       .from("refresh_tokens")
       .update({ revoked_at: new Date().toISOString() })
       .eq("user_id", userId)
@@ -394,10 +381,7 @@ export class TokenService {
     }
   }
 
-  /**
-   * List active refresh token sessions for a user.
-   * Exposes `jti` as `id` in the returned objects for API compatibility.
-   */
+  // Exposes `jti` as `id` in the returned objects for API compatibility.
   static async listUserSessions(
     userId: string,
     currentTokenHash?: string,
@@ -411,32 +395,25 @@ export class TokenService {
       is_current: boolean;
     }>
   > {
-    const { data, error } = await (supabaseAdmin as any)
+    const { data, error } = await supabaseAdmin
       .from("refresh_tokens")
       .select(
-        "jti, token_hash, device_fingerprint, created_at, expires_at, revoked_at",
+        "jti, token_hash, device_fingerprint, issued_at, expires_at, revoked_at",
       )
       .eq("user_id", userId)
       .gt("expires_at", new Date().toISOString())
-      .order("created_at", { ascending: false });
+      .order("issued_at", { ascending: false });
 
     if (error) {
       throw new Error(`Failed to list sessions: ${error.message}`);
     }
 
-    const rows = (data || []) as Array<{
-      jti: string;
-      token_hash: string;
-      device_fingerprint: string | null;
-      created_at: string;
-      expires_at: string;
-      revoked_at: string | null;
-    }>;
+    const rows = data || [];
 
     return rows.map((row) => ({
       id: row.jti,
       device_fingerprint: row.device_fingerprint,
-      created_at: row.created_at,
+      created_at: row.issued_at ?? row.expires_at,
       expires_at: row.expires_at,
       revoked_at: row.revoked_at,
       is_current: currentTokenHash
@@ -445,11 +422,8 @@ export class TokenService {
     }));
   }
 
-  /**
-   * Clean up expired refresh tokens from the database.
-   */
   static async cleanupExpiredTokens(): Promise<number> {
-    const { error, count } = await (supabaseAdmin as any)
+    const { error, count } = await supabaseAdmin
       .from("refresh_tokens")
       .delete({ count: "exact" })
       .lt("expires_at", new Date().toISOString());

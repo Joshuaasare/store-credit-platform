@@ -28,8 +28,7 @@ export default function Customers() {
   const { branches } = useStoreStore();
   const user = useAuthStore((s) => s.user);
   const userBranchId = user?.branch_id ?? null;
-  // Branch scope: defaults to the caller's branch (null when they have none
-  // or when "All branches" is chosen). `null` = merchant-wide.
+  // null = merchant-wide (caller's branch default, or "All branches").
   const [branchId, setBranchId] = useState<number | null>(userBranchId);
   const [searchInput, setSearchInput] = useState("");
   const debouncedSearchQuery = useDebounce(searchInput, 300);

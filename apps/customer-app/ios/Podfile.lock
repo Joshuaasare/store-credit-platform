@@ -194,6 +194,11 @@ PODS:
     - SDWebImageAVIFCoder (~> 0.11.0)
     - SDWebImageSVGCoder (~> 1.7.0)
     - SDWebImageWebPCoder (~> 0.14.6)
+  - ExpoImageManipulator (55.0.20):
+    - ExpoModulesCore
+    - SDWebImageWebPCoder
+  - ExpoImagePicker (55.0.23):
+    - ExpoModulesCore
   - ExpoKeepAwake (55.0.6):
     - ExpoModulesCore
   - ExpoLinearGradient (55.0.16):
@@ -2441,6 +2446,8 @@ DEPENDENCIES:
   - ExpoFileSystem (from `../../../node_modules/expo-file-system/ios`)
   - ExpoFont (from `../../../node_modules/expo-font/ios`)
   - ExpoImage (from `../../../node_modules/expo-image/ios`)
+  - ExpoImageManipulator (from `../../../node_modules/expo-image-manipulator/ios`)
+  - ExpoImagePicker (from `../../../node_modules/expo-image-picker/ios`)
   - ExpoKeepAwake (from `../../../node_modules/expo-keep-awake/ios`)
   - ExpoLinearGradient (from `../../../node_modules/expo-linear-gradient/ios`)
   - "ExpoLogBox (from `../../../node_modules/@expo/log-box`)"
@@ -2572,6 +2579,10 @@ EXTERNAL SOURCES:
     :path: "../../../node_modules/expo-font/ios"
   ExpoImage:
     :path: "../../../node_modules/expo-image/ios"
+  ExpoImageManipulator:
+    :path: "../../../node_modules/expo-image-manipulator/ios"
+  ExpoImagePicker:
+    :path: "../../../node_modules/expo-image-picker/ios"
   ExpoKeepAwake:
     :path: "../../../node_modules/expo-keep-awake/ios"
   ExpoLinearGradient:
@@ -2769,6 +2780,8 @@ SPEC CHECKSUMS:
   ExpoFileSystem: adf8dda829f0fca443064fb12df98ca9fea9083f
   ExpoFont: 21550be2946ea5bbf50f1a20b31facd19ba4150c
   ExpoImage: eeba1f2a1c6f89ba079e832dfef2b29a5ed1d8ca
+  ExpoImageManipulator: f165f22c047ecc19e0f9bf8e73119eab20186959
+  ExpoImagePicker: c71470b7e8c6174d27fd9ad28c6e149343948c4a
   ExpoKeepAwake: 5e391c2c712b7af91e044be8ab44b7f542d81f3c
   ExpoLinearGradient: 13c409e8a045bd618daa8b5fcb3df9193722106b
   ExpoLogBox: ba1ad09d3e7632ce488e1eeab684ee6fd75f2777

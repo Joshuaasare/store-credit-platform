@@ -22,10 +22,7 @@ export class StaffService {
     const merchantId = await this.resolveMerchantId(manager);
     const limit = filters.limit ?? StaffService.DEFAULT_LIMIT;
     const offset = filters.offset ?? 0;
-    // Disabled users (access_granted = false) are always visible in the
-    // directory — they're alive, just blocked from login. The
-    // include_disabled flag is a no-op kept for back-compat with the
-    // querystring schema; deletion is the only thing that hides a row.
+    // Disabled users (access_granted = false) stay visible in the directory — deletion is the only thing that hides a row. include_disabled is a no-op kept for back-compat with the querystring schema.
     void filters.include_disabled;
 
     const search = filters.search?.trim() ?? "";
@@ -71,15 +68,7 @@ export class StaffService {
     };
   }
 
-  // ── Create ──────────────────────────────────────────────────────────────
-
-  /**
-   * Create a staff member — phone + name + role + branch. Branch must belong
-   * to the merchant. If a soft-deleted `users` row with the same phone
-   * exists, auto-restore it (clear deleted_at, refresh name + access) and
-   * create a fresh staff row carrying the role. If a live `users` row with
-   * the same phone exists, return 409.
-   */
+  // Branch must belong to the merchant. If a soft-deleted users row with the same phone exists, auto-restore it (clear deleted_at, refresh name + access) and create a fresh staff row carrying the role. If a live users row with the same phone exists, returns 409. Names + access_granted live on staff, not users.
   async createStaff(
     manager: AccessTokenPayload,
     payload: CreateStaffRequest,
@@ -90,7 +79,6 @@ export class StaffService {
     const phone = normalizePhone(payload.phone);
     const accessGranted = payload.access_granted ?? true;
 
-    // 1. Look up existing users by phone (live OR soft-deleted).
     const { data: existing, error: existErr } = await supabaseAdmin
       .from("users")
       .select("id, deleted_at")
@@ -101,14 +89,10 @@ export class StaffService {
     }
 
     if (existing && existing.deleted_at === null) {
-      // A live user already has this phone — refuse so we don't create a
-      // duplicate staff row for the same user.
       throw new Error("A staff member with this phone already exists");
     }
 
-    // existing && existing.deleted_at != null  → auto-restore path (upsert
-    // below clears deleted_at and refreshes profile fields).
-    // existing == null                          → fresh insert.
+    // existing && existing.deleted_at != null → auto-restore path (upsert clears deleted_at). existing == null → fresh insert.
     const newUserId = existing?.id ?? randomUUID();
 
     const { error: createUserErr } = await supabaseAdmin.from("users").upsert(
@@ -125,9 +109,7 @@ export class StaffService {
       throw new Error(`Failed to create user: ${createUserErr.message}`);
     }
 
-    // 2. Insert staff row with the role + name + access carried directly on
-    //    the row (the old tombstoned staff rows stay tombstoned). Names +
-    //    access_granted live on staff, not users.
+    // Insert the staff row with role + name + access carried directly (old tombstoned staff rows stay tombstoned).
     const { error: staffInsertErr } = await supabaseAdmin.from("staff").insert({
       user_id: newUserId,
       branch_id: payload.branch_id,
@@ -145,14 +127,7 @@ export class StaffService {
     return (await this.fetchStaffUser(manager, newUserId))!;
   }
 
-  // ── Update ──────────────────────────────────────────────────────────────
-
-  /**
-   * Edit a staff member — full-replace semantics. Phone is editable; if it
-   * collides with another live user, returns 409. Self-protection: a manager
-   * cannot change their own role or access_granted. Last-manager guard: a
-   * manager cannot demote / disable the last manager.
-   */
+  // Full-replace semantics. Self-protection: a manager cannot change their own role or access_granted. Last-manager guard: a manager cannot demote/disable the last manager. Phone collisions return 409.
   async updateStaff(
     manager: AccessTokenPayload,
     userId: string,
@@ -178,12 +153,10 @@ export class StaffService {
     const accessChanging =
       !!access_granted && access_granted !== current.access_granted;
 
-    // Self-protection: cannot change own role or own access.
     if (userId === manager.sub && (roleChanging || accessChanging)) {
       throw new Error("You cannot change your own role or access");
     }
 
-    // Last-manager guard: demoting or disabling the only active manager.
     if (
       current.role === "manager" &&
       current.access_granted &&
@@ -193,12 +166,10 @@ export class StaffService {
       await this.assertNotLastManager(merchantId, userId);
     }
 
-    // Branch ownership when branch changes.
     if (branch_id != null && branch_id !== current.branch_id) {
       await this.assertBranchOwned(branch_id, merchantId);
     }
 
-    // Phone uniqueness check when phone changes.
     const normalizedPhone = phone ? normalizePhone(phone) : null;
     if (normalizedPhone != null && normalizedPhone !== current.user.phone) {
       const { data: conflict } = await supabaseAdmin
@@ -213,7 +184,7 @@ export class StaffService {
       }
     }
 
-    // 1. Update users row (phone only — names + access live on staff).
+    // users row carries phone only — names + access live on staff.
     const userUpdate: Record<string, unknown> = {
       updated_at: new Date().toISOString(),
     };
@@ -227,7 +198,6 @@ export class StaffService {
       throw new Error(`Failed to update user: ${userErr.message}`);
     }
 
-    // 2. Update staff row when branch / role / name / access / address / notes change.
     const staffUpdate: Record<string, unknown> = {};
     if (branch_id != null) staffUpdate.branch_id = branch_id;
     if (roleChanging) staffUpdate.role = role;
@@ -251,12 +221,7 @@ export class StaffService {
     return (await this.fetchStaffUser(manager, userId))!;
   }
 
-  // ── Access toggle ─────────────────────────────────────────────────────────
-
-  /**
-   * Toggle access_granted for a staff member. Reuses updateStaff so
-   * self-protection + last-manager guard both apply.
-   */
+  // Reuses updateStaff so self-protection + last-manager guard both apply.
   async setStaffAccess(
     manager: AccessTokenPayload,
     userId: string,
@@ -265,14 +230,7 @@ export class StaffService {
     return this.updateStaff(manager, userId, { access_granted: accessGranted });
   }
 
-  // ── Delete ───────────────────────────────────────────────────────────────
-
-  /**
-   * Soft delete — tombstones `users` + every linked `staff` row. The role
-   * lives on the staff row, so tombstoning staff carries the role away with
-   * it. Self-protection + last-manager guard apply. The phone is NOT freed;
-   * re-adding it later auto-restores the same user row.
-   */
+  // Tombstones users + every linked staff row. Self-protection + last-manager guard apply. The phone is NOT freed — re-adding it later auto-restores the same user row.
   async deleteStaff(
     manager: AccessTokenPayload,
     userId: string,
@@ -287,7 +245,6 @@ export class StaffService {
       throw new Error("You cannot delete your own account");
     }
 
-    // Last-manager guard.
     if (current.role === "manager" && current.access_granted) {
       await this.assertNotLastManager(merchantId, userId);
     }
@@ -295,7 +252,7 @@ export class StaffService {
     const nowIso = new Date().toISOString();
     const branchIds = await this.merchantBranchIds(merchantId);
 
-    // Tombstone staff rows first (so a re-add race doesn't resurrect them).
+    // Tombstone staff rows first so a re-add race can't resurrect them.
     const { error: staffErr } = await supabaseAdmin
       .from("staff")
       .update({ deleted_at: nowIso })
@@ -306,8 +263,7 @@ export class StaffService {
       throw new Error(`Failed to tombstone staff rows: ${staffErr.message}`);
     }
 
-    // Tombstone the user row last — also blocks login (verifyOtp checks
-    // deleted_at IS NULL).
+    // Tombstone the user row last — also blocks login (verifyOtp checks deleted_at IS NULL).
     const { error: userErr } = await supabaseAdmin
       .from("users")
       .update({ deleted_at: nowIso, updated_at: nowIso })
@@ -319,8 +275,6 @@ export class StaffService {
 
     return { id: userId };
   }
-
-  // ── Helpers ──────────────────────────────────────────────────────────────
 
   private async resolveMerchantId(
     manager: AccessTokenPayload,
@@ -367,16 +321,7 @@ export class StaffService {
     }
   }
 
-  /**
-   * Count active managers in the merchant excluding the target user — a single
-   * joined query: `staff` inner-joined to `branches` (merchant scope) and
-   * `users` (live), filtered to `role = 'manager'` + `access_granted = true`
-   * (access lives on staff now, not users). If the count is 0, the target is
-   * the last manager and the operation is blocked.
-   *
-   * Dotted-column filters (`user.deleted_at`, `branch.merchant_id`) infer
-   * natively — no `as any` per the supabase-query-conventions skill.
-   */
+  // Counts active managers in the merchant excluding the target user. Dotted-column filters (user.deleted_at, branch.merchant_id) infer natively — no `as any` per the supabase-query-conventions skill. Count 0 → target is the last manager, operation blocked.
   private async assertNotLastManager(
     merchantId: number,
     userId: string,
@@ -400,14 +345,7 @@ export class StaffService {
     }
   }
 
-  /**
-   * Re-fetch a single Staff by user_id (merchant-scoped via manager) in
-   * one joined query — `staff` inner-joined to `branches` (merchant scope)
-   * and `users` (excludes tombstoned users). The role is read directly from
-   * `staff.role`. Returns null if the user has no live staff row at the
-   * merchant's branches, no role, or is tombstoned. Returns the nested
-   * shape (user + branch) directly; the frontend computes `is_self`.
-   */
+  // Re-fetches a single Staff by user_id (merchant-scoped via manager). `.not("role", "is", null)` guarantees role is non-null at runtime; `as const` on the select string narrows the typed builder so role resolves to its enum union and the result lands directly on the composed Staff shape without an `as` cast. Returns null when the user has no live staff row at the merchant's branches or is tombstoned.
   private async fetchStaffUser(
     manager: AccessTokenPayload,
     userId: string,
@@ -419,7 +357,7 @@ export class StaffService {
       .select(
         `${QueryFragments.BASE_STAFF},
          branch:branches!inner(${QueryFragments.BASE_BRANCH}),
-         user:users!inner(${QueryFragments.BASE_USER_PROFILE})`,
+         user:users!inner(${QueryFragments.BASE_USER_PROFILE})` as const,
       )
       .eq("user_id", userId)
       .eq("branch.merchant_id", merchantId)
@@ -431,10 +369,7 @@ export class StaffService {
       .maybeSingle();
     if (error || !data) return null;
 
-    // `.not("role", "is", null)` guarantees role is non-null at runtime; the
-    // supabase client infers enum columns as `unknown`, so one boundary cast
-    // narrows to the composed `Staff` shape.
-    return data as unknown as Staff;
+    return data;
   }
 }
 

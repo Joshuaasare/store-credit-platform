@@ -1,6 +1,4 @@
-// My Store — merchant + branch API types (source of truth)
-// After editing, run `yarn generate:types` to produce merchant.schema.ts
-// and to mirror these types into the frontend api.types.ts files.
+// Source of truth — after editing, run `yarn generate:types` to produce merchant.schema.ts and mirror into the frontend api.types.ts.
 
 import { ApiErrorResponse, BaseMerchant } from "./main.types";
 
@@ -26,8 +24,6 @@ export interface MerchantMutationResponse {
   success: true;
   data: MerchantWithStats;
 }
-
-// Response shapes
 
 export interface MerchantMeResponse {
   success: true;

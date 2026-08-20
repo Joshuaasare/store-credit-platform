@@ -53,7 +53,6 @@ export function OtpVerifyScreen({ route, navigation }: Props) {
           refresh_token: res.data.refresh_token,
           user: res.data.user,
         });
-        // Root flips to <AppStack/> automatically via the auth store.
       } else {
         setPending(res.data.pending_token);
         navigation.navigate("NewUser");

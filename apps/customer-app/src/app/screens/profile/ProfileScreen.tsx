@@ -1,6 +1,7 @@
 import { StyleSheet, Text, View } from "react-native";
 import ScreenBackground from "../../shared/components/ScreenBackground";
 import ScreenBody from "../../shared/components/ScreenBody";
+import PageHeader from "../../shared/components/PageHeader";
 import GlassCard from "../../shared/components/GlassCard";
 import PrimaryButton from "../../shared/components/PrimaryButton";
 import GlassTransition from "../../shared/components/GlassTransition";
@@ -18,20 +19,10 @@ export function ProfileScreen() {
 
   return (
     <ScreenBackground>
-      <ScreenBody>
+      <PageHeader />
+      <ScreenBody edges={["bottom"]}>
       <GlassTransition>
         <View style={styles.container}>
-          <Text
-            style={[
-              styles.title,
-              {
-                color: theme.colors.text,
-                fontFamily: theme.typography.fontFamilyBold,
-              },
-            ]}
-          >
-            Profile
-          </Text>
           <GlassCard style={styles.card}>
             <Text
               style={[
@@ -73,11 +64,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     justifyContent: "center",
-  },
-  title: {
-    fontSize: 28,
-    textAlign: "center",
-    marginBottom: 24,
+    paddingTop: 16,
   },
   card: {
     marginHorizontal: 0,

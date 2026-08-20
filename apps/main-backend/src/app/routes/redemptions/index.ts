@@ -22,19 +22,7 @@ async function resolveMerchantId(
 }
 
 export default async function (fastify: FastifyInstance) {
-  /**
-   * GET /redemptions/pending
-   *
-   * Pending requests at the merchant — one row per (customer, merchant)
-   * pair that has a `customer_credit_redemptions` row in the pending
-   * state (approved_at IS NULL AND rejected_at IS NULL AND deleted_at
-   * IS NULL). The audit row IS the pending record; the customer app
-   * shows the 4-digit code on its Pending tab and the merchant staff
-   * types it into the approve dialog.
-   *
-   * IMPORTANT: the response shape NEVER includes `redemption_code` —
-   * the code is customer-only, not staff-visible.
-   */
+  // redemption_code is intentionally never included — the code is customer-only, not staff-visible.
   fastify.get<{
     Querystring: MerchantPendingRequestFilters;
     Reply: MerchantPendingRequestsApiResponse;
@@ -80,13 +68,6 @@ export default async function (fastify: FastifyInstance) {
     },
   });
 
-  /**
-   * GET /redemptions/approved
-   *
-   * Audit feed of APPROVED redemptions for the merchant — one row per
-   * `customer_credit_redemptions` row with `approved_at IS NOT NULL`,
-   * scoped to the merchant's customer set via `customer_credit.branch_id`.
-   */
   fastify.get<{
     Querystring: MerchantAuditFeedFilters;
     Reply: MerchantApprovedRedemptionsApiResponse;
@@ -132,12 +113,6 @@ export default async function (fastify: FastifyInstance) {
     },
   });
 
-  /**
-   * GET /redemptions/rejected
-   *
-   * Audit feed of REJECTED redemptions for the merchant — one row per
-   * `customer_credit_redemptions` row with `rejected_at IS NOT NULL`.
-   */
   fastify.get<{
     Querystring: MerchantAuditFeedFilters;
     Reply: MerchantRejectedRedemptionsApiResponse;
@@ -183,18 +158,7 @@ export default async function (fastify: FastifyInstance) {
     },
   });
 
-  /**
-   * POST /redemptions/customers/:customerId/approve
-   *
-   * Manager-only. Approves the pending request for (customer, merchant).
-   * Body: `{ redemption_code, redemption_id }` — the staff member types
-   * the 4-digit code from the customer's screen; the SQL RPC verifies
-   * it matches the pending audit row at this merchant before stamping
-   * `approved_at` + `approved_by_staff_id` + moving pending → approved.
-   *
-   * 404 when there's no pending request at the merchant. 400 when the
-   * supplied code does not match (the SQL RPC raises P0001).
-   */
+  // RPC verifies the 4-digit code matches the pending audit row before stamping approved_at. 400 on mismatch (P0001), 404 when no pending request.
   fastify.post<{
     Params: { customerId: number };
     Body: MerchantRedemptionActionBody;
@@ -244,17 +208,7 @@ export default async function (fastify: FastifyInstance) {
     },
   });
 
-  /**
-   * POST /redemptions/customers/:customerId/reject
-   *
-   * Manager-only. Rejects the pending request. Body: `{ redemption_code,
-   * redemption_id }`. The SQL RPC verifies the code matches the pending
-   * audit row at this merchant, stamps `rejected_at`, and zeroes the
-   * fan-out slices.
-   *
-   * 404 when there's no pending request at the merchant. 400 when the
-   * supplied code does not match.
-   */
+  // 404 when no pending request at the merchant; 400 when the supplied code does not match.
   fastify.post<{
     Params: { customerId: number };
     Body: MerchantRedemptionActionBody;

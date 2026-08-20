@@ -56,29 +56,18 @@ export type LeaderboardStatsApiResponse =
   | LeaderboardStatsResponse
   | ApiErrorResponse;
 
-// ────────────────────────────────────────────────────────────────────────────
-// Customer directory (/customers) — list + detail
-// ────────────────────────────────────────────────────────────────────────────
-// A customer appears in the directory iff they have ≥1 non-deleted purchase at
-// a merchant branch. List aggregates are scoped to the branch filter; detail
-// aggregates are merchant-wide for that customer.
+// Customer directory (/customers). A customer appears iff they have ≥1 non-deleted purchase at a merchant branch. List aggregates are branch-scoped; detail aggregates are merchant-wide.
 
 export interface CustomerListFilters {
   // null/undefined = all merchant branches; a number = that branch only.
   branch_id?: number | null;
-  // Substring match on customer surname, other_names, or phone. Empty/null
-  // disables search.
+  // Substring match on customer surname, other_names, or phone. Empty/null disables search.
   search?: string | null;
   limit?: number;
   offset?: number;
 }
 
-// Row shape returned by the get_customers RPC (minus the pagination `total`
-// column, which is extracted into CustomerListPage.total). The linked user's
-// profile is nested as `user: BaseUserProfile | null` (null for walk-in
-// customers with no user account). `phone` and `user_id` stay top-level for
-// back-compat with customerRowInitials — `phone` is the customer's phone
-// (customers.phone), distinct from `user.phone` (users.phone).
+// From the get_customers RPC (pagination total extracted into CustomerListPage.total). user is null for walk-in customers; phone/user_id stay top-level for back-compat.
 export interface CustomerListRow {
   customer_id: number;
   user_id: string | null;
@@ -105,12 +94,7 @@ export interface CustomerListResponse {
   data: CustomerListPage;
 }
 
-// A single live credit row on the detail page. Extends BaseCustomerCredit
-// (auto-propagates column changes via BASE_CUSTOMER_CREDIT) + adds the live
-// `remaining` / `redeemed_total` aggregates and the nested `branch: BaseBranch`
-// (replaces the denormalized `branch_name`). `remaining` is clamped at 0 per
-// credit; fully-redeemed credits (remaining = 0) are still listed but rendered
-// greyed. `expires_at` is Unix epoch milliseconds; null = lifetime.
+// Extends BaseCustomerCredit + live remaining/redeemed_total + nested branch. remaining clamped at 0; expires_at is epoch ms (null = lifetime).
 export interface CustomerDetailCreditRow extends BaseCustomerCredit {
   redeemed_total: number;
   pending_total: number;
@@ -124,8 +108,7 @@ export interface CustomerDetail {
   phone: string | null;
   user: BaseUserProfile | null;
   customer_name: string;
-  // Merchant-wide totals for this customer (NOT branch-scoped — the detail
-  // page shows the full picture across every branch of the merchant).
+  // Merchant-wide totals (the detail page shows the full picture across every branch of the merchant).
   total_purchases: number;
   available_credits: number;
   live_credit_count: number;

@@ -47,23 +47,6 @@ const PENDING_REQUEST_KEY = ["customer", "pendingRequest"] as const;
 const BRANCHES_KEY_PREFIX = ["customer", "merchantBranches"] as const;
 const APPROVED_REDEMPTIONS_KEY = ["customer", "approvedRedemptions"] as const;
 
-/**
- * Parent merchant credit detail screen. Owns:
- *   - The tall fixed purple header (back arrow + merchant logo + 2-line
- *     store name + meta + available total).
- *   - The two-option tab switcher (`MerchantTabSwitcher`): Available /
- *     Pending.
- *   - The cancel-confirmation bottom-cancel modal
- *     (`MerchantRedemptionConfirmSheet`) + the cancellation mutation.
- *   - The amount + branch redemption sheet (`RedemptionAmountSheet`)
- *     and its create-vs-edit mutation pair
- *     (`createMyRedemptionRequest` / `updateMyRedemptionRequest`).
- *
- * Branches and the pending audit row are fetched in parallel so the
- * sheet can render the branch picker immediately on open. Single-
- * branch merchants collapse the picker to a static label (handled by
- * the sheet itself).
- */
 export function MerchantCreditsScreen() {
   const route =
     useRoute<RouteProp<AppStackParamList, "CreditsMerchantDetail">>();
@@ -72,36 +55,27 @@ export function MerchantCreditsScreen() {
   const navigation = useNavigation();
   const queryClient = useQueryClient();
 
-  // The `["customer", "credits"]` query is also read by the Credits
-  // tab list and by the Available tab body — the parent subscribes
-  // here so the header available total recomputes on invalidation.
+  // Also read by the Credits tab list + Available tab body; subscribing here
+  // recomputes the header total on invalidation.
   const creditsQuery = useQuery<CustomerCreditsApiResponse>({
     queryKey: CREDITS_QUERY_KEY,
     queryFn: () => customerCreditsService.getMyCredits(),
   });
 
-  // Branches at this merchant. Drives the redemption sheet's branch
-  // picker. Cached per-merchant so re-opening the sheet after a
-  // network blip doesn't reflash the picker.
+  // Cached per-merchant so re-opening the sheet after a blip doesn't reflash.
   const branchesQuery = useQuery<CustomerMerchantBranchesApiResponse>({
     queryKey: [...BRANCHES_KEY_PREFIX, merchantId],
     queryFn: () => customerRedemptionsService.getMyBranches(merchantId),
   });
 
-  // The customer's pending redemption at this merchant. `data` is null
-  // when no pending row exists, which is the source-of-truth signal
-  // for "no request out". Carries the 4-digit `redemption_code` that
-  // the Pending tab renders.
+  // null data = no pending row, the source-of-truth signal for "no request out".
   const pendingQuery = useQuery<CustomerPendingRedemptionApiResponse>({
     queryKey: [...PENDING_REQUEST_KEY, merchantId],
     queryFn: () => customerRedemptionsService.getMyPendingRequest(merchantId),
   });
 
-  // The customer's approved history at this merchant — drives the
-  // Approved tab. Cursor-paginated 20-per-page; the parent owns the
-  // query so the cache survives tab switches. The child
-  // `CreditsMerchantApproved` reads `items` + `hasNextPage` /
-  // `fetchNextPage` and renders the FlatList.
+  // Cursor-paginated 20-per-page; parent owns the query so the cache survives
+  // tab switches.
   const approvedInfinite = useInfiniteQuery<
     CustomerApprovedRedemptionApiResponse,
     Error,
@@ -127,10 +101,8 @@ export function MerchantCreditsScreen() {
     },
   });
 
-  // Flatten the infinite-query pages into a single items array for
-  // the child. Failed pages are skipped so a transient mid-feed error
-  // doesn't blank the list — the child surfaces the latest failure
-  // separately via `approvedInfinite.error`.
+  // Failed pages are skipped so a transient mid-feed error doesn't blank the
+  // list; the child surfaces the latest failure via `approvedInfinite.error`.
   const approvedItems: CustomerApprovedRedemption[] = useMemo(() => {
     const pages = approvedInfinite.data?.pages ?? [];
     const items: CustomerApprovedRedemption[] = [];
@@ -154,8 +126,6 @@ export function MerchantCreditsScreen() {
     return null;
   }, [pendingQuery.data]);
 
-  // The bucket for this merchant — derives the header meta + total so
-  // both tabs render the same header.
   const bucket = useMemo<MerchantCreditBucket | null>(() => {
     if (!creditsQuery.data?.success) return null;
     const live = creditsQuery.data.data.live.filter(
@@ -163,16 +133,6 @@ export function MerchantCreditsScreen() {
     );
     return aggregateLiveByMerchant(live)[0] ?? null;
   }, [creditsQuery.data, merchantId]);
-
-  const headerMeta = bucket
-    ? (() => {
-        const firstBranch = bucket.credits[0]?.branch;
-        const label = firstBranch
-          ? formatBranchLabel(firstBranch.name, firstBranch.city)
-          : "All branches";
-        return `${label} `;
-      })()
-    : null;
 
   const [tab, setTab] = useState<MerchantTab>("available");
 
@@ -185,9 +145,8 @@ export function MerchantCreditsScreen() {
     [],
   );
 
-  // Pending totals at this merchant — drives both the redeem-button
-  // disable state (any pending → both CTAs disabled) and the sheet's
-  // cap (available + current_pending, per the grilled decision).
+  // Drives the redeem-button disable (any pending → both CTAs disabled) and
+  // the sheet's cap (available + current_pending).
   const pendingTotal = useMemo(() => {
     if (!creditsQuery.data?.success) return 0;
     let sum = 0;
@@ -202,29 +161,18 @@ export function MerchantCreditsScreen() {
   const redemptionCap = availableTotal + pendingTotal;
   const isRedeemDisabled = redemptionCap <= 0;
 
-  // Cancel state — the parent owns the sheet + mutation so the rolled-up
-  // Pending card can fire `onCancelRequest(merchantId)` without the
-  // child owning its own.
   const [pendingCancel, setPendingCancel] = useState(false);
 
-  // Create / edit redemption sheet — `'closed' | 'create' | 'edit'`. The
-  // mode drives the sheet copy + initial value.
   const [redemptionSheet, setRedemptionSheet] = useState<
     "closed" | "create" | "edit"
   >("closed");
 
-  // `create` and `update` are sibling mutations: `create` POSTs a new
-  // audit row (rejects 409 if pending already exists — the parent
-  // guards the entry-point to never POST in that case), `update`
-  // PATCHes the existing row (404 if no pending). The RPC returns the
-  // new code on each successful round-trip; we just invalidate the
-  // relevant queries.
+  // `create` POSTs a new audit row (409 if pending already exists); `update`
+  // PATCHes the existing row (404 if no pending). The RPC returns the new code.
   const upsertMutation = useMutation({
     mutationFn: (params: { amount: number; branchId: number }) => {
-      // Create vs edit drives the right verb — `pendingRow` is null
-      // for `create`. We deliberately READ `pendingRow` here rather
-      // than switching on `redemptionSheet === "edit"` so a stale
-      // sheet-mode state can't fire POST against an existing row.
+      // Read `pendingRow` (not `redemptionSheet === "edit"`) so stale sheet-mode
+      // state can't fire POST against an existing row.
       if (pendingRow) {
         return customerRedemptionsService.updateMyRedemptionRequest({
           merchantId,
@@ -244,9 +192,7 @@ export function MerchantCreditsScreen() {
         return;
       }
       setRedemptionSheet("closed");
-      // After create / update the customer wants to see (or share) the
-      // freshly-issued 4-digit code, so jump straight to the Pending
-      // tab — that's where the code chip lives.
+      // Jump to Pending so the customer sees the freshly-issued code chip.
       setTab("pending");
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: CREDITS_QUERY_KEY }),
@@ -258,17 +204,15 @@ export function MerchantCreditsScreen() {
     },
   });
 
-  // Auto-open the redemption sheet when navigated from the main Credits
-  // screen with `autoOpenRedemption: true`. Only fires once after the
-  // credits query has data (so the cap is correct) and the redeem
-  // affordance isn't disabled.
+  // Auto-open from the Credits screen's `autoOpenRedemption` param. Fires once
+  // after credits data is in so the cap is correct.
   useEffect(() => {
     if (!autoOpenRedemption) return;
     if (redemptionSheet !== "closed") return;
     if (creditsQuery.isLoading) return;
     if (isRedeemDisabled) return;
     setRedemptionSheet(pendingTotal > 0 ? "edit" : "create");
-    // We only want this to fire once on mount with the param set.
+    // Fire once on mount with the param set.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoOpenRedemption, creditsQuery.isLoading]);
 
@@ -298,7 +242,6 @@ export function MerchantCreditsScreen() {
         <DetailHeader
           merchantName={bucket?.merchantName ?? null}
           logoUrl={bucket?.logoUrl ?? null}
-          meta={headerMeta}
           total={bucket?.totalRemaining ?? null}
           onBack={() => navigation.goBack()}
         />
@@ -380,22 +323,14 @@ export function MerchantCreditsScreen() {
   );
 }
 
-/**
- * Tall fixed purple header. The structure is 2 stacked rows inside the
- * purple surface:
- *   1. Back arrow (own row at the top — sits above everything else)
- *   2. Avatar + 2-line store name + meta + available total
- */
 function DetailHeader({
   merchantName,
   logoUrl,
-  meta,
   total,
   onBack,
 }: {
   merchantName: string | null;
   logoUrl: string | null;
-  meta: string | null;
   total: number | null;
   onBack: () => void;
 }) {
@@ -405,11 +340,6 @@ function DetailHeader({
       edges={["top"]}
       style={[styles.header, { backgroundColor: theme.colors.primary }]}
     >
-      {/* Decorative coupon layer — sits behind the row of content.
-          A rotated ticket-style rectangle with a dashed perforation
-          stripe + a circular discount badge, both at low opacity.
-          Mirrors the hero card's soft-orb treatment so the brand
-          surface carries the same energy on both screens. */}
       <View style={styles.headerDecoration} pointerEvents="none">
         <View style={styles.couponTicket} />
         <View style={styles.couponPerforation} />
@@ -418,10 +348,6 @@ function DetailHeader({
         </View>
       </View>
 
-      {/* Row 1 — back arrow on its own row, sitting above everything.
-          Pushed to the left edge so it reads as the universal 'leave
-          this screen' affordance without competing with the merchant
-          info beneath. */}
       <TouchableOpacity
         onPress={onBack}
         style={styles.headerBackRow}
@@ -436,7 +362,6 @@ function DetailHeader({
         />
       </TouchableOpacity>
 
-      {/* Row 2 — avatar + store name + available total. */}
       <View style={styles.headerTopRow}>
         <MerchantAvatar
           merchantName={merchantName ?? "Merchant"}
@@ -451,42 +376,17 @@ function DetailHeader({
               styles.headerTitle,
               {
                 color: theme.colors.textOnPrimary,
-                fontFamily: theme.typography.fontFamilyBold,
+                fontFamily: theme.typography.fontFamilyRegular,
               },
             ]}
             numberOfLines={2}
           >
             {merchantName ?? "Merchant"}
           </Text>
-          {meta !== null ? (
-            <Text
-              style={[
-                styles.headerMeta,
-                {
-                  color: theme.colors.textOnPrimary,
-                  fontFamily: theme.typography.fontFamilyMedium,
-                },
-              ]}
-              numberOfLines={1}
-            >
-              {meta}
-            </Text>
-          ) : null}
         </View>
 
         {total !== null ? (
           <View style={styles.headerTotalWrap}>
-            <Text
-              style={[
-                styles.headerTotalLabel,
-                {
-                  color: theme.colors.textOnPrimary,
-                  fontFamily: theme.typography.fontFamilyMedium,
-                },
-              ]}
-            >
-              Available
-            </Text>
             <Text
               style={[
                 styles.headerTotalValue,
@@ -498,6 +398,17 @@ function DetailHeader({
               accessibilityLabel={`Total ${formatGhs(total)}`}
             >
               {formatGhs(total)}
+            </Text>
+            <Text
+              style={[
+                styles.headerTotalLabel,
+                {
+                  color: theme.colors.textOnPrimary,
+                  fontFamily: theme.typography.fontFamilyMedium,
+                },
+              ]}
+            >
+              Total Available
             </Text>
           </View>
         ) : null}
@@ -589,9 +500,10 @@ const styles = StyleSheet.create({
   headerText: {
     flex: 1,
     minWidth: 0,
+    paddingRight: 30,
   },
   headerTitle: {
-    fontSize: 14,
+    fontSize: 16,
     letterSpacing: -0.2,
     lineHeight: 22,
   },
@@ -612,7 +524,7 @@ const styles = StyleSheet.create({
     opacity: 0.78,
   },
   headerTotalValue: {
-    fontSize: 20,
+    fontSize: 24,
     letterSpacing: -0.3,
     marginTop: 2,
   },

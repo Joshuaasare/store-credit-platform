@@ -118,6 +118,10 @@ other_names: Type.Union([
 Type.String(),
 Type.Null()
 ]),
+avatar_url: Type.Union([
+Type.String(),
+Type.Null()
+]),
 created_at: Type.String(),
 deleted_at: Type.Union([
 Type.String(),
@@ -138,6 +142,10 @@ Type.String(),
 Type.Null()
 ]),
 other_names: Type.Union([
+Type.String(),
+Type.Null()
+]),
+avatar_url: Type.Union([
 Type.String(),
 Type.Null()
 ])

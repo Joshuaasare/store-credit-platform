@@ -32,8 +32,7 @@ export default function TransactionsLeaderboard() {
     branchId: null,
     datePreset: "this_year",
     start: startOfYearEpochMs(),
-    // end=null → "no upper bound". Keeps newly-created transactions in-window
-    // so the leaderboard reflects purchases added in the current session.
+    // end=null keeps newly-created transactions in-window across refetches.
     end: null,
   }));
 

@@ -284,6 +284,18 @@ Before declaring the feature complete, verify:
 - [ ] All TypeScript types are consistent across the stack
 - [ ] Error handling is in place at all layers
 - [ ] Existing functionality was not broken when adding to existing files
+- [ ] Comments are minimal (see Comment Discipline below) — no WHAT-comments, no banners, WHY-comments ≤2 lines
+
+## Comment Discipline
+
+Write as few comments as possible. This is a hard rule for this repo, not a suggestion.
+
+- **Default to no comment.** A function or variable's name should explain its purpose. If the name does the job, do not add a comment.
+- **Never write a WHAT-comment.** Don't restate what the code does — well-named identifiers already say that. Don't write "used by X", "added for the Y flow", "handles the case from issue #123" — that belongs in the PR description and rots as the codebase evolves.
+- **Comments are only for non-obvious WHY.** A hidden constraint, a subtle invariant, a workaround for a specific bug, behavior that would surprise a reader. If a reader could figure it out from the code + the names, there is no comment.
+- **1-2 lines max.** No multi-paragraph docstrings, no multi-line comment blocks. If the non-obvious WHY genuinely needs more, the design is probably wrong — extract a well-named helper instead.
+- **No banners.** No `// ─── Handlers ───` section dividers, no file-header comment blocks describing what the file contains (the filename + imports already say that).
+- **Trim existing comments when you touch a file.** When implementing a feature in an existing file, comb through the surrounding code and cut comments down to the minimum: delete WHAT-comments entirely, trim WHY-comments to ≤2 lines, delete banners. Do not leave the file more commented than you found it.
 
 ## Error Handling and Edge Cases
 

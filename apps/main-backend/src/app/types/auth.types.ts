@@ -28,18 +28,14 @@ export interface AuthUser {
   id: string;
   email: string;
   phone: string | null;
-  // Names live on `staff` (or `customers`), not on `users`. Resolved via the
-  // staff assignment; null when the user has no staff row (e.g. a customer
-  // logging in — out of scope for this flow today).
+  // Names live on staff/customers, not users; null when the user has no staff row.
   surname: string | null;
   other_names: string | null;
   access_granted: boolean;
   role: StaffRoleValues | null;
   merchant_id: number | null;
   branch_id: number | null;
-  // Carried in the access token so staff-only routes (e.g. approving a
-  // redemption) can stamp `redemption_approval_staff_id` without an extra
-  // staff lookup. Null for non-staff users (customers have no `staff` row).
+  // Carried in the access token so staff routes can stamp redemption_approval_staff_id without an extra lookup. Null for non-staff.
   staff_id: number | null;
 }
 
@@ -115,15 +111,7 @@ export type GetCurrentUserApiResponse =
   | GetCurrentUserResponse
   | AuthErrorResponse;
 
-// ========================================
-// Customer App Auth (phone-based, no staff gate)
-// ========================================
-//
-// Separate namespace from staff auth (`/api/customer-auth/*`). Reuses the
-// underlying primitives (otp.store, normalizePhone, MessagingService,
-// PasswordService, RateLimitService, TokenService) but NOT the staff-gated
-// service logic — a customer has no `staff` row and must NOT be rejected by
-// `resolveStaffAssignment`. See docs/plans/customer_app_auth_feature.md.
+// Customer-app auth — separate namespace from staff (/api/customer-auth/*). Reuses primitives but NOT staff-gated logic; a customer has no staff row.
 
 export interface CustomerOtpSendRequest {
   phone: string;

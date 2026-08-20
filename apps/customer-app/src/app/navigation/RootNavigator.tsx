@@ -6,6 +6,7 @@ import { OtpVerifyScreen } from "../screens/auth/OtpVerifyScreen";
 import { NewUserScreen } from "../screens/auth/NewUserScreen";
 import { TabNavigator } from "./TabNavigator";
 import { MerchantCreditsScreen } from "../screens/credits/MerchantCreditsScreen";
+import { EditProfileScreen } from "../screens/edit-profile/EditProfileScreen";
 import { useThemeTokens } from "../shared/theme/ThemeContext";
 import { buildNavTheme } from "../shared/theme/navTheme";
 
@@ -21,6 +22,7 @@ export type AppStackParamList = {
     merchantId: number;
     autoOpenRedemption?: boolean;
   };
+  EditProfile: undefined;
 };
 
 const AuthStack = createNativeStackNavigator<AuthStackParamList>();
@@ -47,16 +49,17 @@ function AppStackNavigator() {
         name="CreditsMerchantDetail"
         component={MerchantCreditsScreen}
       />
+      <AppStack.Screen
+        name="EditProfile"
+        component={EditProfileScreen}
+        options={{ animation: "slide_from_left" }}
+      />
     </AppStack.Navigator>
   );
 }
 
-/**
- * Conditional root — renders <AuthStack/> or <AppStack/> based on the auth
- * store's status. When the session flips (login completes, refresh fails,
- * logout), the whole subtree unmounts/mounts so auth screens never linger
- * in the post-auth back stack.
- */
+// Conditional root — when the session flips, the whole subtree unmounts/mounts
+// so auth screens never linger in the post-auth back stack.
 export function RootNavigator() {
   const status = useAuthStore((s) => s.status);
   const theme = useThemeTokens();

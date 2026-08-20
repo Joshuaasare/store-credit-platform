@@ -10,43 +10,29 @@ import type {
 } from "@store-credit-platform/api-services";
 import ScreenBackground from "../../shared/components/ScreenBackground";
 import ScreenBody from "../../shared/components/ScreenBody";
-import { useAuthStore } from "../../shared/store/useAuthStore";
+import PageHeader from "../../shared/components/PageHeader";
 import {
   customerActivitiesService,
   customerCreditsService,
 } from "../../api/client";
 import type { TabStackParamList } from "../../navigation/TabNavigator";
 import ActivitiesModal from "./components/ActivitiesModal";
-import { computeInitials } from "../../shared/utils/computeInitials";
 import { deriveOffers } from "./deriveOffers";
 import { useActivitiesFeed } from "./useActivitiesFeed";
 import RecentActivitySection from "./components/RecentActivitySection";
 import NearbyOffersSection from "./components/NearbyOffersSection";
 import HeroBalanceCard from "./components/HeroBalanceCard";
-import Header from "../../shared/components/Header";
 
 const PREVIEW_ROWS = 4;
 
-// Query keys — colocated so invalidation logic has a single source of truth.
 const CREDITS_QUERY_KEY = ["customer", "credits"] as const;
 const ACTIVITIES_PREVIEW_KEY = ["customer", "activities", "preview"] as const;
 
 export function HomeScreen() {
-  const user = useAuthStore((s) => s.user);
   const navigation =
     useNavigation<BottomTabNavigationProp<TabStackParamList>>();
 
-  const fullName = useMemo(
-    () =>
-      [user?.surname, user?.other_names].filter(Boolean).join(" ").trim() ||
-      "Customer",
-    [user?.surname, user?.other_names],
-  );
-  const initials = useMemo(() => computeInitials(fullName), [fullName]);
-
-  // Hero balance — derived from the credits query (already cached). Sum the
-  // `remaining` field on every credit row, not just live ones — the
-  // customer sees their total wallet position at a glance.
+  // Sum remaining on every credit row, not just live — total wallet position at a glance.
   const creditsQuery = useQuery<CustomerCreditsApiResponse>({
     queryKey: CREDITS_QUERY_KEY,
     queryFn: () => customerCreditsService.getMyCredits(),
@@ -82,14 +68,10 @@ export function HomeScreen() {
 
   const [modalVisible, setModalVisible] = useState(false);
 
-  // Derive offers from the credits data — each live credit's branch +
-  // merchant gives a real entry point. This beats placeholder copy.
   const offers = useMemo(
     () => deriveOffers(creditsQuery.data),
     [creditsQuery.data],
   );
-
-  // ─── Render ─────────────────────────────────────────────────────────────
 
   const goToCredits = useCallback(() => {
     navigation.navigate("Credits");
@@ -104,11 +86,13 @@ export function HomeScreen() {
 
   return (
     <ScreenBackground>
-      <ScreenBody>
-      <ScrollView showsVerticalScrollIndicator={false}>
-        {/* <GlassTransition> */}
-        <View>
-          <Header fullName={fullName} initials={initials} />
+      <PageHeader unreadNotifications={5} />
+      <ScreenBody edges={["bottom"]}>
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          style={{ paddingTop: 24 }}
+        >
+          {/* <GlassTransition> */}
           <View style={styles.heroBlock}>
             <HeroBalanceCard
               totalRemaining={totalRemaining}
@@ -117,24 +101,23 @@ export function HomeScreen() {
               onViewCredits={goToCredits}
             />
           </View>
-        </View>
 
-        <RecentActivitySection
-          previewLoading={previewQuery.isLoading}
-          previewError={previewQuery.error}
-          previewItems={previewItems}
-          onOpenActivitiesModal={openActivitiesModal}
-        />
+          <RecentActivitySection
+            previewLoading={previewQuery.isLoading}
+            previewError={previewQuery.error}
+            previewItems={previewItems}
+            onOpenActivitiesModal={openActivitiesModal}
+          />
 
-        {offers.length > 0 ? <NearbyOffersSection offers={offers} /> : null}
-        {/* </GlassTransition> */}
-        <ActivitiesModal
-          visible={modalVisible}
-          onClose={closeActivitiesModal}
-          feedQuery={feedQuery}
-          previewItemCount={previewItems.length}
-        />
-      </ScrollView>
+          {offers.length > 0 ? <NearbyOffersSection offers={offers} /> : null}
+          {/* </GlassTransition> */}
+          <ActivitiesModal
+            visible={modalVisible}
+            onClose={closeActivitiesModal}
+            feedQuery={feedQuery}
+            previewItemCount={previewItems.length}
+          />
+        </ScrollView>
       </ScreenBody>
     </ScreenBackground>
   );
@@ -142,7 +125,7 @@ export function HomeScreen() {
 
 const styles = StyleSheet.create({
   scrollContent: {
-    paddingBottom: 96, // clears the floating tab bar
+    paddingBottom: 96,
   },
   bottomSpacer: {
     height: 16,

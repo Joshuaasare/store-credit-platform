@@ -5,16 +5,8 @@ import {
 } from "../schemas/merchant.schema";
 import { QueryFragments } from "../constants/queryFragments";
 
-/**
- * Merchant service — handles "my merchant" resolution and aggregates.
- * All reads/writes are scoped to a verified merchant_id (resolved upstream
- * from the JWT or staff lookup).
- */
 export class MerchantService {
-  /**
-   * Resolve the merchant_id for a user via staff → branches → merchants.
-   * Returns null when the user has no staff row (no-merchant state).
-   */
+  // Returns null when the user has no staff row (no-merchant state).
   async getMerchantIdForUser(
     userId: string,
   ): Promise<{ merchant_id: number; branch_id: number } | null> {
@@ -37,9 +29,6 @@ export class MerchantService {
     };
   }
 
-  /**
-   * Fetch the merchant row plus the 4 stats + pool for the My Store hero/stats.
-   */
   async getMyMerchantWithStats(
     merchantId: number,
   ): Promise<MerchantWithStats | null> {
@@ -52,14 +41,12 @@ export class MerchantService {
 
     if (error || !merchant) return null;
 
-    // branch_count
     const { count: branchCount } = await supabaseAdmin
       .from("branches")
       .select("id", { count: "exact", head: true })
       .eq("merchant_id", merchantId)
       .is("deleted_at", null);
 
-    // staff_count — staff joined to branches of this merchant
     const { count: staffCount } = await supabaseAdmin
       .from("staff")
       .select("id, branch_id!inner(merchant_id)", {
@@ -69,8 +56,7 @@ export class MerchantService {
       .eq("branch_id.merchant_id", merchantId)
       .is("deleted_at", null);
 
-    // customer_count — distinct customers who have transacted across this
-    // merchant's branches (server-side aggregate via RPC).
+    // distinct customer count via RPC (the branch_customer junction is gone).
     const { data: custCountRes, error: custCountErr } = await supabaseAdmin.rpc(
       "get_distinct_customer_count",
       {
@@ -84,16 +70,13 @@ export class MerchantService {
     }
     const customerCount = custCountRes == null ? 0 : Number(custCountRes);
 
-    // lifetime_credit_issued — sum of customer_credit.credit_amount across
-    // the merchant's branches. The old customer_transactions.credit_generated
-    // column is gone after the re-architecture; customer_credit now stores the
-    // calculated GHS amount directly.
+    // lifetime_credit_issued = sum of customer_credit.credit_amount (the old customer_transactions.credit_generated column is gone).
     const { data: branchIdRows } = await supabaseAdmin
       .from("branches")
       .select("id")
       .eq("merchant_id", merchantId)
       .is("deleted_at", null);
-    const merchantBranchIds = (branchIdRows ?? []).map((b) => (b as any).id);
+    const merchantBranchIds = (branchIdRows ?? []).map((b) => b.id);
 
     let lifetimeCreditIssued = 0;
     if (merchantBranchIds.length > 0) {
@@ -104,7 +87,7 @@ export class MerchantService {
         .is("deleted_at", null)
         .is("revoked_at", null);
       lifetimeCreditIssued = (issuedRows ?? []).reduce(
-        (sum, r) => sum + Number((r as any).credit_amount ?? 0),
+        (sum, r) => sum + Number(r.credit_amount ?? 0),
         0,
       );
     }
@@ -123,10 +106,7 @@ export class MerchantService {
     };
   }
 
-  /**
-   * Update editable fields on the merchant profile.
-   * Pool columns and is_active are intentionally not editable here.
-   */
+  // Pool columns and is_active are intentionally not editable here.
   async updateMyMerchant(
     merchantId: number,
     payload: UpdateMerchantRequest,

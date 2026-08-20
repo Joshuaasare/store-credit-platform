@@ -13,15 +13,10 @@ import {
   FixedCreditConfigDeleteApiResponse,
 } from "../types/api.types.js";
 
-/**
- * Credit Config service — wraps the credit-configs backend endpoints.
- * All routes are manager-writable; reads are available to any authed user.
- */
 export function createCreditConfigService() {
   const { apiRequest } = createApiClient();
 
   return {
-    /** GET /credit-configs/running — grouped list. */
     async listRunningConfigs(): Promise<RunningCreditConfigListApiResponse> {
       return apiRequest<RunningCreditConfigListApiResponse>(
         "/credit-configs/running",
@@ -29,7 +24,6 @@ export function createCreditConfigService() {
       );
     },
 
-    /** POST /credit-configs/running — create a multi-branch config. */
     async createRunningConfig(
       payload: CreateRunningCreditConfigRequest,
     ): Promise<RunningCreditConfigMutationApiResponse> {
@@ -39,7 +33,6 @@ export function createCreditConfigService() {
       );
     },
 
-    /** PATCH /credit-configs/running/:configGroupId — full-replace update. */
     async updateRunningConfig(
       configGroupId: string,
       payload: UpdateRunningCreditConfigRequest,
@@ -50,7 +43,6 @@ export function createCreditConfigService() {
       );
     },
 
-    /** DELETE /credit-configs/running/:configGroupId — hard-delete group. */
     async deleteRunningConfig(
       configGroupId: string,
     ): Promise<RunningCreditConfigDeleteApiResponse> {
@@ -60,7 +52,6 @@ export function createCreditConfigService() {
       );
     },
 
-    /** PATCH /credit-configs/running/:configGroupId/active — toggle active. */
     async toggleRunningConfigActive(
       configGroupId: string,
       isActive: boolean,
@@ -72,7 +63,6 @@ export function createCreditConfigService() {
       );
     },
 
-    /** GET /credit-configs/fixed — grouped list. */
     async listFixedConfigs(): Promise<FixedCreditConfigListApiResponse> {
       return apiRequest<FixedCreditConfigListApiResponse>(
         "/credit-configs/fixed",
@@ -80,7 +70,6 @@ export function createCreditConfigService() {
       );
     },
 
-    /** POST /credit-configs/fixed — create a multi-branch fixed promo. */
     async createFixedConfig(
       payload: CreateFixedCreditConfigRequest,
     ): Promise<FixedCreditConfigMutationApiResponse> {
@@ -90,7 +79,6 @@ export function createCreditConfigService() {
       );
     },
 
-    /** PATCH /credit-configs/fixed/:configGroupId — full-replace update. */
     async updateFixedConfig(
       configGroupId: string,
       payload: UpdateFixedCreditConfigRequest,
@@ -101,7 +89,6 @@ export function createCreditConfigService() {
       );
     },
 
-    /** DELETE /credit-configs/fixed/:configGroupId — hard-delete group. */
     async deleteFixedConfig(
       configGroupId: string,
     ): Promise<FixedCreditConfigDeleteApiResponse> {
@@ -111,7 +98,6 @@ export function createCreditConfigService() {
       );
     },
 
-    /** PATCH /credit-configs/fixed/:configGroupId/active — toggle active. */
     async toggleFixedConfigActive(
       configGroupId: string,
       isActive: boolean,

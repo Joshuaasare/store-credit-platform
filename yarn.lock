@@ -8144,6 +8144,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@react-native/normalize-color@npm:*":
+  version: 2.1.0
+  resolution: "@react-native/normalize-color@npm:2.1.0"
+  checksum: 10c0/95814a1e2aac9c00dfc2c65f9e2caec07f70d3dba903b5640f5cf24605bf39863e572f2a5138a85d1c514fb3c33f6931595e0a9f738a58b5c220ee74f2bec13b
+  languageName: node
+  linkType: hard
+
 "@react-native/normalize-colors@npm:0.81.5":
   version: 0.81.5
   resolution: "@react-native/normalize-colors@npm:0.81.5"
@@ -9303,8 +9310,11 @@ __metadata:
     expo: "npm:~55.0.0"
     expo-blur: "npm:~55.0.16"
     expo-dev-client: "npm:~55.0.18"
+    expo-file-system: "npm:~55.0.14"
     expo-font: "npm:~55.0.8"
     expo-image: "npm:~55.0.11"
+    expo-image-manipulator: "npm:~55.0.6"
+    expo-image-picker: "npm:~55.0.6"
     expo-linear-gradient: "npm:~55.0.16"
     expo-secure-store: "npm:~55.0.16"
     expo-splash-screen: "npm:~31.0.13"
@@ -9318,6 +9328,7 @@ __metadata:
     react-hook-form: "npm:^7.71.2"
     react-native: "npm:0.83.0"
     react-native-gesture-handler: "npm:^2.31.1"
+    react-native-popover-view: "npm:^6.1.0"
     react-native-reanimated: "npm:^4.3.0"
     react-native-safe-area-context: "npm:~5.6.0"
     react-native-screens: "npm:~4.16.0"
@@ -14835,6 +14846,17 @@ __metadata:
   languageName: node
   linkType: hard
 
+"deprecated-react-native-prop-types@npm:^2.3.0":
+  version: 2.3.0
+  resolution: "deprecated-react-native-prop-types@npm:2.3.0"
+  dependencies:
+    "@react-native/normalize-color": "npm:*"
+    invariant: "npm:*"
+    prop-types: "npm:*"
+  checksum: 10c0/a4bf78dde109cd1a706206fa6e06f7c44e70bc327b990f0f7f936d5d0b8a2372bc78e09979fb2e84bbc5233774aca4165b3ecd17a74765ccc11cead4827380ca
+  languageName: node
+  linkType: hard
+
 "dequal@npm:^2.0.3":
   version: 2.0.3
   resolution: "dequal@npm:2.0.3"
@@ -16595,6 +16617,37 @@ __metadata:
     react: "*"
     react-native: "*"
   checksum: 10c0/561c5c6a3661b0103fd010ee36867bc6d4ea8dbd9771a899d62bcd16f7d27af587034971a080ad4e7d42e1bbb5f6f18ad8ed715bcd11b04e6acbb3ba19a128bc
+  languageName: node
+  linkType: hard
+
+"expo-image-loader@npm:~55.0.1":
+  version: 55.0.1
+  resolution: "expo-image-loader@npm:55.0.1"
+  peerDependencies:
+    expo: "*"
+  checksum: 10c0/a596d36bc95f1fedf63805122e21a36aee859d79f1f6726aa256b24908ba0ace8c413556fbe2a824e845f29375072d8d6144c6a6cfbc30b314a42fa88c68f686
+  languageName: node
+  linkType: hard
+
+"expo-image-manipulator@npm:~55.0.6":
+  version: 55.0.20
+  resolution: "expo-image-manipulator@npm:55.0.20"
+  dependencies:
+    expo-image-loader: "npm:~55.0.1"
+  peerDependencies:
+    expo: "*"
+  checksum: 10c0/e580bac7ae940c25f166163ac279764b76b19319ddcc2401149b4f9ad1e7dbf88d58c8031a6592c47acdf274c31f105378c2ef1275430006709a3df6bbddf119
+  languageName: node
+  linkType: hard
+
+"expo-image-picker@npm:~55.0.6":
+  version: 55.0.23
+  resolution: "expo-image-picker@npm:55.0.23"
+  dependencies:
+    expo-image-loader: "npm:~55.0.1"
+  peerDependencies:
+    expo: "*"
+  checksum: 10c0/cf3e4d529176a8cb37a66c8f6297b63408730eaaa75f6c16382bfdafecc64b57596513919a180293d426a581e5e6814d7531384fb08076cee77b9f5eaa98090a
   languageName: node
   linkType: hard
 
@@ -18647,7 +18700,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"invariant@npm:^2.2.4":
+"invariant@npm:*, invariant@npm:^2.2.4":
   version: 2.2.4
   resolution: "invariant@npm:2.2.4"
   dependencies:
@@ -24325,7 +24378,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"prop-types@npm:^15.6.2, prop-types@npm:^15.8.1":
+"prop-types@npm:*, prop-types@npm:^15.6.2, prop-types@npm:^15.8.1":
   version: 15.8.1
   resolution: "prop-types@npm:15.8.1"
   dependencies:
@@ -24662,6 +24715,16 @@ __metadata:
     react: "*"
     react-native: "*"
   checksum: 10c0/28cebd5f1f3632864ff5e342278721d1e5e38627ae73859a8814012116ef15c629fee7137a6c9c97bb05d94bbe639b0b47e69b36fc2735ab53ed31570140663f
+  languageName: node
+  linkType: hard
+
+"react-native-popover-view@npm:^6.1.0":
+  version: 6.1.0
+  resolution: "react-native-popover-view@npm:6.1.0"
+  dependencies:
+    deprecated-react-native-prop-types: "npm:^2.3.0"
+    prop-types: "npm:^15.8.1"
+  checksum: 10c0/1b3c71078b466e5368231384900caaf54ca7aded6edad7cfb8200a2337d5073c07214a0bee8d1741247989270c313d0a9fc7c394098eab5603f6d0a6245f579b
   languageName: node
   linkType: hard
 

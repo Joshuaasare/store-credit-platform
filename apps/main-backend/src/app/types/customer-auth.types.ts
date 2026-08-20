@@ -1,10 +1,4 @@
-// Composed response types for the customer-auth service layer.
-//
-// These mirror the `data` payloads of the `/api/customer-auth/*` routes (see
-// auth.types.ts) but are returned directly from the service methods so the
-// route handlers can spread them into the `{ success, message, data }` envelope
-// without re-shaping. The route layer owns the success/error envelope; the
-// service owns the bare session shape.
+// Service-layer response shapes for /api/customer-auth/*. The route owns the success/error envelope; the service owns the bare session shape.
 
 import { CustomerAuthUser } from "./main.types";
 

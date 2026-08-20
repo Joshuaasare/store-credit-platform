@@ -28,10 +28,6 @@ export const isActionOrRoutePermitted = (
   return !!matchingRole;
 };
 
-/**
- * Maps action IDs to the permissions required to perform them.
- * Organize by feature/module for easier maintenance.
- */
 export const ACTION_PERMISSIONS = {
   // branch management
   "branch.create": ["manager"],
@@ -44,19 +40,12 @@ export const ACTION_PERMISSIONS = {
   "user.delete": ["manager"],
 } as const satisfies Record<string, StaffRoleValues[]>;
 
-/**
- * Gets the required permissions for a specific action ID.
- * Returns undefined if no permissions are required (action is public).
- */
 export const getAllowedPermissions = (
   actionId: keyof typeof ACTION_PERMISSIONS,
 ) => {
   return ACTION_PERMISSIONS[actionId];
 };
 
-/**
- * Checks if a user has permission to perform a specific action.
- */
 export const hasActionPermission = (
   userRole: StaffRoleValues | undefined,
   actionId: keyof typeof ACTION_PERMISSIONS,

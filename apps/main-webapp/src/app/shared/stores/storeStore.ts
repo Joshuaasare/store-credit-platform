@@ -61,9 +61,7 @@ export const useStoreStore = create<StoreState>((set, get) => ({
     }
   },
 
-  // Idempotent boot helper — fetches only if we don't already have merchant
-  // data and aren't currently loading. Used by the authenticated layout so
-  // every child page sees populated `branches` regardless of entry route.
+  // Idempotent: skip fetch when merchant data already exists or is loading.
   ensureStoreLoaded: async () => {
     const { merchant, loading } = get();
     if (merchant != null || loading) return;
@@ -83,11 +81,9 @@ export const useStoreStore = create<StoreState>((set, get) => ({
   },
 
   createBranch: async (payload) => {
-    // Optimistic: append a placeholder card is awkward since aggregates need
-    // server compute; instead we fire the request then refetch the list.
+    // Aggregates need server compute, so we append the new row then refetch.
     const res = await storeService.createBranch(payload);
     if (isApiError(res)) throw new Error(res.error);
-    // Append the new branch immediately, then refetch to reconcile aggregates.
     set({ branches: [res.data, ...get().branches] });
     void get().refreshBranches();
     return res.data;
@@ -95,7 +91,6 @@ export const useStoreStore = create<StoreState>((set, get) => ({
 
   updateBranch: async (id, payload) => {
     const previous = get().branches;
-    // Optimistic patch
     set({
       branches: previous.map((b) =>
         b.id === id
@@ -120,7 +115,6 @@ export const useStoreStore = create<StoreState>((set, get) => ({
       });
       return res.data;
     } catch (err) {
-      // Rollback
       set({ branches: previous });
       throw err;
     }

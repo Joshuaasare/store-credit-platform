@@ -5,58 +5,21 @@ import { useThemeTokens } from "../theme/ThemeContext";
 import { formatGhs } from "../utils/formatGhs";
 import { formatRelativeTimestamp } from "../utils/date.utils";
 
-/**
- * Compact row primitive used by the three customer-side merchant credit
- * list surfaces (main Credits list, per-merchant Available, per-merchant
- * Approved). Rendered inside a shared `GlassCard` so a stack of rows
- * reads as one coherent transaction log instead of N stacked cards —
- * matching the Approved tab's settled visual language.
- *
- * Anatomy (left → right):
- *   1. Direction arrow tinted in `primary` (brand berry). Down-arrow
- *      for all "money out of wallet" rows; up-arrow for "money in".
- *   2. Avatar ring (MerchantAvatar) sized at 36 — same diameter as
- *      `ActivityRow`'s avatar so the two row families blend when a
- *      customer scans between Home → Credits.
- *   3. Title (merchant or branch name, `fontFamilySemiBold`) + muted
- *      meta line underneath ("Approved 2 days ago" / "Expires in 5
- *      days" / "Issued 14 Aug"). One line each.
- *   4. Right-aligned amount in `primary`, same baseline as the title.
- *
- * No tap behaviour here — the parent card wraps the list and handles
- * navigation. Rows are read-only.
- */
-
 export type MerchantActivityRowKind =
-  /** Per-credit Available row: storefront avatar, branch name + status meta, right-aligned remaining amount. */
   | "credit-available"
-  /** Per-merchant main-list row: merchant avatar, merchant name + soonest expiry meta, right-aligned total. */
   | "merchant-available"
-  /** Per-redemption Approved row: storefront avatar, branch name + relative time, right-aligned amount. */
   | "merchant-approved";
 
 export interface MerchantActivityRowItem {
-  /** Stable key — `merchantId`, `redemption_id`, `credit.id`, etc. */
   key: string;
-  /** Avatar icon name — defaults to storefront when null. */
   iconName?: keyof typeof Ionicons.glyphMap;
-  /** Avatar fallback when no logo: 1-2 char initials (uppercased). */
   initials: string;
-  /** Logo URL; falls back to initials when null. */
   logoUrl: string | null;
-  /** Title (top line). */
   title: string;
-  /** Secondary line beneath the title — relative time, expiry, status. */
   meta: string;
-  /** Right-aligned amount in major units (already summed). */
   amount: number;
-  /**
-   * Stable ID that drives the placeholder avatar gradient. When a
-   * branch / merchant has rows on multiple tabs (Available, Pending,
-   * Approved) or surfaces (main Credits list), pass `branch_id` or
-   * `merchant_id` here so the same entity always renders the same
-   * colour — regardless of which row copy appears on each tab.
-   */
+  // Stable ID driving the placeholder avatar gradient — pass branch_id or
+  // merchant_id so the same entity renders the same colour across tabs.
   idSeed?: number | string | null;
 }
 
@@ -67,8 +30,6 @@ export default function MerchantActivityRow({
 }: {
   kind: MerchantActivityRowKind;
   item: MerchantActivityRowItem;
-
-  /** Tone for the secondary meta line — "muted" (default) or "warning" (amber). */
   metaTone?: "muted" | "warning";
 }) {
   const theme = useThemeTokens();

@@ -6,16 +6,8 @@ import {
   UpdateBranchRequest,
 } from "../schemas/branch.schema";
 
-/**
- * Branch service — list/create/update branches for a merchant with
- * per-branch aggregates. Ownership is enforced: every read/write verifies
- * the branch belongs to the requesting merchant.
- */
+// Ownership enforced: every read/write verifies the branch belongs to the requesting merchant.
 export class BranchService {
-  /**
-   * List all branches for a merchant with staff_count, customer_count,
-   * credit_issued_this_month, and last_activity_date aggregates.
-   */
   async listBranchesForMerchant(
     merchantId: number,
   ): Promise<BranchWithAggregates[]> {
@@ -33,33 +25,27 @@ export class BranchService {
 
     const results = await Promise.all(
       branches.map(async (b): Promise<BranchWithAggregates> => {
-        // staff_count
         const { count: staffCount } = await supabaseAdmin
           .from("staff")
           .select("id", { count: "exact", head: true })
           .eq("branch_id", b.id)
           .is("deleted_at", null);
 
-        // customer_count — distinct customers who have transacted at this branch
-        // (server-side aggregate via RPC; the branch_customer junction is gone).
-        const { data: custCountRes, error: custCountErr } = await supabaseAdmin.rpc(
-          "get_distinct_customer_count",
-          {
+        // distinct customer count via RPC — the branch_customer junction is gone.
+        const { data: custCountRes, error: custCountErr } =
+          await supabaseAdmin.rpc("get_distinct_customer_count", {
             p_merchant_id: merchantId,
             p_branch_id: b.id,
-          },
-        );
+          });
         if (custCountErr) {
           throw new Error(
             `Failed to load branch customer count: ${custCountErr.message}`,
           );
         }
         const customerCount =
-          custCountRes == null ? 0 : Number(custCountRes as unknown);
+          custCountRes == null ? 0 : Number(custCountRes);
 
-        // credit_issued_this_month — sum of customer_credit.credit_amount
-        // issued this month at this branch. The old customer_transactions
-        // .credit_generated column is gone after the re-architecture.
+        // credit_issued_this_month — sum of customer_credit.credit_amount (the old customer_transactions.credit_generated column is gone).
         const monthStartIso = monthStart.toISOString();
         const { data: issuedRows } = await supabaseAdmin
           .from("customer_credit")
@@ -70,18 +56,11 @@ export class BranchService {
           .is("revoked_at", null);
 
         const creditIssuedThisMonth = (issuedRows || []).reduce(
-          (sum, r) => sum + Number((r as any).credit_amount ?? 0),
+          (sum, r) => sum + Number(r.credit_amount ?? 0),
           0,
         );
 
-        // last_activity_date — latest of: most recent purchase (transaction_date
-        // epoch), most recent credit (created_at), most recent approved
-        // redemption (created_at). Falls back to null if no activity.
-        //
-        // Redemptions don't carry a denormalized branch_id — we scope them via
-        // the credit_id → customer_credit.branch_id join, so first fetch the
-        // branch's credit IDs, then fetch the latest approved redemption among
-        // them.
+        // Redemptions have no denormalized branch_id — scope via credit_id → customer_credit.branch_id, so fetch the branch's credit IDs first.
         const [lastPurchase, lastCredit, branchCreditIds] = await Promise.all([
           supabaseAdmin
             .from("customer_purchases")
@@ -109,9 +88,9 @@ export class BranchService {
         ]);
 
         const branchCreditIdList = (branchCreditIds.data ?? []).map(
-          (c: any) => c.id as number,
+          (c) => c.id,
         );
-        let lastRedemption: { data: any | null; error: any } = {
+        let lastRedemption: { data: { created_at: string } | null; error: { message: string } | null } = {
           data: null,
           error: null,
         };
@@ -155,9 +134,6 @@ export class BranchService {
     return results;
   }
 
-  /**
-   * Create a new branch for a merchant.
-   */
   async createBranch(
     merchantId: number,
     payload: CreateBranchRequest,
@@ -191,16 +167,12 @@ export class BranchService {
     };
   }
 
-  /**
-   * Update a branch. Verifies the branch belongs to the merchant before
-   * applying changes; throws 403-equivalent if ownership fails.
-   */
+  // Verifies the branch belongs to the merchant; throws a 403-equivalent on ownership failure.
   async updateBranch(
     branchId: number,
     merchantId: number,
     payload: UpdateBranchRequest,
   ): Promise<BranchWithAggregates> {
-    // Ownership check
     const { data: existing, error: lookupError } = await supabaseAdmin
       .from("branches")
       .select("id, merchant_id")
@@ -238,7 +210,6 @@ export class BranchService {
       throw new Error(`Failed to update branch: ${error.message}`);
     }
 
-    // Re-fetch with aggregates via list and pick the matching id
     const all = await this.listBranchesForMerchant(merchantId);
     const updated = all.find((b) => b.id === branchId);
     if (!updated) throw new Error("Branch not found after update");

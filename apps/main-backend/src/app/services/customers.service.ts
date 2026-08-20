@@ -13,25 +13,10 @@ import {
 } from "../schemas/customers.schema";
 import { BaseUserProfile } from "../schemas/main.schema";
 
-// ────────────────────────────────────────────────────────────────────────────
-// Service
-// ────────────────────────────────────────────────────────────────────────────
-
-/**
- * Customer service — leaderboard (via Postgres RPC), redemption recording,
- * and live "remaining credit" calculation.
- *
- * All reads/writes are scoped to a verified merchant_id resolved upstream
- * from the JWT. The activity feed and purchase recording live in
- * `transactions.service.ts` after the domain split.
- */
+// Customer leaderboard (via Postgres RPCs), directory list, and single-customer detail. Reads/writes are scoped to a verified merchant_id resolved from the JWT; activity feed + purchase recording live in transactions.service.ts.
 export class CustomerService {
   private static readonly DEFAULT_LIMIT = 20;
 
-  /**
-   * Leaderboard rows + total distinct customer count. Sort defaults to
-   * `purchases`; tiebreak by `customer_id` asc (enforced in the RPC).
-   */
   async getLeaderboard(
     merchantId: number,
     filters: LeaderboardFilters,
@@ -78,10 +63,6 @@ export class CustomerService {
     return { rows, total, offset, limit };
   }
 
-  /**
-   * Stats row for the leaderboard hero: total distinct customers, total
-   * purchase amount, total credits issued in the window.
-   */
   async getLeaderboardStats(
     merchantId: number,
     filters: Omit<LeaderboardFilters, "sort" | "limit" | "offset">,
@@ -124,19 +105,7 @@ export class CustomerService {
     return { total_customers, total_purchases, total_credits_issued };
   }
 
-  /**
-   * Customer directory list — paginated, branch-scoped, searchable via the
-   * `get_customers` RPC. The RPC returns flat columns + a `total` window-count
-   * column on every row (pre-LIMIT); we read it from the first row, or 0 when
-   * the page is empty. Search and branch scope are both applied server-side so
-   * the `total` reflects the filtered set.
-   *
-   * The linked user profile is nested service-side: the page is already
-   * paginated (≤limit rows), so we collect the non-null user_ids and do one
-   * `users` select by `id in (...)` using BASE_USER_PROFILE, then attach
-   * `user: BaseUserProfile | null` per row. This keeps the column set driven
-   * by the fragment rather than hand-copying fields in the RPC.
-   */
+  // `get_customers` RPC returns flat columns + a `total` window-count column on every row (pre-LIMIT); read it from the first row, or 0 when empty. The linked user profile is fetched in one `users` select by `id in (...)` so the column set stays driven by BASE_USER_PROFILE rather than hand-copied in the RPC.
   async listCustomers(
     merchantId: number,
     filters: CustomerListFilters,
@@ -170,17 +139,17 @@ export class CustomerService {
     }>;
     const total = rpcRows.length > 0 ? Number(rpcRows[0].total) : 0;
 
-    // Fetch linked user profiles for this page in one query.
     const userIds = rpcRows
       .map((r) => r.user_id)
       .filter((id): id is string => id != null);
     const usersById = new Map<string, BaseUserProfile>();
     if (userIds.length > 0) {
+      const USER_COLS = `${QueryFragments.BASE_USER_PROFILE}` as const;
       const { data: userRows } = await supabaseAdmin
         .from("users")
-        .select(QueryFragments.BASE_USER_PROFILE)
+        .select(USER_COLS)
         .in("id", userIds);
-      for (const u of (userRows ?? []) as unknown as BaseUserProfile[]) {
+      for (const u of userRows ?? []) {
         usersById.set(u.id, u);
       }
     }
@@ -200,22 +169,11 @@ export class CustomerService {
     return { rows, total, offset, limit };
   }
 
-  /**
-   * Single-customer detail — merchant-wide totals + every live credit row
-   * (with per-credit redeemed_total / remaining). Service-layer (no RPC): the
-   * data volume for one customer is small enough that a couple of queries +
-   * JS aggregation is simpler than a second RPC.
-   *
-   * Throws "Customer not found" if the customer has no non-deleted purchase at
-   * any branch of the merchant (the directory scoping rule) — this also
-   * prevents a caller from probing customer_ids that belong to another
-   * merchant.
-   */
+  // Service-layer (no RPC): one customer's data volume is small enough for two queries + JS aggregation. The scope check (≥1 non-deleted purchase at a merchant branch) is also the security boundary — a customer_id with no purchase at any of this merchant's branches is treated as not found, so callers can't probe other merchants' customer_ids.
   async getCustomerDetail(
     merchantId: number,
     customerId: number,
   ): Promise<CustomerDetail> {
-    // 0. Merchant branch ids — reused for scope check + purchase filtering.
     const { data: mbRows, error: mbErr } = await supabaseAdmin
       .from("branches")
       .select("id")
@@ -228,9 +186,6 @@ export class CustomerService {
       (b: { id: number }) => b.id,
     );
 
-    // 1. Scope check: ≥1 non-deleted purchase at a merchant branch. This is
-    //    also the security boundary — a customer_id with no purchase at any
-    //    of this merchant's branches is treated as not found.
     if (merchantBranchIds.length === 0) {
       throw new Error("Customer not found");
     }
@@ -249,9 +204,7 @@ export class CustomerService {
       throw new Error("Customer not found");
     }
 
-    // 2. Customer row + linked user profile (nested via BASE_USER_PROFILE).
-    //    Names live on the customer row (surname / other_names); the user
-    //    join carries phone / access / last_login only.
+    // Names live on the customer row; the user join carries phone / access / last_login only.
     const { data: customer, error: custErr } = await supabaseAdmin
       .from("customers")
       .select(`id, phone, user_id, surname, other_names, users(${QueryFragments.BASE_USER_PROFILE})`)
@@ -263,18 +216,12 @@ export class CustomerService {
     if (!customer) {
       throw new Error("Customer not found");
     }
-    const linkedUser = (customer as unknown as {
-      users: BaseUserProfile | null;
-    }).users;
+    const linkedUser = customer.users;
 
-    // 3. Live credit rows joined to their branch (merchant-wide). Use the
-    //    BASE_CUSTOMER_CREDIT + BASE_BRANCH fragments so column additions
-    //    auto-propagate; the merchant_id on branch is used for scoping.
+    const CREDIT_COLS = `${QueryFragments.BASE_CUSTOMER_CREDIT},branch:branches(${QueryFragments.BASE_BRANCH})` as const;
     const { data: creditRows, error: creditErr } = await supabaseAdmin
       .from("customer_credit")
-      .select(
-        `${QueryFragments.BASE_CUSTOMER_CREDIT},branch:branches(${QueryFragments.BASE_BRANCH})`,
-      )
+      .select(CREDIT_COLS)
       .eq("customer_id", customerId)
       .is("deleted_at", null)
       .is("revoked_at", null);
@@ -283,24 +230,14 @@ export class CustomerService {
     }
 
     const nowEpoch = Math.floor(Date.now());
-    const merchantCredits = ((creditRows ?? []) as unknown as Array<
-      CustomerDetailCreditRow & {
-        branch: { merchant_id: number };
-        expires_at: number | null;
-        created_at: string;
-      }
-    >).filter((row) => {
+    const merchantCredits = (creditRows ?? []).filter((row) => {
       const branchMerchantId = row.branch?.merchant_id ?? null;
       if (branchMerchantId !== merchantId) return false;
       const expiresAt = row.expires_at;
       return expiresAt == null || Number(expiresAt) > nowEpoch;
     });
 
-    // 4. Approved redemption totals now live on the credit row itself
-    //    (`approved_redemption_amount`) — no SUM-of-audit-table query is
-    //    needed. We still need the customer's most-recent approved
-    //    redemption timestamp to compute `last_activity_epoch`, so we
-    //    pull it directly from the audit table scoped to the customer.
+    // Approved redemption totals live on the credit row itself (approved_redemption_amount) — no SUM-of-audit-table. The audit table is only queried for the most-recent approved_at, to derive last_activity_epoch.
     const customerIds = [customerId];
     let lastRedemptionEpoch: number | null = null;
     if (customerIds.length > 0) {
@@ -323,10 +260,7 @@ export class CustomerService {
       }
     }
 
-    // 5. Per-credit remaining + customer-level credit aggregates. Sort by
-    //    remaining desc so the most-relevant credits sit at the top. The
-    //    composed row already carries the BASE_CUSTOMER_CREDIT + branch
-    //    columns; we just read the live aggregate directly off the row.
+    // Sort by remaining desc so the most-relevant credits sit at the top.
     const credits: CustomerDetailCreditRow[] = merchantCredits
       .map((row) => {
         const creditAmount = Number(row.credit_amount) || 0;
@@ -360,7 +294,6 @@ export class CustomerService {
       null,
     );
 
-    // 6. Merchant-wide purchase total + last purchase epoch.
     const { data: purchaseRows, error: purchaseErr } = await supabaseAdmin
       .from("customer_purchases")
       .select("amount, transaction_date, branch_id")

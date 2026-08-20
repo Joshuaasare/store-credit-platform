@@ -26,8 +26,6 @@ async function resolveMerchantId(
 }
 
 export default async function (fastify: FastifyInstance) {
-  // ── Running configs ──────────────────────────────────────
-
   fastify.get<{
     Reply: RunningCreditConfigListApiResponse;
   }>("/running", {
@@ -226,8 +224,6 @@ export default async function (fastify: FastifyInstance) {
       }
     },
   });
-
-  // ── Fixed configs ─────────────────────────────────────────
 
   fastify.get<{
     Reply: FixedCreditConfigListApiResponse;

@@ -107,7 +107,7 @@ interface StoreHeroProps {
 }
 
 export function StoreHero({ merchant, isManager }: StoreHeroProps) {
-  const country = getCountryByCode(merchant.country_code as any);
+  const country = getCountryByCode(merchant.country_code);
   const initials = merchant.name
     .split(/\s+/)
     .slice(0, 2)

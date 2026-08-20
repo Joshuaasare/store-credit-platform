@@ -9,7 +9,11 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.joshuaasare.-store-credit-platform-customer-app"
+      "bundleIdentifier": "com.joshuaasare.-store-credit-platform-customer-app",
+      "infoPlist": {
+        "NSPhotoLibraryUsageDescription": "We use your photo library to let you pick a profile photo.",
+        "NSCameraUsageDescription": "We use your camera to let you take a profile photo."
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -31,7 +35,8 @@
       ],
       "expo-secure-store",
       "expo-font",
-      "expo-image"
+      "expo-image",
+      "expo-image-picker"
     ],
     "extra": {
       "eas": {

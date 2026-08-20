@@ -225,8 +225,6 @@ export function FixedConfigDialog({
       start_date: f ? toEpochMs(f) : null,
       end_date: t ? endOfDayEpochMs(t) : null,
     };
-    // Patch form state directly via react-hook-form setValue on the controller values.
-    // We use reset to merge the new dates with the existing values.
     reset((prev) => ({ ...prev, ...next }));
     setRangeOpen(false);
   };

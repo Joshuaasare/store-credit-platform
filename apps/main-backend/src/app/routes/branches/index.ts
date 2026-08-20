@@ -13,10 +13,6 @@ import {
 } from "../../schemas/branch.schema";
 
 export default async function (fastify: FastifyInstance) {
-  /**
-   * GET /branches
-   * List all branches for the authenticated user's merchant.
-   */
   fastify.get<{
     Reply: BranchListApiResponse;
   }>("/", {
@@ -53,10 +49,6 @@ export default async function (fastify: FastifyInstance) {
     },
   });
 
-  /**
-   * POST /branches
-   * Manager-only. Create a new branch for the merchant.
-   */
   fastify.post<{
     Body: CreateBranchRequest;
     Reply: BranchMutationApiResponse;
@@ -104,10 +96,6 @@ export default async function (fastify: FastifyInstance) {
     },
   });
 
-  /**
-   * PATCH /branches/:id
-   * Manager-only. Update a branch (must belong to the merchant).
-   */
   fastify.patch<{
     Params: { id: string };
     Body: UpdateBranchRequest;

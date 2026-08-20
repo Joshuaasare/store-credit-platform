@@ -10,10 +10,6 @@ import {
   StaffDeleteApiResponse,
 } from "../types/api.types.js";
 
-/**
- * Staff service — wraps the /staff backend endpoints. Mirrors the
- * createCustomerService / createAuthService factory pattern.
- */
 export function createStaffService() {
   const { apiRequest } = createApiClient();
 
@@ -27,7 +23,6 @@ export function createStaffService() {
   }
 
   return {
-    /** GET /staff — manager-only, merchant-scoped staff directory. */
     async listStaff(
       params: StaffListQuerystring,
     ): Promise<StaffListApiResponse> {
@@ -35,10 +30,6 @@ export function createStaffService() {
       return apiRequest<StaffListApiResponse>(`/staff${qs}`, { method: "GET" });
     },
 
-    /**
-     * POST /staff — create a new staff member (or auto-restore a
-     * soft-deleted phone — the backend service handles both paths).
-     */
     async createStaff(
       payload: CreateStaffRequest,
     ): Promise<StaffMutationApiResponse> {
@@ -48,7 +39,6 @@ export function createStaffService() {
       });
     },
 
-    /** PATCH /staff/:userId — full-replace edit (name, phone, role, branch, access, address, notes). */
     async updateStaff(
       userId: string,
       payload: UpdateStaffRequest,
@@ -59,7 +49,6 @@ export function createStaffService() {
       );
     },
 
-    /** PATCH /staff/:userId/access — toggle access_granted. */
     async setStaffAccess(
       userId: string,
       payload: SetStaffAccessRequest,
@@ -70,7 +59,6 @@ export function createStaffService() {
       );
     },
 
-    /** DELETE /staff/:userId — soft delete (tombstones users + linked staff + role rows). */
     async deleteStaff(userId: string): Promise<StaffDeleteApiResponse> {
       return apiRequest<StaffDeleteApiResponse>(
         `/staff/${encodeURIComponent(userId)}`,

@@ -1,15 +1,4 @@
-/**
- * Shared string transformation helpers.
- */
-
-/**
- * Slugify a string for use in URLs / filesystem folder names.
- *
- * Lowercases, strips non-alphanumeric characters (keeping spaces and hyphens),
- * collapses whitespace runs to single hyphens, collapses repeated hyphens, and
- * truncates to 60 characters. If the result is empty, returns `fallback` (or
- * empty string when no fallback is given).
- */
+// Truncates to 60 chars; returns `fallback` (or "") when the slug is empty.
 export function slugify(value: string, fallback = ""): string {
   return (
     value

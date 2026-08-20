@@ -28,12 +28,13 @@ interface AuthState {
   setPending: (token: string) => void;
   clearPending: () => void;
   setError: (message: string | null) => void;
+  setUser: (user: CustomerAuthUser) => void;
   logout: () => Promise<void>;
 }
 
 export const useAuthStore = create<AuthState>((set, get) => {
-  // Wire the access-token source into the API client so 401-triggered
-  // refreshes read/write the store's token. Runs once at store creation.
+  // Wire the access-token source into the API client so 401-triggered refreshes
+  // read/write the store's token. Runs once at store creation.
   wireAccessToken(
     () => get().accessToken,
     (t) => set({ accessToken: t }),
@@ -99,6 +100,10 @@ export const useAuthStore = create<AuthState>((set, get) => {
 
     setError(message) {
       set({ error: message });
+    },
+
+    setUser(user) {
+      set({ user });
     },
 
     async logout() {

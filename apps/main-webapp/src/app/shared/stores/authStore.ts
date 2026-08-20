@@ -60,7 +60,7 @@ export const useAuthStore = create<AuthState>()(
           let user = await fetchUser();
 
           if (!user) {
-            // Try silent refresh using httpOnly cookie
+            // Refresh uses the httpOnly cookie, not the access token.
             const refreshed = await tryRefreshToken();
             if (refreshed) {
               user = await fetchUser();

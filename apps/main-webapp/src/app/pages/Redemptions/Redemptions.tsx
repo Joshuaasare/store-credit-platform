@@ -42,10 +42,6 @@ import RedemptionCodeDialog from "./components/RedemptionCodeDialog";
 
 const LIMIT = 20;
 
-// Two tabs only — Pending + Approved. Rejected is removed from the manager
-// UI by product spec (decision 13 — the manager still has a reject
-// action available on Pending rows; rejected requests are tracked in the
-// audit table for the customer-side reconciliation flow).
 type Tab = "pending" | "approved";
 
 const STATUS_TABS: { value: Tab; label: string }[] = [
@@ -63,10 +59,6 @@ const EMPTY_COPY: Record<Tab, { title: string; hint: string }> = {
     hint: "Approved redemption requests will appear here.",
   },
 };
-
-// ────────────────────────────────────────────────────────────────────────────
-// Customer display helpers (shared between the two tabs)
-// ────────────────────────────────────────────────────────────────────────────
 
 type CustomerLike =
   | MerchantPendingRequest["customer"]
@@ -94,11 +86,6 @@ function customerInitials(c: CustomerLike): string {
   return "?";
 }
 
-// ────────────────────────────────────────────────────────────────────────────
-// Pending row (MerchantPendingRequest)
-// ────────────────────────────────────────────────────────────────────────────
-
-// Customer column for the pending tab.
 const pendingCustomerColumn: ColumnDef<MerchantPendingRequest> = {
   id: "customer",
   header: "Customer",
@@ -129,10 +116,7 @@ const pendingCustomerColumn: ColumnDef<MerchantPendingRequest> = {
   },
 };
 
-// Branch column — pending tab rows carry `branch_id` + `branch_name` on
-// the audit row (the customer picked the branch on the redemption
-// sheet). No more per-credit breakdown: pending is now a single amount
-// per audit row.
+// Pending tab rows carry the branch the customer picked on the redemption sheet.
 const pendingBranchColumn: ColumnDef<MerchantPendingRequest> = {
   id: "branch",
   header: "Branch",
@@ -146,7 +130,6 @@ const pendingBranchColumn: ColumnDef<MerchantPendingRequest> = {
   },
 };
 
-// Requested amount — the audit row's `amount_redeemed`.
 const pendingRequestedColumn: ColumnDef<MerchantPendingRequest> = {
   id: "requested_amount",
   header: "Requested amount",
@@ -157,7 +140,6 @@ const pendingRequestedColumn: ColumnDef<MerchantPendingRequest> = {
   ),
 };
 
-// Requested date — the audit row's `requested_date` (epoch ms).
 const pendingRequestedAtColumn: ColumnDef<MerchantPendingRequest> = {
   id: "requested_at",
   header: "Requested at",
@@ -167,10 +149,6 @@ const pendingRequestedAtColumn: ColumnDef<MerchantPendingRequest> = {
     </span>
   ),
 };
-
-// ────────────────────────────────────────────────────────────────────────────
-// Approved row (MerchantApprovedRedemption)
-// ────────────────────────────────────────────────────────────────────────────
 
 const approvedCustomerColumn: ColumnDef<MerchantApprovedRedemption> = {
   id: "customer",
@@ -252,21 +230,12 @@ const approvedByColumn: ColumnDef<MerchantApprovedRedemption> = {
   },
 };
 
-// ────────────────────────────────────────────────────────────────────────────
-// Page
-// ────────────────────────────────────────────────────────────────────────────
-
 export default function Redemptions() {
   const { branches } = useStoreStore();
   const queryClient = useQueryClient();
   const [tab, setTab] = useState<Tab>("pending");
   const [branchId, setBranchId] = useState<number | null>(null);
 
-  // ─── Code-entry dialog state ───
-  // `dialog` is null when the dialog is closed; otherwise it carries the
-  // (customerId, redemptionId, kind) tuple that the dialog acts on. The
-  // dialog asks the user to type the 4-digit code, then calls the
-  // matching approve / reject mutation with the code in the body.
   const [dialog, setDialog] = useState<
     | {
         customerId: number;
@@ -277,7 +246,6 @@ export default function Redemptions() {
     | null
   >(null);
 
-  // ─── Pending ───
   const pendingQuery = useInfiniteQuery({
     queryKey: ["redemptions", "pending", { branchId, limit: LIMIT }],
     queryFn: ({ pageParam }) => {
@@ -305,7 +273,6 @@ export default function Redemptions() {
     return out;
   }, [pendingQuery.data]);
 
-  // ─── Approved ───
   const approvedQuery = useInfiniteQuery({
     queryKey: ["redemptions", "approved", { branchId, limit: LIMIT }],
     queryFn: ({ pageParam }) => {
@@ -333,8 +300,6 @@ export default function Redemptions() {
     return out;
   }, [approvedQuery.data]);
 
-  // Pick the right query based on the active tab — drives both the table
-  // and the total-count chip.
   const activeQuery = tab === "pending" ? pendingQuery : approvedQuery;
   const lastPage =
     activeQuery.data?.pages?.[activeQuery.data.pages.length - 1];
@@ -344,8 +309,7 @@ export default function Redemptions() {
   const activeRows = tab === "pending" ? pendingRows : approvedRows;
 
   const invalidateAllRedemptions = () => {
-    // Approve / reject moves a row from Pending → Approved, so invalidate
-    // both tabs to keep them consistent.
+    // Approve/reject moves a row Pending → Approved, so invalidate both tabs.
     void queryClient.invalidateQueries({ queryKey: ["redemptions"] });
   };
 
@@ -369,7 +333,6 @@ export default function Redemptions() {
     },
     onSuccess: () => {
       toast.success("Redemption approved", successToastProperties);
-      // Close the dialog and refresh both tabs.
       setDialog(null);
       invalidateAllRedemptions();
     },
@@ -378,9 +341,7 @@ export default function Redemptions() {
         err instanceof Error ? err.message : "Failed to approve redemption",
         errorToastProperties,
       );
-      // Don't close the dialog on error — let the user retry with the
-      // correct code. The dialog's internal state will re-enable the
-      // submit button on the next attempt.
+      // Keep dialog open so the user can retry with the correct code.
     },
   });
 
@@ -409,9 +370,6 @@ export default function Redemptions() {
     },
   });
 
-  // The dialog drives the actual mutation. When it submits, it calls
-  // `confirm({ redemption_code, redemption_id })`. We route to the right
-  // mutation by `dialog.kind`.
   const confirmDialog = (body: MerchantRedemptionActionBody) => {
     if (!dialog) return;
     if (dialog.kind === "approve") {
@@ -421,9 +379,6 @@ export default function Redemptions() {
     }
   };
 
-  // Surface a dialog-side error toast (mismatch) when the mutation
-  // rejects. We watch both mutations and feed the message back into the
-  // dialog via `dialogError`.
   const dialogError =
     approveMutation.isError || rejectMutation.isError
       ? approveMutation.error instanceof Error
@@ -433,8 +388,7 @@ export default function Redemptions() {
           : "Code did not match"
       : null;
 
-  // Clear the dialog error whenever the user reopens the dialog (a new
-  // attempt starts clean).
+  // Reset mutation state when the dialog closes so a new attempt starts clean.
   useEffect(() => {
     if (dialog == null) {
       approveMutation.reset();

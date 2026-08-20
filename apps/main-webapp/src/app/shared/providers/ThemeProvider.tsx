@@ -21,7 +21,6 @@ export function ThemeProvider({
   const [theme, setTheme] = useState<Theme>(defaultTheme);
 
   useEffect(() => {
-    // Load theme from localStorage if available
     const savedTheme = localStorage.getItem("theme") as Theme;
     if (savedTheme) {
       setTheme(savedTheme);
@@ -29,7 +28,6 @@ export function ThemeProvider({
   }, []);
 
   useEffect(() => {
-    // Update data-theme attribute and save to localStorage
     document.documentElement.setAttribute("data-theme", theme);
     localStorage.setItem("theme", theme);
   }, [theme]);

@@ -12,11 +12,7 @@ import {
 } from "../../schemas/storage.schema";
 
 export default async function (fastify: FastifyInstance) {
-  /**
-   * POST /storage/upload-url
-   * Returns a short-lived signed upload URL + the object's eventual public URL.
-   * The path is generated server-side so clients can't pick arbitrary paths.
-   */
+  // Object path is generated server-side — clients can't pick arbitrary paths.
   fastify.post<{
     Body: CreateUploadUrlRequest;
     Reply: UploadUrlApiResponse;
@@ -54,10 +50,6 @@ export default async function (fastify: FastifyInstance) {
     },
   });
 
-  /**
-   * POST /storage/download-url
-   * Returns a short-lived signed download URL for a (private) object.
-   */
   fastify.post<{
     Body: CreateDownloadUrlRequest;
     Reply: DownloadUrlApiResponse;
@@ -92,10 +84,6 @@ export default async function (fastify: FastifyInstance) {
     },
   });
 
-  /**
-   * POST /storage/delete
-   * Deletes one or more objects by path, or a single object by public URL.
-   */
   fastify.post<{
     Body: DeleteStorageRequest;
     Reply: DeleteStorageApiResponse;
@@ -130,10 +118,6 @@ export default async function (fastify: FastifyInstance) {
     },
   });
 
-  /**
-   * GET /storage/public-url?bucket=&path=
-   * Returns the public URL for an object (no network call).
-   */
   fastify.get<{
     Querystring: { bucket: string; path: string };
     Reply: PublicUrlApiResponse;

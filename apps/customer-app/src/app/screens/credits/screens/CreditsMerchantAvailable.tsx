@@ -19,22 +19,6 @@ import type { AppStackParamList } from "../../../navigation/RootNavigator";
 
 const CREDITS_QUERY_KEY = ["customer", "credits"] as const;
 
-/**
- * "Credits available" tab body. Reads the same `["customer", "credits"]`
- * query the parent screen owns so switching tabs does NOT cause a
- * refetch — the parent already keeps the data fresh via invalidation on
- * cancel.
- *
- * Renders the merchant's live credits grouped by branch. Each branch
- * becomes a section header inside a shared `GlassCard`, then its
- * individual credits render as `MerchantActivityRow` cells — same row
- * shape the main Credits list + Approved tab use, so the three list
- * surfaces read as one coherent transaction log.
- *
- * The header + progress + tab switcher + tab body live on the parent
- * screen. The parent also owns the redeem CTA + edit/cancel
- * affordances, which sit outside the list as a sticky footer.
- */
 export function CreditsMerchantAvailable({
   onRedeemPress,
   isRedeemDisabled,
@@ -54,9 +38,6 @@ export function CreditsMerchantAvailable({
     queryFn: () => customerCreditsService.getMyCredits(),
   });
 
-  // Pick the single bucket for this merchant. The aggregation helper
-  // groups live credits by merchant — we filter to ours first so the
-  // branch sections only render credits at this merchant.
   const bucket = useMemo<MerchantCreditBucket | null>(() => {
     if (!query.data?.success) return null;
     const live = query.data.data.live.filter(
@@ -65,16 +46,9 @@ export function CreditsMerchantAvailable({
     return aggregateLiveByMerchant(live)[0] ?? null;
   }, [query.data, merchantId]);
 
-  // Group this merchant's live credits by branch so the detail can
-  // show a "Branch A — 2 credits, GH₵X total" section header. Even
-  // when every credit lives at a single branch, this still renders the
-  // branch name so the user knows where the credit is spendable.
-  //
-  // Credits whose remaining has been fully consumed by pending
-  // (remaining <= 0) are dropped from the Available list — they're no
-  // longer spendable, so showing them would only add noise. The
-  // customer still sees them on the merchant's Approved history (via
-  // the audit feed) once approved.
+  // Credits fully consumed by pending (remaining <= 0) are dropped — they're
+  // no longer spendable here. They still appear on the merchant's Approved
+  // history once approved.
   const sections = useMemo<BranchSection[]>(() => {
     if (!bucket) return [];
     const byBranch = new Map<number, BranchSection>();
@@ -169,15 +143,25 @@ export function CreditsMerchantAvailable({
               <CreditRow credit={item.credit} />
             )
           }
-          ItemSeparatorComponent={() => (
-            <View
-              style={{
-                height: 1,
-                backgroundColor: theme.colors.surfaceBorder,
-                marginHorizontal: 16,
-              }}
-            />
-          )}
+          ItemSeparatorComponent={({ leadingItem, trailingItem }) => {
+            const trailingIsSection =
+              (trailingItem as DetailRow | null)?.kind === "section";
+            const leadingIsSection =
+              (leadingItem as DetailRow | null)?.kind === "section";
+            // Open up between branches so the next section breathes.
+            if (leadingIsSection || trailingIsSection) {
+              return <View style={styles.sectionGap} />;
+            }
+            return (
+              <View
+                style={{
+                  height: 1,
+                  backgroundColor: theme.colors.surfaceBorder,
+                  marginHorizontal: 16,
+                }}
+              />
+            );
+          }}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
         />
@@ -216,12 +200,6 @@ export function CreditsMerchantAvailable({
   );
 }
 
-/**
- * Branch section header — sits inside the same GlassCard as the credits
- * below it. The label and total sit inside the section row padding so
- * the visual rhythm reads as "section → divider → credits → divider …
- * → next section → …" without dipping out of the card.
- */
 function BranchSectionHeader({ section }: { section: BranchSection }) {
   const theme = useThemeTokens();
   const label = section.branchName ?? "Branch";
@@ -253,13 +231,6 @@ function BranchSectionHeader({ section }: { section: BranchSection }) {
   );
 }
 
-/**
- * Single credit row. Reuses `MerchantActivityRow` so the row shape
- * matches the main Credits list and the Approved tab. The branch
- * name doubles as the row's title (the merchant is implicit on this
- * screen), the status chip + issue date form the meta line, and the
- * right-aligned amount is `remaining` (the spendable slice).
- */
 function CreditRow({
   credit,
 }: {
@@ -267,8 +238,7 @@ function CreditRow({
 }) {
   const remaining = Number(credit.remaining) || 0;
   const chip = creditStatusChip(credit.expires_at);
-  const title =
-    credit.branch.name ?? `Branch #${String(credit.branch.id)}`;
+  const title = credit.branch.name ?? `Branch #${String(credit.branch.id)}`;
 
   return (
     <MerchantActivityRow
@@ -341,5 +311,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 16,
     paddingBottom: 6,
+  },
+  sectionGap: {
+    height: 5,
   },
 });

@@ -2,10 +2,6 @@ import { StyleSheet, Text, View } from "react-native";
 import GlassCard from "../../../shared/components/GlassCard";
 import { useThemeTokens } from "../../../shared/theme/ThemeContext";
 
-/**
- * Error state for the Credits screen — a glass card with the failure
- * headline and a propagated error message.
- */
 export default function ErrorState({ message }: { message: string }) {
   const theme = useThemeTokens();
   return (
