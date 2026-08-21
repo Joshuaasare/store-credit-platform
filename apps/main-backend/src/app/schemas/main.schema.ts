@@ -341,24 +341,7 @@ Type.Null()
 export type BaseFixedCreditConfig = Static<typeof BaseFixedCreditConfig>
 export const BaseFixedCreditConfig = Type.Object({
 id: Type.Number(),
-config_group_id: Type.String(),
 branch_id: Type.Number(),
-credit_type: Type.Union([
-CreditTypeValues,
-Type.Null()
-]),
-fixed_credit_value: Type.Union([
-Type.Number(),
-Type.Null()
-]),
-percentage_credit_value: Type.Union([
-Type.Number(),
-Type.Null()
-]),
-maximum_allowed_credit: Type.Union([
-Type.Number(),
-Type.Null()
-]),
 start_date: Type.Union([
 Type.Number(),
 Type.Null()
@@ -379,6 +362,19 @@ Type.Null()
 ]),
 deleted_at: Type.Union([
 Type.String(),
+Type.Null()
+]),
+title: Type.Union([
+Type.String(),
+Type.Null()
+]),
+config_group_id: Type.String(),
+description: Type.Union([
+Type.String(),
+Type.Null()
+]),
+images: Type.Union([
+Type.Array(Type.String()),
 Type.Null()
 ])
 })

@@ -6,6 +6,8 @@ import {
   CumulativeScopeValues,
 } from "./main.types";
 
+// CreditTypeValues is still used by the running-config interfaces below.
+
 export interface RunningCreditConfigGroup {
   config_group_id: string;
   branches: BaseBranch[];
@@ -41,10 +43,9 @@ export type UpdateRunningCreditConfigRequest = CreateRunningCreditConfigRequest;
 export interface FixedCreditConfigGroup {
   config_group_id: string;
   branches: BaseBranch[];
-  credit_type: CreditTypeValues | null;
-  fixed_credit_value: number | null;
-  percentage_credit_value: number | null;
-  maximum_allowed_credit: number | null;
+  title: string | null;
+  description: string | null;
+  images: string[] | null;
   start_date: number | null;
   end_date: number | null;
   terms: string | null;
@@ -55,10 +56,9 @@ export interface FixedCreditConfigGroup {
 
 export interface CreateFixedCreditConfigRequest {
   branch_ids: number[];
-  credit_type: CreditTypeValues | null;
-  fixed_credit_value?: number | null;
-  percentage_credit_value?: number | null;
-  maximum_allowed_credit?: number | null;
+  title?: string | null;
+  description?: string | null;
+  images?: string[] | null;
   start_date?: number | null;
   end_date?: number | null;
   terms?: string | null;

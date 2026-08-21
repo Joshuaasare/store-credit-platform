@@ -52,10 +52,10 @@ export function FixedConfigsTab({ isManager }: FixedConfigsTabProps) {
       {query.data && query.data.length === 0 && (
         <div className="bg-card flex flex-col items-center gap-2 rounded-xl border p-10 text-center">
           <CalendarClock className="text-muted-foreground h-6 w-6" />
-          <h3 className="text-sm font-semibold">No fixed promos yet</h3>
+          <h3 className="text-sm font-semibold">No promo banners yet</h3>
           <p className="text-muted-foreground max-w-sm text-xs">
-            Fixed promos are passive registry entries with a start and end
-            date. No credits are issued automatically.
+            Promotional banners with a title, description, and images shown to
+            customers across selected branches.
           </p>
           {isManager && (
             <Button

@@ -166,12 +166,7 @@ export interface BaseRunningCreditConfig {
 
 export interface BaseFixedCreditConfig {
   id: number;
-  config_group_id: string;
   branch_id: number;
-  credit_type: CreditTypeValues | null;
-  fixed_credit_value: number | null;
-  percentage_credit_value: number | null;
-  maximum_allowed_credit: number | null;
   start_date: number | null;
   end_date: number | null;
   terms: string | null;
@@ -179,4 +174,8 @@ export interface BaseFixedCreditConfig {
   created_at: string;
   updated_at: string | null;
   deleted_at: string | null;
+  title: string | null;
+  config_group_id: string;
+  description: string | null;
+  images: string[] | null;
 }

@@ -12,6 +12,7 @@ import {
   FixedCreditConfigGroup,
 } from "../schemas/creditConfig.schema";
 import type { BaseBranch } from "../schemas/main.schema";
+import { storageService, extractPathFromUrl } from "./storage.service";
 
 // select() doesn't infer nested branch:branches(...) joins when QueryFragments.* is interpolated into a template literal — re-narrow with as const at the constant declaration. Regenerate (yarn generate:types) keeps the base Row in lockstep.
 
@@ -71,6 +72,7 @@ function groupFixedRows(
 ): FixedCreditConfigGroup[] {
   const map = new Map<string, FixedConfigWithBranch>();
   for (const row of rows) {
+    if (!row.config_group_id) continue;
     const existing = map.get(row.config_group_id);
     if (!existing) {
       map.set(row.config_group_id, row);
@@ -78,16 +80,15 @@ function groupFixedRows(
   }
   return Array.from(map.values())
     .map((row) => {
-      const groupRows = rows.filter(
-        (r) => r.config_group_id === row.config_group_id,
-      );
+      const groupId = row.config_group_id;
+      if (!groupId) return null;
+      const groupRows = rows.filter((r) => r.config_group_id === groupId);
       return {
-        config_group_id: row.config_group_id,
+        config_group_id: groupId,
         branches: groupRows.map((r) => r.branch),
-        credit_type: row.credit_type,
-        fixed_credit_value: row.fixed_credit_value,
-        percentage_credit_value: row.percentage_credit_value,
-        maximum_allowed_credit: row.maximum_allowed_credit,
+        title: row.title,
+        description: row.description,
+        images: row.images as string[] | null,
         start_date: row.start_date,
         end_date: row.end_date,
         terms: row.terms,
@@ -96,6 +97,7 @@ function groupFixedRows(
         updated_at: row.updated_at,
       };
     })
+    .filter((g): g is FixedCreditConfigGroup => g !== null)
     .sort((a, b) => (b.created_at > a.created_at ? 1 : -1));
 }
 
@@ -182,17 +184,9 @@ function normalizeRunningValues(
 function normalizeFixedValues(
   payload: CreateFixedCreditConfigRequest | UpdateFixedCreditConfigRequest,
 ) {
-  const maximum_allowed_credit =
-    payload.credit_type === "fixed" &&
-    payload.maximum_allowed_credit == null &&
-    payload.fixed_credit_value != null
-      ? payload.fixed_credit_value
-      : (payload.maximum_allowed_credit ?? null);
   return {
-    credit_type: payload.credit_type,
-    fixed_credit_value: payload.fixed_credit_value ?? null,
-    percentage_credit_value: payload.percentage_credit_value ?? null,
-    maximum_allowed_credit,
+    title: payload.title ?? null,
+    description: payload.description ?? null,
     start_date: payload.start_date ?? null,
     end_date: payload.end_date ?? null,
     terms: payload.terms ?? null,
@@ -359,10 +353,12 @@ export class CreditConfigService {
     await verifyBranchOwnership(merchantId, payload.branch_ids);
     const groupId = randomUUID();
     const values = normalizeFixedValues(payload);
+    const images = payload.images ?? [];
     const rows = payload.branch_ids.map((branch_id) => ({
       branch_id,
       config_group_id: groupId,
       ...values,
+      images,
       is_active: true,
     }));
     const { error } = await supabaseAdmin
@@ -385,7 +381,7 @@ export class CreditConfigService {
 
     const { data: existing, error: fetchErr } = await supabaseAdmin
       .from("fixed_credit_config")
-      .select("id, branch_id")
+      .select("id, branch_id, images")
       .eq("config_group_id", groupId)
       .in("branch_id", merchantBranchIds)
       .is("deleted_at", null);
@@ -406,6 +402,32 @@ export class CreditConfigService {
 
     const values = normalizeFixedValues(payload);
 
+    // Why: only diff images when payload explicitly provides an array; null = "leave existing alone".
+    const updatePayload: Database["public"]["Tables"]["fixed_credit_config"]["Update"] = {
+      ...values,
+      ...(Array.isArray(payload.images) ? { images: payload.images } : {}),
+    };
+    if (Array.isArray(payload.images)) {
+      const newUrls = new Set(payload.images);
+      const stalePaths: string[] = [];
+      for (const row of existing) {
+        const rowImages = Array.isArray(row.images) ? (row.images as string[]) : [];
+        for (const url of rowImages) {
+          if (!newUrls.has(url)) {
+            const p = extractPathFromUrl("store-assets", url);
+            if (p) stalePaths.push(p);
+          }
+        }
+      }
+      if (stalePaths.length > 0) {
+        try {
+          await storageService.deleteFiles("store-assets", stalePaths);
+        } catch (err) {
+          console.warn("Failed to clean stale promo images:", err);
+        }
+      }
+    }
+
     if (removed.length > 0) {
       const { error } = await supabaseAdmin
         .from("fixed_credit_config")
@@ -417,7 +439,7 @@ export class CreditConfigService {
     if (kept.length > 0) {
       const { error } = await supabaseAdmin
         .from("fixed_credit_config")
-        .update({ ...values })
+        .update(updatePayload)
         .eq("config_group_id", groupId)
         .in("branch_id", kept);
       if (error) throw new Error(`Failed to update branches: ${error.message}`);
@@ -427,6 +449,7 @@ export class CreditConfigService {
         branch_id,
         config_group_id: groupId,
         ...values,
+        images: Array.isArray(payload.images) ? payload.images : [],
         is_active: true,
       }));
       const { error } = await supabaseAdmin
@@ -440,6 +463,29 @@ export class CreditConfigService {
 
   async deleteFixedConfig(merchantId: number, groupId: string): Promise<void> {
     const merchantBranchIds = await getMerchantBranchIds(merchantId);
+
+    const { data: rows } = await supabaseAdmin
+      .from("fixed_credit_config")
+      .select("images")
+      .eq("config_group_id", groupId)
+      .in("branch_id", merchantBranchIds)
+      .is("deleted_at", null);
+    const paths: string[] = [];
+    for (const row of rows ?? []) {
+      const rowImages = Array.isArray(row.images) ? (row.images as string[]) : [];
+      for (const url of rowImages) {
+        const p = extractPathFromUrl("store-assets", url);
+        if (p) paths.push(p);
+      }
+    }
+    if (paths.length > 0) {
+      try {
+        await storageService.deleteFiles("store-assets", paths);
+      } catch (err) {
+        console.warn("Failed to clean promo images on delete:", err);
+      }
+    }
+
     const { error } = await supabaseAdmin
       .from("fixed_credit_config")
       .delete()

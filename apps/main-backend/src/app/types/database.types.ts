@@ -357,50 +357,47 @@ export type Database = {
       fixed_credit_config: {
         Row: {
           branch_id: number
-          config_group_id: string
+          config_group_id: string | null
           created_at: string
-          credit_type: Database["public"]["Enums"]["credit_type"] | null
           deleted_at: string | null
+          description: string | null
           end_date: number | null
-          fixed_credit_value: number | null
           id: number
+          images: Json | null
           is_active: boolean
-          maximum_allowed_credit: number | null
-          percentage_credit_value: number | null
           start_date: number | null
           terms: string | null
+          title: string | null
           updated_at: string | null
         }
         Insert: {
           branch_id: number
-          config_group_id?: string
+          config_group_id?: string | null
           created_at?: string
-          credit_type?: Database["public"]["Enums"]["credit_type"] | null
           deleted_at?: string | null
+          description?: string | null
           end_date?: number | null
-          fixed_credit_value?: number | null
           id?: number
+          images?: Json | null
           is_active?: boolean
-          maximum_allowed_credit?: number | null
-          percentage_credit_value?: number | null
           start_date?: number | null
           terms?: string | null
+          title?: string | null
           updated_at?: string | null
         }
         Update: {
           branch_id?: number
-          config_group_id?: string
+          config_group_id?: string | null
           created_at?: string
-          credit_type?: Database["public"]["Enums"]["credit_type"] | null
           deleted_at?: string | null
+          description?: string | null
           end_date?: number | null
-          fixed_credit_value?: number | null
           id?: number
+          images?: Json | null
           is_active?: boolean
-          maximum_allowed_credit?: number | null
-          percentage_credit_value?: number | null
           start_date?: number | null
           terms?: string | null
+          title?: string | null
           updated_at?: string | null
         }
         Relationships: [

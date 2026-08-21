@@ -93,20 +93,16 @@ export type FixedCreditConfigGroup = Static<typeof FixedCreditConfigGroup>
 export const FixedCreditConfigGroup = Type.Object({
 config_group_id: Type.String(),
 branches: Type.Array(BaseBranch),
-credit_type: Type.Union([
-CreditTypeValues,
+title: Type.Union([
+Type.String(),
 Type.Null()
 ]),
-fixed_credit_value: Type.Union([
-Type.Number(),
+description: Type.Union([
+Type.String(),
 Type.Null()
 ]),
-percentage_credit_value: Type.Union([
-Type.Number(),
-Type.Null()
-]),
-maximum_allowed_credit: Type.Union([
-Type.Number(),
+images: Type.Union([
+Type.Array(Type.String()),
 Type.Null()
 ]),
 start_date: Type.Union([
@@ -130,22 +126,19 @@ Type.Null()
 })
 
 export type CreateFixedCreditConfigRequest = Static<typeof CreateFixedCreditConfigRequest>
+// Why: maxLength guards are hand-applied (typebox-codegen can't express them from .types.ts). Re-apply after `yarn generate:types`.
 export const CreateFixedCreditConfigRequest = Type.Object({
 branch_ids: Type.Array(Type.Number()),
-credit_type: Type.Union([
-CreditTypeValues,
-Type.Null()
-]),
-fixed_credit_value: Type.Optional(Type.Union([
-Type.Number(),
+title: Type.Optional(Type.Union([
+Type.String({ maxLength: 120 }),
 Type.Null()
 ])),
-percentage_credit_value: Type.Optional(Type.Union([
-Type.Number(),
+description: Type.Optional(Type.Union([
+Type.String({ maxLength: 1000 }),
 Type.Null()
 ])),
-maximum_allowed_credit: Type.Optional(Type.Union([
-Type.Number(),
+images: Type.Optional(Type.Union([
+Type.Array(Type.String()),
 Type.Null()
 ])),
 start_date: Type.Optional(Type.Union([

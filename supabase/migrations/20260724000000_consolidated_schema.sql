@@ -113,10 +113,48 @@ create index if not exists idx_running_credit_config_group
   where deleted_at is null;
 
 -- ──────────────────────────────────────────────────────────────────────────
--- 6. fixed_credit_config augmentations
+-- 6. fixed_credit_config augmentations (repurposed: promotional banner config)
 -- ──────────────────────────────────────────────────────────────────────────
 alter table public.fixed_credit_config
   add column if not exists config_group_id uuid not null default gen_random_uuid();
+
+alter table public.fixed_credit_config
+  drop column if exists credit_type;
+alter table public.fixed_credit_config
+  drop column if exists fixed_credit_value;
+alter table public.fixed_credit_config
+  drop column if exists percentage_credit_value;
+alter table public.fixed_credit_config
+  drop column if exists maximum_allowed_credit;
+
+alter table public.fixed_credit_config
+  add column if not exists title text;
+alter table public.fixed_credit_config
+  add column if not exists description text;
+alter table public.fixed_credit_config
+  add column if not exists images jsonb;
+alter table public.fixed_credit_config
+  add column if not exists start_date bigint;
+alter table public.fixed_credit_config
+  add column if not exists end_date bigint;
+
+-- Normalise legacy epoch values to milliseconds (the repo contract). Rows
+-- created before the Aug-16 ms conversion stored seconds (10-digit) or 0 as
+-- the "no value" sentinel; the new contract uses ms (13-digit) and null.
+-- Idempotent: ms values (>= 1e12) pass through, so re-applies are no-ops.
+update public.fixed_credit_config
+  set start_date = case
+    when start_date is null or start_date = 0 then null
+    when start_date < 1000000000000 then start_date * 1000
+    else start_date
+  end,
+  end_date = case
+    when end_date is null or end_date = 0 then null
+    when end_date < 1000000000000 then end_date * 1000
+    else end_date
+  end
+  where (start_date is not null and start_date < 1000000000000)
+     or (end_date is not null and end_date < 1000000000000);
 
 create index if not exists idx_fixed_credit_config_branch
   on public.fixed_credit_config (branch_id)

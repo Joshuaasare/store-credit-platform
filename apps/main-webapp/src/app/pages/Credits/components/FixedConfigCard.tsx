@@ -2,8 +2,6 @@ import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
-  ArrowLeft,
-  Info,
   MoreVertical,
   Pause,
   Pencil,
@@ -25,29 +23,20 @@ import {
   errorToastProperties,
   successToastProperties,
 } from "@shared/utils/misc.utils";
-import {
-  formatEpochDate,
-  formatGHS,
-  formatGHSCompact,
-} from "@shared/utils/format";
+import { formatEpochDate } from "@shared/utils/format";
 import { ConfirmDialog } from "@shared/components/ConfirmDialog/ConfirmDialog";
-import { FlipCard } from "@shared/components/FlipCard/FlipCard";
-import { FixedConfigSummary } from "./ConfigSummary";
 import { FixedConfigDialog } from "./FixedConfigDialog";
 import {
   CARD_CLASS,
   CARD_CLASS_PAUSED,
   CHIP,
   DIVIDER,
-  HERO_NUMBER,
-  HERO_NUMBER_MUTED,
   LABEL,
   PAUSED_PILL,
   STATUS_DOT_ACTIVE,
   STATUS_DOT_PAUSED,
   STATUS_TEXT_ACTIVE,
   STATUS_TEXT_PAUSED,
-  VALUE,
 } from "./configCardStyles";
 
 interface FixedConfigCardProps {
@@ -104,27 +93,8 @@ export function FixedConfigCard({ config, isManager }: FixedConfigCardProps) {
       ),
   });
 
-  const isPercentage = config.credit_type === "percentage";
-  const rewardNumber = isPercentage
-    ? `${config.percentage_credit_value ?? 0}%`
-    : formatGHSCompact(config.fixed_credit_value ?? 0);
-  const caption = isPercentage
-    ? "Promo cashback rate"
-    : "Promo cashback amount";
-
   const start = config.start_date;
   const end = config.end_date;
-  let tagline: string;
-  if (start != null && end != null) {
-    tagline = `Active ${formatEpochDate(start)} – ${formatEpochDate(end)}.`;
-  } else if (start != null) {
-    tagline = `Active from ${formatEpochDate(start)}.`;
-  } else if (end != null) {
-    tagline = `Active until ${formatEpochDate(end)}.`;
-  } else {
-    tagline = "No active window set.";
-  }
-
   const now = Math.floor(Date.now());
   const withinWindow =
     start != null && end != null && now >= start && now <= end;
@@ -139,180 +109,133 @@ export function FixedConfigCard({ config, isManager }: FixedConfigCardProps) {
 
   const isActive = config.is_active;
   const cardClass = isActive ? CARD_CLASS : CARD_CLASS_PAUSED;
-  const heroClass = isActive ? HERO_NUMBER : HERO_NUMBER_MUTED;
+
+  const images = config.images ?? [];
+  const visibleImages = images.slice(0, 4);
+  const overflow = images.length - visibleImages.length;
 
   return (
     <>
-      <FlipCard
-        front={(flip) => (
-          <Card className={cardClass}>
-            <div className="text-muted-foreground flex items-center justify-between text-[11px] font-medium uppercase tracking-wide">
-              <div className="flex items-center gap-2">
-                <span>{caption}</span>
-                {!isActive && (
-                  <span className={PAUSED_PILL}>
-                    <Pause className="h-2.5 w-2.5" />
-                    Paused
-                  </span>
-                )}
-              </div>
-              <div className="flex items-center gap-0.5">
+      <Card className={cardClass}>
+        <div className="text-muted-foreground flex items-center justify-between text-[11px] font-medium uppercase tracking-wide">
+          <div className="flex items-center gap-2">
+            <span>Promo banner</span>
+            {!isActive && (
+              <span className={PAUSED_PILL}>
+                <Pause className="h-2.5 w-2.5" />
+                Paused
+              </span>
+            )}
+          </div>
+          {isManager && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
                 <Button
                   variant="ghost"
                   size="icon"
                   className="text-muted-foreground h-6 w-6"
-                  onClick={flip}
-                  title="How this promo works"
                 >
-                  <Info className="h-3.5 w-3.5" />
+                  <MoreVertical className="h-3.5 w-3.5" />
                 </Button>
-                {isManager && (
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="text-muted-foreground h-6 w-6"
-                      >
-                        <MoreVertical className="h-3.5 w-3.5" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => setEditOpen(true)}>
-                        <Pencil className="mr-2 h-4 w-4" /> Edit promo
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={() => setConfirmPause(true)}
-                        disabled={toggleMutation.isPending}
-                      >
-                        {config.is_active ? (
-                          <>
-                            <Pause className="mr-2 h-4 w-4" /> Pause promo
-                          </>
-                        ) : (
-                          <>
-                            <Play className="mr-2 h-4 w-4" /> Activate promo
-                          </>
-                        )}
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        className="text-destructive"
-                        onClick={() => setConfirmDelete(true)}
-                        disabled={deleteMutation.isPending}
-                      >
-                        <Trash2 className="mr-2 h-4 w-4" /> Delete promo
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                )}
-              </div>
-            </div>
-
-            <div className="mt-2 leading-none">
-              <span className={heroClass}>{rewardNumber}</span>
-            </div>
-            <p className="text-muted-foreground mt-2 text-sm">{tagline}</p>
-
-            <div className={`mt-5 pt-4 ${DIVIDER}`}>
-              <div className="text-muted-foreground flex items-center gap-2 text-xs">
-                <span className={statusColor} />
-                <span
-                  className={isActive ? STATUS_TEXT_ACTIVE : STATUS_TEXT_PAUSED}
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => setEditOpen(true)}>
+                  <Pencil className="mr-2 h-4 w-4" /> Edit promo
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => setConfirmPause(true)}
+                  disabled={toggleMutation.isPending}
                 >
-                  {statusLabel}
-                </span>
-              </div>
+                  {config.is_active ? (
+                    <>
+                      <Pause className="mr-2 h-4 w-4" /> Pause promo
+                    </>
+                  ) : (
+                    <>
+                      <Play className="mr-2 h-4 w-4" /> Activate promo
+                    </>
+                  )}
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  className="text-destructive"
+                  onClick={() => setConfirmDelete(true)}
+                  disabled={deleteMutation.isPending}
+                >
+                  <Trash2 className="mr-2 h-4 w-4" /> Delete promo
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+        </div>
 
-              {config.maximum_allowed_credit != null && (
-                <div className="mt-4 grid grid-cols-2 gap-x-6 gap-y-3">
-                  <div>
-                    <div className={LABEL}>Cap per purchase</div>
-                    <div className={VALUE}>
-                      {formatGHS(config.maximum_allowed_credit)}
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <p className="text-muted-foreground mt-auto space-y-2 pt-5 text-xs">
-              Passive registry — no credits are issued automatically. Record any
-              payouts out-of-band.
-            </p>
-
-            <div className="text-muted-foreground space-y-2 pt-3 text-xs">
-              <div className={LABEL}>Listed at</div>
-              <div className="flex flex-wrap gap-1.5">
-                {config.branches.map((b) => (
-                  <span key={b.id} className={CHIP}>
-                    {b.name?.trim() || "Unnamed branch"} · {b.city}
-                  </span>
-                ))}
-              </div>
-            </div>
-          </Card>
+        <h3 className="mt-2 text-lg font-semibold leading-snug line-clamp-2">
+          {config.title?.trim() || "Untitled promo"}
+        </h3>
+        {config.description && (
+          <p className="text-muted-foreground mt-1 text-sm leading-relaxed line-clamp-2">
+            {config.description}
+          </p>
         )}
-        back={(flip) => (
-          <Card className={cardClass}>
-            <div className="text-muted-foreground flex items-center justify-between text-[11px] font-medium uppercase tracking-wide">
-              <div className="flex items-center gap-2">
-                <span>How this promo works</span>
-                {!isActive && (
-                  <span className={PAUSED_PILL}>
-                    <Pause className="h-2.5 w-2.5" />
-                    Paused
-                  </span>
-                )}
-              </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-muted-foreground h-6"
-                onClick={flip}
-              >
-                <ArrowLeft className="h-3.5 w-3.5" />
-                Back
-              </Button>
-            </div>
 
-            <div className="mt-4">
-              <FixedConfigSummary
-                accent="amber"
-                credit_type={
-                  (config.credit_type ?? "percentage") as "percentage" | "fixed"
-                }
-                percentage_credit_value={config.percentage_credit_value}
-                fixed_credit_value={config.fixed_credit_value}
-                maximum_allowed_credit={config.maximum_allowed_credit}
-                start_date={config.start_date}
-                end_date={config.end_date}
+        {visibleImages.length > 0 && (
+          <div className="mt-3 flex flex-wrap gap-1.5">
+            {visibleImages.map((url, i) => (
+              <img
+                key={url + i}
+                src={url}
+                alt=""
+                className="h-16 w-16 rounded-md border border-border object-cover"
               />
-            </div>
-
-            {config.terms && (
-              <p className="bg-muted/40 text-muted-foreground mt-4 rounded-md px-3 py-2 text-xs">
-                {config.terms}
-              </p>
-            )}
-
-            <p className="text-muted-foreground mt-4 text-xs">
-              Passive registry — no credits are issued automatically. Record any
-              payouts out-of-band.
-            </p>
-
-            <div className="text-muted-foreground mt-auto space-y-2 pt-5 text-xs">
-              <div className={LABEL}>Listed at</div>
-              <div className="flex flex-wrap gap-1.5">
-                {config.branches.map((b) => (
-                  <span key={b.id} className={CHIP}>
-                    {b.name?.trim() || "Unnamed branch"} · {b.city}
-                  </span>
-                ))}
+            ))}
+            {overflow > 0 && (
+              <div className="text-muted-foreground border-border bg-muted/50 flex h-16 w-16 items-center justify-center rounded-md border text-xs font-medium">
+                +{overflow}
               </div>
-            </div>
-          </Card>
+            )}
+          </div>
         )}
-      />
+
+        <div className="text-muted-foreground mt-3 text-xs">
+          {start != null && end != null
+            ? `${formatEpochDate(start)} – ${formatEpochDate(end)}`
+            : start != null
+              ? `From ${formatEpochDate(start)}`
+              : end != null
+                ? `Until ${formatEpochDate(end)}`
+                : "No active window set."}
+        </div>
+
+        <div className={`mt-4 pt-3 ${DIVIDER}`}>
+          <div className="text-muted-foreground flex items-center gap-2 text-xs">
+            <span className={statusColor} />
+            <span
+              className={isActive ? STATUS_TEXT_ACTIVE : STATUS_TEXT_PAUSED}
+            >
+              {statusLabel}
+            </span>
+          </div>
+        </div>
+
+        {config.terms && (
+          <details className="text-muted-foreground mt-3 text-xs">
+            <summary className="cursor-pointer select-none">Terms</summary>
+            <p className="bg-muted/40 mt-1.5 rounded-md px-2.5 py-2 leading-relaxed">
+              {config.terms}
+            </p>
+          </details>
+        )}
+
+        <div className="text-muted-foreground mt-auto space-y-2 pt-4 text-xs">
+          <div className={LABEL}>Listed at</div>
+          <div className="flex flex-wrap gap-1.5">
+            {config.branches.map((b) => (
+              <span key={b.id} className={CHIP}>
+                {b.name?.trim() || "Unnamed branch"} · {b.city}
+              </span>
+            ))}
+          </div>
+        </div>
+      </Card>
 
       <FixedConfigDialog
         open={editOpen}
@@ -348,7 +271,7 @@ export function FixedConfigCard({ config, isManager }: FixedConfigCardProps) {
         open={confirmDelete}
         onOpenChange={setConfirmDelete}
         title="Delete this promo?"
-        description="This permanently removes the promo from all its branches. No credits were ever issued from this promo (it's a passive registry), so there's nothing to undo on the customer side. This cannot be undone."
+        description="This permanently removes the promo from all its branches and deletes its uploaded images. This cannot be undone."
         confirmLabel="Delete promo"
         confirmIcon={<Trash2 className="h-4 w-4" />}
         destructive
