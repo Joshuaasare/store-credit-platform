@@ -1,6 +1,6 @@
 /**
  * Auto-generated API Types
- * Generated on: 2026-08-19T18:12:32.630Z
+ * Generated on: 2026-08-21T09:53:26.211Z
  * 
  * ⚠️ DO NOT EDIT MANUALLY
  * Source: apps/smartschool-api/src/app/types/
@@ -26,10 +26,9 @@ export type CreditTypeValues = "fixed" | "percentage";
 
 export type CumulativeScopeValues = "per_branch" | "merchant_wide";
 
-
 export type SendSMSMessageParams = {
   phone: string; 
-  message: string; 
+  message: string;
   sender?: string; 
 };
 
@@ -90,10 +89,6 @@ export interface BaseCustomer {
 }
 
 
-
-
-
-
 export interface CustomerAuthUser {
   id: string;
   phone: string | null;
@@ -112,15 +107,7 @@ export interface BaseCustomerTransaction {
   transaction_type: TransactionTypeValues;
   created_at: string;
   
-  
-  
 }
-
-
-
-
-
-
 
 
 export interface BaseUserProfile {
@@ -130,8 +117,6 @@ export interface BaseUserProfile {
   created_at: string;
   deleted_at: string | null;
 }
-
-
 
 
 export interface BaseStaff {
@@ -148,16 +133,6 @@ export interface BaseStaff {
   updated_at: string | null;
   deleted_at: string | null;
 }
-
-
-
-
-
-
-
-
-
-
 
 
 export interface BaseCustomerCredit {
@@ -177,25 +152,9 @@ export interface BaseCustomerCredit {
 }
 
 
-
-
-
-
-
-
-
-
-
-
-
 export interface BaseCustomerCreditRedemption {
   id: number;
   customer_id: number;
-  
-  
-  
-  
-  
   
   merchant_id: number | null;
   amount_redeemed: number;
@@ -229,12 +188,7 @@ export interface BaseRunningCreditConfig {
 
 export interface BaseFixedCreditConfig {
   id: number;
-  config_group_id: string;
   branch_id: number;
-  credit_type: CreditTypeValues | null;
-  fixed_credit_value: number | null;
-  percentage_credit_value: number | null;
-  maximum_allowed_credit: number | null;
   start_date: number | null;
   end_date: number | null;
   terms: string | null;
@@ -242,6 +196,10 @@ export interface BaseFixedCreditConfig {
   created_at: string;
   updated_at: string | null;
   deleted_at: string | null;
+  title: string | null;
+  config_group_id: string;
+  description: string | null;
+  images: string[] | null;
 }
 
 // ========================================
@@ -275,14 +233,14 @@ export interface AuthUser {
   id: string;
   email: string;
   phone: string | null;
-
+  
   surname: string | null;
   other_names: string | null;
   access_granted: boolean;
   role: StaffRoleValues | null;
   merchant_id: number | null;
   branch_id: number | null;
-
+  
   staff_id: number | null;
 }
 
@@ -532,10 +490,9 @@ export type UpdateRunningCreditConfigRequest = CreateRunningCreditConfigRequest;
 export interface FixedCreditConfigGroup {
   config_group_id: string;
   branches: BaseBranch[];
-  credit_type: CreditTypeValues | null;
-  fixed_credit_value: number | null;
-  percentage_credit_value: number | null;
-  maximum_allowed_credit: number | null;
+  title: string | null;
+  description: string | null;
+  images: string[] | null;
   start_date: number | null;
   end_date: number | null;
   terms: string | null;
@@ -546,10 +503,9 @@ export interface FixedCreditConfigGroup {
 
 export interface CreateFixedCreditConfigRequest {
   branch_ids: number[];
-  credit_type: CreditTypeValues | null;
-  fixed_credit_value?: number | null;
-  percentage_credit_value?: number | null;
-  maximum_allowed_credit?: number | null;
+  title?: string | null;
+  description?: string | null;
+  images?: string[] | null;
   start_date?: number | null;
   end_date?: number | null;
   terms?: string | null;
@@ -664,7 +620,7 @@ export interface CustomerActivityRedeemed {
   branch: BaseBranch;
   created_at: string;
   credit_id: number;
-
+  
   purchase_id: number | null;
 }
 
@@ -674,7 +630,7 @@ export type CustomerActivity =
 
 export interface CustomerActivitiesPage {
   items: CustomerActivity[];
-
+  
   nextCursor: number | null;
 }
 
@@ -692,13 +648,13 @@ export type CustomerCreditStatus = "live" | "expired" | "revoked";
 export type CustomerCreditType = "running" | "fixed" | null;
 
 export interface CustomerCreditWithBranch extends BaseCustomerCredit {
-
+  
   branch: BaseBranch & { merchant: BaseMerchant };
-
+  
   redeemed_total: number;
-
+  
   pending_total: number;
-
+  
   remaining: number;
   
   status: CustomerCreditStatus;
@@ -918,7 +874,7 @@ export type LeaderboardStatsApiResponse =
 export interface CustomerListFilters {
   
   branch_id?: number | null;
-
+  
   search?: string | null;
   limit?: number;
   offset?: number;
@@ -963,7 +919,7 @@ export interface CustomerDetail {
   phone: string | null;
   user: BaseUserProfile | null;
   customer_name: string;
-
+  
   total_purchases: number;
   available_credits: number;
   live_credit_count: number;
@@ -1121,7 +1077,7 @@ export interface StaffListFilters {
   branch_id?: number | null;
   
   role?: StaffRoleValues | null;
-
+  
   include_disabled?: boolean | null;
   limit?: number;
   offset?: number;

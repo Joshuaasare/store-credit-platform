@@ -1,10 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
+import { Loader2, Upload, X } from "lucide-react";
 import type { DateRange } from "react-day-picker";
 import {
   Button,
@@ -20,11 +20,12 @@ import {
   PopoverContent,
   PopoverTrigger,
   Textarea,
-  ToggleGroup,
-  ToggleGroupItem,
   cn,
 } from "@store-credit-platform/web-components";
-import { creditConfigService } from "@store-credit-platform/api-services";
+import {
+  creditConfigService,
+  createStorageService,
+} from "@store-credit-platform/api-services";
 import type {
   CreateFixedCreditConfigRequest,
   FixedCreditConfigGroup,
@@ -41,18 +42,42 @@ import {
   toEpochMs,
 } from "@shared/utils/date.utils";
 import { useStoreStore } from "@shared/stores/storeStore";
+import { compressPromoImage, isHeic } from "@shared/utils/imageCompression.utils";
+import { slugify } from "@shared/utils/string.utils";
 import { BranchMultiSelect } from "./BranchMultiSelect";
+import { EmojiPicker } from "./EmojiPicker";
 import { FieldInfoLabel } from "./FieldInfoLabel";
-import { FixedConfigSummary } from "./ConfigSummary";
 
-const numericNullable = z.union([z.number(), z.null()]).optional();
+const storage = createStorageService();
+const STORE_ASSETS_BUCKET = "store-assets";
+
+function insertAtCursor(
+  el: HTMLInputElement | HTMLTextAreaElement | null,
+  value: string | null,
+  emoji: string,
+  apply: (next: string) => void,
+) {
+  const current = value ?? "";
+  if (!el) {
+    apply(current + emoji);
+    return;
+  }
+  const start = el.selectionStart ?? current.length;
+  const end = el.selectionEnd ?? current.length;
+  const next = current.slice(0, start) + emoji + current.slice(end);
+  apply(next);
+  requestAnimationFrame(() => {
+    el.focus();
+    const pos = start + emoji.length;
+    el.setSelectionRange(pos, pos);
+  });
+}
 
 const fixedSchema = z.object({
   branch_ids: z.array(z.number()).min(1, "Select at least one branch"),
-  credit_type: z.enum(["percentage", "fixed"]),
-  percentage_credit_value: numericNullable,
-  fixed_credit_value: numericNullable,
-  maximum_allowed_credit: numericNullable,
+  title: z.string().max(120).nullable(),
+  description: z.string().max(1000).nullable(),
+  images: z.array(z.string()).nullable(),
   start_date: z.number().nullable(),
   end_date: z.number().nullable(),
   terms: z.string().nullable(),
@@ -65,9 +90,6 @@ interface FixedConfigDialogProps {
   onOpenChange?: (open: boolean) => void;
   config?: FixedCreditConfigGroup;
 }
-
-const NULLABLE_NUMBER = (v: unknown) =>
-  v === "" || v == null ? null : Number(v);
 
 function inRangeDays(visibleMonth: Date, from?: Date, to?: Date): Date[] {
   if (!from || !to) return [];
@@ -106,7 +128,7 @@ export function FixedConfigDialog({
 }: FixedConfigDialogProps) {
   const isEdit = !!config;
   const queryClient = useQueryClient();
-  const { branches } = useStoreStore();
+  const { branches, merchant } = useStoreStore();
 
   const [rangeOpen, setRangeOpen] = useState(false);
   const [customRange, setCustomRange] = useState<DateRange | undefined>();
@@ -119,6 +141,10 @@ export function FixedConfigDialog({
     const d = new Date();
     return startOfMonth(new Date(d.getFullYear(), d.getMonth() + 1, 1));
   });
+  const [uploadingCount, setUploadingCount] = useState(0);
+
+  const titleRef = useRef<HTMLInputElement>(null);
+  const descriptionRef = useRef<HTMLTextAreaElement>(null);
 
   const {
     register,
@@ -126,15 +152,15 @@ export function FixedConfigDialog({
     control,
     reset,
     watch,
+    setValue,
     formState: { errors },
   } = useForm<FixedFormValues>({
     resolver: zodResolver(fixedSchema),
     defaultValues: {
       branch_ids: [],
-      credit_type: "percentage",
-      percentage_credit_value: null,
-      fixed_credit_value: null,
-      maximum_allowed_credit: null,
+      title: null,
+      description: null,
+      images: [],
       start_date: null,
       end_date: null,
       terms: null,
@@ -145,11 +171,9 @@ export function FixedConfigDialog({
     if (open) {
       reset({
         branch_ids: config?.branches.map((b) => b.id) ?? [],
-        credit_type:
-          (config?.credit_type as "percentage" | "fixed") ?? "percentage",
-        percentage_credit_value: config?.percentage_credit_value ?? null,
-        fixed_credit_value: config?.fixed_credit_value ?? null,
-        maximum_allowed_credit: config?.maximum_allowed_credit ?? null,
+        title: config?.title ?? null,
+        description: config?.description ?? null,
+        images: config?.images ?? [],
         start_date: config?.start_date ?? null,
         end_date: config?.end_date ?? null,
         terms: config?.terms ?? null,
@@ -161,14 +185,85 @@ export function FixedConfigDialog({
     }
   }, [open, config, reset]);
 
+  // Why: on create, the server mints config_group_id, so uploads go to a temp folder; on edit, use the real group's folder.
+  const uploadFolder = isEdit
+    ? `merchant-${slugify(merchant?.name ?? "store", "store")}/promo-images/${config!.config_group_id}`
+    : `merchant-${slugify(merchant?.name ?? "store", "store")}/promo-images/temp/${crypto.randomUUID()}`;
+
+  const titleField = register("title", {
+    setValueAs: (v) => (v === "" ? null : v),
+  });
+  const descriptionField = register("description", {
+    setValueAs: (v) => (v === "" ? null : v),
+  });
+
+  const watchTitle = watch("title");
+  const watchDescription = watch("description");
+
+  const pickTitleEmoji = (emoji: string) =>
+    insertAtCursor(titleRef.current, watchTitle, emoji, (next) =>
+      setValue("title", next === "" ? null : next, { shouldDirty: true }),
+    );
+  const pickDescriptionEmoji = (emoji: string) =>
+    insertAtCursor(descriptionRef.current, watchDescription, emoji, (next) =>
+      setValue("description", next === "" ? null : next, { shouldDirty: true }),
+    );
+
+  const images = watch("images") ?? [];
+
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? []);
+    e.target.value = "";
+    if (files.length === 0) return;
+    setUploadingCount(files.length);
+    try {
+      const uploaded: string[] = [];
+      for (const file of files) {
+        if (!file.type.startsWith("image/") && !isHeic(file)) {
+          toast.error("Only image files are allowed");
+          continue;
+        }
+        if (file.size > 5 * 1024 * 1024) {
+          toast.error(`${file.name} exceeds 5MB`);
+          continue;
+        }
+        const compressed = await compressPromoImage(file);
+        const { publicUrl } = await storage.uploadFile(compressed, {
+          bucket: STORE_ASSETS_BUCKET,
+          folder: uploadFolder,
+          id: config?.config_group_id ?? crypto.randomUUID(),
+          contentType: compressed.type || "image/jpeg",
+        });
+        uploaded.push(publicUrl);
+      }
+      if (uploaded.length > 0) {
+        setValue("images", [...images, ...uploaded], { shouldDirty: true });
+      }
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : "Upload failed",
+        errorToastProperties,
+      );
+    } finally {
+      setUploadingCount(0);
+    }
+  };
+
+  const removeImage = (url: string) => {
+    setValue(
+      "images",
+      images.filter((u) => u !== url),
+      { shouldDirty: true },
+    );
+  };
+
   const mutation = useMutation({
     mutationFn: async (values: FixedFormValues) => {
       const payload: CreateFixedCreditConfigRequest = {
         branch_ids: values.branch_ids,
-        credit_type: values.credit_type,
-        percentage_credit_value: values.percentage_credit_value ?? null,
-        fixed_credit_value: values.fixed_credit_value ?? null,
-        maximum_allowed_credit: values.maximum_allowed_credit ?? null,
+        title: values.title ?? null,
+        description: values.description ?? null,
+        images: values.images ?? [],
         start_date: values.start_date,
         end_date: values.end_date,
         terms: values.terms ?? null,
@@ -197,12 +292,8 @@ export function FixedConfigDialog({
       ),
   });
 
-  const creditType = watch("credit_type");
   const startDate = watch("start_date");
   const endDate = watch("end_date");
-  const percentageValue = watch("percentage_credit_value");
-  const fixedValue = watch("fixed_credit_value");
-  const maximumAllowed = watch("maximum_allowed_credit");
   const from = fromEpochMs(startDate);
   const to = fromEpochMs(endDate);
 
@@ -238,17 +329,17 @@ export function FixedConfigDialog({
       <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>
-            {isEdit ? "Edit fixed promo" : "New fixed promo"}
+            {isEdit ? "Edit promo banner" : "New promo banner"}
           </DialogTitle>
           <DialogDescription>
-            Time-bound promotional registry. No credits are issued automatically
-            — record payouts out-of-band.
+            Promotional banners with a title, description, and images shown to
+            customers across selected branches.
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div className="space-y-1.5">
-            <FieldInfoLabel info="Pick which of your branches this promo is shown at. Staff at any selected branch will see it during the promo window.">
+            <FieldInfoLabel info="Pick which of your branches this promo is shown at.">
               Branches *
             </FieldInfoLabel>
             <Controller
@@ -270,112 +361,104 @@ export function FixedConfigDialog({
           </div>
 
           <div className="space-y-1.5">
-            <FieldInfoLabel info="Describes how the promo reward works, for staff reference. Fixed promos don't issue credit automatically — they're just listed so staff know about the promo.">
-              Reward type *
+            <FieldInfoLabel htmlFor="title" info="The headline shown on the promo banner.">
+              Title
             </FieldInfoLabel>
-            <Controller
-              control={control}
-              name="credit_type"
-              render={({ field }) => (
-                <ToggleGroup
-                  type="single"
-                  value={field.value}
-                  onValueChange={(v) =>
-                    field.onChange(v as "percentage" | "fixed")
-                  }
-                  className="bg-muted/40 rounded-lg border p-0.5"
-                >
-                  <ToggleGroupItem
-                    value="percentage"
-                    variant="outline"
-                    className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground flex-none rounded-sm border-transparent px-4"
-                  >
-                    Percentage
-                  </ToggleGroupItem>
-                  <ToggleGroupItem
-                    value="fixed"
-                    variant="outline"
-                    className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground flex-none rounded-sm border-transparent px-4"
-                  >
-                    Fixed
-                  </ToggleGroupItem>
-                </ToggleGroup>
-              )}
-            />
+            <div className="flex gap-2">
+              <Input
+                id="title"
+                type="text"
+                maxLength={120}
+                placeholder="e.g. Double Cashback Weekend 🎉"
+                className="flex-1"
+                {...titleField}
+                ref={(el) => {
+                  titleField.ref(el);
+                  titleRef.current = el;
+                }}
+              />
+              <EmojiPicker onPick={pickTitleEmoji} />
+            </div>
           </div>
-
-          {creditType === "percentage" ? (
-            <div className="space-y-1.5">
-              <FieldInfoLabel
-                htmlFor="percentage_credit_value"
-                info="The cashback percentage shown on the promo listing. E.g., 5 means '5% cashback' is shown to staff. Not applied automatically."
-              >
-                Percentage (%) *
-              </FieldInfoLabel>
-              <Input
-                id="percentage_credit_value"
-                type="number"
-                step="0.01"
-                min="0"
-                placeholder="e.g. 5"
-                {...register("percentage_credit_value", {
-                  setValueAs: NULLABLE_NUMBER,
-                })}
-              />
-            </div>
-          ) : (
-            <div className="space-y-1.5">
-              <FieldInfoLabel
-                htmlFor="fixed_credit_value"
-                info="The flat reward amount shown on the promo listing. E.g., GH₵10 means 'GH₵10 cashback' is shown to staff. The max credit is set to match this automatically."
-              >
-                Fixed amount (GH₵) *
-              </FieldInfoLabel>
-              <Input
-                id="fixed_credit_value"
-                type="number"
-                step="0.01"
-                min="0"
-                placeholder="e.g. 10"
-                {...register("fixed_credit_value", {
-                  setValueAs: NULLABLE_NUMBER,
-                })}
-              />
-            </div>
-          )}
 
           <div className="space-y-1.5">
             <FieldInfoLabel
-              htmlFor="maximum_allowed_credit"
-              info={
-                creditType === "fixed"
-                  ? "When the reward type is Fixed, this is automatically set to match the fixed amount."
-                  : "The cap shown on the promo listing. Leave empty for no stated cap. Not enforced automatically."
-              }
+              htmlFor="description"
+              info="Short description shown under the title. Keep it brief — customers see this at a glance."
             >
-              Max credit (GH₵)
+              Description
             </FieldInfoLabel>
-            <Input
-              id="maximum_allowed_credit"
-              type="number"
-              step="0.01"
-              min="0"
-              placeholder={creditType === "fixed" ? "Matches fixed amount" : "No cap if empty"}
-              disabled={creditType === "fixed"}
-              {...register("maximum_allowed_credit", {
-                setValueAs: NULLABLE_NUMBER,
-              })}
-            />
-            {creditType === "fixed" && (
-              <p className="text-muted-foreground text-xs">
-                Auto-set to match the fixed amount.
-              </p>
-            )}
+            <div className="flex gap-2">
+              <Textarea
+                id="description"
+                rows={3}
+                maxLength={1000}
+                placeholder="What's the promo about?"
+                className="flex-1"
+                {...descriptionField}
+                ref={(el) => {
+                  descriptionField.ref(el);
+                  descriptionRef.current = el;
+                }}
+              />
+              <EmojiPicker onPick={pickDescriptionEmoji} />
+            </div>
           </div>
 
           <div className="space-y-1.5">
-            <FieldInfoLabel info="The dates this promo is shown as 'Active' to staff. No credit is issued automatically — the dates just mark when the promo is live.">
-              Promo window *
+            <FieldInfoLabel info="Images shown on the promo banner. Upload up to 5MB each — they're compressed and stored at ≤500KB as JPEG. JPG/PNG/WebP/HEIC (iPhone).">
+              Images
+            </FieldInfoLabel>
+            <div className="flex flex-wrap gap-2">
+              {images.map((url) => (
+                <div
+                  key={url}
+                  className="border-border relative h-20 w-20 overflow-hidden rounded-md border"
+                >
+                  <img
+                    src={url}
+                    alt=""
+                    className="h-full w-full object-cover"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => removeImage(url)}
+                    className="bg-background/80 absolute right-1 top-1 rounded-full p-0.5"
+                    aria-label="Remove image"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              ))}
+              <label
+                className={cn(
+                  "border-border flex h-20 w-20 cursor-pointer flex-col items-center justify-center rounded-md border border-dashed text-xs text-muted-foreground",
+                  uploadingCount > 0 && "pointer-events-none opacity-50",
+                )}
+              >
+                {uploadingCount > 0 ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <>
+                    <Upload className="mb-1 h-4 w-4" />
+                    <span>Upload</span>
+                  </>
+                )}
+                <input
+                  type="file"
+                  accept="image/*,image/heic,image/heif,.heic,.heif"
+                  multiple
+                  className="hidden"
+                  onChange={handleFileSelect}
+                  disabled={uploadingCount > 0}
+                />
+              </label>
+            </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <FieldInfoLabel info="The dates this promo is shown as 'Active'. Optional — leave empty for an always-on banner.">
+              Promo window
             </FieldInfoLabel>
             <Popover
               open={rangeOpen}
@@ -420,7 +503,7 @@ export function FixedConfigDialog({
               <PopoverContent className="w-auto p-3" align="start">
                 <div className="space-y-3">
                   <div className="text-muted-foreground text-xs font-medium">
-                    Custom promo window
+                    Promo window
                   </div>
                   <div className="flex flex-col gap-4 sm:flex-row">
                     <div className="space-y-1">
@@ -506,7 +589,7 @@ export function FixedConfigDialog({
           <div className="space-y-1.5">
             <FieldInfoLabel
               htmlFor="terms"
-              info="Optional notes shown with the promo. E.g., 'Valid on Saturdays only. No cash redemption.'"
+              info="Optional customer-facing terms shown with the promo. E.g., 'Valid on Saturdays only.'"
             >
               Terms
             </FieldInfoLabel>
@@ -520,29 +603,18 @@ export function FixedConfigDialog({
             />
           </div>
 
-          <FixedConfigSummary
-            credit_type={creditType}
-            percentage_credit_value={percentageValue ?? null}
-            fixed_credit_value={fixedValue ?? null}
-            maximum_allowed_credit={maximumAllowed ?? null}
-            start_date={startDate ?? null}
-            end_date={endDate ?? null}
-          />
-
           <DialogFooter>
             <Button
               type="button"
               variant="outline"
               onClick={() => onOpenChange?.(false)}
-              disabled={mutation.isPending}
+              disabled={mutation.isPending || uploadingCount > 0}
             >
               Cancel
             </Button>
             <Button
               type="submit"
-              disabled={
-                mutation.isPending || startDate == null || endDate == null
-              }
+              disabled={mutation.isPending || uploadingCount > 0}
             >
               {mutation.isPending && (
                 <Loader2 className="h-4 w-4 animate-spin" />

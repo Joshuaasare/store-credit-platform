@@ -4,6 +4,7 @@ import {
   UpdateMerchantRequest,
 } from "../schemas/merchant.schema";
 import { QueryFragments } from "../constants/queryFragments";
+import { storageService } from "./storage.service";
 
 export class MerchantService {
   // Returns null when the user has no staff row (no-merchant state).
@@ -122,6 +123,42 @@ export class MerchantService {
     if (payload.logo_url !== undefined) update.logo_url = payload.logo_url;
     if (payload.cover_photo_url !== undefined)
       update.cover_photo_url = payload.cover_photo_url;
+
+    // Why: delete the previous object so replacing a logo/cover doesn't orphan it in the bucket.
+    const { data: current } = await supabaseAdmin
+      .from("merchants")
+      .select("logo_url, cover_photo_url")
+      .eq("id", merchantId)
+      .is("deleted_at", null)
+      .maybeSingle();
+
+    if (current) {
+      if (
+        payload.logo_url !== undefined &&
+        current.logo_url &&
+        payload.logo_url !== current.logo_url
+      ) {
+        try {
+          await storageService.deleteFileByUrl("store-assets", current.logo_url);
+        } catch (err) {
+          console.warn("Failed to delete previous logo:", err);
+        }
+      }
+      if (
+        payload.cover_photo_url !== undefined &&
+        current.cover_photo_url &&
+        payload.cover_photo_url !== current.cover_photo_url
+      ) {
+        try {
+          await storageService.deleteFileByUrl(
+            "store-assets",
+            current.cover_photo_url,
+          );
+        } catch (err) {
+          console.warn("Failed to delete previous cover photo:", err);
+        }
+      }
+    }
 
     const { error } = await supabaseAdmin
       .from("merchants")

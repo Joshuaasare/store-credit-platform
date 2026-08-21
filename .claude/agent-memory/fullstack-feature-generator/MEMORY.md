@@ -8,3 +8,4 @@
 - [Schema hand-edits leak](schema-hand-edits-leak.md) — regenerating main.schema.ts strips hand-edited BaseMerchant/UpdateMerchantRequest fields; backport them to source .types.ts first.
 - [Purchase/credit/redemption re-architecture](purchase_credit_redemption_rearchitecture.md) — customer_transactions is gone; three tables (customer_purchases, customer_credit, customer_credit_redemptions) own the flow.
 - [customer_credit has no config FK](customer_credit_no_config_fk.md) — no FK / config_group_id to running or fixed credit_config; credit_type "running" is a server-side default, not a stored field.
+- [fixed_credit_config is a promo banner](fixed_credit_config_promo_banner.md) — repurposed: title/description/images/start/end/terms; credit_type/value columns dropped; service GCs orphan images on update/delete; maxLength guards on schema are hand-applied (regen strips them).
