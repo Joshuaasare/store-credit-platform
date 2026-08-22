@@ -2,6 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { LogOut } from "lucide-react";
 import { Button, Card } from "@store-credit-platform/web-components";
 import { useAuthStore } from "@shared/stores/authStore";
+import { PageHeader } from "@shared/components/PageHeader";
 
 export default function ProfilePage() {
   const { user, logout } = useAuthStore();
@@ -15,12 +16,13 @@ export default function ProfilePage() {
   return (
     <div className="min-h-screen px-4 py-6 md:px-8 md:py-10">
       <div className="mx-auto max-w-3xl space-y-6">
-        <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-bold tracking-tight">Profile</h1>
-          <Button variant="outline" size="sm" onClick={handleLogout}>
-            <LogOut className="mr-2 h-4 w-4" /> Logout
-          </Button>
-        </div>
+        <PageHeader title="Profile" subtitle="Your account details and access.">
+          <div className="flex justify-end">
+            <Button variant="outline" size="sm" onClick={handleLogout}>
+              <LogOut className="mr-2 h-4 w-4" /> Logout
+            </Button>
+          </div>
+        </PageHeader>
 
         <Card className="p-6">
           <div className="space-y-2 text-sm">

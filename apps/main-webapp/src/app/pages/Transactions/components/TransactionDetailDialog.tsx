@@ -10,8 +10,6 @@ import {
 import {
   Dialog,
   DialogContent,
-  cn,
-  Badge,
   Monogram,
 } from "@store-credit-platform/web-components";
 import { CustomerTransactions } from "@shared/types/api.types";
@@ -22,6 +20,7 @@ import {
 import { formatEpochDateTime, formatGHS } from "@shared/utils/format";
 import { formatDisplayNumber, TYPE_META } from "@shared/utils/ui.utils";
 import { staffDisplayName } from "@shared/utils/staff.utils";
+import { TransactionTypeTag } from "@shared/components/TransactionTypeTag";
 
 interface TransactionDetailDialogProps {
   row: CustomerTransactions | null;
@@ -88,7 +87,6 @@ export function TransactionDetailDialog({
   onOpenChange,
 }: TransactionDetailDialogProps) {
   const open = row !== null;
-  const meta = row ? TYPE_META[row.transaction_type] : null;
   const displayName = row ? customerDisplayName(row) : "";
 
   return (
@@ -119,14 +117,9 @@ export function TransactionDetailDialog({
                 <Phone className="mr-1.5 inline h-3.5 w-3.5 stroke-[1.5] align-text-bottom" />
                 {formatDisplayNumber(row?.customer?.phone) ?? "—"}
               </p>
-              {row && meta && (
+              {row && (
                 <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
-                  <Badge
-                    variant="outline"
-                    className={cn("border bg-transparent", meta.chip)}
-                  >
-                    {meta.label}
-                  </Badge>
+                  <TransactionTypeTag type={row.transaction_type} />
                   <span className="text-muted-foreground/60">·</span>
                   <span className="text-muted-foreground">
                     {formatEpochDateTime(row.transaction_date)}

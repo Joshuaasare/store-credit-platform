@@ -1,5 +1,13 @@
-import { CalendarClock, Clock, MapPin } from "lucide-react";
-import { Card, Badge, cn } from "@store-credit-platform/web-components";
+import { useState } from "react";
+import { CalendarClock, ChevronDown, MapPin } from "lucide-react";
+import {
+  Card,
+  Badge,
+  Collapsible,
+  CollapsibleTrigger,
+  CollapsibleContent,
+  cn,
+} from "@store-credit-platform/web-components";
 import { CustomerDetailCreditRow } from "@shared/types/api.types";
 import { formatEpochDate, formatGHS, formatIsoDate } from "@shared/utils/format";
 
@@ -10,6 +18,7 @@ interface CustomerDetailCreditCardProps {
 export function CustomerDetailCreditCard({
   row,
 }: CustomerDetailCreditCardProps) {
+  const [open, setOpen] = useState(false);
   const isFullyRedeemed = row.remaining <= 0;
   const isExpired =
     row.expires_at != null && row.expires_at <= Math.floor(Date.now());
@@ -24,101 +33,108 @@ export function CustomerDetailCreditCard({
   const showProgressBar = fillPercent > 0;
 
   return (
-    <Card
-      className={cn(
-        "p-4 transition-colors",
-        isFullyRedeemed && "opacity-60",
-      )}
-    >
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <div className="text-muted-foreground text-[11px] font-medium uppercase tracking-wide">
-            Credit amount
-          </div>
-          <div
-            className={cn(
-              "mt-0.5 text-xl font-semibold tabular-nums",
-              isFullyRedeemed && "text-muted-foreground",
-            )}
-          >
-            {formatGHS(row.credit_amount)}
-          </div>
-        </div>
-        <Badge
-          variant="outline"
+    <Collapsible open={open} onOpenChange={setOpen}>
+      <Card
+        className={cn(
+          "p-0 transition-colors",
+          isFullyRedeemed && "opacity-60",
+        )}
+      >
+        <CollapsibleTrigger
           className={cn(
-            "border bg-transparent",
-            isFullyRedeemed
-              ? "text-muted-foreground"
-              : "border-primary/20 text-primary",
+            "flex w-full items-start justify-between gap-3 p-4 text-left",
+            "transition-colors hover:bg-muted/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
           )}
         >
-          {isFullyRedeemed ? "Fully redeemed" : "Live"}
-        </Badge>
-      </div>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-baseline gap-3">
+              <div
+                className={cn(
+                  "text-xl font-semibold tabular-nums",
+                  isFullyRedeemed && "text-muted-foreground",
+                )}
+              >
+                {formatGHS(row.remaining)}
+              </div>
+              <div className="text-muted-foreground text-xs">
+                of {formatGHS(row.credit_amount)}
+              </div>
+            </div>
+            <div className="text-muted-foreground mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
+              <span className="inline-flex items-center gap-1">
+                <CalendarClock className="h-3 w-3" />
+                {row.expires_at == null
+                  ? "Lifetime"
+                  : `Expires ${formatEpochDate(row.expires_at)}`}
+                {isExpired && row.expires_at != null && (
+                  <span className="text-destructive">· Expired</span>
+                )}
+              </span>
+              <span className="inline-flex items-center gap-1">
+                <MapPin className="h-3 w-3" />
+                {row.branch.name?.trim() || `Branch #${row.branch_id}`}
+              </span>
+            </div>
+          </div>
+          <div className="flex shrink-0 items-center gap-2">
+            <Badge
+              variant="outline"
+              className={cn(
+                "border bg-transparent",
+                isFullyRedeemed
+                  ? "text-muted-foreground"
+                  : "border-primary/20 text-primary",
+              )}
+            >
+              {isFullyRedeemed ? "Fully redeemed" : "Live"}
+            </Badge>
+            <ChevronDown
+              className={cn(
+                "text-muted-foreground h-4 w-4 transition-transform",
+                open && "rotate-180",
+              )}
+            />
+          </div>
+        </CollapsibleTrigger>
 
-      {showProgressBar && (
-        <div
-          className="bg-muted mt-3 h-1.5 overflow-hidden rounded-full"
-          role="progressbar"
-          aria-valuemin={0}
-          aria-valuemax={100}
-          aria-valuenow={fillPercent}
-          aria-label={`${fillPercent}% redeemed`}
-        >
-          <div
-            className={cn(
-              "h-full rounded-full transition-[width]",
-              isFullyRedeemed ? "bg-muted-foreground" : "bg-primary",
+        <CollapsibleContent>
+          <div className="border-t px-4 pb-4 pt-3">
+            {showProgressBar && (
+              <div
+                className="bg-muted h-1.5 overflow-hidden rounded-full"
+                role="progressbar"
+                aria-valuemin={0}
+                aria-valuemax={100}
+                aria-valuenow={fillPercent}
+                aria-label={`${fillPercent}% redeemed`}
+              >
+                <div
+                  className={cn(
+                    "h-full rounded-full transition-[width]",
+                    isFullyRedeemed ? "bg-muted-foreground" : "bg-primary",
+                  )}
+                  style={{ width: `${fillPercent}%` }}
+                />
+              </div>
             )}
-            style={{ width: `${fillPercent}%` }}
-          />
-        </div>
-      )}
 
-      <div className="mt-3 grid grid-cols-2 gap-3 border-t pt-3">
-        <div>
-          <div className="text-muted-foreground text-[11px] font-medium uppercase tracking-wide">
-            Redeemed
+            <div className="mt-3 grid grid-cols-2 gap-3">
+              <div>
+                <div className="text-muted-foreground text-xs">Redeemed</div>
+                <div className="mt-0.5 text-sm font-medium tabular-nums">
+                  {formatGHS(row.redeemed_total)}
+                </div>
+              </div>
+              <div>
+                <div className="text-muted-foreground text-xs">Issued</div>
+                <div className="text-muted-foreground mt-0.5 text-xs">
+                  {formatIsoDate(row.created_at)}
+                </div>
+              </div>
+            </div>
           </div>
-          <div className="mt-0.5 text-sm font-medium tabular-nums">
-            {formatGHS(row.redeemed_total)}
-          </div>
-        </div>
-        <div>
-          <div className="text-muted-foreground text-[11px] font-medium uppercase tracking-wide">
-            Remaining
-          </div>
-          <div
-            className={cn(
-              "mt-0.5 text-sm font-semibold tabular-nums",
-              !isFullyRedeemed && "text-primary",
-            )}
-          >
-            {formatGHS(row.remaining)}
-          </div>
-        </div>
-      </div>
-
-      <div className="text-muted-foreground mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 border-t pt-3 text-[11px]">
-        <span className="inline-flex items-center gap-1">
-          <CalendarClock className="h-3 w-3" />
-          {row.expires_at == null
-            ? "Lifetime"
-            : `Expires ${formatEpochDate(row.expires_at)}`}
-          {isExpired && row.expires_at != null && (
-            <span className="text-destructive">· Expired</span>
-          )}
-        </span>
-        <span className="inline-flex items-center gap-1">
-          <Clock className="h-3 w-3" />
-          Issued {formatIsoDate(row.created_at)}
-        </span>
-        <span className="inline-flex items-center gap-1">
-          <MapPin className="h-3 w-3" />
-          {row.branch.name?.trim() || `Branch #${row.branch_id}`}
-        </span>
-      </div>
-    </Card>
+        </CollapsibleContent>
+      </Card>
+    </Collapsible>
   );
 }
