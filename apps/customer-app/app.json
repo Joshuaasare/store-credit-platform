@@ -9,7 +9,7 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.joshuaasare.-store-credit-platform-customer-app",
+      "bundleIdentifier": "com.discountsgh.customerapp",
       "infoPlist": {
         "NSPhotoLibraryUsageDescription": "We use your photo library to let you pick a profile photo.",
         "NSCameraUsageDescription": "We use your camera to let you take a profile photo.",
@@ -29,7 +29,7 @@
         "android.permission.ACCESS_FINE_LOCATION",
         "android.permission.RECORD_AUDIO"
       ],
-      "package": "com.joshuaasare.storecreditplatformcustomerapp"
+      "package": "com.discountsgh.customerapp"
     },
     "web": {
       "bundler": "metro"
@@ -38,6 +38,7 @@
       [
         "expo-splash-screen",
         {
+          "image": "./assets/images/splash-logo.png",
           "imageWidth": 200,
           "resizeMode": "contain",
           "backgroundColor": "#ffffff"
