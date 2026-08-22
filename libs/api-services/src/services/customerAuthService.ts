@@ -42,11 +42,19 @@ export function createCustomerAuthService(config?: ApiClientConfig) {
       pendingToken: string,
       surname: string,
       otherNames: string,
+      location?: {
+        latitude?: number | null;
+        longitude?: number | null;
+        place_id?: string | null;
+      },
     ): Promise<CustomerRegisterApiResponse> {
       const body: CustomerRegisterRequest = {
         pending_token: pendingToken,
         surname,
         other_names: otherNames,
+        latitude: location?.latitude ?? undefined,
+        longitude: location?.longitude ?? undefined,
+        place_id: location?.place_id ?? undefined,
       };
       return publicApiRequest<CustomerRegisterApiResponse>(
         "/customer-auth/register",

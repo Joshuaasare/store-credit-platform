@@ -78,7 +78,19 @@ Type.Null()
 city: Type.String(),
 country_code: Type.String(),
 is_active: Type.Boolean(),
-created_at: Type.String()
+created_at: Type.String(),
+latitude: Type.Union([
+Type.Number(),
+Type.Null()
+]),
+longitude: Type.Union([
+Type.Number(),
+Type.Null()
+]),
+place_id: Type.Union([
+Type.String(),
+Type.Null()
+])
 })
 
 export type ApiErrorResponse = Static<typeof ApiErrorResponse>
@@ -124,6 +136,18 @@ Type.Null()
 ]),
 created_at: Type.String(),
 deleted_at: Type.Union([
+Type.String(),
+Type.Null()
+]),
+latitude: Type.Union([
+Type.Number(),
+Type.Null()
+]),
+longitude: Type.Union([
+Type.Number(),
+Type.Null()
+]),
+place_id: Type.Union([
 Type.String(),
 Type.Null()
 ])

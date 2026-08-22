@@ -170,6 +170,9 @@ export class CustomerAuthService {
           user_id: newUser.id,
           surname: data.surname.trim() || null,
           other_names: data.other_names.trim() || null,
+          latitude: data.latitude ?? null,
+          longitude: data.longitude ?? null,
+          place_id: data.place_id ?? null,
         })
         .eq("id", existingCustomer.id)
         .select(QueryFragments.BASE_CUSTOMER)
@@ -191,6 +194,9 @@ export class CustomerAuthService {
           user_id: newUser.id,
           surname: data.surname.trim() || null,
           other_names: data.other_names.trim() || null,
+          latitude: data.latitude ?? null,
+          longitude: data.longitude ?? null,
+          place_id: data.place_id ?? null,
         })
         .select(QueryFragments.BASE_CUSTOMER)
         .single();

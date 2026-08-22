@@ -95,6 +95,9 @@ export class CustomerProfileService {
       avatar_url?: string | null;
       newPhone?: string;
       phoneVerifiedToken?: string;
+      latitude?: number | null;
+      longitude?: number | null;
+      place_id?: string | null;
     },
   ): Promise<CustomerAuthUser> {
     if (body.surname != null) {
@@ -170,6 +173,9 @@ export class CustomerProfileService {
     if (body.avatar_url !== undefined)
       customersUpdate.avatar_url = body.avatar_url;
     if (normalizedNewPhone != null) customersUpdate.phone = normalizedNewPhone;
+    if (body.latitude !== undefined) customersUpdate.latitude = body.latitude;
+    if (body.longitude !== undefined) customersUpdate.longitude = body.longitude;
+    if (body.place_id !== undefined) customersUpdate.place_id = body.place_id;
 
     const oldAvatarUrl = current.avatar_url;
 

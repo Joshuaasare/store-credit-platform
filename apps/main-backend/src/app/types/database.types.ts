@@ -48,9 +48,12 @@ export type Database = {
           deleted_at: string | null
           id: number
           is_active: boolean
+          latitude: number | null
+          longitude: number | null
           merchant_id: number
           name: string | null
           phone: string | null
+          place_id: string | null
           updated_at: string | null
         }
         Insert: {
@@ -61,9 +64,12 @@ export type Database = {
           deleted_at?: string | null
           id?: number
           is_active?: boolean
+          latitude?: number | null
+          longitude?: number | null
           merchant_id: number
           name?: string | null
           phone?: string | null
+          place_id?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -74,9 +80,12 @@ export type Database = {
           deleted_at?: string | null
           id?: number
           is_active?: boolean
+          latitude?: number | null
+          longitude?: number | null
           merchant_id?: number
           name?: string | null
           phone?: string | null
+          place_id?: string | null
           updated_at?: string | null
         }
         Relationships: [
@@ -313,8 +322,11 @@ export type Database = {
           created_at: string
           deleted_at: string | null
           id: number
+          latitude: number | null
+          longitude: number | null
           other_names: string | null
           phone: string | null
+          place_id: string | null
           surname: string | null
           unique_id: string | null
           updated_at: string | null
@@ -325,8 +337,11 @@ export type Database = {
           created_at?: string
           deleted_at?: string | null
           id?: number
+          latitude?: number | null
+          longitude?: number | null
           other_names?: string | null
           phone?: string | null
+          place_id?: string | null
           surname?: string | null
           unique_id?: string | null
           updated_at?: string | null
@@ -337,8 +352,11 @@ export type Database = {
           created_at?: string
           deleted_at?: string | null
           id?: number
+          latitude?: number | null
+          longitude?: number | null
           other_names?: string | null
           phone?: string | null
+          place_id?: string | null
           surname?: string | null
           unique_id?: string | null
           updated_at?: string | null

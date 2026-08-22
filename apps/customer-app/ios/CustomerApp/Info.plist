@@ -47,6 +47,8 @@
 	</dict>
 	<key>NSCameraUsageDescription</key>
 	<string>We use your camera to let you take a profile photo.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>We use your location to set your home area so we can show you nearby merchant branches.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>We use your photo library to let you pick a profile photo.</string>
 	<key>RCTNewArchEnabled</key>

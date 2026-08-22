@@ -42,6 +42,9 @@ export interface CustomerProfileUpdateRequest {
   avatar_url?: string | null;
   newPhone?: string;
   phoneVerifiedToken?: string;
+  latitude?: number | null;
+  longitude?: number | null;
+  place_id?: string | null;
 }
 
 // The returned CustomerAuthUser is post-update so the customer-app can setUser without a refetch.

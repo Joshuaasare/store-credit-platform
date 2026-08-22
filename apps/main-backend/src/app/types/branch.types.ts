@@ -23,6 +23,9 @@ export interface CreateBranchRequest {
   address?: string;
   city: string;
   country_code: string;
+  latitude?: number | null;
+  longitude?: number | null;
+  place_id?: string | null;
 }
 
 export interface UpdateBranchRequest {
@@ -31,6 +34,9 @@ export interface UpdateBranchRequest {
   address?: string;
   city?: string;
   country_code?: string;
+  latitude?: number | null;
+  longitude?: number | null;
+  place_id?: string | null;
 }
 
 export type BranchListApiResponse = BranchListResponse | ApiErrorResponse;

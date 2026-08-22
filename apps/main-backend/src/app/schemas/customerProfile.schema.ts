@@ -54,7 +54,19 @@ Type.String(),
 Type.Null()
 ])),
 newPhone: Type.Optional(Type.String()),
-phoneVerifiedToken: Type.Optional(Type.String())
+phoneVerifiedToken: Type.Optional(Type.String()),
+latitude: Type.Optional(Type.Union([
+Type.Number(),
+Type.Null()
+])),
+longitude: Type.Optional(Type.Union([
+Type.Number(),
+Type.Null()
+])),
+place_id: Type.Optional(Type.Union([
+Type.String(),
+Type.Null()
+]))
 })
 
 export type CustomerProfileUpdateResponse = Static<typeof CustomerProfileUpdateResponse>

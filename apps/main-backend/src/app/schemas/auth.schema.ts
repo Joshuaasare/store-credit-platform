@@ -216,7 +216,19 @@ export type CustomerRegisterRequest = Static<typeof CustomerRegisterRequest>
 export const CustomerRegisterRequest = Type.Object({
 pending_token: Type.String(),
 surname: Type.String(),
-other_names: Type.String()
+other_names: Type.String(),
+latitude: Type.Optional(Type.Union([
+Type.Number(),
+Type.Null()
+])),
+longitude: Type.Optional(Type.Union([
+Type.Number(),
+Type.Null()
+])),
+place_id: Type.Optional(Type.Union([
+Type.String(),
+Type.Null()
+]))
 })
 
 export type CustomerRefreshRequest = Static<typeof CustomerRefreshRequest>

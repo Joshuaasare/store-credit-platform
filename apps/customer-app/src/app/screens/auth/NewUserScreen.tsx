@@ -1,10 +1,14 @@
 import { useState } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { ScrollView, StyleSheet, Text } from "react-native";
 import ScreenBackground from "../../shared/components/ScreenBackground";
 import ScreenBody from "../../shared/components/ScreenBody";
 import GlassCard from "../../shared/components/GlassCard";
 import GlassInput from "../../shared/components/GlassInput";
 import PrimaryButton from "../../shared/components/PrimaryButton";
+import {
+  LocationPicker,
+  LocationValue,
+} from "../../shared/components/LocationPicker";
 import { customerAuthService } from "../../api/client";
 import { useAuthStore } from "../../shared/store/useAuthStore";
 import { useThemeTokens } from "../../shared/theme/ThemeContext";
@@ -13,6 +17,7 @@ export function NewUserScreen() {
   const theme = useThemeTokens();
   const [surname, setSurname] = useState("");
   const [otherNames, setOtherNames] = useState("");
+  const [location, setLocation] = useState<LocationValue | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const pendingToken = useAuthStore((s) => s.pendingToken);
@@ -36,6 +41,7 @@ export function NewUserScreen() {
         pendingToken,
         surnameTrimmed,
         otherTrimmed,
+        location ?? undefined,
       );
       if (!res.success) {
         setError(res.error);
@@ -56,7 +62,11 @@ export function NewUserScreen() {
   return (
     <ScreenBackground>
       <ScreenBody>
-      <View style={styles.container}>
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={styles.containerContent}
+        keyboardShouldPersistTaps="handled"
+      >
         <Text
           style={[
             styles.title,
@@ -117,6 +127,30 @@ export function NewUserScreen() {
             autoCapitalize="words"
             autoCorrect={false}
           />
+          <Text
+            style={[
+              styles.label,
+              {
+                marginTop: 16,
+                color: theme.colors.textSecondary,
+                fontFamily: theme.typography.fontFamilyMedium,
+              },
+            ]}
+          >
+            Location (optional)
+          </Text>
+          <Text
+            style={[
+              styles.hint,
+              {
+                color: theme.colors.textMuted,
+                fontFamily: theme.typography.fontFamilyRegular,
+              },
+            ]}
+          >
+            Set your home area so we can show you nearby branches.
+          </Text>
+          <LocationPicker value={location} onChange={setLocation} />
           {error ? (
             <Text
               style={[
@@ -138,7 +172,7 @@ export function NewUserScreen() {
             style={styles.button}
           />
         </GlassCard>
-      </View>
+      </ScrollView>
       </ScreenBody>
     </ScreenBackground>
   );
@@ -147,7 +181,9 @@ export function NewUserScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: "center",
+  },
+  containerContent: {
+    paddingVertical: 32,
   },
   title: {
     fontSize: 28,
@@ -164,6 +200,10 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 13,
+    marginBottom: 8,
+  },
+  hint: {
+    fontSize: 12,
     marginBottom: 8,
   },
   button: {

@@ -148,6 +148,9 @@ export class BranchService {
         city: payload.city,
         country_code: payload.country_code,
         is_active: true,
+        latitude: payload.latitude ?? null,
+        longitude: payload.longitude ?? null,
+        place_id: payload.place_id ?? null,
       })
       .select(QueryFragments.BASE_BRANCH)
       .single();
@@ -200,6 +203,9 @@ export class BranchService {
     if (payload.city !== undefined) update.city = payload.city;
     if (payload.country_code !== undefined)
       update.country_code = payload.country_code;
+    if (payload.latitude !== undefined) update.latitude = payload.latitude;
+    if (payload.longitude !== undefined) update.longitude = payload.longitude;
+    if (payload.place_id !== undefined) update.place_id = payload.place_id;
 
     const { error } = await supabaseAdmin
       .from("branches")

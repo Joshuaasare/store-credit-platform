@@ -32,7 +32,19 @@ name: Type.String(),
 phone: Type.Optional(Type.String()),
 address: Type.Optional(Type.String()),
 city: Type.String(),
-country_code: Type.String()
+country_code: Type.String(),
+latitude: Type.Optional(Type.Union([
+Type.Number(),
+Type.Null()
+])),
+longitude: Type.Optional(Type.Union([
+Type.Number(),
+Type.Null()
+])),
+place_id: Type.Optional(Type.Union([
+Type.String(),
+Type.Null()
+]))
 })
 
 export type UpdateBranchRequest = Static<typeof UpdateBranchRequest>
@@ -41,7 +53,19 @@ name: Type.Optional(Type.String()),
 phone: Type.Optional(Type.String()),
 address: Type.Optional(Type.String()),
 city: Type.Optional(Type.String()),
-country_code: Type.Optional(Type.String())
+country_code: Type.Optional(Type.String()),
+latitude: Type.Optional(Type.Union([
+Type.Number(),
+Type.Null()
+])),
+longitude: Type.Optional(Type.Union([
+Type.Number(),
+Type.Null()
+])),
+place_id: Type.Optional(Type.Union([
+Type.String(),
+Type.Null()
+]))
 })
 
 export type BranchListApiResponse = Static<typeof BranchListApiResponse>

@@ -1,8 +1,8 @@
 export const QueryFragments = {
   BASE_USER: `id,email,phone,otp,otp_expires_at`,
   BASE_MERCHANT: `id,name,phone,country_code,slug,is_active,created_at,credit_pool_used,credit_pool_limit,logo_url,cover_photo_url`,
-  BASE_BRANCH: `id,merchant_id,name,phone,address,city,country_code,is_active,created_at`,
-  BASE_CUSTOMER: `id,phone,unique_id,user_id,surname,other_names,avatar_url,created_at,deleted_at`,
+  BASE_BRANCH: `id,merchant_id,name,phone,address,city,country_code,is_active,created_at,latitude,longitude,place_id`,
+  BASE_CUSTOMER: `id,phone,unique_id,user_id,surname,other_names,avatar_url,created_at,deleted_at,latitude,longitude,place_id`,
   BASE_CUSTOMER_TRANSACTION: `id,customer_id,branch_id,recorded_by_staff_id,amount,transaction_date,transaction_type,created_at`,
   BASE_USER_PROFILE: `id,phone,last_login_at,created_at,deleted_at`,
   BASE_STAFF: `id,user_id,branch_id,role,surname,other_names,access_granted,address,notes,created_at,updated_at,deleted_at`,

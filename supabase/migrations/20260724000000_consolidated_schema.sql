@@ -93,7 +93,10 @@ alter table public.merchants
 -- 4. branches columns
 -- ──────────────────────────────────────────────────────────────────────────
 alter table public.branches
-  add column if not exists is_active boolean not null default true;
+  add column if not exists is_active boolean not null default true,
+  add column if not exists latitude numeric,
+  add column if not exists longitude numeric,
+  add column if not exists place_id text;
 
 -- ──────────────────────────────────────────────────────────────────────────
 -- 5. running_credit_config augmentations
@@ -406,7 +409,10 @@ alter table public.staff
 alter table public.customers
   add column if not exists surname text,
   add column if not exists other_names text,
-  add column if not exists avatar_url text;
+  add column if not exists avatar_url text,
+  add column if not exists latitude numeric,
+  add column if not exists longitude numeric,
+  add column if not exists place_id text;
 
 alter table public.users
   drop column if exists surname,

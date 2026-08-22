@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
@@ -24,6 +24,10 @@ import {
   errorToastProperties,
   successToastProperties,
 } from "@shared/utils/misc.utils";
+import {
+  LocationPicker,
+  LocationValue,
+} from "@shared/components/LocationPicker/LocationPicker";
 import { Loader2 } from "lucide-react";
 
 const branchSchema = z.object({
@@ -38,6 +42,9 @@ const branchSchema = z.object({
     .min(1, "City is required")
     .max(60, "City must be 60 characters or less"),
   country_code: z.string().min(1, "Country is required"),
+  latitude: z.number().nullable().optional(),
+  longitude: z.number().nullable().optional(),
+  place_id: z.string().nullable().optional(),
 });
 
 type BranchFormValues = z.infer<typeof branchSchema>;
@@ -74,6 +81,9 @@ export function BranchEditDialog({
       address: "",
       city: "",
       country_code: CountryCode.GH,
+      latitude: null,
+      longitude: null,
+      place_id: null,
     },
   });
 
@@ -85,6 +95,9 @@ export function BranchEditDialog({
         address: branch?.address ?? "",
         city: branch?.city ?? "",
         country_code: (branch?.country_code as CountryCode) ?? CountryCode.GH,
+        latitude: branch?.latitude ?? null,
+        longitude: branch?.longitude ?? null,
+        place_id: branch?.place_id ?? null,
       });
     }
   }, [open, branch, reset]);
@@ -97,6 +110,14 @@ export function BranchEditDialog({
 
   const onSubmit = async (values: BranchFormValues) => {
     try {
+      const location =
+        values.latitude != null && values.longitude != null
+          ? {
+              latitude: values.latitude,
+              longitude: values.longitude,
+              place_id: values.place_id ?? null,
+            }
+          : { latitude: null, longitude: null, place_id: null };
       if (isEdit && branch) {
         await updateBranch(branch.id, {
           name: values.name,
@@ -104,6 +125,9 @@ export function BranchEditDialog({
           address: values.address || undefined,
           city: values.city,
           country_code: values.country_code,
+          latitude: location.latitude,
+          longitude: location.longitude,
+          place_id: location.place_id,
         });
         toast.success("Branch updated", successToastProperties);
       } else {
@@ -113,6 +137,9 @@ export function BranchEditDialog({
           address: values.address || undefined,
           city: values.city,
           country_code: values.country_code,
+          latitude: location.latitude,
+          longitude: location.longitude,
+          place_id: location.place_id,
         });
         toast.success("Branch added", successToastProperties);
       }
@@ -198,6 +225,36 @@ export function BranchEditDialog({
                 </p>
               )}
             </div>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label>Location</Label>
+            <Controller
+              control={control}
+              name="latitude"
+              render={({ field }) => {
+                const lng = watch("longitude");
+                const pid = watch("place_id");
+                const value: LocationValue | null =
+                  field.value != null && lng != null
+                    ? {
+                        latitude: field.value,
+                        longitude: lng,
+                        place_id: pid ?? null,
+                      }
+                    : null;
+                return (
+                  <LocationPicker
+                    value={value}
+                    onChange={(v) => {
+                      field.onChange(v?.latitude ?? null);
+                      setValue("longitude", v?.longitude ?? null);
+                      setValue("place_id", v?.place_id ?? null);
+                    }}
+                  />
+                );
+              }}
+            />
           </div>
 
           <DialogFooter>

@@ -26,6 +26,10 @@ import { useThemeTokens } from "../../shared/theme/ThemeContext";
 import type { AppStackParamList } from "../../navigation/RootNavigator";
 import AvatarSourcePicker from "./components/AvatarSourcePicker";
 import OtpVerifyModal from "./components/OtpVerifyModal";
+import {
+  LocationPicker,
+  LocationValue,
+} from "../../shared/components/LocationPicker";
 
 type Props = NativeStackScreenProps<AppStackParamList, "EditProfile">;
 
@@ -71,6 +75,9 @@ export function EditProfileScreen({ navigation }: Props) {
 
   const [submitting, setSubmitting] = useState(false);
   const [pageError, setPageError] = useState<string | null>(null);
+
+  const [location, setLocation] = useState<LocationValue | null>(null);
+  const [locationDirty, setLocationDirty] = useState(false);
 
   const phoneUnchanged = phone === currentPhone;
   const phoneVerified = !phoneUnchanged && phone === verifiedPhone;
@@ -198,9 +205,7 @@ export function EditProfileScreen({ navigation }: Props) {
       }
       setUser(res.data.user);
     } catch (e) {
-      setPageError(
-        e instanceof Error ? e.message : "Failed to update photo",
-      );
+      setPageError(e instanceof Error ? e.message : "Failed to update photo");
     } finally {
       setAvatarUploading(false);
     }
@@ -288,6 +293,9 @@ export function EditProfileScreen({ navigation }: Props) {
         other_names?: string;
         newPhone?: string;
         phoneVerifiedToken?: string;
+        latitude?: number | null;
+        longitude?: number | null;
+        place_id?: string | null;
       } = {};
       if (surnameTrimmed !== (user?.surname ?? ""))
         body.surname = surnameTrimmed;
@@ -297,8 +305,14 @@ export function EditProfileScreen({ navigation }: Props) {
         body.newPhone = phone;
         body.phoneVerifiedToken = phoneVerifiedToken;
       }
+      if (locationDirty) {
+        body.latitude = location?.latitude ?? null;
+        body.longitude = location?.longitude ?? null;
+        body.place_id = location?.place_id ?? null;
+      }
 
       if (
+        !locationDirty &&
         body.surname === undefined &&
         body.other_names === undefined &&
         body.newPhone === undefined
@@ -344,6 +358,7 @@ export function EditProfileScreen({ navigation }: Props) {
         <ScrollView
           contentContainerStyle={styles.scrollBody}
           keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
         >
           <View style={styles.avatarBlock}>
             <TouchableOpacity
@@ -603,6 +618,26 @@ export function EditProfileScreen({ navigation }: Props) {
               </TouchableOpacity>
             ) : null}
           </View>
+
+          <Text
+            style={[
+              styles.label,
+              styles.labelSpacing,
+              {
+                color: theme.colors.textSecondary,
+                fontFamily: theme.typography.fontFamilyMedium,
+              },
+            ]}
+          >
+            Location
+          </Text>
+          <LocationPicker
+            value={location}
+            onChange={(v) => {
+              setLocation(v);
+              setLocationDirty(true);
+            }}
+          />
 
           {pageError ? (
             <Text

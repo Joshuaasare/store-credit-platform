@@ -1,6 +1,6 @@
 /**
  * Auto-generated API Types
- * Generated on: 2026-08-21T09:53:26.010Z
+ * Generated on: 2026-08-21T18:58:04.639Z
  * 
  * ⚠️ DO NOT EDIT MANUALLY
  * Source: apps/smartschool-api/src/app/types/
@@ -63,6 +63,9 @@ export interface BaseBranch {
   country_code: string;
   is_active: boolean;
   created_at: string;
+  latitude: number | null;
+  longitude: number | null;
+  place_id: string | null;
 }
 
 export interface ApiErrorResponse {
@@ -86,6 +89,9 @@ export interface BaseCustomer {
   avatar_url: string | null;
   created_at: string;
   deleted_at: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  place_id: string | null;
 }
 
 
@@ -329,6 +335,9 @@ export interface CustomerRegisterRequest {
   pending_token: string;
   surname: string;
   other_names: string;
+  latitude?: number | null;
+  longitude?: number | null;
+  place_id?: string | null;
 }
 
 export interface CustomerRefreshRequest {
@@ -440,6 +449,9 @@ export interface CreateBranchRequest {
   address?: string;
   city: string;
   country_code: string;
+  latitude?: number | null;
+  longitude?: number | null;
+  place_id?: string | null;
 }
 
 export interface UpdateBranchRequest {
@@ -448,6 +460,9 @@ export interface UpdateBranchRequest {
   address?: string;
   city?: string;
   country_code?: string;
+  latitude?: number | null;
+  longitude?: number | null;
+  place_id?: string | null;
 }
 
 export type BranchListApiResponse = BranchListResponse | ApiErrorResponse;
@@ -713,6 +728,9 @@ export interface CustomerProfileUpdateRequest {
   avatar_url?: string | null;
   newPhone?: string;
   phoneVerifiedToken?: string;
+  latitude?: number | null;
+  longitude?: number | null;
+  place_id?: string | null;
 }
 
 export interface CustomerProfileUpdateResponse {
