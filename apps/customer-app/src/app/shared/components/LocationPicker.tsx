@@ -11,11 +11,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 import MapView, { Marker, Region } from "react-native-maps";
 import { useThemeTokens } from "../theme/ThemeContext";
-import {
-  GeoResult,
-  photonReverse,
-  searchPlaces,
-} from "../utils/geocode";
+import { GeoResult, photonReverse, searchPlaces } from "../utils/geocode";
 import {
   Coords,
   GeolocationDeniedError,
@@ -81,9 +77,18 @@ export function LocationPicker({ value, onChange }: LocationPickerProps) {
         reverseController.current = controller;
         photonReverse(lat, lng, controller.signal)
           .then((r) => {
-            const resolved = r ?? { lat, lng, place_id: null, label: "Dropped pin" };
+            const resolved = r ?? {
+              lat,
+              lng,
+              place_id: null,
+              label: "Dropped pin",
+            };
             setLabel(resolved.label);
-            onChange({ latitude: lat, longitude: lng, place_id: resolved.place_id });
+            onChange({
+              latitude: lat,
+              longitude: lng,
+              place_id: resolved.place_id,
+            });
           })
           .catch(() => {
             setLabel("Dropped pin");
@@ -163,7 +168,8 @@ export function LocationPicker({ value, onChange }: LocationPickerProps) {
       placeAt(coords.lat, coords.lng);
     } catch (err) {
       setError(
-        err instanceof GeolocationDeniedError || err instanceof GeolocationUnavailableError
+        err instanceof GeolocationDeniedError ||
+          err instanceof GeolocationUnavailableError
           ? err.message
           : "Could not get your location.",
       );
@@ -256,7 +262,9 @@ export function LocationPicker({ value, onChange }: LocationPickerProps) {
           <FlatList
             data={results}
             keyboardShouldPersistTaps="handled"
-            keyExtractor={(item, i) => `${item.place_id ?? ""}-${item.lat}-${item.lng}-${i}`}
+            keyExtractor={(item, i) =>
+              `${item.place_id ?? ""}-${item.lat}-${item.lng}-${i}`
+            }
             renderItem={({ item }) => (
               <TouchableOpacity
                 onPress={() => selectResult(item)}
@@ -308,15 +316,26 @@ export function LocationPicker({ value, onChange }: LocationPickerProps) {
           ref={mapRef}
           style={styles.map}
           initialRegion={region}
-          onPress={(e) => placeAt(e.nativeEvent.coordinate.latitude, e.nativeEvent.coordinate.longitude)}
+          onPress={(e) =>
+            placeAt(
+              e.nativeEvent.coordinate.latitude,
+              e.nativeEvent.coordinate.longitude,
+            )
+          }
         >
           {marker && (
             <Marker
-              coordinate={{ latitude: marker.latitude, longitude: marker.longitude }}
+              coordinate={{
+                latitude: marker.latitude,
+                longitude: marker.longitude,
+              }}
               draggable
               pinColor={theme.colors.primary}
               onDragEnd={(e) =>
-                placeAt(e.nativeEvent.coordinate.latitude, e.nativeEvent.coordinate.longitude)
+                placeAt(
+                  e.nativeEvent.coordinate.latitude,
+                  e.nativeEvent.coordinate.longitude,
+                )
               }
             />
           )}
@@ -339,7 +358,10 @@ export function LocationPicker({ value, onChange }: LocationPickerProps) {
               : "No location set — search, drag, or use my location."}
         </Text>
         {marker && (
-          <TouchableOpacity onPress={clear} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+          <TouchableOpacity
+            onPress={clear}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
             <View style={styles.clearBtn}>
               <Ionicons name="close" size={14} color={theme.colors.textMuted} />
               <Text
@@ -375,13 +397,36 @@ export function LocationPicker({ value, onChange }: LocationPickerProps) {
 const styles = StyleSheet.create({
   container: { gap: 8 },
   searchRow: { flexDirection: "row", alignItems: "center", gap: 8 },
-  searchBox: { flex: 1, flexDirection: "row", alignItems: "center", borderWidth: 1, paddingHorizontal: 10, height: 44 },
+  searchBox: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    borderWidth: 1,
+    paddingHorizontal: 10,
+    height: 44,
+  },
   searchIcon: { marginRight: 6 },
-  myLocationBtn: { width: 44, height: 44, alignItems: "center", justifyContent: "center", borderWidth: 1 },
+  myLocationBtn: {
+    width: 44,
+    height: 44,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+  },
   results: { maxHeight: 200, borderWidth: 1, overflow: "hidden" },
-  resultRow: { flexDirection: "row", alignItems: "center", gap: 8, paddingHorizontal: 12, paddingVertical: 10 },
+  resultRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
   mapWrap: { borderWidth: 1, overflow: "hidden" },
   map: { height: 240, width: "100%" },
-  readoutRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  readoutRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
   clearBtn: { flexDirection: "row", alignItems: "center" },
 });

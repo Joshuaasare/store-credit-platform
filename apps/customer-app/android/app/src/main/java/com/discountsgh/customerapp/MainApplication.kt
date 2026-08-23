@@ -1,4 +1,4 @@
-package com.joshuaasare.storecreditplatformcustomerapp
+package com.discountsgh.customerapp
 
 import android.app.Application
 import android.content.res.Configuration

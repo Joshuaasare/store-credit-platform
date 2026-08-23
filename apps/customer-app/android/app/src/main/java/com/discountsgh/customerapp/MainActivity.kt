@@ -1,4 +1,4 @@
-package com.joshuaasare.storecreditplatformcustomerapp
+package com.discountsgh.customerapp
 import expo.modules.splashscreen.SplashScreenManager
 
 import android.os.Build
