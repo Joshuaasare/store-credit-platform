@@ -232,6 +232,9 @@ export class CustomerProfileService {
       surname: updatedCustomer.surname,
       other_names: updatedCustomer.other_names,
       avatar_url: updatedCustomer.avatar_url,
+      latitude: updatedCustomer.latitude,
+      longitude: updatedCustomer.longitude,
+      place_id: updatedCustomer.place_id,
     };
   }
 

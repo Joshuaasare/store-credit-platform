@@ -87,6 +87,9 @@ export class CustomerAuthService {
         surname: customer.surname,
         other_names: customer.other_names,
         avatar_url: customer.avatar_url,
+        latitude: customer.latitude,
+        longitude: customer.longitude,
+        place_id: customer.place_id,
       };
       const session = await this.issueSession(authUser, userAgent, clientIp);
       return { status: "logged_in", ...session };
@@ -219,6 +222,9 @@ export class CustomerAuthService {
       surname: data.surname.trim() || null,
       other_names: data.other_names.trim() || null,
       avatar_url: customerAvatarUrl,
+      latitude: data.latitude ?? null,
+      longitude: data.longitude ?? null,
+      place_id: data.place_id ?? null,
     };
 
     return this.issueSession(authUser, userAgent, clientIp);
@@ -248,6 +254,9 @@ export class CustomerAuthService {
       surname: customer.surname,
       other_names: customer.other_names,
       avatar_url: customer.avatar_url,
+      latitude: customer.latitude,
+      longitude: customer.longitude,
+      place_id: customer.place_id,
     };
   }
 
@@ -367,6 +376,9 @@ export class CustomerAuthService {
       surname: customer.surname,
       other_names: customer.other_names,
       avatar_url: customer.avatar_url,
+      latitude: customer.latitude,
+      longitude: customer.longitude,
+      place_id: customer.place_id,
     };
     const session = await this.issueSession(authUser, userAgent, clientIp);
     return { status: "logged_in", ...session };
@@ -378,6 +390,9 @@ export class CustomerAuthService {
     surname: string | null;
     other_names: string | null;
     avatar_url: string | null;
+    latitude: number | null;
+    longitude: number | null;
+    place_id: string | null;
   } | null> {
     const { data } = await supabaseAdmin
       .from("customers")
@@ -392,6 +407,9 @@ export class CustomerAuthService {
           surname: data.surname,
           other_names: data.other_names,
           avatar_url: data.avatar_url,
+          latitude: data.latitude,
+          longitude: data.longitude,
+          place_id: data.place_id,
         }
       : null;
   }

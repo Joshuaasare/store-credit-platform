@@ -172,6 +172,18 @@ Type.Null()
 avatar_url: Type.Union([
 Type.String(),
 Type.Null()
+]),
+latitude: Type.Union([
+Type.Number(),
+Type.Null()
+]),
+longitude: Type.Union([
+Type.Number(),
+Type.Null()
+]),
+place_id: Type.Union([
+Type.String(),
+Type.Null()
 ])
 })
 

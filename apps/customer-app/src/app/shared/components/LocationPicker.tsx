@@ -68,6 +68,27 @@ export function LocationPicker({ value, onChange }: LocationPickerProps) {
   // but never moves the view. animateToRegion is the imperative way to recenter.
   const mapRef = useRef<MapView>(null);
 
+  // Resolve the label for a persisted location on mount — read-only, doesn't
+  // re-emit (the value is already stored). User interactions set the label
+  // themselves via reverseAndEmit/selectResult.
+  useEffect(() => {
+    if (!initial) return;
+    let cancelled = false;
+    const controller = new AbortController();
+    photonReverse(initial.latitude, initial.longitude, controller.signal)
+      .then((r) => {
+        if (!cancelled) setLabel(r?.label ?? null);
+      })
+      .catch(() => {
+        if (!cancelled) setLabel(null);
+      });
+    return () => {
+      cancelled = true;
+      controller.abort();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const reverseAndEmit = useCallback(
     (lat: number, lng: number) => {
       if (reverseTimer.current) clearTimeout(reverseTimer.current);
@@ -209,7 +230,7 @@ export function LocationPicker({ value, onChange }: LocationPickerProps) {
           <TextInput
             value={query}
             onChangeText={setQuery}
-            placeholder="Search a place…"
+            placeholder={marker ? "" : "Search a place…"}
             placeholderTextColor={theme.colors.textPlaceholder}
             autoCorrect={false}
             spellCheck={false}
@@ -223,6 +244,32 @@ export function LocationPicker({ value, onChange }: LocationPickerProps) {
               fontSize: 15,
             }}
           />
+          {marker && query.length === 0 && (
+            <View
+              pointerEvents="none"
+              style={{
+                position: "absolute",
+                left: 32,
+                right: 12,
+                top: 0,
+                bottom: 0,
+                justifyContent: "center",
+              }}
+            >
+              <Text
+                numberOfLines={1}
+                ellipsizeMode="tail"
+                style={{
+                  color: theme.colors.textSecondary,
+                  fontFamily: theme.typography.fontFamilyRegular,
+                  fontSize: 15,
+                }}
+              >
+                {label ??
+                  `${marker.latitude.toFixed(4)}, ${marker.longitude.toFixed(4)}`}
+              </Text>
+            </View>
+          )}
           {searching && (
             <ActivityIndicator size="small" color={theme.colors.textMuted} />
           )}
@@ -344,6 +391,8 @@ export function LocationPicker({ value, onChange }: LocationPickerProps) {
 
       <View style={styles.readoutRow}>
         <Text
+          numberOfLines={1}
+          ellipsizeMode="tail"
           style={{
             flex: 1,
             color: theme.colors.textMuted,
@@ -351,11 +400,10 @@ export function LocationPicker({ value, onChange }: LocationPickerProps) {
             fontSize: 12,
           }}
         >
-          {label
-            ? `${label}${marker ? ` · ${marker.latitude.toFixed(4)}, ${marker.longitude.toFixed(4)}` : ""}`
-            : marker
-              ? `${marker.latitude.toFixed(4)}, ${marker.longitude.toFixed(4)}`
-              : "No location set — search, drag, or use my location."}
+          {marker
+            ? label ??
+              `${marker.latitude.toFixed(4)}, ${marker.longitude.toFixed(4)}`
+            : "No location set — search, drag, or use my location."}
         </Text>
         {marker && (
           <TouchableOpacity

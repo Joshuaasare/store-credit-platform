@@ -48,6 +48,7 @@
     "react-native-svg-transformer": "*",
     "react-native-web": "*",
     "react-native-worklets": "^0.10.0",
+    "sonner-native": "^0.27.0",
     "zod": "^4.3.6",
     "zustand": "^5.0.14"
   }

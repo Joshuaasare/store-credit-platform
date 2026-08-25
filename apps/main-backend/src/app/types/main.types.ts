@@ -80,6 +80,9 @@ export interface CustomerAuthUser {
   surname: string | null;
   other_names: string | null;
   avatar_url: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  place_id: string | null;
 }
 
 export interface BaseCustomerTransaction {

@@ -30,6 +30,7 @@ import {
   LocationPicker,
   LocationValue,
 } from "../../shared/components/LocationPicker";
+import { toastSuccess, toastError } from "../../shared/utils/toast.utils";
 
 type Props = NativeStackScreenProps<AppStackParamList, "EditProfile">;
 
@@ -76,7 +77,15 @@ export function EditProfileScreen({ navigation }: Props) {
   const [submitting, setSubmitting] = useState(false);
   const [pageError, setPageError] = useState<string | null>(null);
 
-  const [location, setLocation] = useState<LocationValue | null>(null);
+  const [location, setLocation] = useState<LocationValue | null>(() =>
+    user?.latitude != null && user?.longitude != null
+      ? {
+          latitude: user.latitude,
+          longitude: user.longitude,
+          place_id: user.place_id ?? null,
+        }
+      : null,
+  );
   const [locationDirty, setLocationDirty] = useState(false);
 
   const phoneUnchanged = phone === currentPhone;
@@ -325,18 +334,19 @@ export function EditProfileScreen({ navigation }: Props) {
       // apiService throws on non-2xx so this is unreachable at runtime;
       // the branch is the union narrowing TS needs for `res.data.user`.
       if (!res.success) {
-        setPageError(res.error);
+        toastError(res.error);
         return;
       }
 
       setUser(res.data.user);
+      toastSuccess("Profile updated");
 
       setPhoneVerifiedToken(null);
       setVerifiedPhone(null);
     } catch (e) {
       const message =
         e instanceof Error ? e.message : "Failed to update profile";
-      setPageError(message);
+      toastError(message);
       // If verification expired between verify and Update, reset so the
       // customer can re-verify — otherwise the Verified chip sticks with no Verify button.
       const lower = message.toLowerCase();
