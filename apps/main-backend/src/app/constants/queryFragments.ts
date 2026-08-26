@@ -9,6 +9,6 @@ export const QueryFragments = {
   BASE_CUSTOMER_CREDIT: `id,customer_id,branch_id,credit_amount,pending_redemption_amount,approved_redemption_amount,redemption_approval_staff_id,expires_at,revoked_at,revoked_by_user_id,created_at,updated_at,deleted_at,transaction_date`,
   BASE_CUSTOMER_CREDIT_REDEMPTION: `id,customer_id,branch_id,merchant_id,amount_redeemed,approved_at,approved_by_staff_id,rejected_at,created_at,updated_at,deleted_at,transaction_date`,
   BASE_CUSTOMER_PURCHASE: `id, customer_id, branch_id, recorded_by_staff_id, amount, transaction_date, created_at`,
-  BASE_RUNNING_CREDIT_CONFIG: `id,config_group_id,branch_id,credit_type,credit_validity,eligible_window,fixed_credit_value,percentage_credit_value,maximum_allowed_credit,threshold_amount,terms,cumulative_scope,is_active,created_at,updated_at,deleted_at`,
+  BASE_RUNNING_CREDIT_CONFIG: `id,config_group_id,branch_id,credit_type,images,credit_validity,eligible_window,fixed_credit_value,percentage_credit_value,maximum_allowed_credit,threshold_amount,terms,cumulative_scope,is_active,created_at,updated_at,deleted_at`,
   BASE_FIXED_CREDIT_CONFIG: `id,config_group_id,branch_id,title,description,images,start_date,end_date,terms,is_active,created_at,updated_at,deleted_at`,
 } as const;

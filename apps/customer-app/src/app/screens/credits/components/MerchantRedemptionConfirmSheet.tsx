@@ -1,5 +1,13 @@
 import { useEffect } from "react";
-import { ActivityIndicator, Modal, Pressable, StyleSheet, Text, View } from "react-native";
+import {
+  ActivityIndicator,
+  Modal,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
@@ -72,6 +80,10 @@ export default function MerchantRedemptionConfirmSheet({
           ]}
         >
           <Pressable onPress={(e) => e.stopPropagation()}>
+            <ScrollView
+              keyboardShouldPersistTaps="handled"
+              showsVerticalScrollIndicator={false}
+            >
             <Text
               style={{
                 color: theme.colors.sheetText,
@@ -147,6 +159,7 @@ export default function MerchantRedemptionConfirmSheet({
                 )}
               </Pressable>
             </View>
+            </ScrollView>
           </Pressable>
         </Animated.View>
       </Pressable>
@@ -165,8 +178,9 @@ const styles = StyleSheet.create({
   sheet: {
     width: "100%",
     maxWidth: 420,
-    paddingTop: 24,
-    paddingBottom: 24,
+    maxHeight: "90%",
+    paddingTop: 32,
+    paddingBottom: 32,
     paddingHorizontal: 20,
   },
   actionsRow: {

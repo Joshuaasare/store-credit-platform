@@ -1,6 +1,6 @@
 /**
  * Auto-generated API Types
- * Generated on: 2026-08-26T08:44:51.323Z
+ * Generated on: 2026-08-26T12:02:24.905Z
  * 
  * ⚠️ DO NOT EDIT MANUALLY
  * Source: apps/smartschool-api/src/app/types/
@@ -193,6 +193,7 @@ export interface BaseRunningCreditConfig {
   terms: string | null;
   threshold_amount: number | null;
   updated_at: string | null;
+  images: string[] | null;
 }
 
 export interface BaseFixedCreditConfig {
@@ -492,6 +493,7 @@ export interface RunningCreditConfigGroup {
   threshold_amount: number | null;
   terms: string | null;
   cumulative_scope: CumulativeScopeValues;
+  images: string[] | null;
   is_active: boolean;
   created_at: string;
   updated_at: string | null;
@@ -507,6 +509,7 @@ export interface CreateRunningCreditConfigRequest {
   maximum_allowed_credit?: number | null;
   threshold_amount?: number | null;
   terms?: string | null;
+  images?: string[] | null;
   cumulative_scope: CumulativeScopeValues;
 }
 

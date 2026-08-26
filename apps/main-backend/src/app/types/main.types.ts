@@ -171,6 +171,7 @@ export interface BaseRunningCreditConfig {
   terms: string | null;
   threshold_amount: number | null;
   updated_at: string | null;
+  images: string[] | null;
 }
 
 export interface BaseFixedCreditConfig {

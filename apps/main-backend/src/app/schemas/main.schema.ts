@@ -371,6 +371,10 @@ Type.Null()
 updated_at: Type.Union([
 Type.String(),
 Type.Null()
+]),
+images: Type.Union([
+Type.Array(Type.String()),
+Type.Null()
 ])
 })
 

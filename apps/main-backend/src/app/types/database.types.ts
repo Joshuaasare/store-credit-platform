@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.15"
+    PostgrestVersion: "14.17"
   }
   graphql_public: {
     Tables: {
@@ -568,6 +568,7 @@ export type Database = {
           eligible_window: number | null
           fixed_credit_value: number | null
           id: number
+          images: Json | null
           is_active: boolean
           maximum_allowed_credit: number | null
           percentage_credit_value: number | null
@@ -586,6 +587,7 @@ export type Database = {
           eligible_window?: number | null
           fixed_credit_value?: number | null
           id?: number
+          images?: Json | null
           is_active?: boolean
           maximum_allowed_credit?: number | null
           percentage_credit_value?: number | null
@@ -604,6 +606,7 @@ export type Database = {
           eligible_window?: number | null
           fixed_credit_value?: number | null
           id?: number
+          images?: Json | null
           is_active?: boolean
           maximum_allowed_credit?: number | null
           percentage_credit_value?: number | null

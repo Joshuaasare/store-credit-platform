@@ -6,6 +6,7 @@ import {
   Modal,
   Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -164,6 +165,10 @@ export default function RedemptionAmountSheet({
                 Keyboard.dismiss();
               }}
             >
+              <ScrollView
+                keyboardShouldPersistTaps="handled"
+                showsVerticalScrollIndicator={false}
+              >
               {/* <Text
                 style={{
                   color: theme.colors.sheetTextMuted,
@@ -409,6 +414,7 @@ export default function RedemptionAmountSheet({
                   Cancel
                 </Text>
               </Pressable>
+              </ScrollView>
             </Pressable>
           </Animated.View>
         </Pressable>
@@ -714,8 +720,9 @@ const styles = StyleSheet.create({
   sheet: {
     width: "100%",
     maxWidth: 420,
-    paddingTop: 24,
-    paddingBottom: 24,
+    maxHeight: "90%",
+    paddingTop: 32,
+    paddingBottom: 32,
     paddingHorizontal: 20,
   },
   amountInputBlock: {

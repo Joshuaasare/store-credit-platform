@@ -6,6 +6,7 @@ import {
   Modal,
   Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -126,6 +127,10 @@ export default function OtpVerifyModal({
                 Keyboard.dismiss();
               }}
             >
+              <ScrollView
+                keyboardShouldPersistTaps="handled"
+                showsVerticalScrollIndicator={false}
+              >
               <Text
                 style={{
                   color: theme.colors.text,
@@ -275,6 +280,7 @@ export default function OtpVerifyModal({
                   Cancel
                 </Text>
               </Pressable>
+              </ScrollView>
             </Pressable>
           </Animated.View>
         </Pressable>
@@ -297,8 +303,9 @@ const styles = StyleSheet.create({
   sheet: {
     width: "100%",
     maxWidth: 420,
-    paddingTop: 24,
-    paddingBottom: 24,
+    maxHeight: "90%",
+    paddingTop: 32,
+    paddingBottom: 32,
     paddingHorizontal: 20,
   },
   submit: {

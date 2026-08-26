@@ -112,6 +112,10 @@ export function RunningConfigCard({
   const cardClass = isActive ? CARD_CLASS : CARD_CLASS_PAUSED;
   const heroClass = isActive ? HERO_NUMBER : HERO_NUMBER_MUTED;
 
+  const images = config.images ?? [];
+  const visibleImages = images.slice(0, 4);
+  const overflow = images.length - visibleImages.length;
+
   let tagline: string;
   if (config.threshold_amount == null) {
     tagline = "On every purchase.";
@@ -199,6 +203,24 @@ export function RunningConfigCard({
               <span className={heroClass}>{rewardNumber}</span>
             </div>
             <p className="text-muted-foreground mt-2 text-sm">{tagline}</p>
+
+            {visibleImages.length > 0 && (
+              <div className="mt-3 flex flex-wrap gap-1.5">
+                {visibleImages.map((url, i) => (
+                  <img
+                    key={url + i}
+                    src={url}
+                    alt=""
+                    className="border-border h-16 w-16 rounded-md border object-cover"
+                  />
+                ))}
+                {overflow > 0 && (
+                  <div className="text-muted-foreground border-border bg-muted/50 flex h-16 w-16 items-center justify-center rounded-md border text-xs font-medium">
+                    +{overflow}
+                  </div>
+                )}
+              </div>
+            )}
 
             <div className={`mt-5 pt-4 ${DIVIDER}`}>
               <div className="text-muted-foreground flex items-center gap-2 text-xs">

@@ -34,6 +34,7 @@ export function groupRunningRows(
         threshold_amount: row.threshold_amount,
         terms: row.terms,
         cumulative_scope: row.cumulative_scope,
+        images: row.images as string[] | null,
         is_active: row.is_active,
         created_at: row.created_at,
         updated_at: row.updated_at,

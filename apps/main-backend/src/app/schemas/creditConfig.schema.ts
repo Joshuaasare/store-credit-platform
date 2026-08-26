@@ -56,6 +56,10 @@ Type.String(),
 Type.Null()
 ]),
 cumulative_scope: CumulativeScopeValues,
+images: Type.Union([
+Type.Array(Type.String()),
+Type.Null()
+]),
 is_active: Type.Boolean(),
 created_at: Type.String(),
 updated_at: Type.Union([
@@ -97,6 +101,10 @@ Type.Null()
 ])),
 terms: Type.Optional(Type.Union([
 Type.String(),
+Type.Null()
+])),
+images: Type.Optional(Type.Union([
+Type.Array(Type.String()),
 Type.Null()
 ])),
 cumulative_scope: CumulativeScopeValues

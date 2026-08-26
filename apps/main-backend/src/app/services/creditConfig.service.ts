@@ -11,6 +11,7 @@ import {
   UpdateFixedCreditConfigRequest,
   FixedCreditConfigGroup,
   FixedCreditConfig,
+  RunningCreditConfig,
 } from "../schemas/creditConfig.schema";
 import { storageService, extractPathFromUrl } from "./storage.service";
 import {
@@ -31,7 +32,7 @@ async function fetchRunningGroup(groupId: string) {
 
   if (error) throw new Error(`Failed to fetch group: ${error.message}`);
   const rows = data ?? [];
-  const grouped = groupRunningRows(rows);
+  const grouped = groupRunningRows(rows as RunningCreditConfig[]);
   if (grouped.length === 0) throw new Error("Config group not found");
   return grouped[0];
 }
@@ -117,7 +118,7 @@ export class CreditConfigService {
     if (error)
       throw new Error(`Failed to list running configs: ${error.message}`);
     const rows = data ?? [];
-    return groupRunningRows(rows);
+    return groupRunningRows(rows as RunningCreditConfig[]);
   }
 
   async createRunningConfig(
@@ -130,10 +131,12 @@ export class CreditConfigService {
     await verifyBranchOwnership(merchantId, payload.branch_ids);
     const groupId = randomUUID();
     const values = normalizeRunningValues(payload);
+    const images = payload.images ?? [];
     const rows = payload.branch_ids.map((branch_id) => ({
       branch_id,
       config_group_id: groupId,
       ...values,
+      images,
       is_active: true,
     }));
     const { error } = await supabaseAdmin
@@ -156,7 +159,7 @@ export class CreditConfigService {
 
     const { data: existing, error: fetchErr } = await supabaseAdmin
       .from("running_credit_config")
-      .select("id, branch_id")
+      .select("id, branch_id, images")
       .eq("config_group_id", groupId)
       .in("branch_id", merchantBranchIds)
       .is("deleted_at", null);
@@ -177,6 +180,35 @@ export class CreditConfigService {
 
     const values = normalizeRunningValues(payload);
 
+    // Why: only diff images when payload explicitly provides an array; null = "leave existing alone".
+    const updatePayload: Database["public"]["Tables"]["running_credit_config"]["Update"] =
+      {
+        ...values,
+        ...(Array.isArray(payload.images) ? { images: payload.images } : {}),
+      };
+    if (Array.isArray(payload.images)) {
+      const newUrls = new Set(payload.images);
+      const stalePaths: string[] = [];
+      for (const row of existing) {
+        const rowImages = Array.isArray(row.images)
+          ? (row.images as string[])
+          : [];
+        for (const url of rowImages) {
+          if (!newUrls.has(url)) {
+            const p = extractPathFromUrl("store-assets", url);
+            if (p) stalePaths.push(p);
+          }
+        }
+      }
+      if (stalePaths.length > 0) {
+        try {
+          await storageService.deleteFiles("store-assets", stalePaths);
+        } catch (err) {
+          console.warn("Failed to clean stale running promo images:", err);
+        }
+      }
+    }
+
     if (removed.length > 0) {
       const { error } = await supabaseAdmin
         .from("running_credit_config")
@@ -188,7 +220,7 @@ export class CreditConfigService {
     if (kept.length > 0) {
       const { error } = await supabaseAdmin
         .from("running_credit_config")
-        .update(values)
+        .update(updatePayload)
         .eq("config_group_id", groupId)
         .in("branch_id", kept);
       if (error) throw new Error(`Failed to update branches: ${error.message}`);
@@ -198,6 +230,7 @@ export class CreditConfigService {
         branch_id,
         config_group_id: groupId,
         ...values,
+        images: Array.isArray(payload.images) ? payload.images : [],
         is_active: true,
       }));
       const { error } = await supabaseAdmin
@@ -214,6 +247,31 @@ export class CreditConfigService {
     groupId: string,
   ): Promise<void> {
     const merchantBranchIds = await getMerchantBranchIds(merchantId);
+
+    const { data: rows } = await supabaseAdmin
+      .from("running_credit_config")
+      .select("images")
+      .eq("config_group_id", groupId)
+      .in("branch_id", merchantBranchIds)
+      .is("deleted_at", null);
+    const paths: string[] = [];
+    for (const row of rows ?? []) {
+      const rowImages = Array.isArray(row.images)
+        ? (row.images as string[])
+        : [];
+      for (const url of rowImages) {
+        const p = extractPathFromUrl("store-assets", url);
+        if (p) paths.push(p);
+      }
+    }
+    if (paths.length > 0) {
+      try {
+        await storageService.deleteFiles("store-assets", paths);
+      } catch (err) {
+        console.warn("Failed to clean running promo images on delete:", err);
+      }
+    }
+
     const { error } = await supabaseAdmin
       .from("running_credit_config")
       .delete()
