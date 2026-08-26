@@ -326,15 +326,20 @@ branch_id: Type.Number()
 
 export type BaseRunningCreditConfig = Static<typeof BaseRunningCreditConfig>
 export const BaseRunningCreditConfig = Type.Object({
-id: Type.Number(),
-config_group_id: Type.String(),
 branch_id: Type.Number(),
+config_group_id: Type.String(),
+created_at: Type.String(),
 credit_type: Type.Union([
 CreditTypeValues,
 Type.Null()
 ]),
 credit_validity: Type.Union([
 Type.Number(),
+Type.Null()
+]),
+cumulative_scope: CumulativeScopeValues,
+deleted_at: Type.Union([
+Type.String(),
 Type.Null()
 ]),
 eligible_window: Type.Union([
@@ -345,15 +350,13 @@ fixed_credit_value: Type.Union([
 Type.Number(),
 Type.Null()
 ]),
-percentage_credit_value: Type.Union([
-Type.Number(),
-Type.Null()
-]),
+id: Type.Number(),
+is_active: Type.Boolean(),
 maximum_allowed_credit: Type.Union([
 Type.Number(),
 Type.Null()
 ]),
-threshold_amount: Type.Union([
+percentage_credit_value: Type.Union([
 Type.Number(),
 Type.Null()
 ]),
@@ -361,14 +364,11 @@ terms: Type.Union([
 Type.String(),
 Type.Null()
 ]),
-cumulative_scope: CumulativeScopeValues,
-is_active: Type.Boolean(),
-created_at: Type.String(),
-updated_at: Type.Union([
-Type.String(),
+threshold_amount: Type.Union([
+Type.Number(),
 Type.Null()
 ]),
-deleted_at: Type.Union([
+updated_at: Type.Union([
 Type.String(),
 Type.Null()
 ])
@@ -376,13 +376,31 @@ Type.Null()
 
 export type BaseFixedCreditConfig = Static<typeof BaseFixedCreditConfig>
 export const BaseFixedCreditConfig = Type.Object({
-id: Type.Number(),
 branch_id: Type.Number(),
-start_date: Type.Union([
-Type.Number(),
+config_group_id: Type.Union([
+Type.String(),
+Type.Null()
+]),
+created_at: Type.String(),
+deleted_at: Type.Union([
+Type.String(),
+Type.Null()
+]),
+description: Type.Union([
+Type.String(),
 Type.Null()
 ]),
 end_date: Type.Union([
+Type.Number(),
+Type.Null()
+]),
+id: Type.Number(),
+images: Type.Union([
+Type.Array(Type.String()),
+Type.Null()
+]),
+is_active: Type.Boolean(),
+start_date: Type.Union([
 Type.Number(),
 Type.Null()
 ]),
@@ -390,27 +408,12 @@ terms: Type.Union([
 Type.String(),
 Type.Null()
 ]),
-is_active: Type.Boolean(),
-created_at: Type.String(),
-updated_at: Type.Union([
-Type.String(),
-Type.Null()
-]),
-deleted_at: Type.Union([
-Type.String(),
-Type.Null()
-]),
 title: Type.Union([
 Type.String(),
 Type.Null()
 ]),
-config_group_id: Type.String(),
-description: Type.Union([
+updated_at: Type.Union([
 Type.String(),
-Type.Null()
-]),
-images: Type.Union([
-Type.Array(Type.String()),
 Type.Null()
 ])
 })

@@ -45,66 +45,59 @@ export function CreditsScreen() {
       <PageHeader />
       <ScreenBody edges={["bottom"]}>
         <GlassTransition>
-          <View style={styles.container}>
-            <View style={styles.listArea}>
-              {query.isLoading ? (
-                <LoadingState />
-              ) : query.isError ? (
-                <ErrorState
-                  message={
-                    query.error instanceof Error
-                      ? query.error.message
-                      : "Couldn't load your credits."
-                  }
-                />
-              ) : buckets.length === 0 ? (
-                <EmptyState
-                  title="No live credits yet"
-                  subtitle="Visit a merchant to start earning credit on your purchases."
-                />
-              ) : (
-                <GlassCard padding={0} style={styles.listCard}>
-                  <FlatList
-                    data={buckets}
-                    keyExtractor={(item) => String(item.merchantId)}
-                    renderItem={({ item }) => (
-                      <Pressable
-                        onPress={() =>
-                          navigation.navigate("CreditsMerchantDetail", {
-                            merchantId: item.merchantId,
-                          })
-                        }
-                        accessibilityRole="button"
-                        accessibilityLabel={`${item.merchantName} credits`}
-                        style={({ pressed }) => [
-                          pressed ? { opacity: 0.7 } : null,
-                        ]}
-                      >
-                        <MerchantActivityRow
-                          kind="merchant-available"
-                          item={merchantRow(item)}
-                          metaTone={merchantRow(item).metaTone}
-                        />
-                      </Pressable>
-                    )}
-                    ItemSeparatorComponent={() => (
-                      <View
-                        style={{
-                          height: 1,
-                          backgroundColor: theme.colors.surfaceBorder,
-                          marginHorizontal: 16,
-                        }}
-                      />
-                    )}
-                    showsVerticalScrollIndicator={false}
-                    contentContainerStyle={{
-                      ...styles.listContent,
-                      paddingBottom: tabBarOffset,
+          <View style={styles.listArea}>
+            {query.isLoading ? (
+              <LoadingState />
+            ) : query.isError ? (
+              <ErrorState
+                message={
+                  query.error instanceof Error
+                    ? query.error.message
+                    : "Couldn't load your credits."
+                }
+              />
+            ) : buckets.length === 0 ? (
+              <EmptyState
+                title="No live credits yet"
+                subtitle="Visit a merchant to start earning credit on your purchases."
+              />
+            ) : (
+              <FlatList
+                data={buckets}
+                keyExtractor={(item) => String(item.merchantId)}
+                renderItem={({ item }) => (
+                  <Pressable
+                    onPress={() =>
+                      navigation.navigate("CreditsMerchantDetail", {
+                        merchantId: item.merchantId,
+                      })
+                    }
+                    accessibilityRole="button"
+                    accessibilityLabel={`${item.merchantName} credits`}
+                    style={({ pressed }) => [pressed ? { opacity: 0.7 } : null]}
+                  >
+                    <MerchantActivityRow
+                      kind="merchant-available"
+                      item={merchantRow(item)}
+                      metaTone={merchantRow(item).metaTone}
+                    />
+                  </Pressable>
+                )}
+                ItemSeparatorComponent={() => (
+                  <View
+                    style={{
+                      height: 1,
+                      backgroundColor: theme.colors.surfaceBorder,
+                      marginHorizontal: 10,
                     }}
                   />
-                </GlassCard>
-              )}
-            </View>
+                )}
+                showsVerticalScrollIndicator={false}
+                contentContainerStyle={{
+                  ...styles.listContent,
+                }}
+              />
+            )}
           </View>
         </GlassTransition>
       </ScreenBody>
@@ -169,12 +162,9 @@ function merchantRow(bucket: MerchantCreditBucket): {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    paddingTop: 16,
-  },
   listArea: {
     flex: 1,
+    paddingTop: 16,
   },
   listCard: {
     overflow: "hidden",

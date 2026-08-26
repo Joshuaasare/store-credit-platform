@@ -1,7 +1,23 @@
 import { Type, Static } from '@sinclair/typebox'
-import { CreditTypeValues, CumulativeScopeValues, BaseBranch, ApiErrorResponse, BaseCustomerCredit } from './main.schema'
+import { CreditTypeValues, CumulativeScopeValues, BaseBranch, ApiErrorResponse, BaseCustomerCredit, BaseRunningCreditConfig, BaseFixedCreditConfig } from './main.schema'
 
 
+
+export type RunningCreditConfig = Static<typeof RunningCreditConfig>
+export const RunningCreditConfig = Type.Intersect([
+BaseRunningCreditConfig,
+Type.Object({
+branch: BaseBranch
+})
+])
+
+export type FixedCreditConfig = Static<typeof FixedCreditConfig>
+export const FixedCreditConfig = Type.Intersect([
+BaseFixedCreditConfig,
+Type.Object({
+branch: BaseBranch
+})
+])
 
 export type RunningCreditConfigGroup = Static<typeof RunningCreditConfigGroup>
 export const RunningCreditConfigGroup = Type.Object({
@@ -126,15 +142,14 @@ Type.Null()
 })
 
 export type CreateFixedCreditConfigRequest = Static<typeof CreateFixedCreditConfigRequest>
-// Why: maxLength guards are hand-applied (typebox-codegen can't express them from .types.ts). Re-apply after `yarn generate:types`.
 export const CreateFixedCreditConfigRequest = Type.Object({
 branch_ids: Type.Array(Type.Number()),
 title: Type.Optional(Type.Union([
-Type.String({ maxLength: 120 }),
+Type.String(),
 Type.Null()
 ])),
 description: Type.Optional(Type.Union([
-Type.String({ maxLength: 1000 }),
+Type.String(),
 Type.Null()
 ])),
 images: Type.Optional(Type.Union([

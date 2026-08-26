@@ -5,8 +5,8 @@ import {
   getOtp,
   deleteOtp,
   incrementAttempts,
-} from "./otp.store";
-import { RateLimitService } from "../services/rateLimit.service";
+} from "../utils/otp.store";
+import { RateLimitService } from "./rateLimit.service";
 
 const MAX_OTP_ATTEMPTS = 5;
 const OTP_TTL_MS = 10 * 60 * 1000; // shared by login + phone-change.
@@ -68,7 +68,10 @@ export class OtpService {
     }
     if (otpEntry.expiresAt <= new Date()) {
       deleteOtp(opts.phone);
-      return { valid: false, error: "OTP has expired. Please request a new OTP." };
+      return {
+        valid: false,
+        error: "OTP has expired. Please request a new OTP.",
+      };
     }
     const attempts = incrementAttempts(opts.phone);
     const remaining = Math.max(0, MAX_OTP_ATTEMPTS - attempts);

@@ -10,105 +10,25 @@ import {
   CreateFixedCreditConfigRequest,
   UpdateFixedCreditConfigRequest,
   FixedCreditConfigGroup,
+  FixedCreditConfig,
 } from "../schemas/creditConfig.schema";
-import type { BaseBranch } from "../schemas/main.schema";
 import { storageService, extractPathFromUrl } from "./storage.service";
+import {
+  groupFixedRows,
+  groupRunningRows,
+  normalizeFixedValues,
+} from "../utils/creditConfig.utils";
 
-// select() doesn't infer nested branch:branches(...) joins when QueryFragments.* is interpolated into a template literal — re-narrow with as const at the constant declaration. Regenerate (yarn generate:types) keeps the base Row in lockstep.
-
-type RunningConfigWithBranch =
-  Database["public"]["Tables"]["running_credit_config"]["Row"] & {
-    branch: BaseBranch;
-  };
-
-type FixedConfigWithBranch =
-  Database["public"]["Tables"]["fixed_credit_config"]["Row"] & {
-    branch: BaseBranch;
-  };
-
-const RUNNING_CONFIG_COLUMNS =
-  `${QueryFragments.BASE_RUNNING_CREDIT_CONFIG},branch:branches(${QueryFragments.BASE_BRANCH})` as const;
-
-const FIXED_CONFIG_COLUMNS =
-  `${QueryFragments.BASE_FIXED_CREDIT_CONFIG},branch:branches(${QueryFragments.BASE_BRANCH})` as const;
-
-function groupRunningRows(
-  rows: RunningConfigWithBranch[],
-): RunningCreditConfigGroup[] {
-  const map = new Map<string, RunningConfigWithBranch>();
-  for (const row of rows) {
-    const existing = map.get(row.config_group_id);
-    if (!existing) {
-      map.set(row.config_group_id, row);
-    }
-  }
-  return Array.from(map.values())
-    .map((row) => {
-      const groupRows = rows.filter(
-        (r) => r.config_group_id === row.config_group_id,
-      );
-      return {
-        config_group_id: row.config_group_id,
-        branches: groupRows.map((r) => r.branch),
-        credit_type: row.credit_type,
-        credit_validity: row.credit_validity,
-        eligible_window: row.eligible_window,
-        fixed_credit_value: row.fixed_credit_value,
-        percentage_credit_value: row.percentage_credit_value,
-        maximum_allowed_credit: row.maximum_allowed_credit,
-        threshold_amount: row.threshold_amount,
-        terms: row.terms,
-        cumulative_scope: row.cumulative_scope,
-        is_active: row.is_active,
-        created_at: row.created_at,
-        updated_at: row.updated_at,
-      };
-    })
-    .sort((a, b) => (b.created_at > a.created_at ? 1 : -1));
-}
-
-function groupFixedRows(
-  rows: FixedConfigWithBranch[],
-): FixedCreditConfigGroup[] {
-  const map = new Map<string, FixedConfigWithBranch>();
-  for (const row of rows) {
-    if (!row.config_group_id) continue;
-    const existing = map.get(row.config_group_id);
-    if (!existing) {
-      map.set(row.config_group_id, row);
-    }
-  }
-  return Array.from(map.values())
-    .map((row) => {
-      const groupId = row.config_group_id;
-      if (!groupId) return null;
-      const groupRows = rows.filter((r) => r.config_group_id === groupId);
-      return {
-        config_group_id: groupId,
-        branches: groupRows.map((r) => r.branch),
-        title: row.title,
-        description: row.description,
-        images: row.images as string[] | null,
-        start_date: row.start_date,
-        end_date: row.end_date,
-        terms: row.terms,
-        is_active: row.is_active,
-        created_at: row.created_at,
-        updated_at: row.updated_at,
-      };
-    })
-    .filter((g): g is FixedCreditConfigGroup => g !== null)
-    .sort((a, b) => (b.created_at > a.created_at ? 1 : -1));
-}
-
-async function fetchRunningGroup(
-  groupId: string,
-): Promise<RunningCreditConfigGroup> {
+async function fetchRunningGroup(groupId: string) {
   const { data, error } = await supabaseAdmin
     .from("running_credit_config")
-    .select(RUNNING_CONFIG_COLUMNS)
+    .select(
+      `${QueryFragments.BASE_RUNNING_CREDIT_CONFIG},
+      branch:branches(${QueryFragments.BASE_BRANCH})`,
+    )
     .eq("config_group_id", groupId)
     .is("deleted_at", null);
+
   if (error) throw new Error(`Failed to fetch group: ${error.message}`);
   const rows = data ?? [];
   const grouped = groupRunningRows(rows);
@@ -121,20 +41,22 @@ async function fetchFixedGroup(
 ): Promise<FixedCreditConfigGroup> {
   const { data, error } = await supabaseAdmin
     .from("fixed_credit_config")
-    .select(FIXED_CONFIG_COLUMNS)
+    .select(
+      `${QueryFragments.BASE_FIXED_CREDIT_CONFIG},
+      branch:branches(${QueryFragments.BASE_BRANCH})`,
+    )
     .eq("config_group_id", groupId)
     .is("deleted_at", null);
+
   if (error) throw new Error(`Failed to fetch group: ${error.message}`);
+
   const rows = data ?? [];
-  const grouped = groupFixedRows(rows);
+  const grouped = groupFixedRows(rows as FixedCreditConfig[]);
   if (grouped.length === 0) throw new Error("Config group not found");
   return grouped[0];
 }
 
-async function verifyBranchOwnership(
-  merchantId: number,
-  branchIds: number[],
-): Promise<void> {
+async function verifyBranchOwnership(merchantId: number, branchIds: number[]) {
   if (branchIds.length === 0) return;
   const { data, error } = await supabaseAdmin
     .from("branches")
@@ -148,7 +70,7 @@ async function verifyBranchOwnership(
   }
 }
 
-async function getMerchantBranchIds(merchantId: number): Promise<number[]> {
+async function getMerchantBranchIds(merchantId: number) {
   const { data, error } = await supabaseAdmin
     .from("branches")
     .select("id")
@@ -181,28 +103,17 @@ function normalizeRunningValues(
   };
 }
 
-function normalizeFixedValues(
-  payload: CreateFixedCreditConfigRequest | UpdateFixedCreditConfigRequest,
-) {
-  return {
-    title: payload.title ?? null,
-    description: payload.description ?? null,
-    start_date: payload.start_date ?? null,
-    end_date: payload.end_date ?? null,
-    terms: payload.terms ?? null,
-  };
-}
-
 export class CreditConfigService {
-  async listRunningConfigs(
-    merchantId: number,
-  ): Promise<RunningCreditConfigGroup[]> {
+  async listRunningConfigs(merchantId: number) {
     const { data, error } = await supabaseAdmin
       .from("running_credit_config")
-      .select(RUNNING_CONFIG_COLUMNS)
+      .select(
+        `${QueryFragments.BASE_RUNNING_CREDIT_CONFIG},
+        branch:branches!inner(${QueryFragments.BASE_BRANCH})`,
+      )
       .is("deleted_at", null)
-      .filter("branch.merchant_id", "eq", merchantId)
-      .filter("branch.deleted_at", "is", null);
+      .eq("branch.merchant_id", merchantId)
+      .is("branch.deleted_at", null);
     if (error)
       throw new Error(`Failed to list running configs: ${error.message}`);
     const rows = data ?? [];
@@ -333,14 +244,19 @@ export class CreditConfigService {
   ): Promise<FixedCreditConfigGroup[]> {
     const { data, error } = await supabaseAdmin
       .from("fixed_credit_config")
-      .select(FIXED_CONFIG_COLUMNS)
+      .select(
+        `${QueryFragments.BASE_FIXED_CREDIT_CONFIG},
+        branch:branches!inner(${QueryFragments.BASE_BRANCH})`,
+      )
       .is("deleted_at", null)
-      .filter("branch.merchant_id", "eq", merchantId)
-      .filter("branch.deleted_at", "is", null);
-    if (error)
+      .eq("branch.merchant_id", merchantId)
+      .is("branch.deleted_at", null);
+
+    if (error) {
       throw new Error(`Failed to list fixed configs: ${error.message}`);
+    }
     const rows = data ?? [];
-    return groupFixedRows(rows);
+    return groupFixedRows(rows as FixedCreditConfig[]);
   }
 
   async createFixedConfig(
@@ -403,15 +319,18 @@ export class CreditConfigService {
     const values = normalizeFixedValues(payload);
 
     // Why: only diff images when payload explicitly provides an array; null = "leave existing alone".
-    const updatePayload: Database["public"]["Tables"]["fixed_credit_config"]["Update"] = {
-      ...values,
-      ...(Array.isArray(payload.images) ? { images: payload.images } : {}),
-    };
+    const updatePayload: Database["public"]["Tables"]["fixed_credit_config"]["Update"] =
+      {
+        ...values,
+        ...(Array.isArray(payload.images) ? { images: payload.images } : {}),
+      };
     if (Array.isArray(payload.images)) {
       const newUrls = new Set(payload.images);
       const stalePaths: string[] = [];
       for (const row of existing) {
-        const rowImages = Array.isArray(row.images) ? (row.images as string[]) : [];
+        const rowImages = Array.isArray(row.images)
+          ? (row.images as string[])
+          : [];
         for (const url of rowImages) {
           if (!newUrls.has(url)) {
             const p = extractPathFromUrl("store-assets", url);
@@ -472,7 +391,9 @@ export class CreditConfigService {
       .is("deleted_at", null);
     const paths: string[] = [];
     for (const row of rows ?? []) {
-      const rowImages = Array.isArray(row.images) ? (row.images as string[]) : [];
+      const rowImages = Array.isArray(row.images)
+        ? (row.images as string[])
+        : [];
       for (const url of rowImages) {
         const p = extractPathFromUrl("store-assets", url);
         if (p) paths.push(p);

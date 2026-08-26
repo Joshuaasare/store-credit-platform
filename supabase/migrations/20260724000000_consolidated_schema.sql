@@ -94,9 +94,19 @@ alter table public.merchants
 -- ──────────────────────────────────────────────────────────────────────────
 alter table public.branches
   add column if not exists is_active boolean not null default true,
-  add column if not exists latitude numeric,
-  add column if not exists longitude numeric,
+  add column if not exists latitude double precision,
+  add column if not exists longitude double precision,
   add column if not exists place_id text;
+
+-- Why: latitude/longitude were numeric, but PostgREST returns numeric as a JSON
+-- string (arbitrary-precision preservation) while the API schema and generated
+-- database.types.ts both expect number — Fastify's response serializer 500s on
+-- any non-null coordinate. double precision is the right type for coordinates
+-- and returns as a JSON number. The alter handles DBs that already created
+-- the column as numeric; the add-column-if-not-exists above handles fresh ones.
+alter table public.branches
+  alter column latitude type double precision using latitude::double precision,
+  alter column longitude type double precision using longitude::double precision;
 
 -- ──────────────────────────────────────────────────────────────────────────
 -- 5. running_credit_config augmentations
@@ -410,9 +420,13 @@ alter table public.customers
   add column if not exists surname text,
   add column if not exists other_names text,
   add column if not exists avatar_url text,
-  add column if not exists latitude numeric,
-  add column if not exists longitude numeric,
+  add column if not exists latitude double precision,
+  add column if not exists longitude double precision,
   add column if not exists place_id text;
+
+alter table public.customers
+  alter column latitude type double precision using latitude::double precision,
+  alter column longitude type double precision using longitude::double precision;
 
 alter table public.users
   drop column if exists surname,

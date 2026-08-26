@@ -155,36 +155,36 @@ export interface BaseCustomerCreditRedemption {
 }
 
 export interface BaseRunningCreditConfig {
-  id: number;
-  config_group_id: string;
   branch_id: number;
+  config_group_id: string;
+  created_at: string;
   credit_type: CreditTypeValues | null;
   credit_validity: number | null;
+  cumulative_scope: CumulativeScopeValues;
+  deleted_at: string | null;
   eligible_window: number | null;
   fixed_credit_value: number | null;
-  percentage_credit_value: number | null;
-  maximum_allowed_credit: number | null;
-  threshold_amount: number | null;
-  terms: string | null;
-  cumulative_scope: CumulativeScopeValues;
+  id: number;
   is_active: boolean;
-  created_at: string;
+  maximum_allowed_credit: number | null;
+  percentage_credit_value: number | null;
+  terms: string | null;
+  threshold_amount: number | null;
   updated_at: string | null;
-  deleted_at: string | null;
 }
 
 export interface BaseFixedCreditConfig {
-  id: number;
   branch_id: number;
-  start_date: number | null;
-  end_date: number | null;
-  terms: string | null;
-  is_active: boolean;
+  config_group_id: string | null;
   created_at: string;
-  updated_at: string | null;
   deleted_at: string | null;
-  title: string | null;
-  config_group_id: string;
   description: string | null;
+  end_date: number | null;
+  id: number;
   images: string[] | null;
+  is_active: boolean;
+  start_date: number | null;
+  terms: string | null;
+  title: string | null;
+  updated_at: string | null;
 }

@@ -1,7 +1,7 @@
 import crypto from "crypto";
 import { supabaseAdmin } from "../utils/supabase.client";
-import { PasswordService } from "../utils/password.service";
-import { MessagingService, SMSTemplates } from "../utils/messaging.service";
+import { PasswordService } from "./password.service";
+import { MessagingService, SMSTemplates } from "./messaging.service";
 import {
   setOtp,
   getOtp,

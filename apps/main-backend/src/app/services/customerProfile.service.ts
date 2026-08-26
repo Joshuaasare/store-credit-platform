@@ -1,7 +1,7 @@
 import { supabaseAdmin } from "../utils/supabase.client";
-import { SMSTemplates } from "../utils/messaging.service";
+import { SMSTemplates } from "./messaging.service";
 import { normalizePhone } from "../utils/phone.utils";
-import { OtpService } from "../utils/otp.service";
+import { OtpService } from "./otp.service";
 import { QueryFragments } from "../constants/queryFragments";
 import { CustomerAuthUser } from "../types/main.types";
 import { TokenService } from "./token.service";
@@ -174,7 +174,8 @@ export class CustomerProfileService {
       customersUpdate.avatar_url = body.avatar_url;
     if (normalizedNewPhone != null) customersUpdate.phone = normalizedNewPhone;
     if (body.latitude !== undefined) customersUpdate.latitude = body.latitude;
-    if (body.longitude !== undefined) customersUpdate.longitude = body.longitude;
+    if (body.longitude !== undefined)
+      customersUpdate.longitude = body.longitude;
     if (body.place_id !== undefined) customersUpdate.place_id = body.place_id;
 
     const oldAvatarUrl = current.avatar_url;
@@ -201,9 +202,7 @@ export class CustomerProfileService {
         .update({ phone: normalizedNewPhone })
         .eq("id", current.userId);
       if (userUpdateError) {
-        throw new Error(
-          `Failed to update phone: ${userUpdateError.message}`,
-        );
+        throw new Error(`Failed to update phone: ${userUpdateError.message}`);
       }
       updatedPhone = normalizedNewPhone;
     }
@@ -211,10 +210,7 @@ export class CustomerProfileService {
     // Old-avatar cleanup — orphan-tolerant: a storage failure is logged but does NOT roll back the profile update.
     const newAvatarUrl =
       body.avatar_url !== undefined ? body.avatar_url : oldAvatarUrl;
-    if (
-      oldAvatarUrl != null &&
-      newAvatarUrl !== oldAvatarUrl
-    ) {
+    if (oldAvatarUrl != null && newAvatarUrl !== oldAvatarUrl) {
       try {
         await storageService.deleteFileByUrl(AVATAR_BUCKET, oldAvatarUrl);
       } catch (err) {
@@ -239,9 +235,7 @@ export class CustomerProfileService {
   }
 
   // Returns userId (uuid), users.phone, and customers.avatar_url — used for newPhone comparison, the users.phone update, and old-avatar cleanup.
-  private async resolveCurrentIdentity(
-    customerId: number,
-  ): Promise<{
+  private async resolveCurrentIdentity(customerId: number): Promise<{
     userId: string | null;
     phone: string | null;
     avatar_url: string | null;

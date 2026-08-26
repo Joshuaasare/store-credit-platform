@@ -2,12 +2,21 @@ import {
   ApiErrorResponse,
   BaseBranch,
   BaseCustomerCredit,
+  BaseFixedCreditConfig,
+  BaseRunningCreditConfig,
   CreditTypeValues,
   CumulativeScopeValues,
 } from "./main.types";
 
 // CreditTypeValues is still used by the running-config interfaces below.
 
+export type RunningCreditConfig = BaseRunningCreditConfig & {
+  branch: BaseBranch;
+};
+
+export type FixedCreditConfig = BaseFixedCreditConfig & {
+  branch: BaseBranch;
+};
 export interface RunningCreditConfigGroup {
   config_group_id: string;
   branches: BaseBranch[];

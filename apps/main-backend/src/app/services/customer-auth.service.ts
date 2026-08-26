@@ -1,8 +1,8 @@
 import crypto from "crypto";
 import { supabaseAdmin } from "../utils/supabase.client";
-import { SMSTemplates } from "../utils/messaging.service";
+import { SMSTemplates } from "./messaging.service";
 import { normalizePhone } from "../utils/phone.utils";
-import { OtpService } from "../utils/otp.service";
+import { OtpService } from "./otp.service";
 import { QueryFragments } from "../constants/queryFragments";
 import { CustomerAuthUser } from "../types/main.types";
 import {
