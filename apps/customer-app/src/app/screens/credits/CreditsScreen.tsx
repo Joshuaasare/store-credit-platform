@@ -20,12 +20,14 @@ import {
   type MerchantCreditBucket,
 } from "./lib/aggregateCredits";
 import type { AppStackParamList } from "../../navigation/RootNavigator";
+import { useOffsets } from "../../shared/hooks/useOffsets";
 
 const CREDITS_QUERY_KEY = ["customer", "credits"] as const;
 const MS_PER_DAY = 1000 * 60 * 60 * 24;
 
 export function CreditsScreen() {
   const theme = useThemeTokens();
+  const { tabBarOffset } = useOffsets();
   const navigation =
     useNavigation<NativeStackNavigationProp<AppStackParamList>>();
 
@@ -42,66 +44,69 @@ export function CreditsScreen() {
     <ScreenBackground>
       <PageHeader />
       <ScreenBody edges={["bottom"]}>
-      <GlassTransition>
-        <View style={styles.container}>
-          <View style={styles.listArea}>
-            {query.isLoading ? (
-              <LoadingState />
-            ) : query.isError ? (
-              <ErrorState
-                message={
-                  query.error instanceof Error
-                    ? query.error.message
-                    : "Couldn't load your credits."
-                }
-              />
-            ) : buckets.length === 0 ? (
-              <EmptyState
-                title="No live credits yet"
-                subtitle="Visit a merchant to start earning credit on your purchases."
-              />
-            ) : (
-              <GlassCard padding={0} style={styles.listCard}>
-                <FlatList
-                  data={buckets}
-                  keyExtractor={(item) => String(item.merchantId)}
-                  renderItem={({ item }) => (
-                    <Pressable
-                      onPress={() =>
-                        navigation.navigate("CreditsMerchantDetail", {
-                          merchantId: item.merchantId,
-                        })
-                      }
-                      accessibilityRole="button"
-                      accessibilityLabel={`${item.merchantName} credits`}
-                      style={({ pressed }) => [
-                        pressed ? { opacity: 0.7 } : null,
-                      ]}
-                    >
-                      <MerchantActivityRow
-                        kind="merchant-available"
-                        item={merchantRow(item)}
-                        metaTone={merchantRow(item).metaTone}
-                      />
-                    </Pressable>
-                  )}
-                  ItemSeparatorComponent={() => (
-                    <View
-                      style={{
-                        height: 1,
-                        backgroundColor: theme.colors.surfaceBorder,
-                        marginHorizontal: 16,
-                      }}
-                    />
-                  )}
-                  showsVerticalScrollIndicator={false}
-                  contentContainerStyle={styles.listContent}
+        <GlassTransition>
+          <View style={styles.container}>
+            <View style={styles.listArea}>
+              {query.isLoading ? (
+                <LoadingState />
+              ) : query.isError ? (
+                <ErrorState
+                  message={
+                    query.error instanceof Error
+                      ? query.error.message
+                      : "Couldn't load your credits."
+                  }
                 />
-              </GlassCard>
-            )}
+              ) : buckets.length === 0 ? (
+                <EmptyState
+                  title="No live credits yet"
+                  subtitle="Visit a merchant to start earning credit on your purchases."
+                />
+              ) : (
+                <GlassCard padding={0} style={styles.listCard}>
+                  <FlatList
+                    data={buckets}
+                    keyExtractor={(item) => String(item.merchantId)}
+                    renderItem={({ item }) => (
+                      <Pressable
+                        onPress={() =>
+                          navigation.navigate("CreditsMerchantDetail", {
+                            merchantId: item.merchantId,
+                          })
+                        }
+                        accessibilityRole="button"
+                        accessibilityLabel={`${item.merchantName} credits`}
+                        style={({ pressed }) => [
+                          pressed ? { opacity: 0.7 } : null,
+                        ]}
+                      >
+                        <MerchantActivityRow
+                          kind="merchant-available"
+                          item={merchantRow(item)}
+                          metaTone={merchantRow(item).metaTone}
+                        />
+                      </Pressable>
+                    )}
+                    ItemSeparatorComponent={() => (
+                      <View
+                        style={{
+                          height: 1,
+                          backgroundColor: theme.colors.surfaceBorder,
+                          marginHorizontal: 16,
+                        }}
+                      />
+                    )}
+                    showsVerticalScrollIndicator={false}
+                    contentContainerStyle={{
+                      ...styles.listContent,
+                      paddingBottom: tabBarOffset,
+                    }}
+                  />
+                </GlassCard>
+              )}
+            </View>
           </View>
-        </View>
-      </GlassTransition>
+        </GlassTransition>
       </ScreenBody>
     </ScreenBackground>
   );
@@ -177,4 +182,4 @@ const styles = StyleSheet.create({
   listContent: {
     paddingBottom: 24,
   },
-  });
+});

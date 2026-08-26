@@ -67,7 +67,7 @@ export async function photonSearch(
 ): Promise<GeoResult[]> {
   const q = query.trim();
   if (q.length < 3) return [];
-  const params = new URLSearchParams({ q, limit: "10" });
+  const params = new URLSearchParams({ q, limit: "20" });
   if (bias) {
     params.set("lat", String(bias.lat));
     params.set("lon", String(bias.lng));
@@ -78,7 +78,9 @@ export async function photonSearch(
   );
   if (!res.ok) throw new Error(`Geocoding failed: ${res.status}`);
   const data = (await res.json()) as PhotonResponse;
-  return (data.features ?? []).map(toGeoResult);
+  return (data.features ?? [])
+    .filter((f) => f.properties.country === "Ghana")
+    .map(toGeoResult);
 }
 
 export async function photonReverse(
@@ -127,6 +129,7 @@ async function nominatimSearch(
     format: "jsonv2",
     limit: "10",
     addressdetails: "1",
+    countrycodes: "gh",
   });
   if (bias) {
     params.set("lat", String(bias.lat));
@@ -156,21 +159,28 @@ async function nominatimSearch(
   });
 }
 
-// Photon first; if it returns nothing, try Nominatim. Non-abort errors are
-// swallowed so a flaky geocoder never blocks the map/drag fallback.
+// Default location bias — Ghana's geographic center (Accra). Used when the
+// caller has no marker to bias toward, so Ghanaian matches rank above
+// same-named places abroad before the country filter is applied.
+export const GHANA_CENTER = { lat: 5.6037, lng: -0.187 };
+
+// Photon first; if it returns nothing (or nothing in Ghana), try Nominatim.
+// Non-abort errors are swallowed so a flaky geocoder never blocks the
+// map/drag fallback.
 export async function searchPlaces(
   query: string,
   bias?: { lat: number; lng: number },
   signal?: AbortSignal,
 ): Promise<GeoResult[]> {
+  const effectiveBias = bias ?? GHANA_CENTER;
   try {
-    const photon = await photonSearch(query, bias, signal);
+    const photon = await photonSearch(query, effectiveBias, signal);
     if (photon.length > 0) return photon;
   } catch (e) {
     if (e instanceof Error && e.name === "AbortError") throw e;
   }
   try {
-    return await nominatimSearch(query, bias, signal);
+    return await nominatimSearch(query, effectiveBias, signal);
   } catch (e) {
     if (e instanceof Error && e.name === "AbortError") throw e;
     return [];

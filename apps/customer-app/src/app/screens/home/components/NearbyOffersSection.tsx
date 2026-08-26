@@ -49,9 +49,7 @@ export default function NearbyOffersSection({
 }
 
 const styles = StyleSheet.create({
-  section: {
-    marginBottom: 24,
-  },
+  section: {},
   sectionHeaderRow: {
     flexDirection: "row",
     alignItems: "center",

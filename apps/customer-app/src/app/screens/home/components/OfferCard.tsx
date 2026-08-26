@@ -82,7 +82,10 @@ export default function OfferCard({
           {logoUrl ? (
             <Image
               source={{ uri: logoUrl }}
-              style={[StyleSheet.absoluteFill, { borderRadius: theme.radii.lg }]}
+              style={[
+                StyleSheet.absoluteFill,
+                { borderRadius: theme.radii.lg },
+              ]}
               contentFit="cover"
               transition={150}
               accessibilityIgnoresInvertColors
@@ -164,11 +167,6 @@ const styles = StyleSheet.create({
   card: {
     borderWidth: 0,
     overflow: "hidden",
-    shadowColor: "#000",
-    shadowOpacity: 0.04,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 1,
   },
   photo: {
     width: "100%",

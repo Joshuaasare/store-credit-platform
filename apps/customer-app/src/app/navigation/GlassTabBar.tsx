@@ -9,6 +9,8 @@ import Animated, {
 import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
 import type { ParamListBase, RouteProp } from "@react-navigation/native";
 import { useThemeTokens } from "../shared/theme/ThemeContext";
+import { useOffsets } from "../shared/hooks/useOffsets";
+import { constants } from "../shared/constants/constants";
 
 type TabIcon = keyof typeof Ionicons.glyphMap;
 
@@ -32,9 +34,13 @@ export function GlassTabBar({
   navigation,
 }: BottomTabBarProps) {
   const theme = useThemeTokens();
+  const { bottomOffset } = useOffsets();
 
   return (
-    <View style={styles.wrapper} pointerEvents="box-none">
+    <View
+      style={[styles.wrapper, { bottom: bottomOffset }]}
+      pointerEvents="box-none"
+    >
       <View
         style={[
           styles.bar,
@@ -165,7 +171,7 @@ const styles = StyleSheet.create({
   bar: {
     flexDirection: "row",
     alignItems: "center",
-    height: 64,
+    height: constants.SIZES.TAB_BAR_HEIGHT,
     paddingHorizontal: 8,
     paddingVertical: 8,
     gap: 4,
