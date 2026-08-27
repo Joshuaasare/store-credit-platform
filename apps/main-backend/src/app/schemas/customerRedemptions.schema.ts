@@ -17,16 +17,22 @@ ApiErrorResponse
 
 export type CustomerPendingRedemption = Static<typeof CustomerPendingRedemption>
 export const CustomerPendingRedemption = Type.Object({
-redemption_code: Type.Number(),
-redemption_id: Type.Number(),
+id: Type.Number(),
 branch_id: Type.Number(),
-branch_name: Type.Union([
+amount_redeemed: Type.Number(),
+created_at: Type.String(),
+branch: Type.Union([
+Type.Object({
+id: Type.Number(),
+name: Type.Union([
 Type.String(),
 Type.Null()
+])
+}),
+Type.Null()
 ]),
-amount_redeemed: Type.Number(),
-requested_date: Type.Number(),
-requested_at: Type.String()
+redemption_code: Type.Number(),
+requested_date: Type.Number()
 })
 
 export type CustomerPendingRedemptionResponse = Static<typeof CustomerPendingRedemptionResponse>
@@ -91,11 +97,17 @@ ApiErrorResponse
 
 export type CustomerApprovedRedemption = Static<typeof CustomerApprovedRedemption>
 export const CustomerApprovedRedemption = Type.Object({
-redemption_id: Type.Number(),
-amount_redeemed: Type.Number(),
+id: Type.Number(),
 branch_id: Type.Number(),
-branch_name: Type.Union([
+amount_redeemed: Type.Number(),
+branch: Type.Union([
+Type.Object({
+id: Type.Number(),
+name: Type.Union([
 Type.String(),
+Type.Null()
+])
+}),
 Type.Null()
 ]),
 approved_at: Type.Number()

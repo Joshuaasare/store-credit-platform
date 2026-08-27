@@ -51,6 +51,21 @@ export interface CreateRunningCreditConfigRequest {
 
 export type UpdateRunningCreditConfigRequest = CreateRunningCreditConfigRequest;
 
+// DB-level update payload — the normalized values written to .update(), plus optional images.
+// Replaces Database["public"]["Tables"]["running_credit_config"]["Update"] references.
+export interface RunningCreditConfigUpdate {
+  credit_type: CreditTypeValues | null;
+  credit_validity: number | null;
+  eligible_window: number | null;
+  fixed_credit_value: number | null;
+  percentage_credit_value: number | null;
+  maximum_allowed_credit: number | null;
+  threshold_amount: number | null;
+  terms: string | null;
+  cumulative_scope: CumulativeScopeValues;
+  images?: string[];
+}
+
 export interface FixedCreditConfigGroup {
   config_group_id: string;
   branches: BaseBranch[];
@@ -76,6 +91,17 @@ export interface CreateFixedCreditConfigRequest {
 }
 
 export type UpdateFixedCreditConfigRequest = CreateFixedCreditConfigRequest;
+
+// DB-level update payload — the normalized values written to .update(), plus optional images.
+// Replaces Database["public"]["Tables"]["fixed_credit_config"]["Update"] references.
+export interface FixedCreditConfigUpdate {
+  title: string | null;
+  description: string | null;
+  start_date: number | null;
+  end_date: number | null;
+  terms: string | null;
+  images?: string[];
+}
 
 export interface ToggleActiveRequest {
   is_active: boolean;

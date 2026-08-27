@@ -6,6 +6,7 @@ import { QueryFragments } from "../constants/queryFragments";
 import { CustomerAuthUser } from "../types/main.types";
 import { TokenService } from "./token.service";
 import { storageService } from "./storage.service";
+import { CustomerUpdate } from "../schemas/customerProfile.schema";
 
 const AVATAR_BUCKET = "customer-avatars";
 
@@ -167,7 +168,7 @@ export class CustomerProfileService {
     }
 
     // customers.phone is written here too — the webapp reads customers.phone (get_customers RPC, getCustomerDetail), so it must stay in sync with users.phone.
-    const customersUpdate: Record<string, unknown> = {};
+    const customersUpdate: CustomerUpdate = {};
     if (body.surname != null) customersUpdate.surname = body.surname.trim();
     if (body.other_names != null)
       customersUpdate.other_names = body.other_names.trim();
@@ -184,6 +185,7 @@ export class CustomerProfileService {
     const oldAvatarUrl = current.avatar_url;
 
     // Always run the UPDATE (even if only the phone is changing) so updated_at advances on any profile edit.
+    customersUpdate.updated_at = new Date().toISOString();
     const { data: updatedCustomer, error: customerUpdateError } =
       await supabaseAdmin
         .from("customers")

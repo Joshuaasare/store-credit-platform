@@ -7,8 +7,6 @@ import { customerCreditsService } from "../../services/customerCredits.service";
 import { customerActivitiesService } from "../../services/customerActivities.service";
 import { customerRedemptionsService } from "../../services/customerRedemptions.service";
 import { customerProfileService } from "../../services/customerProfile.service";
-import { exploreService } from "../../services/explore.service";
-import { branchService } from "../../services/branch.service";
 import {
   LeaderboardQuerystring,
   LeaderboardApiResponse,
@@ -36,9 +34,6 @@ import {
   CustomerProfileUpdateRequest,
   CustomerProfileUpdateApiResponse,
 } from "../../schemas/customerProfile.schema";
-import { CustomerExploreOffersApiResponse } from "../../schemas/explore.schema";
-import { CustomerExploreBranchesApiResponse } from "../../schemas/branch.schema";
-import { CustomerMerchantSearchApiResponse } from "../../schemas/merchant.schema";
 
 // cursor is the numeric id of the last item from the previous page (stringified in the querystring, coerced to number in the handler).
 const CustomerActivitiesQuerystring = Type.Object({
@@ -782,118 +777,6 @@ export default async function (fastify: FastifyInstance) {
           (error as Error & { statusCode?: number }).statusCode ?? 400;
         request.log.error(error, "PATCH /customers/me/profile failed");
         reply.status(statusCode);
-        return { success: false, error: message };
-      }
-    },
-  });
-
-  fastify.get<{
-    Reply: CustomerExploreOffersApiResponse;
-  }>("/me/explore-offers", {
-    preHandler: [requireAuth],
-    schema: {
-      response: {
-        200: CustomerExploreOffersApiResponse,
-        401: CustomerExploreOffersApiResponse,
-        403: CustomerExploreOffersApiResponse,
-      },
-    },
-    handler: async (request, reply) => {
-      try {
-        const customerId = request.user?.customer_id;
-        if (customerId == null) {
-          reply.status(403);
-          return {
-            success: false,
-            error: "Forbidden: this endpoint is for customer accounts only",
-          };
-        }
-        const offers = await exploreService.listExploreOffers(customerId);
-        return { success: true, data: offers };
-      } catch (error) {
-        const message =
-          error instanceof Error
-            ? error.message
-            : "Failed to load explore offers";
-        request.log.error(error, "GET /customers/me/explore-offers failed");
-        reply.status(400);
-        return { success: false, error: message };
-      }
-    },
-  });
-
-  fastify.get<{
-    Reply: CustomerExploreBranchesApiResponse;
-  }>("/me/explore-branches", {
-    preHandler: [requireAuth],
-    schema: {
-      response: {
-        200: CustomerExploreBranchesApiResponse,
-        401: CustomerExploreBranchesApiResponse,
-        403: CustomerExploreBranchesApiResponse,
-      },
-    },
-    handler: async (request, reply) => {
-      try {
-        const customerId = request.user?.customer_id;
-        if (customerId == null) {
-          reply.status(403);
-          return {
-            success: false,
-            error: "Forbidden: this endpoint is for customer accounts only",
-          };
-        }
-        const branches = await branchService.listExploreBranches(customerId);
-        return { success: true, data: branches };
-      } catch (error) {
-        const message =
-          error instanceof Error
-            ? error.message
-            : "Failed to load explore branches";
-        request.log.error(
-          error,
-          "GET /customers/me/explore-branches failed",
-        );
-        reply.status(400);
-        return { success: false, error: message };
-      }
-    },
-  });
-
-  fastify.get<{
-    Querystring: { q?: string };
-    Reply: CustomerMerchantSearchApiResponse;
-  }>("/me/merchants/search", {
-    preHandler: [requireAuth],
-    schema: {
-      querystring: Type.Object({ q: Type.Optional(Type.String()) }),
-      response: {
-        200: CustomerMerchantSearchApiResponse,
-        401: CustomerMerchantSearchApiResponse,
-        403: CustomerMerchantSearchApiResponse,
-      },
-    },
-    handler: async (request, reply) => {
-      try {
-        const customerId = request.user?.customer_id;
-        if (customerId == null) {
-          reply.status(403);
-          return {
-            success: false,
-            error: "Forbidden: this endpoint is for customer accounts only",
-          };
-        }
-        const results = await merchantService.searchMerchants(
-          request.query.q ?? "",
-        );
-        return { success: true, data: results };
-      } catch (error) {
-        const message =
-          error instanceof Error
-            ? error.message
-            : "Failed to search merchants";
-        request.log.error(error, "GET /customers/me/merchants/search failed");
-        reply.status(400);
         return { success: false, error: message };
       }
     },

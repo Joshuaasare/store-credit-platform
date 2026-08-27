@@ -10,7 +10,7 @@ import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { BlurView } from "expo-blur";
 import { Ionicons } from "@expo/vector-icons";
-import type { ExploreBranch } from "@store-credit-platform/api-services";
+import type { BranchWithOffers } from "@store-credit-platform/api-services";
 import { pickAvatarGradient } from "../../../shared/utils/avatarPalette";
 import { useThemeTokens } from "../../../shared/theme/ThemeContext";
 
@@ -26,22 +26,24 @@ export default function BranchCard({
   onPress,
   style,
 }: {
-  branch: ExploreBranch;
+  branch: BranchWithOffers;
   onPress?: () => void;
   style?: StyleProp<ViewStyle>;
 }) {
   const theme = useThemeTokens();
-  const [gradientStart, gradientEnd] = pickAvatarGradient(branch.merchant.name);
-  const placeText =
-    branch.branch.place_label ?? branch.branch.city ?? "Unknown place";
-  const branchName = branch.branch.name ?? branch.branch.city ?? "Branch";
+  const merchantName = branch.merchant?.name ?? "Merchant";
+  const [gradientStart, gradientEnd] = pickAvatarGradient(merchantName);
+  const placeText = branch.place_label ?? branch.city ?? "Unknown place";
+  const branchName = branch.name ?? branch.city ?? "Branch";
+  const offerCount =
+    branch.running_configs.length + branch.fixed_configs.length;
 
   return (
     <Pressable
       onPress={onPress}
       style={style}
       accessibilityRole="button"
-      accessibilityLabel={`${branch.merchant.name} at ${branch.branch.name ?? branch.branch.city}`}
+      accessibilityLabel={`${merchantName} at ${branch.name ?? branch.city}`}
     >
       <View
         style={[
@@ -52,9 +54,9 @@ export default function BranchCard({
           },
         ]}
       >
-        {branch.merchant.logo_url ? (
+        {branch.merchant?.logo_url ? (
           <Image
-            source={{ uri: branch.merchant.logo_url }}
+            source={{ uri: branch.merchant!.logo_url! }}
             style={[StyleSheet.absoluteFill, { borderRadius: theme.radii.lg }]}
             contentFit="cover"
             transition={150}
@@ -88,7 +90,7 @@ export default function BranchCard({
                     fontSize: 15,
                   }}
                 >
-                  {branch.merchant.name || "Merchant"}
+                  {merchantName}
                 </Text>
                 <Text
                   numberOfLines={1}
@@ -139,8 +141,8 @@ export default function BranchCard({
             fontSize: 14,
           }}
         >
-          {branch.offers_summary.count}{" "}
-          {branch.offers_summary.count === 1
+          {offerCount}{" "}
+          {offerCount === 1
             ? "discount and cashback offer available"
             : "discount and cashback offers available"}
         </Text>

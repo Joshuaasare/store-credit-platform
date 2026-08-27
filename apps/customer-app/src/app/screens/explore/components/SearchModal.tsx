@@ -18,15 +18,22 @@ import Animated, {
 } from "react-native-reanimated";
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
-import type { MerchantSearchResult } from "@store-credit-platform/api-services";
-import { customerExploreService } from "../../../api/client";
+import type { BranchWithOffers } from "@store-credit-platform/api-services";
+import { customerBranchService } from "../../../api/client";
 import MerchantAvatar from "../../../shared/components/MerchantAvatar";
+import { useAuthStore } from "../../../shared/store/useAuthStore";
 import { useThemeTokens } from "../../../shared/theme/ThemeContext";
 
 const DURATION_IN = 180;
 const DURATION_OUT = 120;
 
-const SEARCH_QUERY_KEY = ["customer", "merchantSearch"] as const;
+const SEARCH_QUERY_KEY = ["customer", "branchSearch"] as const;
+
+function formatDistance(km: number | null): string {
+  if (km == null) return "—";
+  if (km < 10) return `${km.toFixed(1)} km`;
+  return `${Math.round(km)} km`;
+}
 
 function useDebounced<T>(value: T, delayMs: number): T {
   const [debounced, setDebounced] = useState(value);
@@ -45,8 +52,11 @@ export default function SearchModal({
   onDismiss: () => void;
 }) {
   const theme = useThemeTokens();
+  const user = useAuthStore((s) => s.user);
   const [query, setQuery] = useState("");
   const debounced = useDebounced(query, 250);
+
+  const hasLocation = user?.latitude != null && user?.longitude != null;
 
   const opacity = useSharedValue(visible ? 1 : 0);
   const scale = useSharedValue(visible ? 1 : 0.92);
@@ -77,12 +87,17 @@ export default function SearchModal({
   }));
 
   const searchQuery = useQuery({
-    queryKey: [...SEARCH_QUERY_KEY, debounced] as const,
-    queryFn: () => customerExploreService.searchMerchants(debounced),
-    enabled: debounced.trim().length > 0,
+    queryKey: [...SEARCH_QUERY_KEY, user?.latitude, user?.longitude, debounced] as const,
+    queryFn: () =>
+      customerBranchService.searchBranchesByLocation(
+        user!.latitude!,
+        user!.longitude!,
+        debounced,
+      ),
+    enabled: hasLocation && debounced.trim().length > 0,
   });
 
-  const results: MerchantSearchResult[] = searchQuery.data?.success
+  const results: BranchWithOffers[] = searchQuery.data?.success
     ? searchQuery.data.data
     : [];
 
@@ -114,7 +129,7 @@ export default function SearchModal({
                 letterSpacing: -0.2,
               }}
             >
-              Search merchants
+              Search branches
             </Text>
 
             <View
@@ -136,7 +151,7 @@ export default function SearchModal({
                 autoFocus
                 value={query}
                 onChangeText={setQuery}
-                placeholder="Search merchants"
+                placeholder="Search branches by name or place"
                 placeholderTextColor={theme.colors.textPlaceholder}
                 style={{
                   flex: 1,
@@ -147,7 +162,7 @@ export default function SearchModal({
                   paddingVertical: 0,
                 }}
                 returnKeyType="search"
-                accessibilityLabel="Search merchants"
+                accessibilityLabel="Search branches"
               />
               {query.length > 0 ? (
                 <Pressable
@@ -176,7 +191,7 @@ export default function SearchModal({
                     marginTop: 8,
                   }}
                 >
-                  Try searching for a merchant by name.
+                  Try searching for a branch by name or place.
                 </Text>
               ) : searchQuery.isLoading ? (
                 <View style={styles.loadingWrap}>
@@ -193,7 +208,7 @@ export default function SearchModal({
                     textAlign: "center",
                   }}
                 >
-                  No merchants found
+                  No branches found
                 </Text>
               ) : (
                 <ScrollView
@@ -201,39 +216,47 @@ export default function SearchModal({
                   showsVerticalScrollIndicator={false}
                   style={styles.resultsList}
                 >
-                  {results.map((merchant, index) => (
-                    <Pressable
-                      key={merchant.id}
-                      onPress={onDismiss}
-                      style={({ pressed }) => [
-                        styles.resultRow,
-                        {
-                          borderTopWidth: index === 0 ? 0 : StyleSheet.hairlineWidth,
-                          borderTopColor: theme.colors.surfaceBorder,
-                          opacity: pressed ? 0.6 : 1,
-                        },
-                      ]}
-                      accessibilityRole="button"
-                      accessibilityLabel={`Select ${merchant.name}`}
-                    >
-                      <MerchantAvatar
-                        merchantName={merchant.name}
-                        logoUrl={merchant.logo_url}
-                        size={40}
-                        idSeed={merchant.id}
-                      />
-                      <View style={styles.resultText}>
-                        <Text
-                          numberOfLines={1}
-                          style={{
-                            color: theme.colors.sheetText,
-                            fontFamily: theme.typography.fontFamilySemiBold,
-                            fontSize: 14,
-                          }}
-                        >
-                          {merchant.name}
-                        </Text>
-                        {merchant.slug ? (
+                  {results.map((branch, index) => {
+                    const merchantName = branch.merchant?.name ?? "Merchant";
+                    const branchLabel =
+                      branch.name ?? branch.city ?? "Branch";
+                    const placeLabel = branch.place_label ?? branch.city ?? "";
+                    const offerCount =
+                      branch.running_configs.length +
+                      branch.fixed_configs.length;
+                    return (
+                      <Pressable
+                        key={branch.id}
+                        onPress={onDismiss}
+                        style={({ pressed }) => [
+                          styles.resultRow,
+                          {
+                            borderTopWidth:
+                              index === 0 ? 0 : StyleSheet.hairlineWidth,
+                            borderTopColor: theme.colors.surfaceBorder,
+                            opacity: pressed ? 0.6 : 1,
+                          },
+                        ]}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Select ${merchantName} — ${branchLabel}`}
+                      >
+                        <MerchantAvatar
+                          merchantName={merchantName}
+                          logoUrl={branch.merchant?.logo_url ?? null}
+                          size={40}
+                          idSeed={branch.id}
+                        />
+                        <View style={styles.resultText}>
+                          <Text
+                            numberOfLines={1}
+                            style={{
+                              color: theme.colors.sheetText,
+                              fontFamily: theme.typography.fontFamilySemiBold,
+                              fontSize: 14,
+                            }}
+                          >
+                            {merchantName}
+                          </Text>
                           <Text
                             numberOfLines={1}
                             style={{
@@ -243,17 +266,24 @@ export default function SearchModal({
                               marginTop: 2,
                             }}
                           >
-                            {merchant.slug}
+                            {branchLabel}
+                            {placeLabel && placeLabel !== branchLabel
+                              ? ` • ${placeLabel}`
+                              : ""}
+                            {"  •  "}
+                            {formatDistance(branch.distance_km)}
+                            {"  •  "}
+                            {offerCount} offer{offerCount === 1 ? "" : "s"}
                           </Text>
-                        ) : null}
-                      </View>
-                      <Ionicons
-                        name="chevron-forward"
-                        size={16}
-                        color={theme.colors.textMuted}
-                      />
-                    </Pressable>
-                  ))}
+                        </View>
+                        <Ionicons
+                          name="chevron-forward"
+                          size={16}
+                          color={theme.colors.textMuted}
+                        />
+                      </Pressable>
+                    );
+                  })}
                 </ScrollView>
               )}
             </View>

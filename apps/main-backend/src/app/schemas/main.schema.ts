@@ -341,7 +341,9 @@ deleted_at: Type.Union([
 Type.String(),
 Type.Null()
 ]),
-branch_id: Type.Number()
+branch_id: Type.Number(),
+requested_date: Type.Number(),
+transaction_date: Type.Number()
 })
 
 export type BaseRunningCreditConfig = Static<typeof BaseRunningCreditConfig>

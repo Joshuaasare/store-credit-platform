@@ -28,11 +28,12 @@ export class CustomerRedemptionsService {
     customerId: number,
     merchantId: number,
   ): Promise<CustomerPendingRedemption | null> {
+    const select =
+      `id, branch_id, amount_redeemed, redemption_code, requested_date, created_at,
+       branch:branches(${QueryFragments.BASE_BRANCH})` as const;
     const { data, error } = await supabaseAdmin
       .from("customer_credit_redemptions")
-      .select(
-        `id, customer_id, merchant_id, branch_id, amount_redeemed, redemption_code, requested_date, created_at, branch:branches(${QueryFragments.BASE_BRANCH})`,
-      )
+      .select(select)
       .eq("customer_id", customerId)
       .eq("merchant_id", merchantId)
       .is("deleted_at", null)
@@ -47,13 +48,13 @@ export class CustomerRedemptionsService {
     if (!data) return null;
 
     return {
-      redemption_code: Number(data.redemption_code),
-      redemption_id: Number(data.id),
+      id: Number(data.id),
       branch_id: Number(data.branch_id),
-      branch_name: data.branch?.name ?? null,
       amount_redeemed: Number(data.amount_redeemed),
+      created_at: String(data.created_at),
+      branch: data.branch,
+      redemption_code: Number(data.redemption_code),
       requested_date: Number(data.requested_date),
-      requested_at: String(data.created_at),
     };
   }
 
@@ -64,12 +65,11 @@ export class CustomerRedemptionsService {
     params: { cursor?: number; limit: number },
   ): Promise<CustomerApprovedRedemptionPage> {
     const limit = Math.min(Math.max(1, params.limit), 50);
+    const select = `id, branch_id, amount_redeemed, approved_at,
+       branch:branches(${QueryFragments.BASE_BRANCH})` as const;
     let query = supabaseAdmin
       .from("customer_credit_redemptions")
-      .select(
-        `id, branch_id, amount_redeemed, approved_at,
-         branch:branches(${QueryFragments.BASE_BRANCH})`,
-      )
+      .select(select)
       .eq("customer_id", customerId)
       .eq("merchant_id", merchantId)
       .is("deleted_at", null)
@@ -79,29 +79,24 @@ export class CustomerRedemptionsService {
 
     if (params.cursor !== undefined) {
       // Supabase returns timestamptz as ISO; convert the ms cursor at the boundary so the predicate is a real timestamp comparison, not a string sort.
-      query = query.lt(
-        "approved_at",
-        new Date(params.cursor).toISOString(),
-      );
+      query = query.lt("approved_at", new Date(params.cursor).toISOString());
     }
 
     const { data, error } = await query;
     if (error) {
-      throw new Error(
-        `Failed to load approved redemptions: ${error.message}`,
-      );
+      throw new Error(`Failed to load approved redemptions: ${error.message}`);
     }
     const rows = data ?? [];
 
-    const items: CustomerApprovedRedemption[] = rows.map((row) => {
-      return {
-        redemption_id: Number(row.id),
-        branch_id: Number(row.branch_id),
-        branch_name: row.branch?.name ?? null,
-        amount_redeemed: Number(row.amount_redeemed),
-        approved_at: new Date(String(row.approved_at)).getTime(),
-      };
-    });
+    const items: CustomerApprovedRedemption[] = rows.map((row) => ({
+      id: Number(row.id),
+      branch_id: Number(row.branch_id),
+      amount_redeemed: Number(row.amount_redeemed),
+      branch: row.branch
+        ? { id: Number(row.branch.id), name: row.branch.name }
+        : null,
+      approved_at: new Date(String(row.approved_at)).getTime(),
+    }));
 
     const last = rows[rows.length - 1];
     const nextCursor =
@@ -134,7 +129,7 @@ export class CustomerRedemptionsService {
     const { data, error } = await supabaseAdmin.rpc(
       "redemption_request_update",
       {
-        p_redemption_id: existing.redemption_id,
+        p_redemption_id: existing.id,
         p_amount: body.amount,
         p_branch_id: body.branchId,
       },
@@ -164,7 +159,7 @@ export class CustomerRedemptionsService {
     const existing = await this.getMyPendingRequest(customerId, merchantId);
     if (!existing) return { cancelled: false };
     const { error } = await supabaseAdmin.rpc("redemption_request_cancel", {
-      p_redemption_id: existing.redemption_id,
+      p_redemption_id: existing.id,
     });
     if (error) {
       throw new Error(`Cancel failed: ${error.message}`);

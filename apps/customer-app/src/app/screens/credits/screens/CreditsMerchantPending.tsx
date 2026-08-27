@@ -122,6 +122,8 @@ export function CreditsMerchantPending({
     ? pendingQuery.data.data
     : null;
 
+  const pendingBranchName = pendingRow?.branch?.name ?? null;
+
   return (
     <View style={styles.scrollWrap}>
       <GlassCard padding={0} style={styles.listCard}>
@@ -130,10 +132,10 @@ export function CreditsMerchantPending({
           metaTone="warning"
           item={{
             key: "pending-rollup",
-            initials: getInitials(pendingRow?.branch_name),
+            initials: getInitials(pendingBranchName),
             logoUrl: null,
-            title: pendingRow?.branch_name
-              ? `Pending at ${pendingRow.branch_name}`
+            title: pendingBranchName
+              ? `Pending at ${pendingBranchName}`
               : "Pending request",
             meta: "Waiting for merchant",
             amount: total,
@@ -178,7 +180,7 @@ function PendingCodeBlock({
   const codeText = pendingRow
     ? String(pendingRow.redemption_code).padStart(4, "0")
     : null;
-  const branchLabel = pendingRow?.branch_name ?? null;
+  const branchLabel = pendingRow?.branch?.name ?? null;
 
   return (
     <View style={styles.codeBlock}>

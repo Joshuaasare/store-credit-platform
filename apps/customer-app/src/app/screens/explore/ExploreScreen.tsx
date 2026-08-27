@@ -10,19 +10,19 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
-import type { ExploreBranch } from "@store-credit-platform/api-services";
+import type { BranchWithOffers } from "@store-credit-platform/api-services";
 import ScreenBackground from "../../shared/components/ScreenBackground";
 import ScreenBody from "../../shared/components/ScreenBody";
 import PageHeader from "../../shared/components/PageHeader";
 import { useAuthStore } from "../../shared/store/useAuthStore";
-import { customerExploreService } from "../../api/client";
+import { customerBranchService } from "../../api/client";
 import { useOffsets } from "../../shared/hooks/useOffsets";
 import { useThemeTokens } from "../../shared/theme/ThemeContext";
 import LocationModal from "./components/LocationModal";
 import SearchModal from "./components/SearchModal";
 import BranchCard from "./components/BranchCard";
 
-const EXPLORE_BRANCHES_QUERY_KEY = ["customer", "exploreBranches"] as const;
+const BRANCHES_NEARBY_QUERY_KEY = ["customer", "branchesNearby"] as const;
 
 export function ExploreScreen() {
   const theme = useThemeTokens();
@@ -35,12 +35,16 @@ export function ExploreScreen() {
     user?.latitude != null && user?.longitude != null;
 
   const branchesQuery = useQuery({
-    queryKey: EXPLORE_BRANCHES_QUERY_KEY,
-    queryFn: () => customerExploreService.getExploreBranches(),
+    queryKey: [...BRANCHES_NEARBY_QUERY_KEY, user?.latitude, user?.longitude],
+    queryFn: () =>
+      customerBranchService.getBranchesByLocation(
+        user!.latitude!,
+        user!.longitude!,
+      ),
     enabled: hasLocation,
   });
 
-  const branches: ExploreBranch[] =
+  const branches: BranchWithOffers[] =
     branchesQuery.data?.success ? branchesQuery.data.data : [];
 
   return (
@@ -65,7 +69,7 @@ export function ExploreScreen() {
               },
             ]}
             accessibilityRole="button"
-            accessibilityLabel="Search merchants"
+            accessibilityLabel="Search branches"
           >
             <Ionicons name="search" size={16} color={theme.colors.textMuted} />
             <Text
@@ -78,7 +82,7 @@ export function ExploreScreen() {
                 marginLeft: 8,
               }}
             >
-              Search merchants
+              Search branches
             </Text>
           </Pressable>
 
@@ -91,7 +95,7 @@ export function ExploreScreen() {
           ) : (
             <FlatList
               data={branches}
-              keyExtractor={(b) => `${b.branch.id}`}
+              keyExtractor={(b) => `${b.id}`}
               renderItem={({ item }) => <BranchCard branch={item} />}
               scrollEnabled={false}
               ItemSeparatorComponent={() => <View style={{ height: 20 }} />}

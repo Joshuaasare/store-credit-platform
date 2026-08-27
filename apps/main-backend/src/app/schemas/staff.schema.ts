@@ -87,6 +87,39 @@ Type.Null()
 ]))
 })
 
+export type StaffUpdate = Static<typeof StaffUpdate>
+export const StaffUpdate = Type.Object({
+branch_id: Type.Optional(Type.Number()),
+role: Type.Optional(Type.Union([
+StaffRoleValues,
+Type.Null()
+])),
+access_granted: Type.Optional(Type.Boolean()),
+surname: Type.Optional(Type.Union([
+Type.String(),
+Type.Null()
+])),
+other_names: Type.Optional(Type.Union([
+Type.String(),
+Type.Null()
+])),
+address: Type.Optional(Type.Union([
+Type.String(),
+Type.Null()
+])),
+notes: Type.Optional(Type.Union([
+Type.String(),
+Type.Null()
+])),
+updated_at: Type.Optional(Type.String())
+})
+
+export type UserUpdate = Static<typeof UserUpdate>
+export const UserUpdate = Type.Object({
+phone: Type.Optional(Type.String()),
+updated_at: Type.String()
+})
+
 export type SetStaffAccessRequest = Static<typeof SetStaffAccessRequest>
 export const SetStaffAccessRequest = Type.Object({
 access_granted: Type.Boolean()

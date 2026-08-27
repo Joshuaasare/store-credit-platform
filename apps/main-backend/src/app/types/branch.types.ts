@@ -1,4 +1,10 @@
-import { ApiErrorResponse, BaseBranch, BaseMerchant } from "./main.types";
+import {
+  ApiErrorResponse,
+  BaseBranch,
+  BaseFixedCreditConfig,
+  BaseMerchant,
+  BaseRunningCreditConfig,
+} from "./main.types";
 
 export interface BranchWithAggregates extends BaseBranch {
   staff_count: number;
@@ -39,26 +45,36 @@ export interface UpdateBranchRequest {
   place_id?: string | null;
 }
 
-export interface ExploreBranchOffersSummary {
-  count: number;
-}
-
-export interface ExploreBranch {
-  branch: BaseBranch;
-  merchant: BaseMerchant;
-  offers_summary: ExploreBranchOffersSummary;
+// Branch + its active running/fixed credit configs + nearest distance. Flat shape — branch
+// fields at top level, not nested under `branch.`. The frontend can group by config_group_id
+// to derive an offers-centric view.
+export type BranchWithOffers = BaseBranch & {
+  merchant: BaseMerchant | null;
+  running_configs: BaseRunningCreditConfig[];
+  fixed_configs: BaseFixedCreditConfig[];
   distance_km: number | null;
+};
+
+export interface BranchesByLocationResponse {
+  success: true;
+  data: BranchWithOffers[];
 }
 
-export interface CustomerExploreBranchesResponse {
-  success: true;
-  data: ExploreBranch[];
+export interface NearbyBranchesQuerystring {
+  lat: number;
+  lng: number;
+}
+
+export interface SearchBranchesQuerystring {
+  lat: number;
+  lng: number;
+  q: string;
 }
 
 export type BranchListApiResponse = BranchListResponse | ApiErrorResponse;
 export type BranchMutationApiResponse =
   | BranchMutationResponse
   | ApiErrorResponse;
-export type CustomerExploreBranchesApiResponse =
-  | CustomerExploreBranchesResponse
+export type BranchesByLocationApiResponse =
+  | BranchesByLocationResponse
   | ApiErrorResponse;

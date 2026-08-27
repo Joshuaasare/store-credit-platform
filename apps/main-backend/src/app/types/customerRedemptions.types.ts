@@ -12,15 +12,14 @@ export type CustomerMerchantBranchesApiResponse =
   | CustomerMerchantBranchesResponse
   | ApiErrorResponse;
 
-// Carries the 4-digit code for the customer to show at the till. The webapp MUST NOT see this.
 export interface CustomerPendingRedemption {
-  redemption_code: number;
-  redemption_id: number;
+  id: number;
   branch_id: number;
-  branch_name: string | null;
   amount_redeemed: number;
+  created_at: string;
+  branch: { id: number; name: string | null } | null;
+  redemption_code: number;
   requested_date: number;
-  requested_at: string;
 }
 
 // null when there's no pending row at this merchant (idempotent on "no pending").
@@ -74,12 +73,12 @@ export type CustomerRedemptionCancelApiResponse =
 
 // Past approved redemptions at one merchant — one row per approved request. The 4-digit code is intentionally NOT included (used once at the till).
 
-// approved_at is epoch ms (matches the customer-app date utils). branch_name is null when the branch was soft-deleted after the redemption (UI falls back to —).
+// approved_at is epoch ms (matches the customer-app date utils). branch.name is null when the branch was soft-deleted after the redemption (UI falls back to —).
 export interface CustomerApprovedRedemption {
-  redemption_id: number;
-  amount_redeemed: number;
+  id: number;
   branch_id: number;
-  branch_name: string | null;
+  amount_redeemed: number;
+  branch: { id: number; name: string | null } | null;
   approved_at: number;
 }
 

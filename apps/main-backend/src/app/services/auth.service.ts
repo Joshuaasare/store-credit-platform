@@ -15,9 +15,9 @@ import {
   AuthUser,
 } from "../schemas/auth.schema";
 import { QueryFragments } from "../constants/queryFragments";
-import { Database } from "../types/database.types";
 import { TokenService } from "./token.service";
 import { RateLimitService } from "./rateLimit.service";
+import { StaffRoleValues } from "../schemas/main.schema";
 
 const MAX_OTP_ATTEMPTS = 5;
 
@@ -322,7 +322,7 @@ export class AuthService {
   // Single role lives on staff.role; names + access_granted also live on the staff row. Picks the first active staff row (ordered by id) for determinism.
   private async resolveStaffAssignment(userId: string): Promise<{
     staff_id: number;
-    role: Database["public"]["Enums"]["role"];
+    role: StaffRoleValues;
     merchant_id: number;
     branch_id: number;
     surname: string | null;

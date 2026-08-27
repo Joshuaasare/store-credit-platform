@@ -48,6 +48,20 @@ export interface CustomerProfileUpdateRequest {
   place_label?: string | null;
 }
 
+// DB-level update payload for the customers table. Built conditionally in updateProfile — only
+// fields the request actually touches are set; trimmed surname/other_names are string (not null).
+export interface CustomerUpdate {
+  surname?: string;
+  other_names?: string;
+  avatar_url?: string | null;
+  phone?: string;
+  latitude?: number | null;
+  longitude?: number | null;
+  place_id?: string | null;
+  place_label?: string | null;
+  updated_at?: string;
+}
+
 // The returned CustomerAuthUser is post-update so the customer-app can setUser without a refetch.
 export interface CustomerProfileUpdateResponse {
   success: true;

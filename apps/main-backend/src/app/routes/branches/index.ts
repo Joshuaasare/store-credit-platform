@@ -10,6 +10,9 @@ import {
   UpdateBranchRequest,
   BranchListApiResponse,
   BranchMutationApiResponse,
+  BranchesByLocationApiResponse,
+  NearbyBranchesQuerystring,
+  SearchBranchesQuerystring,
 } from "../../schemas/branch.schema";
 
 export default async function (fastify: FastifyInstance) {
@@ -153,6 +156,70 @@ export default async function (fastify: FastifyInstance) {
           reply.status(404);
           return { success: false, error: message };
         }
+        reply.status(400);
+        return { success: false, error: message };
+      }
+    },
+  });
+
+  fastify.get<{
+    Querystring: NearbyBranchesQuerystring;
+    Reply: BranchesByLocationApiResponse;
+  }>("/nearby", {
+    preHandler: [requireAuth],
+    schema: {
+      querystring: NearbyBranchesQuerystring,
+      response: {
+        200: BranchesByLocationApiResponse,
+        400: BranchesByLocationApiResponse,
+        401: BranchesByLocationApiResponse,
+      },
+    },
+    handler: async (request, reply) => {
+      try {
+        const { lat, lng } = request.query;
+        const data = await branchService.getBranchesByLocation(lat, lng);
+        return { success: true, data };
+      } catch (error) {
+        const message =
+          error instanceof Error
+            ? error.message
+            : "Failed to load nearby branches";
+        request.log.error(error, "GET /branches/nearby failed");
+        reply.status(400);
+        return { success: false, error: message };
+      }
+    },
+  });
+
+  fastify.get<{
+    Querystring: SearchBranchesQuerystring;
+    Reply: BranchesByLocationApiResponse;
+  }>("/search", {
+    preHandler: [requireAuth],
+    schema: {
+      querystring: SearchBranchesQuerystring,
+      response: {
+        200: BranchesByLocationApiResponse,
+        400: BranchesByLocationApiResponse,
+        401: BranchesByLocationApiResponse,
+      },
+    },
+    handler: async (request, reply) => {
+      try {
+        const { lat, lng, q } = request.query;
+        const data = await branchService.searchBranchesByLocation(
+          lat,
+          lng,
+          q,
+        );
+        return { success: true, data };
+      } catch (error) {
+        const message =
+          error instanceof Error
+            ? error.message
+            : "Failed to search branches";
+        request.log.error(error, "GET /branches/search failed");
         reply.status(400);
         return { success: false, error: message };
       }

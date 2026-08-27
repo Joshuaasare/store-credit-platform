@@ -157,6 +157,8 @@ export interface BaseCustomerCreditRedemption {
   updated_at: string | null;
   deleted_at: string | null;
   branch_id: number;
+  requested_date: number;
+  transaction_date: number;
 }
 
 export interface BaseRunningCreditConfig {

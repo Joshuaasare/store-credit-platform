@@ -122,9 +122,10 @@ const pendingBranchColumn: ColumnDef<MerchantPendingRequest> = {
   header: "Branch",
   cell: ({ row }) => {
     const r = row.original;
+    const name = r.branch?.name?.trim();
     return (
       <span className="truncate">
-        {r.branch_name?.trim() || `Branch #${r.branch_id}`}
+        {name || (r.branch ? `Branch #${r.branch.id}` : "—")}
       </span>
     );
   },
@@ -145,7 +146,7 @@ const pendingRequestedAtColumn: ColumnDef<MerchantPendingRequest> = {
   header: "Requested at",
   cell: ({ row }) => (
     <span className="text-muted-foreground text-sm">
-      {formatIsoDate(new Date(row.original.requested_date).toISOString())}
+      {formatIsoDate(new Date(Number(row.original.requested_date)).toISOString())}
     </span>
   ),
 };
@@ -401,8 +402,8 @@ export default function Redemptions() {
     id: "actions",
     header: "Actions",
     cell: ({ row }) => {
-      const customerId = row.original.customer_id;
-      const redemptionId = row.original.redemption_id;
+      const customerId = Number(row.original.customer_id);
+      const redemptionId = Number(row.original.id);
       const anyDialogOpen = dialog != null;
       return (
         <div className="flex items-center gap-2">

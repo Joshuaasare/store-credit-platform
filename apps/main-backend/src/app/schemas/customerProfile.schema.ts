@@ -73,6 +73,34 @@ Type.Null()
 ]))
 })
 
+export type CustomerUpdate = Static<typeof CustomerUpdate>
+export const CustomerUpdate = Type.Object({
+surname: Type.Optional(Type.String()),
+other_names: Type.Optional(Type.String()),
+avatar_url: Type.Optional(Type.Union([
+Type.String(),
+Type.Null()
+])),
+phone: Type.Optional(Type.String()),
+latitude: Type.Optional(Type.Union([
+Type.Number(),
+Type.Null()
+])),
+longitude: Type.Optional(Type.Union([
+Type.Number(),
+Type.Null()
+])),
+place_id: Type.Optional(Type.Union([
+Type.String(),
+Type.Null()
+])),
+place_label: Type.Optional(Type.Union([
+Type.String(),
+Type.Null()
+])),
+updated_at: Type.Optional(Type.String())
+})
+
 export type CustomerProfileUpdateResponse = Static<typeof CustomerProfileUpdateResponse>
 export const CustomerProfileUpdateResponse = Type.Object({
 success: Type.Literal(true),

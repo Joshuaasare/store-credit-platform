@@ -113,6 +113,44 @@ Type.Null()
 export type UpdateRunningCreditConfigRequest = Static<typeof UpdateRunningCreditConfigRequest>
 export const UpdateRunningCreditConfigRequest = CreateRunningCreditConfigRequest
 
+export type RunningCreditConfigUpdate = Static<typeof RunningCreditConfigUpdate>
+export const RunningCreditConfigUpdate = Type.Object({
+credit_type: Type.Union([
+CreditTypeValues,
+Type.Null()
+]),
+credit_validity: Type.Union([
+Type.Number(),
+Type.Null()
+]),
+eligible_window: Type.Union([
+Type.Number(),
+Type.Null()
+]),
+fixed_credit_value: Type.Union([
+Type.Number(),
+Type.Null()
+]),
+percentage_credit_value: Type.Union([
+Type.Number(),
+Type.Null()
+]),
+maximum_allowed_credit: Type.Union([
+Type.Number(),
+Type.Null()
+]),
+threshold_amount: Type.Union([
+Type.Number(),
+Type.Null()
+]),
+terms: Type.Union([
+Type.String(),
+Type.Null()
+]),
+cumulative_scope: CumulativeScopeValues,
+images: Type.Optional(Type.Array(Type.String()))
+})
+
 export type FixedCreditConfigGroup = Static<typeof FixedCreditConfigGroup>
 export const FixedCreditConfigGroup = Type.Object({
 config_group_id: Type.String(),
@@ -180,6 +218,31 @@ Type.Null()
 
 export type UpdateFixedCreditConfigRequest = Static<typeof UpdateFixedCreditConfigRequest>
 export const UpdateFixedCreditConfigRequest = CreateFixedCreditConfigRequest
+
+export type FixedCreditConfigUpdate = Static<typeof FixedCreditConfigUpdate>
+export const FixedCreditConfigUpdate = Type.Object({
+title: Type.Union([
+Type.String(),
+Type.Null()
+]),
+description: Type.Union([
+Type.String(),
+Type.Null()
+]),
+start_date: Type.Union([
+Type.Number(),
+Type.Null()
+]),
+end_date: Type.Union([
+Type.Number(),
+Type.Null()
+]),
+terms: Type.Union([
+Type.String(),
+Type.Null()
+]),
+images: Type.Optional(Type.Array(Type.String()))
+})
 
 export type ToggleActiveRequest = Static<typeof ToggleActiveRequest>
 export const ToggleActiveRequest = Type.Object({

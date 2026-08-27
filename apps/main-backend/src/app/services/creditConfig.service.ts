@@ -12,12 +12,16 @@ import {
   FixedCreditConfigGroup,
   FixedCreditConfig,
   RunningCreditConfig,
+  RunningCreditConfigUpdate,
+  FixedCreditConfigUpdate,
 } from "../schemas/creditConfig.schema";
-import { storageService, extractPathFromUrl } from "./storage.service";
+import { BaseCustomerCredit } from "../types/main.types";
 import {
   groupFixedRows,
   groupRunningRows,
   normalizeFixedValues,
+  deleteStaleImages,
+  deleteImagesForRows,
 } from "../utils/creditConfig.utils";
 
 async function fetchRunningGroup(groupId: string) {
@@ -181,32 +185,12 @@ export class CreditConfigService {
     const values = normalizeRunningValues(payload);
 
     // Why: only diff images when payload explicitly provides an array; null = "leave existing alone".
-    const updatePayload: Database["public"]["Tables"]["running_credit_config"]["Update"] =
-      {
-        ...values,
-        ...(Array.isArray(payload.images) ? { images: payload.images } : {}),
-      };
+    const updatePayload: RunningCreditConfigUpdate = {
+      ...values,
+      ...(Array.isArray(payload.images) ? { images: payload.images } : {}),
+    };
     if (Array.isArray(payload.images)) {
-      const newUrls = new Set(payload.images);
-      const stalePaths: string[] = [];
-      for (const row of existing) {
-        const rowImages = Array.isArray(row.images)
-          ? (row.images as string[])
-          : [];
-        for (const url of rowImages) {
-          if (!newUrls.has(url)) {
-            const p = extractPathFromUrl("store-assets", url);
-            if (p) stalePaths.push(p);
-          }
-        }
-      }
-      if (stalePaths.length > 0) {
-        try {
-          await storageService.deleteFiles("store-assets", stalePaths);
-        } catch (err) {
-          console.warn("Failed to clean stale running promo images:", err);
-        }
-      }
+      await deleteStaleImages(payload.images, existing);
     }
 
     if (removed.length > 0) {
@@ -254,23 +238,7 @@ export class CreditConfigService {
       .eq("config_group_id", groupId)
       .in("branch_id", merchantBranchIds)
       .is("deleted_at", null);
-    const paths: string[] = [];
-    for (const row of rows ?? []) {
-      const rowImages = Array.isArray(row.images)
-        ? (row.images as string[])
-        : [];
-      for (const url of rowImages) {
-        const p = extractPathFromUrl("store-assets", url);
-        if (p) paths.push(p);
-      }
-    }
-    if (paths.length > 0) {
-      try {
-        await storageService.deleteFiles("store-assets", paths);
-      } catch (err) {
-        console.warn("Failed to clean running promo images on delete:", err);
-      }
-    }
+    await deleteImagesForRows(rows ?? []);
 
     const { error } = await supabaseAdmin
       .from("running_credit_config")
@@ -377,32 +345,12 @@ export class CreditConfigService {
     const values = normalizeFixedValues(payload);
 
     // Why: only diff images when payload explicitly provides an array; null = "leave existing alone".
-    const updatePayload: Database["public"]["Tables"]["fixed_credit_config"]["Update"] =
-      {
-        ...values,
-        ...(Array.isArray(payload.images) ? { images: payload.images } : {}),
-      };
+    const updatePayload: FixedCreditConfigUpdate = {
+      ...values,
+      ...(Array.isArray(payload.images) ? { images: payload.images } : {}),
+    };
     if (Array.isArray(payload.images)) {
-      const newUrls = new Set(payload.images);
-      const stalePaths: string[] = [];
-      for (const row of existing) {
-        const rowImages = Array.isArray(row.images)
-          ? (row.images as string[])
-          : [];
-        for (const url of rowImages) {
-          if (!newUrls.has(url)) {
-            const p = extractPathFromUrl("store-assets", url);
-            if (p) stalePaths.push(p);
-          }
-        }
-      }
-      if (stalePaths.length > 0) {
-        try {
-          await storageService.deleteFiles("store-assets", stalePaths);
-        } catch (err) {
-          console.warn("Failed to clean stale promo images:", err);
-        }
-      }
+      await deleteStaleImages(payload.images, existing);
     }
 
     if (removed.length > 0) {
@@ -447,23 +395,7 @@ export class CreditConfigService {
       .eq("config_group_id", groupId)
       .in("branch_id", merchantBranchIds)
       .is("deleted_at", null);
-    const paths: string[] = [];
-    for (const row of rows ?? []) {
-      const rowImages = Array.isArray(row.images)
-        ? (row.images as string[])
-        : [];
-      for (const url of rowImages) {
-        const p = extractPathFromUrl("store-assets", url);
-        if (p) paths.push(p);
-      }
-    }
-    if (paths.length > 0) {
-      try {
-        await storageService.deleteFiles("store-assets", paths);
-      } catch (err) {
-        console.warn("Failed to clean promo images on delete:", err);
-      }
-    }
+    await deleteImagesForRows(rows ?? []);
 
     const { error } = await supabaseAdmin
       .from("fixed_credit_config")
@@ -501,7 +433,7 @@ export async function issueRunningCreditsForPurchase(
   branchId: number,
   purchaseAmount: number,
   transactionDateEpoch: number,
-): Promise<Database["public"]["Tables"]["customer_credit"]["Row"][]> {
+): Promise<BaseCustomerCredit[]> {
   if (!(purchaseAmount > 0)) return [];
 
   const { data: merchant } = await supabase

@@ -97,15 +97,15 @@ export function CreditsMerchantApproved({
       <GlassCard padding={0} style={styles.listCard}>
         <FlatList
           data={items}
-          keyExtractor={(item) => String(item.redemption_id)}
+          keyExtractor={(item) => String(item.id)}
           renderItem={({ item }) => {
-            const title = item.branch_name ?? "—";
+            const title = item.branch?.name ?? "—";
             const meta = `Approved ${formatRelativeTimestamp(item.approved_at)}`;
             return (
               <MerchantActivityRow
                 kind="merchant-approved"
                 item={{
-                  key: String(item.redemption_id),
+                  key: String(item.id),
                   initials: getInitials(title),
                   logoUrl: null,
                   title,

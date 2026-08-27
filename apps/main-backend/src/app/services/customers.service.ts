@@ -12,6 +12,7 @@ import {
   CustomerDetailCreditRow,
 } from "../schemas/customers.schema";
 import { BaseUserProfile } from "../schemas/main.schema";
+import { BaseCustomer } from "../types/main.types";
 
 // Customer leaderboard (via Postgres RPCs), directory list, and single-customer detail. Reads/writes are scoped to a verified merchant_id resolved from the JWT; activity feed + purchase recording live in transactions.service.ts.
 export class CustomerService {
@@ -348,6 +349,20 @@ export class CustomerService {
       last_activity_epoch: lastActivityEpoch,
       credits,
     };
+  }
+
+  // Atomic primitive: full BaseCustomer row (includes latitude/longitude/place_id/place_label via
+  // BASE_CUSTOMER fragment). Other services/routes call this when they need a customer's details.
+  async getCustomerById(customerId: number): Promise<BaseCustomer | null> {
+    const { data, error } = await supabaseAdmin
+      .from("customers")
+      .select(QueryFragments.BASE_CUSTOMER)
+      .eq("id", customerId)
+      .maybeSingle();
+    if (error) {
+      throw new Error(`getCustomerById: ${error.message}`);
+    }
+    return data;
   }
 }
 

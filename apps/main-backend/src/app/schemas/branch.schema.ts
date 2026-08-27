@@ -1,5 +1,5 @@
 import { Type, Static } from '@sinclair/typebox'
-import { BaseMerchant, BaseBranch, ApiErrorResponse } from './main.schema'
+import { BaseMerchant, BaseBranch, ApiErrorResponse, BaseRunningCreditConfig, BaseFixedCreditConfig } from './main.schema'
 
 
 
@@ -68,26 +68,40 @@ Type.Null()
 ]))
 })
 
-export type ExploreBranchOffersSummary = Static<typeof ExploreBranchOffersSummary>
-export const ExploreBranchOffersSummary = Type.Object({
-count: Type.Number()
-})
-
-export type ExploreBranch = Static<typeof ExploreBranch>
-export const ExploreBranch = Type.Object({
-branch: BaseBranch,
-merchant: BaseMerchant,
-offers_summary: ExploreBranchOffersSummary,
+export type BranchWithOffers = Static<typeof BranchWithOffers>
+export const BranchWithOffers = Type.Intersect([
+BaseBranch,
+Type.Object({
+merchant: Type.Union([
+BaseMerchant,
+Type.Null()
+]),
+running_configs: Type.Array(BaseRunningCreditConfig),
+fixed_configs: Type.Array(BaseFixedCreditConfig),
 distance_km: Type.Union([
 Type.Number(),
 Type.Null()
 ])
 })
+])
 
-export type CustomerExploreBranchesResponse = Static<typeof CustomerExploreBranchesResponse>
-export const CustomerExploreBranchesResponse = Type.Object({
+export type BranchesByLocationResponse = Static<typeof BranchesByLocationResponse>
+export const BranchesByLocationResponse = Type.Object({
 success: Type.Literal(true),
-data: Type.Array(ExploreBranch)
+data: Type.Array(BranchWithOffers)
+})
+
+export type NearbyBranchesQuerystring = Static<typeof NearbyBranchesQuerystring>
+export const NearbyBranchesQuerystring = Type.Object({
+lat: Type.Number(),
+lng: Type.Number()
+})
+
+export type SearchBranchesQuerystring = Static<typeof SearchBranchesQuerystring>
+export const SearchBranchesQuerystring = Type.Object({
+lat: Type.Number(),
+lng: Type.Number(),
+q: Type.String()
 })
 
 export type BranchListApiResponse = Static<typeof BranchListApiResponse>
@@ -102,8 +116,8 @@ BranchMutationResponse,
 ApiErrorResponse
 ])
 
-export type CustomerExploreBranchesApiResponse = Static<typeof CustomerExploreBranchesApiResponse>
-export const CustomerExploreBranchesApiResponse = Type.Union([
-CustomerExploreBranchesResponse,
+export type BranchesByLocationApiResponse = Static<typeof BranchesByLocationApiResponse>
+export const BranchesByLocationApiResponse = Type.Union([
+BranchesByLocationResponse,
 ApiErrorResponse
 ])
