@@ -81,6 +81,17 @@ begin
   end if;
 end$$;
 
+do $$
+begin
+  if not exists (
+    select 1 from pg_type t
+    join pg_namespace n on n.oid = t.typnamespace
+    where t.typname = 'branch_category' and n.nspname = 'public'
+  ) then
+    create type public.branch_category as enum ('electronics', 'home_appliances', 'furniture', 'retail_shops', 'restaurants', 'schools');
+  end if;
+end$$;
+
 -- ──────────────────────────────────────────────────────────────────────────
 -- 3. merchants columns
 -- ──────────────────────────────────────────────────────────────────────────
@@ -97,7 +108,8 @@ alter table public.branches
   add column if not exists latitude double precision,
   add column if not exists longitude double precision,
   add column if not exists place_id text,
-  add column if not exists place_text text;
+  add column if not exists place_text text,
+  add column if not exists category public.branch_category;
 
 -- Why: latitude/longitude were numeric, but PostgREST returns numeric as a JSON
 -- string (arbitrary-precision preservation) while the API schema and generated

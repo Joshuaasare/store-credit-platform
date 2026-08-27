@@ -15,11 +15,19 @@ import {
   Input,
   Label,
   Combobox,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from "@store-credit-platform/web-components";
 import { PhoneInput } from "@shared/components/PhoneInput/PhoneInput";
 import { countries, CountryCode } from "@shared/utils/countries";
 import { useStoreStore } from "@shared/stores/storeStore";
-import { BranchWithAggregates } from "@shared/types/api.types";
+import {
+  BranchCategoryValues,
+  BranchWithAggregates,
+} from "@shared/types/api.types";
 import {
   errorToastProperties,
   successToastProperties,
@@ -29,6 +37,15 @@ import {
   LocationValue,
 } from "@shared/components/LocationPicker/LocationPicker";
 import { Loader2 } from "lucide-react";
+
+const BRANCH_CATEGORIES: { value: BranchCategoryValues; label: string }[] = [
+  { value: "electronics", label: "Electronics" },
+  { value: "home_appliances", label: "Home Appliances" },
+  { value: "furniture", label: "Furniture" },
+  { value: "retail_shops", label: "Retail Shops" },
+  { value: "restaurants", label: "Restaurants" },
+  { value: "schools", label: "Schools" },
+];
 
 const branchSchema = z.object({
   name: z
@@ -45,6 +62,18 @@ const branchSchema = z.object({
   latitude: z.number().nullable().optional(),
   longitude: z.number().nullable().optional(),
   place_id: z.string().nullable().optional(),
+  category: z
+    .enum([
+      "electronics",
+      "home_appliances",
+      "furniture",
+      "retail_shops",
+      "restaurants",
+      "schools",
+      "__none",
+    ])
+    .nullable()
+    .optional(),
 });
 
 type BranchFormValues = z.infer<typeof branchSchema>;
@@ -84,6 +113,7 @@ export function BranchEditDialog({
       latitude: null,
       longitude: null,
       place_id: null,
+      category: null,
     },
   });
 
@@ -98,6 +128,7 @@ export function BranchEditDialog({
         latitude: branch?.latitude ?? null,
         longitude: branch?.longitude ?? null,
         place_id: branch?.place_id ?? null,
+        category: branch?.category ?? null,
       });
     }
   }, [open, branch, reset]);
@@ -128,6 +159,7 @@ export function BranchEditDialog({
           latitude: location.latitude,
           longitude: location.longitude,
           place_id: location.place_id,
+          category: values.category === "__none" ? null : values.category ?? null,
         });
         toast.success("Branch updated", successToastProperties);
       } else {
@@ -140,6 +172,7 @@ export function BranchEditDialog({
           latitude: location.latitude,
           longitude: location.longitude,
           place_id: location.place_id,
+          category: values.category === "__none" ? null : values.category ?? null,
         });
         toast.success("Branch added", successToastProperties);
       }
@@ -254,6 +287,34 @@ export function BranchEditDialog({
                   />
                 );
               }}
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label>Category</Label>
+            <Controller
+              control={control}
+              name="category"
+              render={({ field }) => (
+                <Select
+                  value={field.value ?? "__none"}
+                  onValueChange={(v) =>
+                    field.onChange(v === "__none" ? null : v)
+                  }
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Uncategorized" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none">Uncategorized</SelectItem>
+                    {BRANCH_CATEGORIES.map((c) => (
+                      <SelectItem key={c.value} value={c.value}>
+                        {c.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
             />
           </div>
 

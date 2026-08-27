@@ -1,5 +1,5 @@
 import { Type, Static } from '@sinclair/typebox'
-import { BaseMerchant, BaseBranch, ApiErrorResponse, BaseRunningCreditConfig, BaseFixedCreditConfig } from './main.schema'
+import { BranchCategoryValues, BaseMerchant, BaseBranch, ApiErrorResponse, BaseRunningCreditConfig, BaseFixedCreditConfig } from './main.schema'
 
 
 
@@ -44,6 +44,10 @@ Type.Null()
 place_id: Type.Optional(Type.Union([
 Type.String(),
 Type.Null()
+])),
+category: Type.Optional(Type.Union([
+BranchCategoryValues,
+Type.Null()
 ]))
 })
 
@@ -64,6 +68,10 @@ Type.Null()
 ])),
 place_id: Type.Optional(Type.Union([
 Type.String(),
+Type.Null()
+])),
+category: Type.Optional(Type.Union([
+BranchCategoryValues,
 Type.Null()
 ]))
 })

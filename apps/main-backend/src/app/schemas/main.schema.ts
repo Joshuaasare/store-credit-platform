@@ -7,6 +7,16 @@ Type.Literal("manager"),
 Type.Literal("cashier")
 ])
 
+export type BranchCategoryValues = Static<typeof BranchCategoryValues>
+export const BranchCategoryValues = Type.Union([
+Type.Literal("electronics"),
+Type.Literal("home_appliances"),
+Type.Literal("furniture"),
+Type.Literal("retail_shops"),
+Type.Literal("restaurants"),
+Type.Literal("schools")
+])
+
 export type CreditTypeValues = Static<typeof CreditTypeValues>
 export const CreditTypeValues = Type.Union([
 Type.Literal("fixed"),
@@ -101,6 +111,10 @@ Type.Null()
 ]),
 place_label: Type.Union([
 Type.String(),
+Type.Null()
+]),
+category: Type.Union([
+BranchCategoryValues,
 Type.Null()
 ])
 })

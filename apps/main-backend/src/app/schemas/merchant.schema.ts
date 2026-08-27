@@ -4,7 +4,9 @@ import { BaseMerchant, ApiErrorResponse } from './main.schema'
 
 
 export type MerchantWithStats = Static<typeof MerchantWithStats>
-export const MerchantWithStats = Type.Composite([BaseMerchant, Type.Object({
+export const MerchantWithStats = Type.Intersect([
+BaseMerchant,
+Type.Object({
 branch_count: Type.Number(),
 staff_count: Type.Number(),
 customer_count: Type.Number(),
@@ -14,7 +16,8 @@ credit_pool_limit: Type.Union([
 Type.Number(),
 Type.Null()
 ])
-})])
+})
+])
 
 export type UpdateMerchantRequest = Static<typeof UpdateMerchantRequest>
 export const UpdateMerchantRequest = Type.Object({

@@ -117,6 +117,7 @@ export class BranchService {
         latitude: payload.latitude ?? null,
         longitude: payload.longitude ?? null,
         place_id: payload.place_id ?? null,
+        category: payload.category ?? null,
       })
       .select(QueryFragments.BASE_BRANCH)
       .single();

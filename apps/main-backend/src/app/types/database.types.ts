@@ -42,6 +42,7 @@ export type Database = {
       branches: {
         Row: {
           address: string | null
+          category: Database["public"]["Enums"]["branch_category"] | null
           city: string
           country_code: string
           created_at: string
@@ -55,11 +56,11 @@ export type Database = {
           phone: string | null
           place_id: string | null
           place_label: string | null
-          place_text: string | null
           updated_at: string | null
         }
         Insert: {
           address?: string | null
+          category?: Database["public"]["Enums"]["branch_category"] | null
           city: string
           country_code: string
           created_at?: string
@@ -73,11 +74,11 @@ export type Database = {
           phone?: string | null
           place_id?: string | null
           place_label?: string | null
-          place_text?: string | null
           updated_at?: string | null
         }
         Update: {
           address?: string | null
+          category?: Database["public"]["Enums"]["branch_category"] | null
           city?: string
           country_code?: string
           created_at?: string
@@ -91,7 +92,6 @@ export type Database = {
           phone?: string | null
           place_id?: string | null
           place_label?: string | null
-          place_text?: string | null
           updated_at?: string | null
         }
         Relationships: [
@@ -743,6 +743,30 @@ export type Database = {
           },
         ]
       }
+      tags: {
+        Row: {
+          created_at: string
+          deleted_at: string | null
+          id: number
+          name: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          deleted_at?: string | null
+          id?: number
+          name: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          deleted_at?: string | null
+          id?: number
+          name?: string
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       users: {
         Row: {
           created_at: string
@@ -926,6 +950,13 @@ export type Database = {
       }
     }
     Enums: {
+      branch_category:
+        | "electronics"
+        | "home_appliances"
+        | "furniture"
+        | "retail_shops"
+        | "restaurants"
+        | "schools"
       credit_stacking_policy_type: "stack" | "best_only"
       credit_type: "fixed" | "percentage"
       cumulative_scope_type: "per_branch" | "merchant_wide"
@@ -1061,6 +1092,14 @@ export const Constants = {
   },
   public: {
     Enums: {
+      branch_category: [
+        "electronics",
+        "home_appliances",
+        "furniture",
+        "retail_shops",
+        "restaurants",
+        "schools",
+      ],
       credit_stacking_policy_type: ["stack", "best_only"],
       credit_type: ["fixed", "percentage"],
       cumulative_scope_type: ["per_branch", "merchant_wide"],

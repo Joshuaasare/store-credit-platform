@@ -4,6 +4,7 @@ import {
   BaseFixedCreditConfig,
   BaseMerchant,
   BaseRunningCreditConfig,
+  BranchCategoryValues,
 } from "./main.types";
 
 export interface BranchWithAggregates extends BaseBranch {
@@ -32,6 +33,7 @@ export interface CreateBranchRequest {
   latitude?: number | null;
   longitude?: number | null;
   place_id?: string | null;
+  category?: BranchCategoryValues | null;
 }
 
 export interface UpdateBranchRequest {
@@ -43,6 +45,7 @@ export interface UpdateBranchRequest {
   latitude?: number | null;
   longitude?: number | null;
   place_id?: string | null;
+  category?: BranchCategoryValues | null;
 }
 
 // Branch + its active running/fixed credit configs + nearest distance. Flat shape — branch

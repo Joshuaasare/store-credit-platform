@@ -9,11 +9,20 @@ import {
 } from "@store-credit-platform/web-components";
 import { formatDistanceToNow } from "date-fns";
 import { useState } from "react";
-import { BranchWithAggregates } from "@shared/types/api.types";
+import { BranchCategoryValues, BranchWithAggregates } from "@shared/types/api.types";
 import { getCountryByCode } from "@shared/utils/countries";
 import { CountryFlag } from "@shared/components/CountryFlag/CountryFlag";
 import { formatGHSCompact } from "@shared/utils/format";
 import { BranchEditDialog } from "./BranchEditDialog";
+
+const CATEGORY_LABELS: Record<BranchCategoryValues, string> = {
+  electronics: "Electronics",
+  home_appliances: "Home Appliances",
+  furniture: "Furniture",
+  retail_shops: "Retail Shops",
+  restaurants: "Restaurants",
+  schools: "Schools",
+};
 
 interface BranchCardProps {
   branch: BranchWithAggregates;
@@ -34,6 +43,7 @@ export function BranchCard({
         addSuffix: true,
       })
     : "No activity yet";
+  const categoryLabel = branch.category ? CATEGORY_LABELS[branch.category] : null;
 
   return (
     <>
@@ -102,6 +112,11 @@ export function BranchCard({
               {country ? `, ${country.name}` : ""}
             </span>
           </div>
+          {categoryLabel && (
+            <span className="mt-2 inline-flex items-center rounded-full border border-primary/30 bg-primary/5 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-primary">
+              {categoryLabel}
+            </span>
+          )}
         </div>
 
         {/* Footer meta */}

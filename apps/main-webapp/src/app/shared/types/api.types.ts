@@ -1,6 +1,6 @@
 /**
  * Auto-generated API Types
- * Generated on: 2026-08-27T17:22:32.187Z
+ * Generated on: 2026-08-27T18:57:30.403Z
  * 
  * ⚠️ DO NOT EDIT MANUALLY
  * Source: apps/smartschool-api/src/app/types/
@@ -21,6 +21,14 @@
 // SHARED TYPES (from main.types.ts)
 // ========================================
 export type StaffRoleValues = "manager" | "cashier";
+
+export type BranchCategoryValues =
+  | "electronics"
+  | "home_appliances"
+  | "furniture"
+  | "retail_shops"
+  | "restaurants"
+  | "schools";
 
 export type CreditTypeValues = "fixed" | "percentage";
 
@@ -69,6 +77,7 @@ export interface BaseBranch {
   longitude: number | null;
   place_id: string | null;
   place_label: string | null;
+  category: BranchCategoryValues | null;
 }
 
 export interface ApiErrorResponse {
@@ -463,6 +472,7 @@ export interface CreateBranchRequest {
   latitude?: number | null;
   longitude?: number | null;
   place_id?: string | null;
+  category?: BranchCategoryValues | null;
 }
 
 export interface UpdateBranchRequest {
@@ -474,6 +484,7 @@ export interface UpdateBranchRequest {
   latitude?: number | null;
   longitude?: number | null;
   place_id?: string | null;
+  category?: BranchCategoryValues | null;
 }
 
 export type BranchWithOffers = BaseBranch & {
@@ -730,20 +741,14 @@ export type CustomerCreditStatus = "live" | "expired" | "revoked";
 
 export type CustomerCreditType = "running" | "fixed" | null;
 
-export interface CustomerCreditWithBranch extends BaseCustomerCredit {
-  
+export type CustomerCreditWithBranch = BaseCustomerCredit & {
   branch: BaseBranch & { merchant: BaseMerchant };
-  
   redeemed_total: number;
-  
   pending_total: number;
-  
   remaining: number;
-  
   status: CustomerCreditStatus;
-  
   credit_type: CustomerCreditType;
-}
+};
 
 export interface CustomerCredits {
   live: CustomerCreditWithBranch[];
@@ -1034,14 +1039,14 @@ export interface CustomerDetailResponse {
 export type CustomerListApiResponse = CustomerListResponse | ApiErrorResponse;
 export type CustomerDetailApiResponse = CustomerDetailResponse | ApiErrorResponse;
 
-export interface MerchantWithStats extends BaseMerchant {
+export type MerchantWithStats = BaseMerchant & {
   branch_count: number;
   staff_count: number;
   customer_count: number;
   lifetime_credit_issued: number;
   credit_pool_used: number;
   credit_pool_limit: number | null;
-}
+};
 
 export interface UpdateMerchantRequest {
   name?: string;

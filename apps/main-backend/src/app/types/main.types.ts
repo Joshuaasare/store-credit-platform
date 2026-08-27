@@ -1,5 +1,13 @@
 export type StaffRoleValues = "manager" | "cashier";
 
+export type BranchCategoryValues =
+  | "electronics"
+  | "home_appliances"
+  | "furniture"
+  | "retail_shops"
+  | "restaurants"
+  | "schools";
+
 export type CreditTypeValues = "fixed" | "percentage";
 
 export type CumulativeScopeValues = "per_branch" | "merchant_wide";
@@ -47,6 +55,7 @@ export interface BaseBranch {
   longitude: number | null;
   place_id: string | null;
   place_label: string | null;
+  category: BranchCategoryValues | null;
 }
 
 export interface ApiErrorResponse {
