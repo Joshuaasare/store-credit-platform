@@ -79,6 +79,14 @@ city: Type.String(),
 country_code: Type.String(),
 is_active: Type.Boolean(),
 created_at: Type.String(),
+updated_at: Type.Union([
+Type.String(),
+Type.Null()
+]),
+deleted_at: Type.Union([
+Type.String(),
+Type.Null()
+]),
 latitude: Type.Union([
 Type.Number(),
 Type.Null()
@@ -88,6 +96,10 @@ Type.Number(),
 Type.Null()
 ]),
 place_id: Type.Union([
+Type.String(),
+Type.Null()
+]),
+place_label: Type.Union([
 Type.String(),
 Type.Null()
 ])
@@ -150,6 +162,10 @@ Type.Null()
 place_id: Type.Union([
 Type.String(),
 Type.Null()
+]),
+place_label: Type.Union([
+Type.String(),
+Type.Null()
 ])
 })
 
@@ -182,6 +198,10 @@ Type.Number(),
 Type.Null()
 ]),
 place_id: Type.Union([
+Type.String(),
+Type.Null()
+]),
+place_label: Type.Union([
 Type.String(),
 Type.Null()
 ])

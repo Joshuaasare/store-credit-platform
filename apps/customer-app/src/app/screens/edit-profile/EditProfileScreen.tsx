@@ -83,6 +83,7 @@ export function EditProfileScreen({ navigation }: Props) {
           latitude: user.latitude,
           longitude: user.longitude,
           place_id: user.place_id ?? null,
+          label: user.place_label ?? "",
         }
       : null,
   );
@@ -305,6 +306,7 @@ export function EditProfileScreen({ navigation }: Props) {
         latitude?: number | null;
         longitude?: number | null;
         place_id?: string | null;
+        place_label?: string | null;
       } = {};
       if (surnameTrimmed !== (user?.surname ?? ""))
         body.surname = surnameTrimmed;
@@ -318,6 +320,7 @@ export function EditProfileScreen({ navigation }: Props) {
         body.latitude = location?.latitude ?? null;
         body.longitude = location?.longitude ?? null;
         body.place_id = location?.place_id ?? null;
+        body.place_label = location?.label ?? null;
       }
 
       if (

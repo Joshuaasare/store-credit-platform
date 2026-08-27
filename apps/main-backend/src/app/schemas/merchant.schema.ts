@@ -61,3 +61,29 @@ export const MerchantMutationApiResponse = Type.Union([
 MerchantMutationResponse,
 ApiErrorResponse
 ])
+
+export type MerchantSearchResult = Static<typeof MerchantSearchResult>
+export const MerchantSearchResult = Type.Object({
+id: Type.Number(),
+name: Type.String(),
+slug: Type.Union([
+Type.String(),
+Type.Null()
+]),
+logo_url: Type.Union([
+Type.String(),
+Type.Null()
+])
+})
+
+export type CustomerMerchantSearchResponse = Static<typeof CustomerMerchantSearchResponse>
+export const CustomerMerchantSearchResponse = Type.Object({
+success: Type.Literal(true),
+data: Type.Array(MerchantSearchResult)
+})
+
+export type CustomerMerchantSearchApiResponse = Static<typeof CustomerMerchantSearchApiResponse>
+export const CustomerMerchantSearchApiResponse = Type.Union([
+CustomerMerchantSearchResponse,
+ApiErrorResponse
+])

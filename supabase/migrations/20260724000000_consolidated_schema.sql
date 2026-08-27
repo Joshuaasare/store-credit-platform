@@ -96,7 +96,8 @@ alter table public.branches
   add column if not exists is_active boolean not null default true,
   add column if not exists latitude double precision,
   add column if not exists longitude double precision,
-  add column if not exists place_id text;
+  add column if not exists place_id text,
+  add column if not exists place_text text;
 
 -- Why: latitude/longitude were numeric, but PostgREST returns numeric as a JSON
 -- string (arbitrary-precision preservation) while the API schema and generated
@@ -422,7 +423,8 @@ alter table public.customers
   add column if not exists avatar_url text,
   add column if not exists latitude double precision,
   add column if not exists longitude double precision,
-  add column if not exists place_id text;
+  add column if not exists place_id text,
+  add column if not exists place_label text;
 
 alter table public.customers
   alter column latitude type double precision using latitude::double precision,

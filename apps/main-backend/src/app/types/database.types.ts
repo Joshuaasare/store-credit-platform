@@ -54,6 +54,8 @@ export type Database = {
           name: string | null
           phone: string | null
           place_id: string | null
+          place_label: string | null
+          place_text: string | null
           updated_at: string | null
         }
         Insert: {
@@ -70,6 +72,8 @@ export type Database = {
           name?: string | null
           phone?: string | null
           place_id?: string | null
+          place_label?: string | null
+          place_text?: string | null
           updated_at?: string | null
         }
         Update: {
@@ -86,6 +90,8 @@ export type Database = {
           name?: string | null
           phone?: string | null
           place_id?: string | null
+          place_label?: string | null
+          place_text?: string | null
           updated_at?: string | null
         }
         Relationships: [
@@ -327,6 +333,7 @@ export type Database = {
           other_names: string | null
           phone: string | null
           place_id: string | null
+          place_label: string | null
           surname: string | null
           unique_id: string | null
           updated_at: string | null
@@ -342,6 +349,7 @@ export type Database = {
           other_names?: string | null
           phone?: string | null
           place_id?: string | null
+          place_label?: string | null
           surname?: string | null
           unique_id?: string | null
           updated_at?: string | null
@@ -357,6 +365,7 @@ export type Database = {
           other_names?: string | null
           phone?: string | null
           place_id?: string | null
+          place_label?: string | null
           surname?: string | null
           unique_id?: string | null
           updated_at?: string | null

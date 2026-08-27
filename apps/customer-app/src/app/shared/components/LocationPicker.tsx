@@ -23,6 +23,7 @@ export interface LocationValue {
   latitude: number;
   longitude: number;
   place_id: string | null;
+  label: string;
 }
 
 interface LocationPickerProps {
@@ -109,11 +110,17 @@ export function LocationPicker({ value, onChange }: LocationPickerProps) {
               latitude: lat,
               longitude: lng,
               place_id: resolved.place_id,
+              label: resolved.label,
             });
           })
           .catch(() => {
             setLabel("Dropped pin");
-            onChange({ latitude: lat, longitude: lng, place_id: null });
+            onChange({
+              latitude: lat,
+              longitude: lng,
+              place_id: null,
+              label: "Dropped pin",
+            });
           });
       }, 500);
     },
@@ -130,7 +137,7 @@ export function LocationPicker({ value, onChange }: LocationPickerProps) {
         longitudeDelta: LAT_LNG_DELTA,
       };
       setRegion(next);
-      setMarker({ latitude: lat, longitude: lng, place_id: null });
+      setMarker({ latitude: lat, longitude: lng, place_id: null, label: "" });
       mapRef.current?.animateToRegion(next, 300);
       reverseAndEmit(lat, lng);
     },
@@ -172,13 +179,23 @@ export function LocationPicker({ value, onChange }: LocationPickerProps) {
       latitudeDelta: LAT_LNG_DELTA,
       longitudeDelta: LAT_LNG_DELTA,
     };
-    setMarker({ latitude: r.lat, longitude: r.lng, place_id: r.place_id });
+    setMarker({
+      latitude: r.lat,
+      longitude: r.lng,
+      place_id: r.place_id,
+      label: r.label,
+    });
     setLabel(r.label);
     setRegion(next);
     mapRef.current?.animateToRegion(next, 300);
     setQuery("");
     setResults([]);
-    onChange({ latitude: r.lat, longitude: r.lng, place_id: r.place_id });
+    onChange({
+      latitude: r.lat,
+      longitude: r.lng,
+      place_id: r.place_id,
+      label: r.label,
+    });
   };
 
   const useMyLocation = async () => {

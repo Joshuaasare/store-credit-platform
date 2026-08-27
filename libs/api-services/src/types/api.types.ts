@@ -1,6 +1,6 @@
 /**
  * Auto-generated API Types
- * Generated on: 2026-08-26T12:02:24.905Z
+ * Generated on: 2026-08-27T08:35:20.370Z
  * 
  * ⚠️ DO NOT EDIT MANUALLY
  * Source: apps/smartschool-api/src/app/types/
@@ -63,9 +63,12 @@ export interface BaseBranch {
   country_code: string;
   is_active: boolean;
   created_at: string;
+  updated_at: string | null;
+  deleted_at: string | null;
   latitude: number | null;
   longitude: number | null;
   place_id: string | null;
+  place_label: string | null;
 }
 
 export interface ApiErrorResponse {
@@ -92,6 +95,7 @@ export interface BaseCustomer {
   latitude: number | null;
   longitude: number | null;
   place_id: string | null;
+  place_label: string | null;
 }
 
 
@@ -105,6 +109,7 @@ export interface CustomerAuthUser {
   latitude: number | null;
   longitude: number | null;
   place_id: string | null;
+  place_label: string | null;
 }
 
 export interface BaseCustomerTransaction {
@@ -469,9 +474,28 @@ export interface UpdateBranchRequest {
   place_id?: string | null;
 }
 
+export interface ExploreBranchOffersSummary {
+  count: number;
+}
+
+export interface ExploreBranch {
+  branch: BaseBranch;
+  merchant: BaseMerchant;
+  offers_summary: ExploreBranchOffersSummary;
+  distance_km: number | null;
+}
+
+export interface CustomerExploreBranchesResponse {
+  success: true;
+  data: ExploreBranch[];
+}
+
 export type BranchListApiResponse = BranchListResponse | ApiErrorResponse;
 export type BranchMutationApiResponse =
   | BranchMutationResponse
+  | ApiErrorResponse;
+export type CustomerExploreBranchesApiResponse =
+  | CustomerExploreBranchesResponse
   | ApiErrorResponse;
 
 export type RunningCreditConfig = BaseRunningCreditConfig & {
@@ -493,10 +517,10 @@ export interface RunningCreditConfigGroup {
   threshold_amount: number | null;
   terms: string | null;
   cumulative_scope: CumulativeScopeValues;
-  images: string[] | null;
   is_active: boolean;
   created_at: string;
   updated_at: string | null;
+  images: string[] | null;
 }
 
 export interface CreateRunningCreditConfigRequest {
@@ -509,8 +533,8 @@ export interface CreateRunningCreditConfigRequest {
   maximum_allowed_credit?: number | null;
   threshold_amount?: number | null;
   terms?: string | null;
-  images?: string[] | null;
   cumulative_scope: CumulativeScopeValues;
+  images?: string[] | null;
 }
 
 export type UpdateRunningCreditConfigRequest = CreateRunningCreditConfigRequest;
@@ -744,6 +768,7 @@ export interface CustomerProfileUpdateRequest {
   latitude?: number | null;
   longitude?: number | null;
   place_id?: string | null;
+  place_label?: string | null;
 }
 
 export interface CustomerProfileUpdateResponse {
@@ -966,6 +991,38 @@ export interface CustomerDetailResponse {
 export type CustomerListApiResponse = CustomerListResponse | ApiErrorResponse;
 export type CustomerDetailApiResponse = CustomerDetailResponse | ApiErrorResponse;
 
+export interface ExploreBranch {
+  id: number;
+  name: string | null;
+  city: string;
+  latitude: number | null;
+  longitude: number | null;
+}
+
+export interface ExploreOffer {
+  kind: "fixed" | "running";
+  config_group_id: string;
+  merchant_name: string;
+  merchant_slug: string | null;
+  branch: ExploreBranch;
+  branch_count: number;
+  distance_km: number | null;
+  image_url: string | null;
+  headline: string;
+  subtext: string | null;
+  start_date: number | null;
+  end_date: number | null;
+}
+
+export interface CustomerExploreOffersResponse {
+  success: true;
+  data: ExploreOffer[];
+}
+
+export type CustomerExploreOffersApiResponse =
+  | CustomerExploreOffersResponse
+  | ApiErrorResponse;
+
 export interface MerchantWithStats extends BaseMerchant {
   branch_count: number;
   staff_count: number;
@@ -998,6 +1055,22 @@ export type MerchantMeApiResponse = MerchantMeResponse | ApiErrorResponse;
 
 export type MerchantMutationApiResponse =
   | MerchantMutationResponse
+  | ApiErrorResponse;
+
+export interface MerchantSearchResult {
+  id: number;
+  name: string;
+  slug: string | null;
+  logo_url: string | null;
+}
+
+export interface CustomerMerchantSearchResponse {
+  success: true;
+  data: MerchantSearchResult[];
+}
+
+export type CustomerMerchantSearchApiResponse =
+  | CustomerMerchantSearchResponse
   | ApiErrorResponse;
 
 export interface MerchantPendingRequest {

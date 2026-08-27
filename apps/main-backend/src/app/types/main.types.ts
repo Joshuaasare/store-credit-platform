@@ -41,9 +41,12 @@ export interface BaseBranch {
   country_code: string;
   is_active: boolean;
   created_at: string;
+  updated_at: string | null;
+  deleted_at: string | null;
   latitude: number | null;
   longitude: number | null;
   place_id: string | null;
+  place_label: string | null;
 }
 
 export interface ApiErrorResponse {
@@ -70,6 +73,7 @@ export interface BaseCustomer {
   latitude: number | null;
   longitude: number | null;
   place_id: string | null;
+  place_label: string | null;
 }
 
 // Cross-file projection (lives here so auth + customer-auth types share it). id is users.id (uuid); customer_id is the linked numeric customers.id.
@@ -83,6 +87,7 @@ export interface CustomerAuthUser {
   latitude: number | null;
   longitude: number | null;
   place_id: string | null;
+  place_label: string | null;
 }
 
 export interface BaseCustomerTransaction {

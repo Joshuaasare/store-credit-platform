@@ -1,4 +1,4 @@
-import { ApiErrorResponse, BaseBranch } from "./main.types";
+import { ApiErrorResponse, BaseBranch, BaseMerchant } from "./main.types";
 
 export interface BranchWithAggregates extends BaseBranch {
   staff_count: number;
@@ -39,7 +39,26 @@ export interface UpdateBranchRequest {
   place_id?: string | null;
 }
 
+export interface ExploreBranchOffersSummary {
+  count: number;
+}
+
+export interface ExploreBranch {
+  branch: BaseBranch;
+  merchant: BaseMerchant;
+  offers_summary: ExploreBranchOffersSummary;
+  distance_km: number | null;
+}
+
+export interface CustomerExploreBranchesResponse {
+  success: true;
+  data: ExploreBranch[];
+}
+
 export type BranchListApiResponse = BranchListResponse | ApiErrorResponse;
 export type BranchMutationApiResponse =
   | BranchMutationResponse
+  | ApiErrorResponse;
+export type CustomerExploreBranchesApiResponse =
+  | CustomerExploreBranchesResponse
   | ApiErrorResponse;

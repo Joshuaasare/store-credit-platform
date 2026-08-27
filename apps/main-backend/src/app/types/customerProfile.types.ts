@@ -45,6 +45,7 @@ export interface CustomerProfileUpdateRequest {
   latitude?: number | null;
   longitude?: number | null;
   place_id?: string | null;
+  place_label?: string | null;
 }
 
 // The returned CustomerAuthUser is post-update so the customer-app can setUser without a refetch.

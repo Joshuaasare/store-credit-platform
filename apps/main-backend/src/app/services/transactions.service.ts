@@ -98,15 +98,14 @@ export class TransactionService {
       to: number;
     },
   ) {
-    let query = supabaseAdmin
-      .from("customer_purchases")
-      .select(
-        `${QueryFragments.BASE_CUSTOMER_PURCHASE},
+    const purchasesSelect = `${QueryFragments.BASE_CUSTOMER_PURCHASE},
          customer:customers(${QueryFragments.BASE_CUSTOMER},
          users(${QueryFragments.BASE_USER_PROFILE})),
          branch:branches(${QueryFragments.BASE_BRANCH}),
-         recorded_by_staff:staff(${QueryFragments.BASE_STAFF})`,
-      )
+         recorded_by_staff:staff(${QueryFragments.BASE_STAFF})` as const;
+    let query = supabaseAdmin
+      .from("customer_purchases")
+      .select(purchasesSelect)
       .in("branch_id", branchIds)
       .is("deleted_at", null)
       .order("transaction_date", { ascending: false });
@@ -129,13 +128,12 @@ export class TransactionService {
       to: number;
     },
   ) {
+    const creditSelect = `id, customer_id, branch_id, credit_amount, created_at,transaction_date,
+         customer:customers(${QueryFragments.BASE_CUSTOMER}, users(${QueryFragments.BASE_USER_PROFILE})),
+         branch:branches(${QueryFragments.BASE_BRANCH})` as const;
     let query = supabaseAdmin
       .from("customer_credit")
-      .select(
-        `id, customer_id, branch_id, credit_amount, created_at,transaction_date,
-         customer:customers(${QueryFragments.BASE_CUSTOMER}, users(${QueryFragments.BASE_USER_PROFILE})),
-         branch:branches(${QueryFragments.BASE_BRANCH})`,
-      )
+      .select(creditSelect)
       .in("branch_id", branchIds)
       .is("deleted_at", null)
       .is("revoked_at", null)
@@ -159,14 +157,13 @@ export class TransactionService {
       to: number;
     },
   ) {
-    let query = supabaseAdmin
-      .from("customer_credit_redemptions")
-      .select(
-        `${QueryFragments.BASE_CUSTOMER_CREDIT_REDEMPTION},
+    const redemptionSelect = `${QueryFragments.BASE_CUSTOMER_CREDIT_REDEMPTION},
          customer:customers(${QueryFragments.BASE_CUSTOMER}, users(${QueryFragments.BASE_USER_PROFILE})),
          branch:branches(${QueryFragments.BASE_BRANCH}),
-         approved_by_staff:staff!approved_by_staff_id(${QueryFragments.BASE_STAFF})`,
-      )
+         approved_by_staff:staff!approved_by_staff_id(${QueryFragments.BASE_STAFF})` as const;
+    let query = supabaseAdmin
+      .from("customer_credit_redemptions")
+      .select(redemptionSelect)
       .in("branch_id", branchIds)
       .is("deleted_at", null)
       .not("approved_at", "is", null)
@@ -235,7 +232,7 @@ export class TransactionService {
         `${QueryFragments.BASE_CUSTOMER_PURCHASE},
          customer:customers(${QueryFragments.BASE_CUSTOMER}, users(${QueryFragments.BASE_USER_PROFILE})),
          branch:branches(${QueryFragments.BASE_BRANCH}),
-         recorded_by_staff:staff(${QueryFragments.BASE_STAFF})`,
+         recorded_by_staff:staff(${QueryFragments.BASE_STAFF})` as const,
       )
       .single();
 

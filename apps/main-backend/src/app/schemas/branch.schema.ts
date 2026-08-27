@@ -1,5 +1,5 @@
 import { Type, Static } from '@sinclair/typebox'
-import { BaseBranch, ApiErrorResponse } from './main.schema'
+import { BaseMerchant, BaseBranch, ApiErrorResponse } from './main.schema'
 
 
 
@@ -68,6 +68,28 @@ Type.Null()
 ]))
 })
 
+export type ExploreBranchOffersSummary = Static<typeof ExploreBranchOffersSummary>
+export const ExploreBranchOffersSummary = Type.Object({
+count: Type.Number()
+})
+
+export type ExploreBranch = Static<typeof ExploreBranch>
+export const ExploreBranch = Type.Object({
+branch: BaseBranch,
+merchant: BaseMerchant,
+offers_summary: ExploreBranchOffersSummary,
+distance_km: Type.Union([
+Type.Number(),
+Type.Null()
+])
+})
+
+export type CustomerExploreBranchesResponse = Static<typeof CustomerExploreBranchesResponse>
+export const CustomerExploreBranchesResponse = Type.Object({
+success: Type.Literal(true),
+data: Type.Array(ExploreBranch)
+})
+
 export type BranchListApiResponse = Static<typeof BranchListApiResponse>
 export const BranchListApiResponse = Type.Union([
 BranchListResponse,
@@ -77,5 +99,11 @@ ApiErrorResponse
 export type BranchMutationApiResponse = Static<typeof BranchMutationApiResponse>
 export const BranchMutationApiResponse = Type.Union([
 BranchMutationResponse,
+ApiErrorResponse
+])
+
+export type CustomerExploreBranchesApiResponse = Static<typeof CustomerExploreBranchesApiResponse>
+export const CustomerExploreBranchesApiResponse = Type.Union([
+CustomerExploreBranchesResponse,
 ApiErrorResponse
 ])

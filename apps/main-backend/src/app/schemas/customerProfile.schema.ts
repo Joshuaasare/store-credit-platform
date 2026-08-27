@@ -66,6 +66,10 @@ Type.Null()
 place_id: Type.Optional(Type.Union([
 Type.String(),
 Type.Null()
+])),
+place_label: Type.Optional(Type.Union([
+Type.String(),
+Type.Null()
 ]))
 })
 

@@ -98,6 +98,7 @@ export class CustomerProfileService {
       latitude?: number | null;
       longitude?: number | null;
       place_id?: string | null;
+      place_label?: string | null;
     },
   ): Promise<CustomerAuthUser> {
     if (body.surname != null) {
@@ -177,6 +178,8 @@ export class CustomerProfileService {
     if (body.longitude !== undefined)
       customersUpdate.longitude = body.longitude;
     if (body.place_id !== undefined) customersUpdate.place_id = body.place_id;
+    if (body.place_label !== undefined)
+      customersUpdate.place_label = body.place_label;
 
     const oldAvatarUrl = current.avatar_url;
 
@@ -231,6 +234,7 @@ export class CustomerProfileService {
       latitude: updatedCustomer.latitude,
       longitude: updatedCustomer.longitude,
       place_id: updatedCustomer.place_id,
+      place_label: updatedCustomer.place_label,
     };
   }
 

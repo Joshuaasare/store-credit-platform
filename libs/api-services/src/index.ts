@@ -6,6 +6,7 @@ export * from "./services/customerCreditsService.js";
 export * from "./services/customerActivitiesService.js";
 export * from "./services/customerRedemptionsService.js";
 export * from "./services/customerProfileService.js";
+export * from "./services/customerExploreService.js";
 export * from "./services/storeService.js";
 export * from "./services/customerService.js";
 export * from "./services/staffService.js";

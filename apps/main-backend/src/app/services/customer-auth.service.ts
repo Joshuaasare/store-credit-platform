@@ -90,6 +90,7 @@ export class CustomerAuthService {
         latitude: customer.latitude,
         longitude: customer.longitude,
         place_id: customer.place_id,
+        place_label: customer.place_label,
       };
       const session = await this.issueSession(authUser, userAgent, clientIp);
       return { status: "logged_in", ...session };
@@ -225,6 +226,7 @@ export class CustomerAuthService {
       latitude: data.latitude ?? null,
       longitude: data.longitude ?? null,
       place_id: data.place_id ?? null,
+      place_label: null,
     };
 
     return this.issueSession(authUser, userAgent, clientIp);
@@ -257,6 +259,7 @@ export class CustomerAuthService {
       latitude: customer.latitude,
       longitude: customer.longitude,
       place_id: customer.place_id,
+      place_label: customer.place_label,
     };
   }
 
@@ -379,6 +382,7 @@ export class CustomerAuthService {
       latitude: customer.latitude,
       longitude: customer.longitude,
       place_id: customer.place_id,
+      place_label: customer.place_label,
     };
     const session = await this.issueSession(authUser, userAgent, clientIp);
     return { status: "logged_in", ...session };
@@ -393,6 +397,7 @@ export class CustomerAuthService {
     latitude: number | null;
     longitude: number | null;
     place_id: string | null;
+    place_label: string | null;
   } | null> {
     const { data } = await supabaseAdmin
       .from("customers")
@@ -410,6 +415,7 @@ export class CustomerAuthService {
           latitude: data.latitude,
           longitude: data.longitude,
           place_id: data.place_id,
+          place_label: data.place_label,
         }
       : null;
   }

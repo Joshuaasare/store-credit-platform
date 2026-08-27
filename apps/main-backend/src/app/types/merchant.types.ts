@@ -35,3 +35,19 @@ export type MerchantMeApiResponse = MerchantMeResponse | ApiErrorResponse;
 export type MerchantMutationApiResponse =
   | MerchantMutationResponse
   | ApiErrorResponse;
+
+export interface MerchantSearchResult {
+  id: number;
+  name: string;
+  slug: string | null;
+  logo_url: string | null;
+}
+
+export interface CustomerMerchantSearchResponse {
+  success: true;
+  data: MerchantSearchResult[];
+}
+
+export type CustomerMerchantSearchApiResponse =
+  | CustomerMerchantSearchResponse
+  | ApiErrorResponse;

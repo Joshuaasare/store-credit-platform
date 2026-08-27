@@ -3,8 +3,10 @@ import { QueryFragments } from "../constants/queryFragments";
 import {
   BranchWithAggregates,
   CreateBranchRequest,
+  ExploreBranch,
   UpdateBranchRequest,
 } from "../schemas/branch.schema";
+import { haversineKm } from "../utils/geo.utils";
 
 // Ownership enforced: every read/write verifies the branch belongs to the requesting merchant.
 export class BranchService {
@@ -220,6 +222,136 @@ export class BranchService {
     const updated = all.find((b) => b.id === branchId);
     if (!updated) throw new Error("Branch not found after update");
     return updated;
+  }
+
+  async listExploreBranches(customerId: number): Promise<ExploreBranch[]> {
+    const { data: customer } = await supabaseAdmin
+      .from("customers")
+      .select("latitude,longitude")
+      .eq("id", customerId)
+      .single();
+    const custLat = customer?.latitude ?? null;
+    const custLng = customer?.longitude ?? null;
+
+    const nowMs = Date.now();
+
+    const branchSelect =
+      `${QueryFragments.BASE_BRANCH}, merchant:merchants(${QueryFragments.BASE_MERCHANT})` as const;
+    const runningSelect =
+      `${QueryFragments.BASE_RUNNING_CREDIT_CONFIG}, branch:branches!inner(${QueryFragments.BASE_BRANCH}, merchant:merchants(${QueryFragments.BASE_MERCHANT}))` as const;
+    const fixedSelect =
+      `${QueryFragments.BASE_FIXED_CREDIT_CONFIG}, branch:branches!inner(${QueryFragments.BASE_BRANCH}, merchant:merchants(${QueryFragments.BASE_MERCHANT}))` as const;
+
+    const [branchRes, runningRes, fixedRes] = await Promise.all([
+      supabaseAdmin
+        .from("branches")
+        .select(branchSelect)
+        .is("deleted_at", null)
+        .eq("is_active", true),
+      supabaseAdmin
+        .from("running_credit_config")
+        .select(runningSelect)
+        .is("deleted_at", null)
+        .eq("is_active", true)
+        .is("branch.deleted_at", null),
+      supabaseAdmin
+        .from("fixed_credit_config")
+        .select(fixedSelect)
+        .is("deleted_at", null)
+        .eq("is_active", true)
+        .lte("start_date", nowMs)
+        .gte("end_date", nowMs)
+        .is("branch.deleted_at", null),
+    ]);
+
+    if (branchRes.error) {
+      throw new Error(`explore branches: ${branchRes.error.message}`);
+    }
+    if (runningRes.error) {
+      throw new Error(`explore running: ${runningRes.error.message}`);
+    }
+    if (fixedRes.error) {
+      throw new Error(`explore fixed: ${fixedRes.error.message}`);
+    }
+
+    const branchRows = branchRes.data ?? [];
+    const runningRows = runningRes.data ?? [];
+    const fixedRows = fixedRes.data ?? [];
+
+    const summarize = (rows: { config_group_id: string | null; branch_id: number }[]) => {
+      const byGroup = new Map<string, { count: number; branchIds: Set<number> }>();
+      for (const row of rows) {
+        const gid = row.config_group_id;
+        if (gid == null) continue;
+        const existing = byGroup.get(gid);
+        if (existing) {
+          existing.branchIds.add(row.branch_id);
+          continue;
+        }
+        byGroup.set(gid, {
+          count: 1,
+          branchIds: new Set([row.branch_id]),
+        });
+      }
+      const perBranch = new Map<number, number>();
+      for (const group of byGroup.values()) {
+        for (const branchId of group.branchIds) {
+          perBranch.set(branchId, (perBranch.get(branchId) ?? 0) + group.count);
+        }
+      }
+      return perBranch;
+    };
+
+    const runningByBranch = summarize(
+      runningRows.map((r) => ({
+        config_group_id: r.config_group_id,
+        branch_id: r.branch_id,
+      })),
+    );
+    const fixedByBranch = summarize(
+      fixedRows.map((r) => ({
+        config_group_id: r.config_group_id,
+        branch_id: r.branch_id,
+      })),
+    );
+
+    const results: ExploreBranch[] = [];
+    for (const row of branchRows) {
+      const merchant = row.merchant;
+      if (merchant == null) continue;
+
+      const totalCount =
+        (runningByBranch.get(row.id) ?? 0) +
+        (fixedByBranch.get(row.id) ?? 0);
+      if (totalCount === 0) continue;
+
+      const distance_km = haversineKm(
+        custLat,
+        custLng,
+        row.latitude,
+        row.longitude,
+      );
+
+      const { merchant: _merchant, ...branchFields } = row;
+      results.push({
+        branch: branchFields,
+        merchant,
+        offers_summary: { count: totalCount },
+        distance_km,
+      });
+    }
+
+    results.sort((a, b) => {
+      if (a.distance_km == null && b.distance_km == null) {
+        return a.branch.id - b.branch.id;
+      }
+      if (a.distance_km == null) return 1;
+      if (b.distance_km == null) return -1;
+      if (a.distance_km === b.distance_km) return a.branch.id - b.branch.id;
+      return a.distance_km - b.distance_km;
+    });
+
+    return results;
   }
 }
 

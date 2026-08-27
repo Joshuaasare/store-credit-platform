@@ -139,7 +139,10 @@ export class MerchantService {
         payload.logo_url !== current.logo_url
       ) {
         try {
-          await storageService.deleteFileByUrl("store-assets", current.logo_url);
+          await storageService.deleteFileByUrl(
+            "store-assets",
+            current.logo_url,
+          );
         } catch (err) {
           console.warn("Failed to delete previous logo:", err);
         }
@@ -171,6 +174,38 @@ export class MerchantService {
     }
 
     return this.getMyMerchantWithStats(merchantId);
+  }
+
+  async searchMerchants(query: string) {
+    const trimmed = query.trim();
+    if (trimmed.length === 0) return [];
+
+    // Escape PostgREST ilike metacharacters so a user-typed "%" doesn't match
+    // everything. Order matters: escape backslashes first.
+    const escaped = trimmed
+      .replace(/\\/g, "\\\\")
+      .replace(/%/g, "\\%")
+      .replace(/_/g, "\\_");
+    const pattern = `%${escaped}%`;
+
+    const { data, error } = await supabaseAdmin
+      .from("merchants")
+      .select(QueryFragments.BASE_MERCHANT)
+      .eq("is_active", true)
+      .ilike("name", pattern)
+      .order("name", { ascending: true })
+      .limit(20);
+
+    if (error) {
+      throw new Error(`merchant search failed: ${error.message}`);
+    }
+
+    return (data ?? []).map((row) => ({
+      id: row.id,
+      name: row.name,
+      slug: row.slug,
+      logo_url: row.logo_url,
+    }));
   }
 }
 

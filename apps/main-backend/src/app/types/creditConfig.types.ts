@@ -32,6 +32,7 @@ export interface RunningCreditConfigGroup {
   is_active: boolean;
   created_at: string;
   updated_at: string | null;
+  images: string[] | null;
 }
 
 export interface CreateRunningCreditConfigRequest {
@@ -45,6 +46,7 @@ export interface CreateRunningCreditConfigRequest {
   threshold_amount?: number | null;
   terms?: string | null;
   cumulative_scope: CumulativeScopeValues;
+  images?: string[] | null;
 }
 
 export type UpdateRunningCreditConfigRequest = CreateRunningCreditConfigRequest;
