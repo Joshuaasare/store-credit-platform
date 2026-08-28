@@ -1,5 +1,9 @@
 import { createApiClient, ApiClientConfig } from "./apiService.js";
-import { BranchesByLocationApiResponse } from "../types/api.types.js";
+import {
+  BranchesNearbyApiResponse,
+  BranchSearchApiResponse,
+  BranchCategoryValues,
+} from "../types/api.types.js";
 
 export function createCustomerBranchService(config?: ApiClientConfig) {
   const { apiRequest } = createApiClient(config);
@@ -8,9 +12,20 @@ export function createCustomerBranchService(config?: ApiClientConfig) {
     async getBranchesByLocation(
       lat: number,
       lng: number,
-    ): Promise<BranchesByLocationApiResponse> {
-      return apiRequest<BranchesByLocationApiResponse>(
-        `/branches/nearby?lat=${lat}&lng=${lng}`,
+      category?: BranchCategoryValues[] | null,
+      limit?: number,
+      offset?: number,
+    ): Promise<BranchesNearbyApiResponse> {
+      const params = new URLSearchParams();
+      params.set("lat", String(lat));
+      params.set("lng", String(lng));
+      if (category && category.length > 0) {
+        category.forEach((c) => params.append("category", c));
+      }
+      if (limit != null) params.set("limit", String(limit));
+      if (offset != null) params.set("offset", String(offset));
+      return apiRequest<BranchesNearbyApiResponse>(
+        `/branches/nearby?${params.toString()}`,
         { method: "GET" },
       );
     },
@@ -18,9 +33,17 @@ export function createCustomerBranchService(config?: ApiClientConfig) {
       lat: number,
       lng: number,
       query: string,
-    ): Promise<BranchesByLocationApiResponse> {
-      return apiRequest<BranchesByLocationApiResponse>(
-        `/branches/search?lat=${lat}&lng=${lng}&q=${encodeURIComponent(query)}`,
+      limit?: number,
+      offset?: number,
+    ): Promise<BranchSearchApiResponse> {
+      const params = new URLSearchParams();
+      params.set("lat", String(lat));
+      params.set("lng", String(lng));
+      params.set("q", query);
+      if (limit != null) params.set("limit", String(limit));
+      if (offset != null) params.set("offset", String(offset));
+      return apiRequest<BranchSearchApiResponse>(
+        `/branches/search?${params.toString()}`,
         { method: "GET" },
       );
     },

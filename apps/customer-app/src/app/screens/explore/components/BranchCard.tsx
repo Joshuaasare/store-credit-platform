@@ -9,11 +9,7 @@ import {
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { BlurView } from "expo-blur";
-import { Ionicons } from "@expo/vector-icons";
-import type {
-  BranchCategoryValues,
-  BranchWithOffers,
-} from "@store-credit-platform/api-services";
+import type { BranchWithOffers } from "@store-credit-platform/api-services";
 import { pickAvatarGradient } from "../../../shared/utils/avatarPalette";
 import { useThemeTokens } from "../../../shared/theme/ThemeContext";
 
@@ -23,15 +19,6 @@ function formatDistance(km: number | null): string {
   if (km < 10) return `${km.toFixed(1)} km`;
   return `${Math.round(km)} km`;
 }
-
-const CATEGORY_LABELS: Record<BranchCategoryValues, string> = {
-  electronics: "Electronics",
-  home_appliances: "Home Appliances",
-  furniture: "Furniture",
-  retail_shops: "Retail Shops",
-  restaurants: "Restaurants",
-  schools: "Schools",
-};
 
 export default function BranchCard({
   branch,
@@ -49,9 +36,6 @@ export default function BranchCard({
   const branchName = branch.name ?? branch.city ?? "Branch";
   const offerCount =
     branch.running_configs.length + branch.fixed_configs.length;
-  const categoryLabel = branch.category
-    ? CATEGORY_LABELS[branch.category]
-    : null;
 
   return (
     <Pressable
@@ -162,30 +146,6 @@ export default function BranchCard({
             : "discount and cashback offers available"}
         </Text>
       </View>
-      {categoryLabel && (
-        <View
-          style={[
-            styles.categoryChip,
-            {
-              backgroundColor: theme.colors.surface,
-              borderColor: theme.colors.surfaceBorder,
-              borderRadius: theme.radii.sm,
-            },
-          ]}
-        >
-          <Text
-            numberOfLines={1}
-            style={{
-              color: theme.colors.textSecondary,
-              fontFamily: theme.typography.fontFamilyMedium,
-              fontSize: 11,
-              letterSpacing: 0.3,
-            }}
-          >
-            {categoryLabel.toUpperCase()}
-          </Text>
-        </View>
-      )}
     </Pressable>
   );
 }

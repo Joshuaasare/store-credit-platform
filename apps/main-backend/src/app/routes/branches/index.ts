@@ -10,10 +10,12 @@ import {
   UpdateBranchRequest,
   BranchListApiResponse,
   BranchMutationApiResponse,
-  BranchesByLocationApiResponse,
-  NearbyBranchesQuerystring,
-  SearchBranchesQuerystring,
+  BranchesNearbyApiResponse,
+  BranchSearchApiResponse,
+  BranchesNearbyQuerystring,
+  BranchSearchQuerystring,
 } from "../../schemas/branch.schema";
+import { BranchCategoryValues } from "../../types/main.types";
 
 export default async function (fastify: FastifyInstance) {
   fastify.get<{
@@ -163,22 +165,38 @@ export default async function (fastify: FastifyInstance) {
   });
 
   fastify.get<{
-    Querystring: NearbyBranchesQuerystring;
-    Reply: BranchesByLocationApiResponse;
+    Querystring: BranchesNearbyQuerystring;
+    Reply: BranchesNearbyApiResponse;
   }>("/nearby", {
     preHandler: [requireAuth],
     schema: {
-      querystring: NearbyBranchesQuerystring,
+      querystring: BranchesNearbyQuerystring,
       response: {
-        200: BranchesByLocationApiResponse,
-        400: BranchesByLocationApiResponse,
-        401: BranchesByLocationApiResponse,
+        200: BranchesNearbyApiResponse,
+        400: BranchesNearbyApiResponse,
+        401: BranchesNearbyApiResponse,
       },
     },
     handler: async (request, reply) => {
       try {
-        const { lat, lng } = request.query;
-        const data = await branchService.getBranchesByLocation(lat, lng);
+        const q = request.query;
+        const lat = q.lat != null ? Number(q.lat) : null;
+        const lng = q.lng != null ? Number(q.lng) : null;
+        const limit = q.limit != null ? Number(q.limit) : 20;
+        const offset = q.offset != null ? Number(q.offset) : 0;
+        const rawCategory = q.category;
+        const category: BranchCategoryValues[] | null = Array.isArray(rawCategory)
+          ? (rawCategory as BranchCategoryValues[])
+          : rawCategory
+            ? [rawCategory as BranchCategoryValues]
+            : null;
+        const data = await branchService.getBranchesByLocation({
+          lat,
+          lng,
+          category,
+          limit,
+          offset,
+        });
         return { success: true, data };
       } catch (error) {
         const message =
@@ -193,26 +211,32 @@ export default async function (fastify: FastifyInstance) {
   });
 
   fastify.get<{
-    Querystring: SearchBranchesQuerystring;
-    Reply: BranchesByLocationApiResponse;
+    Querystring: BranchSearchQuerystring;
+    Reply: BranchSearchApiResponse;
   }>("/search", {
     preHandler: [requireAuth],
     schema: {
-      querystring: SearchBranchesQuerystring,
+      querystring: BranchSearchQuerystring,
       response: {
-        200: BranchesByLocationApiResponse,
-        400: BranchesByLocationApiResponse,
-        401: BranchesByLocationApiResponse,
+        200: BranchSearchApiResponse,
+        400: BranchSearchApiResponse,
+        401: BranchSearchApiResponse,
       },
     },
     handler: async (request, reply) => {
       try {
-        const { lat, lng, q } = request.query;
-        const data = await branchService.searchBranchesByLocation(
+        const q = request.query;
+        const lat = q.lat != null ? Number(q.lat) : null;
+        const lng = q.lng != null ? Number(q.lng) : null;
+        const limit = q.limit != null ? Number(q.limit) : 20;
+        const offset = q.offset != null ? Number(q.offset) : 0;
+        const data = await branchService.searchBranchesByLocation({
           lat,
           lng,
-          q,
-        );
+          query: q.q ?? "",
+          limit,
+          offset,
+        });
         return { success: true, data };
       } catch (error) {
         const message =

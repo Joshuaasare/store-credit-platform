@@ -5,7 +5,13 @@ import {
   CreateBranchRequest,
   UpdateBranchRequest,
 } from "../schemas/branch.schema";
-import { BranchWithOffers } from "../types/branch.types";
+import {
+  BranchesNearbyFilters,
+  BranchesNearbyPage,
+  BranchSearchFilters,
+  BranchSearchPage,
+  BranchWithOffers,
+} from "../types/branch.types";
 import { haversineKm, sortByDistance } from "../utils/geo.utils";
 import { coerceImages } from "../utils/creditConfig.utils";
 import { maxMs } from "../utils/misc.utils";
@@ -180,16 +186,16 @@ export class BranchService {
   }
 
   async getBranchesByLocation(
-    lat: number | null,
-    lng: number | null,
-  ): Promise<BranchWithOffers[]> {
+    filters: BranchesNearbyFilters,
+  ): Promise<BranchesNearbyPage> {
+    const { lat, lng, category, limit = 20, offset = 0 } = filters;
     const nowMs = Date.now();
-    const { data, error } = await supabaseAdmin
+    let query = supabaseAdmin
       .from("branches")
       .select(
-        `${QueryFragments.BASE_BRANCH}, 
-        merchant:merchants(${QueryFragments.BASE_MERCHANT}), 
-        running_credit_config(${QueryFragments.BASE_RUNNING_CREDIT_CONFIG}), 
+        `${QueryFragments.BASE_BRANCH},
+        merchant:merchants(${QueryFragments.BASE_MERCHANT}),
+        running_credit_config(${QueryFragments.BASE_RUNNING_CREDIT_CONFIG}),
         fixed_credit_config(${QueryFragments.BASE_FIXED_CREDIT_CONFIG})` as const,
       )
       .is("deleted_at", null)
@@ -201,6 +207,10 @@ export class BranchService {
       .is("fixed_credit_config.deleted_at", null)
       .lte("fixed_credit_config.start_date", nowMs)
       .gte("fixed_credit_config.end_date", nowMs);
+    if (category && category.length > 0) {
+      query = query.in("category", category);
+    }
+    const { data, error } = await query;
 
     if (error) {
       throw new Error(`getBranchesByLocation: ${error.message}`);
@@ -232,25 +242,47 @@ export class BranchService {
       });
     }
 
-    return sortByDistance(results);
+    const shaped = sortByDistance(results);
+    return {
+      rows: shaped.slice(offset, offset + limit),
+      total: shaped.length,
+      offset,
+      limit,
+    };
   }
 
-  // Reuses getBranchesByLocation — one query, one composed shape, search is a pure filter on top.
+  // Search overrides category (mutually exclusive modes). Reuses the nearby query
+  // then applies a JS filter on name / merchant.name / city.
   async searchBranchesByLocation(
-    lat: number | null,
-    lng: number | null,
-    query: string,
-  ): Promise<BranchWithOffers[]> {
-    const q = query.trim().toLowerCase();
-    if (q === "") return [];
-
-    const all = await this.getBranchesByLocation(lat, lng);
-    return all.filter((b) => {
+    filters: BranchSearchFilters,
+  ): Promise<BranchSearchPage> {
+    const { lat, lng, query: q, limit = 20, offset = 0 } = filters;
+    const trimmed = q.trim().toLowerCase();
+    if (trimmed === "") {
+      return { rows: [], total: 0, offset, limit };
+    }
+    const all = await this.getBranchesByLocation({
+      lat,
+      lng,
+      limit: Number.MAX_SAFE_INTEGER,
+      offset: 0,
+    });
+    const filtered = all.rows.filter((b) => {
       const name = (b.name ?? "").toLowerCase();
       const merchantName = (b.merchant?.name ?? "").toLowerCase();
       const city = (b.city ?? "").toLowerCase();
-      return name.includes(q) || merchantName.includes(q) || city.includes(q);
+      return (
+        name.includes(trimmed) ||
+        merchantName.includes(trimmed) ||
+        city.includes(trimmed)
+      );
     });
+    return {
+      rows: filtered.slice(offset, offset + limit),
+      total: filtered.length,
+      offset,
+      limit,
+    };
   }
 }
 

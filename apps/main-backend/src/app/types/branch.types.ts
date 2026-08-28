@@ -58,26 +58,64 @@ export type BranchWithOffers = BaseBranch & {
   distance_km: number | null;
 };
 
-export interface BranchesByLocationResponse {
+export interface BranchesNearbyFilters {
+  lat: number | null;
+  lng: number | null;
+  category?: BranchCategoryValues[] | null;
+  limit?: number;
+  offset?: number;
+}
+
+export interface BranchesNearbyPage {
+  rows: BranchWithOffers[];
+  total: number;
+  offset: number;
+  limit: number;
+}
+
+export interface BranchSearchFilters {
+  lat: number | null;
+  lng: number | null;
+  query: string;
+  limit?: number;
+  offset?: number;
+}
+
+export type BranchSearchPage = BranchesNearbyPage;
+
+// category arrives as a single string or a repeated-param array depending on the client;
+// the handler normalizes both forms into BranchCategoryValues[].
+export interface BranchesNearbyQuerystring {
+  lat?: number;
+  lng?: number;
+  category?: BranchCategoryValues[] | BranchCategoryValues;
+  limit?: number;
+  offset?: number;
+}
+
+export interface BranchSearchQuerystring {
+  lat?: number;
+  lng?: number;
+  q?: string;
+  limit?: number;
+  offset?: number;
+}
+
+export interface BranchesNearbyResponse {
   success: true;
-  data: BranchWithOffers[];
+  data: BranchesNearbyPage;
 }
 
-export interface NearbyBranchesQuerystring {
-  lat: number;
-  lng: number;
-}
-
-export interface SearchBranchesQuerystring {
-  lat: number;
-  lng: number;
-  q: string;
+export interface BranchSearchResponse {
+  success: true;
+  data: BranchSearchPage;
 }
 
 export type BranchListApiResponse = BranchListResponse | ApiErrorResponse;
 export type BranchMutationApiResponse =
   | BranchMutationResponse
   | ApiErrorResponse;
-export type BranchesByLocationApiResponse =
-  | BranchesByLocationResponse
+export type BranchesNearbyApiResponse =
+  | BranchesNearbyResponse
   | ApiErrorResponse;
+export type BranchSearchApiResponse = BranchSearchResponse | ApiErrorResponse;

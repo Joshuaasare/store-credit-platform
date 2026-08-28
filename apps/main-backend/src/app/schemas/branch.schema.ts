@@ -93,23 +93,81 @@ Type.Null()
 })
 ])
 
-export type BranchesByLocationResponse = Static<typeof BranchesByLocationResponse>
-export const BranchesByLocationResponse = Type.Object({
+export type BranchesNearbyFilters = Static<typeof BranchesNearbyFilters>
+export const BranchesNearbyFilters = Type.Object({
+lat: Type.Union([
+Type.Number(),
+Type.Null()
+]),
+lng: Type.Union([
+Type.Number(),
+Type.Null()
+]),
+category: Type.Optional(Type.Union([
+Type.Array(BranchCategoryValues),
+Type.Null()
+])),
+limit: Type.Optional(Type.Number()),
+offset: Type.Optional(Type.Number())
+})
+
+export type BranchesNearbyPage = Static<typeof BranchesNearbyPage>
+export const BranchesNearbyPage = Type.Object({
+rows: Type.Array(BranchWithOffers),
+total: Type.Number(),
+offset: Type.Number(),
+limit: Type.Number()
+})
+
+export type BranchSearchFilters = Static<typeof BranchSearchFilters>
+export const BranchSearchFilters = Type.Object({
+lat: Type.Union([
+Type.Number(),
+Type.Null()
+]),
+lng: Type.Union([
+Type.Number(),
+Type.Null()
+]),
+query: Type.String(),
+limit: Type.Optional(Type.Number()),
+offset: Type.Optional(Type.Number())
+})
+
+export type BranchSearchPage = Static<typeof BranchSearchPage>
+export const BranchSearchPage = BranchesNearbyPage
+
+export type BranchesNearbyQuerystring = Static<typeof BranchesNearbyQuerystring>
+export const BranchesNearbyQuerystring = Type.Object({
+lat: Type.Optional(Type.Number()),
+lng: Type.Optional(Type.Number()),
+category: Type.Optional(Type.Union([
+Type.Array(BranchCategoryValues),
+BranchCategoryValues
+])),
+limit: Type.Optional(Type.Number()),
+offset: Type.Optional(Type.Number())
+})
+
+export type BranchSearchQuerystring = Static<typeof BranchSearchQuerystring>
+export const BranchSearchQuerystring = Type.Object({
+lat: Type.Optional(Type.Number()),
+lng: Type.Optional(Type.Number()),
+q: Type.Optional(Type.String()),
+limit: Type.Optional(Type.Number()),
+offset: Type.Optional(Type.Number())
+})
+
+export type BranchesNearbyResponse = Static<typeof BranchesNearbyResponse>
+export const BranchesNearbyResponse = Type.Object({
 success: Type.Literal(true),
-data: Type.Array(BranchWithOffers)
+data: BranchesNearbyPage
 })
 
-export type NearbyBranchesQuerystring = Static<typeof NearbyBranchesQuerystring>
-export const NearbyBranchesQuerystring = Type.Object({
-lat: Type.Number(),
-lng: Type.Number()
-})
-
-export type SearchBranchesQuerystring = Static<typeof SearchBranchesQuerystring>
-export const SearchBranchesQuerystring = Type.Object({
-lat: Type.Number(),
-lng: Type.Number(),
-q: Type.String()
+export type BranchSearchResponse = Static<typeof BranchSearchResponse>
+export const BranchSearchResponse = Type.Object({
+success: Type.Literal(true),
+data: BranchSearchPage
 })
 
 export type BranchListApiResponse = Static<typeof BranchListApiResponse>
@@ -124,8 +182,14 @@ BranchMutationResponse,
 ApiErrorResponse
 ])
 
-export type BranchesByLocationApiResponse = Static<typeof BranchesByLocationApiResponse>
-export const BranchesByLocationApiResponse = Type.Union([
-BranchesByLocationResponse,
+export type BranchesNearbyApiResponse = Static<typeof BranchesNearbyApiResponse>
+export const BranchesNearbyApiResponse = Type.Union([
+BranchesNearbyResponse,
+ApiErrorResponse
+])
+
+export type BranchSearchApiResponse = Static<typeof BranchSearchApiResponse>
+export const BranchSearchApiResponse = Type.Union([
+BranchSearchResponse,
 ApiErrorResponse
 ])

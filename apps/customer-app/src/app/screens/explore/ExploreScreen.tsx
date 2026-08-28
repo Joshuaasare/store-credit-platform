@@ -1,71 +1,167 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from "react-native";
+import { BlurView } from "expo-blur";
 import { Ionicons } from "@expo/vector-icons";
-import { useQuery } from "@tanstack/react-query";
-import type { BranchWithOffers } from "@store-credit-platform/api-services";
+import { useInfiniteQuery } from "@tanstack/react-query";
+import type {
+  BranchCategoryValues,
+  BranchWithOffers,
+} from "@store-credit-platform/api-services";
 import ScreenBackground from "../../shared/components/ScreenBackground";
 import ScreenBody from "../../shared/components/ScreenBody";
 import PageHeader from "../../shared/components/PageHeader";
 import { useAuthStore } from "../../shared/store/useAuthStore";
 import { customerBranchService } from "../../api/client";
 import { useOffsets } from "../../shared/hooks/useOffsets";
-import { useThemeTokens } from "../../shared/theme/ThemeContext";
+import { useTheme, useThemeTokens } from "../../shared/theme/ThemeContext";
 import LocationModal from "./components/LocationModal";
-import SearchModal from "./components/SearchModal";
+import CategoryFilterModal, {
+  CATEGORY_LABELS,
+} from "./components/CategoryFilterModal";
 import BranchCard from "./components/BranchCard";
 
-const BRANCHES_NEARBY_QUERY_KEY = ["customer", "branchesNearby"] as const;
+const PAGE_SIZE = 20;
+const DEBOUNCE_MS = 300;
+
+function useDebounced<T>(value: T, delayMs: number): T {
+  const [debounced, setDebounced] = useState(value);
+  useEffect(() => {
+    const t = setTimeout(() => setDebounced(value), delayMs);
+    return () => clearTimeout(t);
+  }, [value, delayMs]);
+  return debounced;
+}
 
 export function ExploreScreen() {
   const theme = useThemeTokens();
+  const { resolvedMode } = useTheme();
   const user = useAuthStore((s) => s.user);
   const { tabBarOffset } = useOffsets();
-  const [searchOpen, setSearchOpen] = useState(false);
+
+  const [searchMode, setSearchMode] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [activeCategory, setActiveCategory] =
+    useState<BranchCategoryValues | null>(null);
+  const [categoryModalOpen, setCategoryModalOpen] = useState(false);
   const [locationOpen, setLocationOpen] = useState(false);
 
-  const hasLocation =
-    user?.latitude != null && user?.longitude != null;
+  const debouncedQuery = useDebounced(searchQuery, DEBOUNCE_MS);
 
-  const branchesQuery = useQuery({
-    queryKey: [...BRANCHES_NEARBY_QUERY_KEY, user?.latitude, user?.longitude],
-    queryFn: () =>
+  const hasLocation = user?.latitude != null && user?.longitude != null;
+  const lat = user?.latitude ?? null;
+  const lng = user?.longitude ?? null;
+
+  const nearbyQuery = useInfiniteQuery({
+    queryKey: ["customer", "branchesNearby", lat, lng, activeCategory],
+    queryFn: ({ pageParam = 0 }) =>
       customerBranchService.getBranchesByLocation(
-        user!.latitude!,
-        user!.longitude!,
+        lat!,
+        lng!,
+        activeCategory ? [activeCategory] : null,
+        PAGE_SIZE,
+        pageParam,
       ),
-    enabled: hasLocation,
+    enabled: hasLocation && !searchMode,
+    initialPageParam: 0,
+    getNextPageParam: (last) => {
+      if (!last.success) return undefined;
+      const page = last.data;
+      return page.offset + page.limit < page.total
+        ? page.offset + page.limit
+        : undefined;
+    },
   });
 
-  const branches: BranchWithOffers[] =
-    branchesQuery.data?.success ? branchesQuery.data.data : [];
+  const searchQueryFn = useInfiniteQuery({
+    queryKey: ["customer", "branchesSearch", lat, lng, debouncedQuery],
+    queryFn: ({ pageParam = 0 }) =>
+      customerBranchService.searchBranchesByLocation(
+        lat!,
+        lng!,
+        debouncedQuery,
+        PAGE_SIZE,
+        pageParam,
+      ),
+    enabled: hasLocation && searchMode && debouncedQuery.trim().length > 0,
+    initialPageParam: 0,
+    getNextPageParam: (last) => {
+      if (!last.success) return undefined;
+      const page = last.data;
+      return page.offset + page.limit < page.total
+        ? page.offset + page.limit
+        : undefined;
+    },
+  });
 
-  return (
-    <ScreenBackground>
-      <PageHeader />
-      <ScreenBody edges={["bottom"]}>
-        <ScrollView
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={{
-            paddingTop: 16,
-            paddingBottom: tabBarOffset,
-          }}
-        >
+  const activeQuery = searchMode ? searchQueryFn : nearbyQuery;
+
+  const branches: BranchWithOffers[] = useMemo(() => {
+    if (!activeQuery.data) return [];
+    return activeQuery.data.pages.flatMap((page) =>
+      page.success ? page.data.rows : [],
+    );
+  }, [activeQuery.data]);
+
+  const enterSearch = () => {
+    setSearchMode(true);
+    setActiveCategory(null);
+  };
+  const exitSearch = () => {
+    setSearchMode(false);
+    setSearchQuery("");
+  };
+  const applyCategory = (next: BranchCategoryValues | null) => {
+    setActiveCategory(next);
+    setSearchMode(false);
+    setSearchQuery("");
+  };
+
+  const emptyStateText = searchMode
+    ? debouncedQuery.trim().length === 0
+      ? "Type to search branches by name or place."
+      : "No branches match your search"
+    : activeCategory != null
+      ? `No branches in this category nearby`
+      : "No branches near you yet";
+
+  type ExploreListItem =
+    | { type: "header" }
+    | { type: "branch"; branch: BranchWithOffers };
+
+  const listData: ExploreListItem[] = useMemo(() => {
+    if (branches.length === 0) return [];
+    return [
+      { type: "header" },
+      ...branches.map((b): ExploreListItem => ({ type: "branch", branch: b })),
+    ];
+  }, [branches]);
+
+  const renderSearchArea = () => (
+    <BlurView
+      // intensity={resolvedMode === "dark" ? 45 : 30}
+      intensity={0}
+      tint={resolvedMode === "dark" ? "dark" : "light"}
+      style={styles.searchAreaWrap}
+    >
+      {!searchMode ? (
+        <View style={styles.headerRow}>
           <Pressable
-            onPress={() => setSearchOpen(true)}
+            onPress={enterSearch}
             style={[
               styles.searchBar,
               {
                 backgroundColor: theme.colors.surface,
                 borderColor: theme.colors.surfaceBorder,
                 borderRadius: theme.radii.pill,
+                opacity: 0.9,
               },
             ]}
             accessibilityRole="button"
@@ -85,28 +181,178 @@ export function ExploreScreen() {
               Search branches
             </Text>
           </Pressable>
-
-          {!hasLocation ? (
-            <SetLocationCta onPress={() => setLocationOpen(true)} />
-          ) : branchesQuery.isLoading ? (
-            <LoadingState />
-          ) : branches.length === 0 ? (
-            <EmptyBranchesState />
-          ) : (
-            <FlatList
-              data={branches}
-              keyExtractor={(b) => `${b.id}`}
-              renderItem={({ item }) => <BranchCard branch={item} />}
-              scrollEnabled={false}
-              ItemSeparatorComponent={() => <View style={{ height: 20 }} />}
-              contentContainerStyle={{ paddingTop: 16 }}
+          <Pressable
+            onPress={() => setCategoryModalOpen(true)}
+            hitSlop={8}
+            style={[
+              styles.filterButton,
+              {
+                backgroundColor: theme.colors.surface,
+                borderColor: theme.colors.surfaceBorder,
+                borderRadius: theme.radii.pill,
+              },
+            ]}
+            accessibilityRole="button"
+            accessibilityLabel="Filter by category"
+          >
+            <Ionicons
+              name="funnel-outline"
+              size={16}
+              // color={theme.colors.textOnPrimary}
+              color={
+                activeCategory ? theme.colors.primary : theme.colors.textMuted
+              }
             />
-          )}
-        </ScrollView>
+          </Pressable>
+        </View>
+      ) : (
+        <View
+          style={[
+            styles.searchInputRow,
+            {
+              backgroundColor: theme.colors.surface,
+              borderColor: theme.colors.surfaceBorder,
+              borderRadius: theme.radii.pill,
+            },
+          ]}
+        >
+          <Pressable
+            onPress={exitSearch}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel="Exit search"
+          >
+            <Ionicons name="arrow-back" size={18} color={theme.colors.text} />
+          </Pressable>
+          <TextInput
+            autoFocus
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            placeholder="Search branches by name or place"
+            placeholderTextColor={theme.colors.textPlaceholder}
+            style={{
+              flex: 1,
+              marginLeft: 10,
+              color: theme.colors.text,
+              fontFamily: theme.typography.fontFamilyRegular,
+              fontSize: 15,
+              paddingVertical: 0,
+            }}
+            returnKeyType="search"
+            accessibilityLabel="Search branches"
+          />
+          {searchQuery.length > 0 ? (
+            <Pressable
+              onPress={() => setSearchQuery("")}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel="Clear search"
+            >
+              <Ionicons
+                name="close-circle"
+                size={16}
+                color={theme.colors.textMuted}
+              />
+            </Pressable>
+          ) : null}
+        </View>
+      )}
 
-        <SearchModal
-          visible={searchOpen}
-          onDismiss={() => setSearchOpen(false)}
+      {!searchMode && activeCategory != null ? (
+        <View
+          style={[
+            styles.activeCategoryChip,
+            {
+              backgroundColor: theme.colors.primary,
+              borderRadius: theme.radii.pill,
+            },
+          ]}
+        >
+          <Text
+            numberOfLines={1}
+            style={{
+              color: theme.colors.textOnPrimary,
+              fontFamily: theme.typography.fontFamilySemiBold,
+              fontSize: 12,
+              letterSpacing: 0.3,
+            }}
+          >
+            {CATEGORY_LABELS[activeCategory].toUpperCase()}
+          </Text>
+          <Pressable
+            onPress={() => setActiveCategory(null)}
+            hitSlop={8}
+            accessibilityRole="button"
+            accessibilityLabel="Clear category filter"
+          >
+            <Ionicons
+              name="close"
+              size={14}
+              color={theme.colors.textOnPrimary}
+            />
+          </Pressable>
+        </View>
+      ) : null}
+    </BlurView>
+  );
+
+  return (
+    <ScreenBackground>
+      <PageHeader />
+      <ScreenBody edges={["bottom"]} padding={0}>
+        {branches.length === 0 ? (
+          <View style={{ paddingHorizontal: 24 }}>
+            {renderSearchArea()}
+            {!hasLocation ? (
+              <SetLocationCta onPress={() => setLocationOpen(true)} />
+            ) : activeQuery.isLoading ? (
+              <LoadingState />
+            ) : (
+              <EmptyBranchesState text={emptyStateText} />
+            )}
+          </View>
+        ) : (
+          <FlatList
+            data={listData}
+            keyExtractor={(item) =>
+              item.type === "header" ? "header" : `branch-${item.branch.id}`
+            }
+            renderItem={({ item }) =>
+              item.type === "header" ? (
+                renderSearchArea()
+              ) : (
+                <BranchCard branch={item.branch} />
+              )
+            }
+            stickyHeaderIndices={[0]}
+            onEndReached={() => activeQuery.fetchNextPage()}
+            onEndReachedThreshold={0.5}
+            ItemSeparatorComponent={({ leadingItem }) =>
+              leadingItem.type === "header" ? null : (
+                <View style={{ height: 20 }} />
+              )
+            }
+            ListFooterComponent={
+              activeQuery.isFetchingNextPage ? (
+                <View style={styles.footerLoader}>
+                  <ActivityIndicator color={theme.colors.primary} />
+                </View>
+              ) : null
+            }
+            contentContainerStyle={{
+              paddingBottom: tabBarOffset,
+              paddingHorizontal: 24,
+            }}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          />
+        )}
+
+        <CategoryFilterModal
+          visible={categoryModalOpen}
+          activeCategory={activeCategory}
+          onApply={applyCategory}
+          onDismiss={() => setCategoryModalOpen(false)}
         />
         <LocationModal
           visible={locationOpen}
@@ -200,7 +446,7 @@ function LoadingState() {
   );
 }
 
-function EmptyBranchesState() {
+function EmptyBranchesState({ text }: { text: string }) {
   const theme = useThemeTokens();
   return (
     <View
@@ -213,7 +459,11 @@ function EmptyBranchesState() {
         },
       ]}
     >
-      <Ionicons name="storefront-outline" size={32} color={theme.colors.textMuted} />
+      <Ionicons
+        name="storefront-outline"
+        size={32}
+        color={theme.colors.textMuted}
+      />
       <Text
         style={{
           color: theme.colors.text,
@@ -223,7 +473,7 @@ function EmptyBranchesState() {
           textAlign: "center",
         }}
       >
-        No branches near you yet
+        {text}
       </Text>
       <Text
         style={{
@@ -235,20 +485,53 @@ function EmptyBranchesState() {
           textAlign: "center",
         }}
       >
-        Try a different location — merchants in your area may not have
-        active offers right now.
+        Try a different location — merchants in your area may not have active
+        offers right now.
       </Text>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  searchAreaWrap: {
+    paddingTop: 16,
+    paddingBottom: 12,
+  },
+  headerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
   searchBar: {
+    flex: 1,
     flexDirection: "row",
     alignItems: "center",
     paddingHorizontal: 16,
     height: 44,
     borderWidth: 1,
+  },
+  filterButton: {
+    width: 44,
+    height: 44,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+  },
+  searchInputRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 14,
+    height: 44,
+    borderWidth: 1,
+  },
+  activeCategoryChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    alignSelf: "flex-start",
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    marginTop: 12,
   },
   emptyCard: {
     alignItems: "center",
@@ -267,5 +550,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     paddingVertical: 40,
+  },
+  footerLoader: {
+    paddingVertical: 16,
+    alignItems: "center",
   },
 });
