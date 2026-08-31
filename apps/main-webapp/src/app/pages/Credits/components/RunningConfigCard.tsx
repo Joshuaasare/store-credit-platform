@@ -19,7 +19,7 @@ import {
   DropdownMenuTrigger,
 } from "@store-credit-platform/web-components";
 import { creditConfigService } from "@store-credit-platform/api-services";
-import type { RunningCreditConfigGroup } from "@shared/types/api.types";
+import type { RunningCreditConfig } from "@shared/types/api.types";
 import { isApiError } from "@shared/utils/api.utils";
 import {
   errorToastProperties,
@@ -47,7 +47,7 @@ import {
 } from "./configCardStyles";
 
 interface RunningConfigCardProps {
-  config: RunningCreditConfigGroup;
+  config: RunningCreditConfig;
   isManager: boolean;
 }
 
@@ -66,7 +66,7 @@ export function RunningConfigCard({
   const deleteMutation = useMutation({
     mutationFn: async () => {
       const res = await creditConfigService.deleteRunningConfig(
-        config.config_group_id,
+        config.id,
       );
       if (isApiError(res)) throw new Error(res.error);
     },
@@ -84,7 +84,7 @@ export function RunningConfigCard({
   const toggleMutation = useMutation({
     mutationFn: async (isActive: boolean) => {
       const res = await creditConfigService.toggleRunningConfigActive(
-        config.config_group_id,
+        config.id,
         isActive,
       );
       if (isApiError(res)) throw new Error(res.error);

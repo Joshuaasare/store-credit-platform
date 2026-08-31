@@ -74,7 +74,7 @@ export function FixedConfigsTab({ isManager }: FixedConfigsTabProps) {
       {query.data && query.data.length > 0 && (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           {query.data.map((c) => (
-            <FixedConfigCard key={c.config_group_id} config={c} isManager={isManager} />
+            <FixedConfigCard key={c.id} config={c} isManager={isManager} />
           ))}
         </div>
       )}

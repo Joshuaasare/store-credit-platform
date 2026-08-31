@@ -1,6 +1,6 @@
 /**
  * Auto-generated API Types
- * Generated on: 2026-08-29T13:45:25.546Z
+ * Generated on: 2026-08-31T12:57:36.275Z
  * 
  * ⚠️ DO NOT EDIT MANUALLY
  * Source: apps/smartschool-api/src/app/types/
@@ -194,8 +194,6 @@ export interface BaseCustomerCreditRedemption {
 }
 
 export interface BaseRunningCreditConfig {
-  branch_id: number;
-  config_group_id: string;
   created_at: string;
   credit_type: CreditTypeValues | null;
   credit_validity: number | null;
@@ -214,8 +212,6 @@ export interface BaseRunningCreditConfig {
 }
 
 export interface BaseFixedCreditConfig {
-  branch_id: number;
-  config_group_id: string | null;
   created_at: string;
   deleted_at: string | null;
   description: string | null;
@@ -558,29 +554,12 @@ export type BranchesNearbyApiResponse =
 export type BranchSearchApiResponse = BranchSearchResponse | ApiErrorResponse;
 
 export type RunningCreditConfig = BaseRunningCreditConfig & {
-  branch: BaseBranch;
+  branches: BaseBranch[];
 };
 
 export type FixedCreditConfig = BaseFixedCreditConfig & {
-  branch: BaseBranch;
-};
-export interface RunningCreditConfigGroup {
-  config_group_id: string;
   branches: BaseBranch[];
-  credit_type: CreditTypeValues | null;
-  credit_validity: number | null;
-  eligible_window: number | null;
-  fixed_credit_value: number | null;
-  percentage_credit_value: number | null;
-  maximum_allowed_credit: number | null;
-  threshold_amount: number | null;
-  terms: string | null;
-  cumulative_scope: CumulativeScopeValues;
-  is_active: boolean;
-  created_at: string;
-  updated_at: string | null;
-  images: string[] | null;
-}
+};
 
 export interface CreateRunningCreditConfigRequest {
   branch_ids: number[];
@@ -611,20 +590,6 @@ export interface RunningCreditConfigUpdate {
   images?: string[];
 }
 
-export interface FixedCreditConfigGroup {
-  config_group_id: string;
-  branches: BaseBranch[];
-  title: string | null;
-  description: string | null;
-  images: string[] | null;
-  start_date: number | null;
-  end_date: number | null;
-  terms: string | null;
-  is_active: boolean;
-  created_at: string;
-  updated_at: string | null;
-}
-
 export interface CreateFixedCreditConfigRequest {
   branch_ids: number[];
   title?: string | null;
@@ -652,12 +617,12 @@ export interface ToggleActiveRequest {
 
 export interface RunningCreditConfigListResponse {
   success: true;
-  data: RunningCreditConfigGroup[];
+  data: RunningCreditConfig[];
 }
 
 export interface RunningCreditConfigMutationResponse {
   success: true;
-  data: RunningCreditConfigGroup;
+  data: RunningCreditConfig;
 }
 
 export interface RunningCreditConfigDeleteResponse {
@@ -679,12 +644,12 @@ export type RunningCreditConfigDeleteApiResponse =
 
 export interface FixedCreditConfigListResponse {
   success: true;
-  data: FixedCreditConfigGroup[];
+  data: FixedCreditConfig[];
 }
 
 export interface FixedCreditConfigMutationResponse {
   success: true;
-  data: FixedCreditConfigGroup;
+  data: FixedCreditConfig;
 }
 
 export interface FixedCreditConfigDeleteResponse {

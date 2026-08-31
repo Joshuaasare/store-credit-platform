@@ -207,16 +207,18 @@ export class BranchService {
       .select(
         `${QueryFragments.BASE_BRANCH},
         merchant:merchants(${QueryFragments.BASE_MERCHANT}),
-        running_credit_config(${QueryFragments.BASE_RUNNING_CREDIT_CONFIG}),
-        fixed_credit_config(${QueryFragments.BASE_FIXED_CREDIT_CONFIG})` as const,
+        branch_running_credit_config!inner(deleted_at,running_credit_config:running_credit_config!inner(${QueryFragments.BASE_RUNNING_CREDIT_CONFIG})),
+        branch_fixed_credit_config!inner(deleted_at,fixed_credit_config:fixed_credit_config!inner(${QueryFragments.BASE_FIXED_CREDIT_CONFIG}))` as const,
       )
       .is("deleted_at", null)
       .eq("is_active", true)
       .eq("merchant.is_active", true)
-      .eq("running_credit_config.is_active", true)
-      .is("running_credit_config.deleted_at", null)
-      .eq("fixed_credit_config.is_active", true)
-      .is("fixed_credit_config.deleted_at", null);
+      .is("branch_running_credit_config.deleted_at", null)
+      .eq("branch_running_credit_config.running_credit_config.is_active", true)
+      .is("branch_running_credit_config.running_credit_config.deleted_at", null)
+      .is("branch_fixed_credit_config.deleted_at", null)
+      .eq("branch_fixed_credit_config.fixed_credit_config.is_active", true)
+      .is("branch_fixed_credit_config.fixed_credit_config.deleted_at", null);
     if (category && category.length > 0) {
       query = query.in("category", category);
     }
@@ -228,16 +230,22 @@ export class BranchService {
 
     const results: BranchWithOffers[] = [];
     for (const row of data) {
-      const running = row?.running_credit_config?.map((c) => ({
-        ...c,
-        images: coerceImages(c.images),
-      }));
+      const running = (row?.branch_running_credit_config ?? [])
+        .filter((j) => !j?.deleted_at)
+        .map((j) => ({
+          ...j.running_credit_config,
+          images: coerceImages(j.running_credit_config.images),
+        }));
       // Filter the active window in JS so null start/end ("perpetual" promos)
       // count as unbounded — DB-level `.lte`/`.gte` exclude nulls, which would
       // drop perpetual configs from the feed. end_date is "through the end of
       // the expiry day", so compare against UTC start-of-today (see above).
-      const fixed = row?.fixed_credit_config
-        ?.map((c) => ({ ...c, images: coerceImages(c.images) }))
+      const fixed = (row?.branch_fixed_credit_config ?? [])
+        .filter((j) => !j?.deleted_at)
+        .map((j) => ({
+          ...j.fixed_credit_config,
+          images: coerceImages(j.fixed_credit_config.images),
+        }))
         .filter((c) => {
           const started = c.start_date == null || c.start_date <= nowMs;
           const notEnded = c.end_date == null || c.end_date >= startOfTodayMs;
@@ -246,8 +254,8 @@ export class BranchService {
       if (running?.length === 0 && fixed?.length === 0) continue;
       const {
         merchant,
-        running_credit_config: _r,
-        fixed_credit_config: _f,
+        branch_running_credit_config: _r,
+        branch_fixed_credit_config: _f,
         ...branchFields
       } = row;
       results.push({

@@ -28,7 +28,7 @@ import {
 } from "@store-credit-platform/api-services";
 import type {
   CreateFixedCreditConfigRequest,
-  FixedCreditConfigGroup,
+  FixedCreditConfig,
 } from "@shared/types/api.types";
 import { isApiError } from "@shared/utils/api.utils";
 import {
@@ -88,7 +88,7 @@ type FixedFormValues = z.infer<typeof fixedSchema>;
 interface FixedConfigDialogProps {
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
-  config?: FixedCreditConfigGroup;
+  config?: FixedCreditConfig;
 }
 
 function inRangeDays(visibleMonth: Date, from?: Date, to?: Date): Date[] {
@@ -185,9 +185,9 @@ export function FixedConfigDialog({
     }
   }, [open, config, reset]);
 
-  // Why: on create, the server mints config_group_id, so uploads go to a temp folder; on edit, use the real group's folder.
+  // Why: on create, the server mints the config id, so uploads go to a temp folder; on edit, use the real config's folder.
   const uploadFolder = isEdit
-    ? `merchant-${slugify(merchant?.name ?? "store", "store")}/promo-images/${config!.config_group_id}`
+    ? `merchant-${slugify(merchant?.name ?? "store", "store")}/promo-images/${config!.id}`
     : `merchant-${slugify(merchant?.name ?? "store", "store")}/promo-images/temp/${crypto.randomUUID()}`;
 
   const titleField = register("title", {
@@ -231,7 +231,7 @@ export function FixedConfigDialog({
         const { publicUrl } = await storage.uploadFile(compressed, {
           bucket: STORE_ASSETS_BUCKET,
           folder: uploadFolder,
-          id: config?.config_group_id ?? crypto.randomUUID(),
+          id: config?.id ?? crypto.randomUUID(),
           contentType: compressed.type || "image/jpeg",
         });
         uploaded.push(publicUrl);
@@ -270,7 +270,7 @@ export function FixedConfigDialog({
       };
       const res = isEdit
         ? await creditConfigService.updateFixedConfig(
-            config!.config_group_id,
+            config!.id,
             payload,
           )
         : await creditConfigService.createFixedConfig(payload);

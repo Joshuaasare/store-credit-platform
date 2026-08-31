@@ -25,7 +25,7 @@ import {
 } from "@store-credit-platform/api-services";
 import type {
   CreateRunningCreditConfigRequest,
-  RunningCreditConfigGroup,
+  RunningCreditConfig,
 } from "@shared/types/api.types";
 import { isApiError } from "@shared/utils/api.utils";
 import {
@@ -66,7 +66,7 @@ type RunningFormValues = z.infer<typeof runningSchema>;
 interface RunningConfigDialogProps {
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
-  config?: RunningCreditConfigGroup;
+  config?: RunningCreditConfig;
 }
 
 const NULLABLE_NUMBER = (v: unknown) =>
@@ -128,9 +128,9 @@ export function RunningConfigDialog({
     }
   }, [open, config, reset]);
 
-  // Why: on create, the server mints config_group_id, so uploads go to a temp folder; on edit, use the real group's folder.
+  // Why: on create, the server mints the config id, so uploads go to a temp folder; on edit, use the real config's folder.
   const uploadFolder = isEdit
-    ? `merchant-${slugify(merchant?.name ?? "store", "store")}/promo-images/${config!.config_group_id}`
+    ? `merchant-${slugify(merchant?.name ?? "store", "store")}/promo-images/${config!.id}`
     : `merchant-${slugify(merchant?.name ?? "store", "store")}/promo-images/temp/${crypto.randomUUID()}`;
 
   const images = watch("images") ?? [];
@@ -155,7 +155,7 @@ export function RunningConfigDialog({
         const { publicUrl } = await storage.uploadFile(compressed, {
           bucket: STORE_ASSETS_BUCKET,
           folder: uploadFolder,
-          id: config?.config_group_id ?? crypto.randomUUID(),
+          id: config?.id ?? crypto.randomUUID(),
           contentType: compressed.type || "image/jpeg",
         });
         uploaded.push(publicUrl);
@@ -198,7 +198,7 @@ export function RunningConfigDialog({
       };
       const res = isEdit
         ? await creditConfigService.updateRunningConfig(
-            config!.config_group_id,
+            config!.id,
             payload,
           )
         : await creditConfigService.createRunningConfig(payload);

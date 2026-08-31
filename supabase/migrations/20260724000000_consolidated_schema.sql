@@ -1498,3 +1498,32 @@ grant execute on function public.redemption_reject(bigint, bigint, int) to servi
 grant execute on function public.redemption_request_create(bigint, bigint, bigint, numeric, bigint) to service_role;
 grant execute on function public.redemption_request_update(bigint, numeric, bigint) to service_role;
 grant execute on function public.redemption_request_cancel(bigint) to service_role;
+-- ────────────────────────────────────────────────────────────────────────────
+-- TODO (DDL pass — apply manually): drop denormalized config_group_id/branch_id
+-- ────────────────────────────────────────────────────────────────────────────
+-- The many-to-many rework moves the branch↔config relationship into the
+-- branch_running_credit_config / branch_fixed_credit_config junction tables.
+-- The old denormalized columns on the config tables are no longer referenced
+-- by the service layer. Run these statements AFTER wiping existing config
+-- data and AFTER regenerating database.types.ts:
+--
+  alter table public.running_credit_config
+    drop column if exists config_group_id,
+    drop column if exists branch_id;
+  alter table public.fixed_credit_config
+    drop column if exists config_group_id,
+    drop column if exists branch_id;
+  drop index if exists public.running_credit_config_branch_id_idx;
+  drop index if exists public.running_credit_config_config_group_id_idx;
+  drop index if exists public.fixed_credit_config_branch_id_idx;
+  drop index if exists public.fixed_credit_config_config_group_id_idx;
+--
+-- Junction uniqueness — a config can be linked to a branch at most once
+-- among non-soft-deleted rows (re-linking after a soft delete is allowed):
+--
+  create unique index if not exists branch_running_credit_config_unique_active
+    on public.branch_running_credit_config (branch_id, running_credit_config_id)
+    where deleted_at is null;
+  create unique index if not exists branch_fixed_credit_config_unique_active
+    on public.branch_fixed_credit_config (branch_id, fixed_credit_config_id)
+    where deleted_at is null

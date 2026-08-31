@@ -1,4 +1,3 @@
-import { randomUUID } from "crypto";
 import { SupabaseClient } from "@supabase/supabase-js";
 import { supabaseAdmin } from "../utils/supabase.client";
 import { Database } from "../types/database.types";
@@ -6,10 +5,8 @@ import { QueryFragments } from "../constants/queryFragments";
 import {
   CreateRunningCreditConfigRequest,
   UpdateRunningCreditConfigRequest,
-  RunningCreditConfigGroup,
   CreateFixedCreditConfigRequest,
   UpdateFixedCreditConfigRequest,
-  FixedCreditConfigGroup,
   FixedCreditConfig,
   RunningCreditConfig,
   RunningCreditConfigUpdate,
@@ -17,48 +14,45 @@ import {
 } from "../schemas/creditConfig.schema";
 import { BaseCustomerCredit } from "../types/main.types";
 import {
-  groupFixedRows,
-  groupRunningRows,
   normalizeFixedValues,
+  shapeFixedConfig,
+  shapeRunningConfig,
   deleteStaleImages,
   deleteImagesForRows,
 } from "../utils/creditConfig.utils";
 
-async function fetchRunningGroup(groupId: string) {
+const RUNNING_SELECT = `${QueryFragments.BASE_RUNNING_CREDIT_CONFIG},
+branch_running_credit_config!inner(deleted_at,branch:branches!inner(${QueryFragments.BASE_BRANCH}))` as const;
+
+const FIXED_SELECT = `${QueryFragments.BASE_FIXED_CREDIT_CONFIG},
+branch_fixed_credit_config!inner(deleted_at,branch:branches!inner(${QueryFragments.BASE_BRANCH}))` as const;
+
+async function fetchRunningConfig(configId: number): Promise<RunningCreditConfig> {
   const { data, error } = await supabaseAdmin
     .from("running_credit_config")
-    .select(
-      `${QueryFragments.BASE_RUNNING_CREDIT_CONFIG},
-      branch:branches(${QueryFragments.BASE_BRANCH})`,
-    )
-    .eq("config_group_id", groupId)
-    .is("deleted_at", null);
-
-  if (error) throw new Error(`Failed to fetch group: ${error.message}`);
-  const rows = data ?? [];
-  const grouped = groupRunningRows(rows as RunningCreditConfig[]);
-  if (grouped.length === 0) throw new Error("Config group not found");
-  return grouped[0];
+    .select(RUNNING_SELECT)
+    .eq("id", configId)
+    .is("deleted_at", null)
+    .is("branch_running_credit_config.deleted_at", null)
+    .is("branch_running_credit_config.branch.deleted_at", null)
+    .maybeSingle();
+  if (error) throw new Error(`Failed to fetch config: ${error.message}`);
+  if (!data) throw new Error("Config not found");
+  return shapeRunningConfig(data);
 }
 
-async function fetchFixedGroup(
-  groupId: string,
-): Promise<FixedCreditConfigGroup> {
+async function fetchFixedConfig(configId: number): Promise<FixedCreditConfig> {
   const { data, error } = await supabaseAdmin
     .from("fixed_credit_config")
-    .select(
-      `${QueryFragments.BASE_FIXED_CREDIT_CONFIG},
-      branch:branches(${QueryFragments.BASE_BRANCH})`,
-    )
-    .eq("config_group_id", groupId)
-    .is("deleted_at", null);
-
-  if (error) throw new Error(`Failed to fetch group: ${error.message}`);
-
-  const rows = data ?? [];
-  const grouped = groupFixedRows(rows as FixedCreditConfig[]);
-  if (grouped.length === 0) throw new Error("Config group not found");
-  return grouped[0];
+    .select(FIXED_SELECT)
+    .eq("id", configId)
+    .is("deleted_at", null)
+    .is("branch_fixed_credit_config.deleted_at", null)
+    .is("branch_fixed_credit_config.branch.deleted_at", null)
+    .maybeSingle();
+  if (error) throw new Error(`Failed to fetch config: ${error.message}`);
+  if (!data) throw new Error("Config not found");
+  return shapeFixedConfig(data);
 }
 
 async function verifyBranchOwnership(merchantId: number, branchIds: number[]) {
@@ -75,15 +69,33 @@ async function verifyBranchOwnership(merchantId: number, branchIds: number[]) {
   }
 }
 
-async function getMerchantBranchIds(merchantId: number) {
+async function verifyConfigOwnership(
+  merchantId: number,
+  table: "running_credit_config" | "fixed_credit_config",
+  configId: number,
+): Promise<void> {
+  const junctionTable =
+    table === "running_credit_config"
+      ? "branch_running_credit_config"
+      : "branch_fixed_credit_config";
+  const fkCol =
+    table === "running_credit_config"
+      ? "running_credit_config_id"
+      : "fixed_credit_config_id";
   const { data, error } = await supabaseAdmin
-    .from("branches")
-    .select("id")
-    .eq("merchant_id", merchantId)
+    .from(junctionTable)
+    .select(`branch:branches(id,merchant_id,deleted_at)`)
+    .eq(fkCol, configId)
     .is("deleted_at", null);
-  if (error)
-    throw new Error(`Failed to resolve merchant branches: ${error.message}`);
-  return (data ?? []).map((b) => b.id);
+  if (error) throw new Error(`Failed to verify config ownership: ${error.message}`);
+  const rows = data ?? [];
+  const owned = rows.some(
+    (r) =>
+      r.branch != null &&
+      r.branch.merchant_id === merchantId &&
+      r.branch.deleted_at == null,
+  );
+  if (!owned) throw new Error("Config not found");
 }
 
 function normalizeRunningValues(
@@ -109,75 +121,88 @@ function normalizeRunningValues(
 }
 
 export class CreditConfigService {
-  async listRunningConfigs(merchantId: number) {
+  async listRunningConfigs(merchantId: number): Promise<RunningCreditConfig[]> {
     const { data, error } = await supabaseAdmin
       .from("running_credit_config")
-      .select(
-        `${QueryFragments.BASE_RUNNING_CREDIT_CONFIG},
-        branch:branches!inner(${QueryFragments.BASE_BRANCH})`,
-      )
+      .select(RUNNING_SELECT)
       .is("deleted_at", null)
-      .eq("branch.merchant_id", merchantId)
-      .is("branch.deleted_at", null);
+      .is("branch_running_credit_config.deleted_at", null)
+      .is("branch_running_credit_config.branch.deleted_at", null)
+      .eq("branch_running_credit_config.branch.merchant_id", merchantId)
+      .eq("branch_running_credit_config.branch.is_active", true);
     if (error)
       throw new Error(`Failed to list running configs: ${error.message}`);
     const rows = data ?? [];
-    return groupRunningRows(rows as RunningCreditConfig[]);
+    const byId = new Map<number, RunningCreditConfig>();
+    for (const row of rows) {
+      const shaped = shapeRunningConfig(row);
+      byId.set(shaped.id, shaped);
+    }
+    return Array.from(byId.values()).sort((a, b) =>
+      b.created_at > a.created_at ? 1 : -1,
+    );
   }
 
   async createRunningConfig(
     merchantId: number,
     payload: CreateRunningCreditConfigRequest,
-  ): Promise<RunningCreditConfigGroup> {
+  ): Promise<RunningCreditConfig> {
     if (!payload.branch_ids || payload.branch_ids.length === 0) {
       throw new Error("Select at least one branch");
     }
     await verifyBranchOwnership(merchantId, payload.branch_ids);
-    const groupId = randomUUID();
     const values = normalizeRunningValues(payload);
     const images = payload.images ?? [];
-    const rows = payload.branch_ids.map((branch_id) => ({
-      branch_id,
-      config_group_id: groupId,
-      ...values,
-      images,
-      is_active: true,
-    }));
-    const { error } = await supabaseAdmin
+    const { data: inserted, error } = await supabaseAdmin
       .from("running_credit_config")
-      .insert(rows);
+      .insert({ ...values, images, is_active: true })
+      .select("id")
+      .single();
     if (error)
       throw new Error(`Failed to create running config: ${error.message}`);
-    return fetchRunningGroup(groupId);
+    const configId = inserted.id;
+    const junctionRows = payload.branch_ids.map((branch_id) => ({
+      branch_id,
+      running_credit_config_id: configId,
+    }));
+    const { error: jErr } = await supabaseAdmin
+      .from("branch_running_credit_config")
+      .insert(junctionRows);
+    if (jErr)
+      throw new Error(`Failed to link branches: ${jErr.message}`);
+    return fetchRunningConfig(configId);
   }
 
   async updateRunningConfig(
     merchantId: number,
-    groupId: string,
+    configId: number,
     payload: UpdateRunningCreditConfigRequest,
-  ): Promise<RunningCreditConfigGroup> {
+  ): Promise<RunningCreditConfig> {
     if (!payload.branch_ids || payload.branch_ids.length === 0) {
       throw new Error("Select at least one branch");
     }
-    const merchantBranchIds = await getMerchantBranchIds(merchantId);
-
-    const { data: existing, error: fetchErr } = await supabaseAdmin
-      .from("running_credit_config")
-      .select("id, branch_id, images")
-      .eq("config_group_id", groupId)
-      .in("branch_id", merchantBranchIds)
-      .is("deleted_at", null);
-    if (fetchErr) throw new Error(`Failed to load group: ${fetchErr.message}`);
-    if (!existing || existing.length === 0) {
-      throw new Error("Config group not found");
-    }
-
+    await verifyConfigOwnership(merchantId, "running_credit_config", configId);
     await verifyBranchOwnership(merchantId, payload.branch_ids);
 
-    const existingBranchIds = existing.map((r) => r.branch_id);
+    const { data: existingJunctions, error: jErr } = await supabaseAdmin
+      .from("branch_running_credit_config")
+      .select("branch_id")
+      .eq("running_credit_config_id", configId)
+      .is("deleted_at", null);
+    if (jErr) throw new Error(`Failed to load junction rows: ${jErr.message}`);
+    const existingBranchIds = (existingJunctions ?? []).map((r) => r.branch_id);
+
+    const { data: existingConfig, error: cfgErr } = await supabaseAdmin
+      .from("running_credit_config")
+      .select("images")
+      .eq("id", configId)
+      .is("deleted_at", null)
+      .maybeSingle();
+    if (cfgErr) throw new Error(`Failed to load config: ${cfgErr.message}`);
+    if (!existingConfig) throw new Error("Config not found");
+
     const requestedSet = new Set(payload.branch_ids);
     const removed = existingBranchIds.filter((id) => !requestedSet.has(id));
-    const kept = existingBranchIds.filter((id) => requestedSet.has(id));
     const added = payload.branch_ids.filter(
       (id) => !existingBranchIds.includes(id),
     );
@@ -190,154 +215,165 @@ export class CreditConfigService {
       ...(Array.isArray(payload.images) ? { images: payload.images } : {}),
     };
     if (Array.isArray(payload.images)) {
-      await deleteStaleImages(payload.images, existing);
+      await deleteStaleImages(payload.images, [existingConfig]);
     }
+
+    const { error: updErr } = await supabaseAdmin
+      .from("running_credit_config")
+      .update(updatePayload)
+      .eq("id", configId)
+      .is("deleted_at", null);
+    if (updErr) throw new Error(`Failed to update config: ${updErr.message}`);
 
     if (removed.length > 0) {
       const { error } = await supabaseAdmin
-        .from("running_credit_config")
-        .delete()
-        .eq("config_group_id", groupId)
-        .in("branch_id", removed);
+        .from("branch_running_credit_config")
+        .update({ deleted_at: new Date().toISOString() })
+        .eq("running_credit_config_id", configId)
+        .in("branch_id", removed)
+        .is("deleted_at", null);
       if (error) throw new Error(`Failed to remove branches: ${error.message}`);
-    }
-    if (kept.length > 0) {
-      const { error } = await supabaseAdmin
-        .from("running_credit_config")
-        .update(updatePayload)
-        .eq("config_group_id", groupId)
-        .in("branch_id", kept);
-      if (error) throw new Error(`Failed to update branches: ${error.message}`);
     }
     if (added.length > 0) {
       const addRows = added.map((branch_id) => ({
         branch_id,
-        config_group_id: groupId,
-        ...values,
-        images: Array.isArray(payload.images) ? payload.images : [],
-        is_active: true,
+        running_credit_config_id: configId,
       }));
       const { error } = await supabaseAdmin
-        .from("running_credit_config")
+        .from("branch_running_credit_config")
         .insert(addRows);
       if (error) throw new Error(`Failed to add branches: ${error.message}`);
     }
 
-    return fetchRunningGroup(groupId);
+    return fetchRunningConfig(configId);
   }
 
-  async deleteRunningConfig(
-    merchantId: number,
-    groupId: string,
-  ): Promise<void> {
-    const merchantBranchIds = await getMerchantBranchIds(merchantId);
+  async deleteRunningConfig(merchantId: number, configId: number): Promise<void> {
+    await verifyConfigOwnership(merchantId, "running_credit_config", configId);
 
-    const { data: rows } = await supabaseAdmin
+    const { data: cfg } = await supabaseAdmin
       .from("running_credit_config")
       .select("images")
-      .eq("config_group_id", groupId)
-      .in("branch_id", merchantBranchIds)
+      .eq("id", configId)
+      .is("deleted_at", null)
+      .maybeSingle();
+    if (cfg) await deleteImagesForRows([cfg]);
+
+    const { error: jErr } = await supabaseAdmin
+      .from("branch_running_credit_config")
+      .update({ deleted_at: new Date().toISOString() })
+      .eq("running_credit_config_id", configId)
       .is("deleted_at", null);
-    await deleteImagesForRows(rows ?? []);
+    if (jErr) throw new Error(`Failed to soft-delete junction rows: ${jErr.message}`);
 
     const { error } = await supabaseAdmin
       .from("running_credit_config")
-      .delete()
-      .eq("config_group_id", groupId)
-      .in("branch_id", merchantBranchIds);
+      .update({ deleted_at: new Date().toISOString() })
+      .eq("id", configId)
+      .is("deleted_at", null);
     if (error)
       throw new Error(`Failed to delete running config: ${error.message}`);
   }
 
   async toggleRunningConfigActive(
     merchantId: number,
-    groupId: string,
+    configId: number,
     isActive: boolean,
-  ): Promise<RunningCreditConfigGroup> {
-    const merchantBranchIds = await getMerchantBranchIds(merchantId);
+  ): Promise<RunningCreditConfig> {
+    await verifyConfigOwnership(merchantId, "running_credit_config", configId);
     const { error } = await supabaseAdmin
       .from("running_credit_config")
       .update({ is_active: isActive })
-      .eq("config_group_id", groupId)
-      .in("branch_id", merchantBranchIds);
+      .eq("id", configId)
+      .is("deleted_at", null);
     if (error)
       throw new Error(`Failed to toggle running config: ${error.message}`);
-    return fetchRunningGroup(groupId);
+    return fetchRunningConfig(configId);
   }
 
-  async listFixedConfigs(
-    merchantId: number,
-  ): Promise<FixedCreditConfigGroup[]> {
+  async listFixedConfigs(merchantId: number): Promise<FixedCreditConfig[]> {
     const { data, error } = await supabaseAdmin
       .from("fixed_credit_config")
-      .select(
-        `${QueryFragments.BASE_FIXED_CREDIT_CONFIG},
-        branch:branches!inner(${QueryFragments.BASE_BRANCH})`,
-      )
+      .select(FIXED_SELECT)
       .is("deleted_at", null)
-      .eq("branch.merchant_id", merchantId)
-      .is("branch.deleted_at", null);
-
+      .is("branch_fixed_credit_config.deleted_at", null)
+      .is("branch_fixed_credit_config.branch.deleted_at", null)
+      .eq("branch_fixed_credit_config.branch.merchant_id", merchantId)
+      .eq("branch_fixed_credit_config.branch.is_active", true);
     if (error) {
       throw new Error(`Failed to list fixed configs: ${error.message}`);
     }
     const rows = data ?? [];
-    return groupFixedRows(rows as FixedCreditConfig[]);
+    const byId = new Map<number, FixedCreditConfig>();
+    for (const row of rows) {
+      const shaped = shapeFixedConfig(row);
+      byId.set(shaped.id, shaped);
+    }
+    return Array.from(byId.values()).sort((a, b) =>
+      b.created_at > a.created_at ? 1 : -1,
+    );
   }
 
   async createFixedConfig(
     merchantId: number,
     payload: CreateFixedCreditConfigRequest,
-  ): Promise<FixedCreditConfigGroup> {
+  ): Promise<FixedCreditConfig> {
     if (!payload.branch_ids || payload.branch_ids.length === 0) {
       throw new Error("Select at least one branch");
     }
     await verifyBranchOwnership(merchantId, payload.branch_ids);
-    const groupId = randomUUID();
     const values = normalizeFixedValues(payload);
     const images = payload.images ?? [];
-    const rows = payload.branch_ids.map((branch_id) => ({
-      branch_id,
-      config_group_id: groupId,
-      ...values,
-      images,
-      is_active: true,
-    }));
-    const { error } = await supabaseAdmin
+    const { data: inserted, error } = await supabaseAdmin
       .from("fixed_credit_config")
-      .insert(rows);
+      .insert({ ...values, images, is_active: true })
+      .select("id")
+      .single();
     if (error)
       throw new Error(`Failed to create fixed config: ${error.message}`);
-    return fetchFixedGroup(groupId);
+    const configId = inserted.id;
+    const junctionRows = payload.branch_ids.map((branch_id) => ({
+      branch_id,
+      fixed_credit_config_id: configId,
+    }));
+    const { error: jErr } = await supabaseAdmin
+      .from("branch_fixed_credit_config")
+      .insert(junctionRows);
+    if (jErr)
+      throw new Error(`Failed to link branches: ${jErr.message}`);
+    return fetchFixedConfig(configId);
   }
 
   async updateFixedConfig(
     merchantId: number,
-    groupId: string,
+    configId: number,
     payload: UpdateFixedCreditConfigRequest,
-  ): Promise<FixedCreditConfigGroup> {
+  ): Promise<FixedCreditConfig> {
     if (!payload.branch_ids || payload.branch_ids.length === 0) {
       throw new Error("Select at least one branch");
     }
-    const merchantBranchIds = await getMerchantBranchIds(merchantId);
-
-    const { data: existing, error: fetchErr } = await supabaseAdmin
-      .from("fixed_credit_config")
-      .select("id, branch_id, images")
-      .eq("config_group_id", groupId)
-      .in("branch_id", merchantBranchIds)
-      .is("deleted_at", null);
-    if (fetchErr) throw new Error(`Failed to load group: ${fetchErr.message}`);
-    if (!existing || existing.length === 0) {
-      throw new Error("Config group not found");
-    }
-
+    await verifyConfigOwnership(merchantId, "fixed_credit_config", configId);
     await verifyBranchOwnership(merchantId, payload.branch_ids);
 
-    const existingBranchIds = existing.map((r) => r.branch_id);
+    const { data: existingJunctions, error: jErr } = await supabaseAdmin
+      .from("branch_fixed_credit_config")
+      .select("branch_id")
+      .eq("fixed_credit_config_id", configId)
+      .is("deleted_at", null);
+    if (jErr) throw new Error(`Failed to load junction rows: ${jErr.message}`);
+    const existingBranchIds = (existingJunctions ?? []).map((r) => r.branch_id);
+
+    const { data: existingConfig, error: cfgErr } = await supabaseAdmin
+      .from("fixed_credit_config")
+      .select("images")
+      .eq("id", configId)
+      .is("deleted_at", null)
+      .maybeSingle();
+    if (cfgErr) throw new Error(`Failed to load config: ${cfgErr.message}`);
+    if (!existingConfig) throw new Error("Config not found");
+
     const requestedSet = new Set(payload.branch_ids);
     const removed = existingBranchIds.filter((id) => !requestedSet.has(id));
-    const kept = existingBranchIds.filter((id) => requestedSet.has(id));
     const added = payload.branch_ids.filter(
       (id) => !existingBranchIds.includes(id),
     );
@@ -350,76 +386,80 @@ export class CreditConfigService {
       ...(Array.isArray(payload.images) ? { images: payload.images } : {}),
     };
     if (Array.isArray(payload.images)) {
-      await deleteStaleImages(payload.images, existing);
+      await deleteStaleImages(payload.images, [existingConfig]);
     }
+
+    const { error: updErr } = await supabaseAdmin
+      .from("fixed_credit_config")
+      .update(updatePayload)
+      .eq("id", configId)
+      .is("deleted_at", null);
+    if (updErr) throw new Error(`Failed to update config: ${updErr.message}`);
 
     if (removed.length > 0) {
       const { error } = await supabaseAdmin
-        .from("fixed_credit_config")
-        .delete()
-        .eq("config_group_id", groupId)
-        .in("branch_id", removed);
+        .from("branch_fixed_credit_config")
+        .update({ deleted_at: new Date().toISOString() })
+        .eq("fixed_credit_config_id", configId)
+        .in("branch_id", removed)
+        .is("deleted_at", null);
       if (error) throw new Error(`Failed to remove branches: ${error.message}`);
-    }
-    if (kept.length > 0) {
-      const { error } = await supabaseAdmin
-        .from("fixed_credit_config")
-        .update(updatePayload)
-        .eq("config_group_id", groupId)
-        .in("branch_id", kept);
-      if (error) throw new Error(`Failed to update branches: ${error.message}`);
     }
     if (added.length > 0) {
       const addRows = added.map((branch_id) => ({
         branch_id,
-        config_group_id: groupId,
-        ...values,
-        images: Array.isArray(payload.images) ? payload.images : [],
-        is_active: true,
+        fixed_credit_config_id: configId,
       }));
       const { error } = await supabaseAdmin
-        .from("fixed_credit_config")
+        .from("branch_fixed_credit_config")
         .insert(addRows);
       if (error) throw new Error(`Failed to add branches: ${error.message}`);
     }
 
-    return fetchFixedGroup(groupId);
+    return fetchFixedConfig(configId);
   }
 
-  async deleteFixedConfig(merchantId: number, groupId: string): Promise<void> {
-    const merchantBranchIds = await getMerchantBranchIds(merchantId);
+  async deleteFixedConfig(merchantId: number, configId: number): Promise<void> {
+    await verifyConfigOwnership(merchantId, "fixed_credit_config", configId);
 
-    const { data: rows } = await supabaseAdmin
+    const { data: cfg } = await supabaseAdmin
       .from("fixed_credit_config")
       .select("images")
-      .eq("config_group_id", groupId)
-      .in("branch_id", merchantBranchIds)
+      .eq("id", configId)
+      .is("deleted_at", null)
+      .maybeSingle();
+    if (cfg) await deleteImagesForRows([cfg]);
+
+    const { error: jErr } = await supabaseAdmin
+      .from("branch_fixed_credit_config")
+      .update({ deleted_at: new Date().toISOString() })
+      .eq("fixed_credit_config_id", configId)
       .is("deleted_at", null);
-    await deleteImagesForRows(rows ?? []);
+    if (jErr) throw new Error(`Failed to soft-delete junction rows: ${jErr.message}`);
 
     const { error } = await supabaseAdmin
       .from("fixed_credit_config")
-      .delete()
-      .eq("config_group_id", groupId)
-      .in("branch_id", merchantBranchIds);
+      .update({ deleted_at: new Date().toISOString() })
+      .eq("id", configId)
+      .is("deleted_at", null);
     if (error)
       throw new Error(`Failed to delete fixed config: ${error.message}`);
   }
 
   async toggleFixedConfigActive(
     merchantId: number,
-    groupId: string,
+    configId: number,
     isActive: boolean,
-  ): Promise<FixedCreditConfigGroup> {
-    const merchantBranchIds = await getMerchantBranchIds(merchantId);
+  ): Promise<FixedCreditConfig> {
+    await verifyConfigOwnership(merchantId, "fixed_credit_config", configId);
     const { error } = await supabaseAdmin
       .from("fixed_credit_config")
       .update({ is_active: isActive })
-      .eq("config_group_id", groupId)
-      .in("branch_id", merchantBranchIds);
+      .eq("id", configId)
+      .is("deleted_at", null);
     if (error)
       throw new Error(`Failed to toggle fixed config: ${error.message}`);
-    return fetchFixedGroup(groupId);
+    return fetchFixedConfig(configId);
   }
 }
 
@@ -444,15 +484,17 @@ export async function issueRunningCreditsForPurchase(
   const policy: "stack" | "best_only" =
     merchant?.credit_stacking_policy ?? "stack";
 
-  const { data: configs } = await supabase
-    .from("running_credit_config")
+  const { data: junctionRows } = await supabase
+    .from("branch_running_credit_config")
     .select(
-      `${QueryFragments.BASE_RUNNING_CREDIT_CONFIG},branch:branches(id,deleted_at)`,
+      `running_credit_config:running_credit_config!inner(${QueryFragments.BASE_RUNNING_CREDIT_CONFIG})`,
     )
     .eq("branch_id", branchId)
-    .eq("is_active", true)
-    .is("deleted_at", null);
-  if (!configs || configs.length === 0) return [];
+    .is("deleted_at", null)
+    .eq("running_credit_config.is_active", true)
+    .is("running_credit_config.deleted_at", null);
+  const configs = (junctionRows ?? []).map((r) => r.running_credit_config);
+  if (configs.length === 0) return [];
 
   const { data: merchantBranchRows } = await supabase
     .from("branches")
@@ -465,8 +507,6 @@ export async function issueRunningCreditsForPurchase(
   const plans: Plan[] = [];
 
   for (const row of configs) {
-    if (row.branch?.deleted_at) continue;
-
     const threshold = row.threshold_amount ?? 0;
     const windowDays = row.eligible_window;
     const maxCap = row.maximum_allowed_credit;

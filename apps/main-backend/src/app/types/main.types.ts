@@ -172,8 +172,6 @@ export interface BaseCustomerCreditRedemption {
 }
 
 export interface BaseRunningCreditConfig {
-  branch_id: number;
-  config_group_id: string;
   created_at: string;
   credit_type: CreditTypeValues | null;
   credit_validity: number | null;
@@ -192,8 +190,6 @@ export interface BaseRunningCreditConfig {
 }
 
 export interface BaseFixedCreditConfig {
-  branch_id: number;
-  config_group_id: string | null;
   created_at: string;
   deleted_at: string | null;
   description: string | null;

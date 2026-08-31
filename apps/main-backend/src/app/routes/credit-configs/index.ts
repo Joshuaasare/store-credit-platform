@@ -101,10 +101,10 @@ export default async function (fastify: FastifyInstance) {
   });
 
   fastify.patch<{
-    Params: { configGroupId: string };
+    Params: { configId: number };
     Body: UpdateRunningCreditConfigRequest;
     Reply: RunningCreditConfigMutationApiResponse;
-  }>("/running/:configGroupId", {
+  }>("/running/:configId", {
     preHandler: [requireAuth, requireRoles("manager")],
     schema: {
       body: UpdateRunningCreditConfigRequest,
@@ -128,7 +128,7 @@ export default async function (fastify: FastifyInstance) {
         }
         const data = await creditConfigService.updateRunningConfig(
           merchantId,
-          request.params.configGroupId,
+          request.params.configId,
           request.body,
         );
         return { success: true, data };
@@ -147,9 +147,9 @@ export default async function (fastify: FastifyInstance) {
   });
 
   fastify.delete<{
-    Params: { configGroupId: string };
+    Params: { configId: number };
     Reply: RunningCreditConfigDeleteApiResponse;
-  }>("/running/:configGroupId", {
+  }>("/running/:configId", {
     preHandler: [requireAuth, requireRoles("manager")],
     schema: {
       response: {
@@ -171,7 +171,7 @@ export default async function (fastify: FastifyInstance) {
         }
         await creditConfigService.deleteRunningConfig(
           merchantId,
-          request.params.configGroupId,
+          request.params.configId,
         );
         return { success: true, data: null };
       } catch (error) {
@@ -185,10 +185,10 @@ export default async function (fastify: FastifyInstance) {
   });
 
   fastify.patch<{
-    Params: { configGroupId: string };
+    Params: { configId: number };
     Body: ToggleActiveRequest;
     Reply: RunningCreditConfigMutationApiResponse;
-  }>("/running/:configGroupId/active", {
+  }>("/running/:configId/active", {
     preHandler: [requireAuth, requireRoles("manager")],
     schema: {
       body: ToggleActiveRequest,
@@ -211,7 +211,7 @@ export default async function (fastify: FastifyInstance) {
         }
         const data = await creditConfigService.toggleRunningConfigActive(
           merchantId,
-          request.params.configGroupId,
+          request.params.configId,
           request.body.is_active,
         );
         return { success: true, data };
@@ -300,10 +300,10 @@ export default async function (fastify: FastifyInstance) {
   });
 
   fastify.patch<{
-    Params: { configGroupId: string };
+    Params: { configId: number };
     Body: UpdateFixedCreditConfigRequest;
     Reply: FixedCreditConfigMutationApiResponse;
-  }>("/fixed/:configGroupId", {
+  }>("/fixed/:configId", {
     preHandler: [requireAuth, requireRoles("manager")],
     schema: {
       body: UpdateFixedCreditConfigRequest,
@@ -327,7 +327,7 @@ export default async function (fastify: FastifyInstance) {
         }
         const data = await creditConfigService.updateFixedConfig(
           merchantId,
-          request.params.configGroupId,
+          request.params.configId,
           request.body,
         );
         return { success: true, data };
@@ -346,9 +346,9 @@ export default async function (fastify: FastifyInstance) {
   });
 
   fastify.delete<{
-    Params: { configGroupId: string };
+    Params: { configId: number };
     Reply: FixedCreditConfigDeleteApiResponse;
-  }>("/fixed/:configGroupId", {
+  }>("/fixed/:configId", {
     preHandler: [requireAuth, requireRoles("manager")],
     schema: {
       response: {
@@ -370,7 +370,7 @@ export default async function (fastify: FastifyInstance) {
         }
         await creditConfigService.deleteFixedConfig(
           merchantId,
-          request.params.configGroupId,
+          request.params.configId,
         );
         return { success: true, data: null };
       } catch (error) {
@@ -384,10 +384,10 @@ export default async function (fastify: FastifyInstance) {
   });
 
   fastify.patch<{
-    Params: { configGroupId: string };
+    Params: { configId: number };
     Body: ToggleActiveRequest;
     Reply: FixedCreditConfigMutationApiResponse;
-  }>("/fixed/:configGroupId/active", {
+  }>("/fixed/:configId/active", {
     preHandler: [requireAuth, requireRoles("manager")],
     schema: {
       body: ToggleActiveRequest,
@@ -410,7 +410,7 @@ export default async function (fastify: FastifyInstance) {
         }
         const data = await creditConfigService.toggleFixedConfigActive(
           merchantId,
-          request.params.configGroupId,
+          request.params.configId,
           request.body.is_active,
         );
         return { success: true, data };

@@ -39,6 +39,90 @@ export type Database = {
   }
   public: {
     Tables: {
+      branch_fixed_credit_config: {
+        Row: {
+          branch_id: number
+          created_at: string
+          deleted_at: string | null
+          fixed_credit_config_id: number
+          id: number
+          updated_at: string | null
+        }
+        Insert: {
+          branch_id: number
+          created_at?: string
+          deleted_at?: string | null
+          fixed_credit_config_id: number
+          id?: number
+          updated_at?: string | null
+        }
+        Update: {
+          branch_id?: number
+          created_at?: string
+          deleted_at?: string | null
+          fixed_credit_config_id?: number
+          id?: number
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "branch_fixed_credit_config_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "branch_fixed_credit_config_fixed_credit_config_id_fkey"
+            columns: ["fixed_credit_config_id"]
+            isOneToOne: false
+            referencedRelation: "fixed_credit_config"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      branch_running_credit_config: {
+        Row: {
+          branch_id: number
+          created_at: string
+          deleted_at: string | null
+          id: number
+          running_credit_config_id: number
+          updated_at: string | null
+        }
+        Insert: {
+          branch_id: number
+          created_at?: string
+          deleted_at?: string | null
+          id?: number
+          running_credit_config_id: number
+          updated_at?: string | null
+        }
+        Update: {
+          branch_id?: number
+          created_at?: string
+          deleted_at?: string | null
+          id?: number
+          running_credit_config_id?: number
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "branch_running_credit_config_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "branch_running_credit_config_running_credit_config_id_fkey"
+            columns: ["running_credit_config_id"]
+            isOneToOne: false
+            referencedRelation: "running_credit_config"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       branches: {
         Row: {
           address: string | null
@@ -267,6 +351,86 @@ export type Database = {
           },
         ]
       }
+      customer_discounts: {
+        Row: {
+          approved_at: string | null
+          approved_by_staff_id: number | null
+          branch_id: number
+          created_at: string
+          customer_id: number
+          deleted_at: string | null
+          description: string | null
+          expires_at: number | null
+          fixed_credit_config_id: number | null
+          id: number
+          redemption_code: number | null
+          requested_date: number
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by_staff_id?: number | null
+          branch_id: number
+          created_at?: string
+          customer_id: number
+          deleted_at?: string | null
+          description?: string | null
+          expires_at?: number | null
+          fixed_credit_config_id?: number | null
+          id?: number
+          redemption_code?: number | null
+          requested_date: number
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by_staff_id?: number | null
+          branch_id?: number
+          created_at?: string
+          customer_id?: number
+          deleted_at?: string | null
+          description?: string | null
+          expires_at?: number | null
+          fixed_credit_config_id?: number | null
+          id?: number
+          redemption_code?: number | null
+          requested_date?: number
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_coupons_approved_by_staff_id_fkey"
+            columns: ["approved_by_staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_coupons_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_coupons_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_coupons_fixed_credit_config_id_fkey"
+            columns: ["fixed_credit_config_id"]
+            isOneToOne: false
+            referencedRelation: "fixed_credit_config"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       customer_purchases: {
         Row: {
           amount: number
@@ -386,8 +550,6 @@ export type Database = {
       }
       fixed_credit_config: {
         Row: {
-          branch_id: number
-          config_group_id: string | null
           created_at: string
           deleted_at: string | null
           description: string | null
@@ -401,8 +563,6 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
-          branch_id: number
-          config_group_id?: string | null
           created_at?: string
           deleted_at?: string | null
           description?: string | null
@@ -416,8 +576,6 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
-          branch_id?: number
-          config_group_id?: string | null
           created_at?: string
           deleted_at?: string | null
           description?: string | null
@@ -430,15 +588,7 @@ export type Database = {
           title?: string | null
           updated_at?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "fixed_credit_config_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: false
-            referencedRelation: "branches"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       merchants: {
         Row: {
@@ -570,8 +720,6 @@ export type Database = {
       }
       running_credit_config: {
         Row: {
-          branch_id: number
-          config_group_id: string
           created_at: string
           credit_type: Database["public"]["Enums"]["credit_type"] | null
           credit_validity: number | null
@@ -589,8 +737,6 @@ export type Database = {
           updated_at: string | null
         }
         Insert: {
-          branch_id: number
-          config_group_id?: string
           created_at?: string
           credit_type?: Database["public"]["Enums"]["credit_type"] | null
           credit_validity?: number | null
@@ -608,8 +754,6 @@ export type Database = {
           updated_at?: string | null
         }
         Update: {
-          branch_id?: number
-          config_group_id?: string
           created_at?: string
           credit_type?: Database["public"]["Enums"]["credit_type"] | null
           credit_validity?: number | null
@@ -626,15 +770,7 @@ export type Database = {
           threshold_amount?: number | null
           updated_at?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "branch_credits_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: false
-            referencedRelation: "branches"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       sessions: {
         Row: {

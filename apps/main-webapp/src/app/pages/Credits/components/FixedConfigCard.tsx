@@ -17,7 +17,7 @@ import {
   DropdownMenuTrigger,
 } from "@store-credit-platform/web-components";
 import { creditConfigService } from "@store-credit-platform/api-services";
-import type { FixedCreditConfigGroup } from "@shared/types/api.types";
+import type { FixedCreditConfig } from "@shared/types/api.types";
 import { isApiError } from "@shared/utils/api.utils";
 import {
   errorToastProperties,
@@ -44,7 +44,7 @@ import {
 } from "./configCardStyles";
 
 interface FixedConfigCardProps {
-  config: FixedCreditConfigGroup;
+  config: FixedCreditConfig;
   isManager: boolean;
 }
 
@@ -60,7 +60,7 @@ export function FixedConfigCard({ config, isManager }: FixedConfigCardProps) {
   const deleteMutation = useMutation({
     mutationFn: async () => {
       const res = await creditConfigService.deleteFixedConfig(
-        config.config_group_id,
+        config.id,
       );
       if (isApiError(res)) throw new Error(res.error);
     },
@@ -78,7 +78,7 @@ export function FixedConfigCard({ config, isManager }: FixedConfigCardProps) {
   const toggleMutation = useMutation({
     mutationFn: async (isActive: boolean) => {
       const res = await creditConfigService.toggleFixedConfigActive(
-        config.config_group_id,
+        config.id,
         isActive,
       );
       if (isApiError(res)) throw new Error(res.error);

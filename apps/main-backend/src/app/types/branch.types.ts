@@ -51,8 +51,8 @@ export interface UpdateBranchRequest {
 }
 
 // Branch + its active running/fixed credit configs + nearest distance. Flat shape — branch
-// fields at top level, not nested under `branch.`. The frontend can group by config_group_id
-// to derive an offers-centric view.
+// fields at top level, not nested under `branch.`. Configs are sourced through the
+// branch_running_credit_config / branch_fixed_credit_config junctions.
 export type BranchWithOffers = BaseBranch & {
   merchant: BaseMerchant | null;
   running_configs: BaseRunningCreditConfig[];
