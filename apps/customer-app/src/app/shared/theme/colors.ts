@@ -81,6 +81,12 @@ export interface ColorTokens {
 
   /** Glass card fill (semi-transparent). */
   surface: string;
+  /**
+   * Frosted-white wash layered over a blur header to read whiter. Low alpha so
+   * it tints rather than hides the blur; in dark mode it's near-transparent so
+   * the dark frosted look is preserved.
+   */
+  glassWash: string;
   /** Recessed field fill (inputs sit slightly below the card). */
   surfaceInput: string;
   /** Glass hairline border. */
@@ -96,6 +102,14 @@ export interface ColorTokens {
    * recognisable through it.
    */
   scrim: string;
+  /**
+   * Bottom-anchored darkening over a brand-logo image on a card (explore
+   * BranchCard). Used as the bottom stop of a transparent → this gradient
+   * so bright/colorful logos don't read loud against the card, and the
+   * transition into the bottom glass footer is continuous (no hard line).
+   * Subtle alpha — the logo stays visible, just grounded.
+   */
+  imageScrim: string;
 
   /** Primary text. */
   text: string;
@@ -195,6 +209,9 @@ export const lightColors: ColorTokens = {
   // hairlines at 10% keep the brand hue present in card edges without
   // making the borders visually heavy.
   surface: "#ffffff",
+  // Frosted-white wash over the home header blur — white at 32% tints the
+  // frosted glass whiter without hiding the content scrolling underneath.
+  glassWash: "rgba(255,255,255,0.32)",
   surfaceInput: "rgba(15,23,42,0.04)",
   surfaceBorder: "rgba(137, 2, 62, 0.15)",
   surfacePill: "rgba(137, 2, 62, 0.06)",
@@ -202,6 +219,7 @@ export const lightColors: ColorTokens = {
   // Slate ink at 45% — dims the photo enough for a white spinner to
   // pop while keeping the image recognisable underneath.
   scrim: "rgba(15,23,42,0.45)",
+  imageScrim: "rgba(15,23,42,0.58)",
 
   // Slate ink — body copy stays legible at all sizes.
   text: "#0f172a",
@@ -234,70 +252,76 @@ export const lightColors: ColorTokens = {
 };
 
 export const darkColors: ColorTokens = {
-  primary: "#F472B6",
-  primaryActive: "#EC4899",
-  // Soft pink fill on dark — a low-alpha lifted berry so the soft CTA
-  // reads against the slate-gradient backdrop without competing with
-  // the pink text on `primary`.
-  primarySurface: "rgba(178, 58, 106, 0.30)",
+  // Branded slate — slate-950 with a faint plum tint, only ~1.5 lightness
+  // steps above the backdrop. The brand is felt rather than shown: CTAs,
+  // hero, and tab bar read as elevated dark surfaces (by lightness, not
+  // hue), with white text carrying the contrast. Near-monochrome dark
+  // mode. Dark enough (#3D3142) that white text passes ~10:1, and as a
+  // label/icon on the white hero + tab pills it reads at ~12.5:1.
+  primary: "#3D3142",
+  primaryActive: "#322A37",
+  primarySurface: "rgba(61, 49, 66, 0.28)",
 
-  // Dark hero card — the same lifted berry that anchors the active tab
-  // pill. Single brand color on dark: #B23A6A reads cleanly against the
-  // slate gradient backdrop without needing a parallel warm tone.
-  heroSurface: "#B23A6A",
-  heroSurfaceCta: "#B23A6A",
+  heroSurface: "#3D3142",
+  heroSurfaceCta: "#3D3142",
 
-  // Dark active tab pill — the lifted berry that anchors the dark mode
-  // brand surfaces.
-  pillSurface: "#B23A6A",
-  // Dark soft CTA surface — a low-alpha lifted berry that reads on the
-  // slate gradient without competing with the brand text colour.
-  mainSurface: "rgba(178, 58, 106, 0.30)",
-  // Dark idle icons — white at 50% on the lifted berry bar.
-  tabIdleIcon: "rgba(255,255,255,0.50)",
+  pillSurface: "#3D3142",
+  mainSurface: "rgba(61, 49, 66, 0.28)",
+  // White at 55% on the dark-slate bar — base ~10:1, so idle icons stay
+  // readable without competing with the white active-pill label.
+  tabIdleIcon: "rgba(255,255,255,0.55)",
 
-  // Canonical dark brand look — slate gradient backdrop + white text +
-  // flat translucent surfaces (the canvas itself does the heavy lifting;
-  // cards read against it).
-  backgroundStart: "#334155",
-  backgroundEnd: "#0f172a",
-  backgroundSolid: "#0f172a",
+  // Slate-900 → slate-950 gradient — genuinely dark (the old slate-700
+  // start read as a mid-gray). Near-black at the bottom keeps cards and
+  // the tab bar clearly elevated without a harsh pure-black top.
+  backgroundStart: "#0f172a",
+  backgroundEnd: "#020617",
+  backgroundSolid: "#020617",
 
-  surface: "rgba(255,255,255,0.08)",
-  surfaceInput: "rgba(255,255,255,0.06)",
-  surfaceBorder: "rgba(255,255,255,0.14)",
-  surfacePill: "rgba(178, 58, 106, 0.14)",
-  surfacePillBorder: "rgba(178, 58, 106, 0.22)",
-  // Black at 55% — darker than light mode so the spinner reads against
-  // the slate-gradient backdrop as well as over a photo.
-  scrim: "rgba(0,0,0,0.55)",
+  // Flat translucent white layers — modern dark surfaces are low-alpha
+  // white over the backdrop, not solid fills. Borders stay subtle
+  // (white 10%) so cards separate by shadow + hairline, not heavy edges.
+  surface: "rgba(255,255,255,0.05)",
+  glassWash: "rgba(255,255,255,0.03)",
+  surfaceInput: "rgba(255,255,255,0.04)",
+  surfaceBorder: "rgba(255,255,255,0.10)",
+  surfacePill: "rgba(61, 49, 66, 0.16)",
+  surfacePillBorder: "rgba(61, 49, 66, 0.28)",
+  // Heavier than light mode so the spinner reads over the dark backdrop
+  // as well as over a photo.
+  scrim: "rgba(0,0,0,0.65)",
+  imageScrim: "rgba(0,0,0,0.58)",
 
-  text: "#ffffff",
-  textSecondary: "rgba(255,255,255,0.70)",
-  textMuted: "rgba(255,255,255,0.55)",
-  textPlaceholder: "rgba(255,255,255,0.50)",
+  // Off-white primary text (pure white is harsh on slate-950). Muted
+  // tiers drop in alpha rather than shifting hue.
+  text: "#f5f5f6",
+  textSecondary: "rgba(255,255,255,0.72)",
+  textMuted: "rgba(255,255,255,0.52)",
+  textPlaceholder: "rgba(255,255,255,0.40)",
   textOnPrimary: "#ffffff",
 
-  error: "#fecaca",
-  errorSurface: "rgba(254,202,202,0.15)",
+  // Solid semantic colors, not pastel — red-400 / amber-400 / emerald-400
+  // read cleanly on slate-950 without looking washed out.
+  error: "#f87171",
+  errorSurface: "rgba(248,113,113,0.12)",
   badge: "#ef4444",
   onBadge: "#ffffff",
-  warning: "#fcd34d",
-  warningSurface: "rgba(251,191,36,0.15)",
-  warningBorder: "rgba(251,191,36,0.40)",
+  warning: "#fbbf24",
+  warningSurface: "rgba(251,191,36,0.14)",
+  warningBorder: "rgba(251,191,36,0.36)",
 
-  // Mint green — pops on the blue gradient while staying semantically
-  // distinct from the brand blue.
-  success: "#86efac",
-  successSurface: "rgba(134,239,172,0.15)",
+  success: "#34d399",
+  successSurface: "rgba(52,211,153,0.14)",
 
-  // Deep midnight — pairs with the blue gradient (sits above it).
-  sheet: "#0f172a",
-  sheetText: "#f8fafc",
-  sheetTextMuted: "#cbd5e1",
-  sheetInput: "rgba(255,255,255,0.08)",
-  sheetSeparator: "rgba(255,255,255,0.10)",
+  // Slate-800 sheet — a clear elevated layer above the slate-950 backdrop,
+  // paired with low-alpha white separators.
+  sheet: "#1e293b",
+  sheetText: "#f5f5f6",
+  sheetTextMuted: "rgba(255,255,255,0.55)",
+  sheetInput: "rgba(255,255,255,0.06)",
+  sheetSeparator: "rgba(255,255,255,0.08)",
 
+  // Slate-900 tab bar — subtle lift above the gradient bottom.
   navCard: "#0f172a",
-  navBorder: "rgba(255,255,255,0.14)",
+  navBorder: "rgba(255,255,255,0.10)",
 };

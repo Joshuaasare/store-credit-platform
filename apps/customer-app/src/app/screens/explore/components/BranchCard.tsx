@@ -9,15 +9,67 @@ import {
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { BlurView } from "expo-blur";
+import { Ionicons } from "@expo/vector-icons";
 import type { BranchWithOffers } from "@store-credit-platform/api-services";
 import { pickAvatarGradient } from "../../../shared/utils/avatarPalette";
+import {
+  DRIVE_KMH,
+  WALK_KMH,
+  formatDistance,
+  formatTravel,
+  travelMinutes,
+} from "../../../shared/utils/travel.utils";
 import { useThemeTokens } from "../../../shared/theme/ThemeContext";
 
-function formatDistance(km: number | null): string {
-  if (km == null) return "—";
-  if (km < 1) return `${km.toFixed(1)} km`;
-  if (km < 10) return `${km.toFixed(1)} km`;
-  return `${Math.round(km)} km`;
+// Solid surface pill carrying one offer count. The semantic accent (amber for
+// discount, green for cashback) is carried by the border + filled icon + bold
+// label together, so the type reads at a glance — not just from a tiny label.
+function OfferPill({
+  icon,
+  accent,
+  count,
+  label,
+}: {
+  icon: keyof typeof Ionicons.glyphMap;
+  accent: string;
+  count: number;
+  label: string;
+}) {
+  const theme = useThemeTokens();
+  return (
+    <View
+      style={[
+        styles.offerPill,
+        {
+          borderRadius: theme.radii.pill,
+          backgroundColor: theme.colors.surface,
+          borderColor: accent,
+        },
+      ]}
+    >
+      <Ionicons name={icon} size={16} color={accent} />
+      <Text
+        style={{
+          color: theme.colors.text,
+          fontFamily: theme.typography.fontFamilyBold,
+          fontSize: 15,
+        }}
+      >
+        {count}
+      </Text>
+      <Text
+        style={{
+          color: accent,
+          fontFamily: theme.typography.fontFamilyBold,
+          fontSize: 10.5,
+          letterSpacing: 0.6,
+          textTransform: "uppercase",
+        }}
+      >
+        {label}
+      </Text>
+    </View>
+  );
 }
 
 export default function BranchCard({
@@ -34,15 +86,21 @@ export default function BranchCard({
   const [gradientStart, gradientEnd] = pickAvatarGradient(merchantName);
   const placeText = branch.place_label ?? branch.city ?? "Unknown place";
   const branchName = branch.name ?? branch.city ?? "Branch";
-  const offerCount =
-    branch.running_configs.length + branch.fixed_configs.length;
+  // fixed_configs = promotional/time-bound = discount; running_configs =
+  // ongoing earn-credit-back = cashback.
+  const discountCount = branch.fixed_configs.length;
+  const cashbackCount = branch.running_configs.length;
+  const walkMin = travelMinutes(branch.distance_km, WALK_KMH);
+  const driveMin = travelMinutes(branch.distance_km, DRIVE_KMH);
 
   return (
     <Pressable
       onPress={onPress}
       style={style}
       accessibilityRole="button"
-      accessibilityLabel={`${merchantName} at ${branch.name ?? branch.city}`}
+      accessibilityLabel={`${merchantName} at ${branch.name ?? branch.city}${
+        walkMin != null ? `, ${formatTravel(walkMin)} walk` : ""
+      }${driveMin != null ? `, ${formatTravel(driveMin)} drive` : ""}, ${cashbackCount} cashback, ${discountCount} discount offers`}
     >
       <View
         style={[
@@ -54,13 +112,22 @@ export default function BranchCard({
         ]}
       >
         {branch.merchant?.logo_url ? (
-          <Image
-            source={{ uri: branch.merchant!.logo_url! }}
-            style={[StyleSheet.absoluteFill, { borderRadius: theme.radii.lg }]}
-            contentFit="cover"
-            transition={150}
-            accessibilityIgnoresInvertColors
-          />
+          <>
+            <Image
+              source={{ uri: branch.merchant!.logo_url! }}
+              style={[StyleSheet.absoluteFill, { borderRadius: theme.radii.lg }]}
+              contentFit="cover"
+              transition={150}
+              accessibilityIgnoresInvertColors
+            />
+            <LinearGradient
+              colors={["transparent", theme.colors.imageScrim]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 0, y: 1 }}
+              style={[StyleSheet.absoluteFill, { borderRadius: theme.radii.lg }]}
+              pointerEvents="none"
+            />
+          </>
         ) : (
           <LinearGradient
             colors={[gradientStart, gradientEnd]}
@@ -106,45 +173,66 @@ export default function BranchCard({
                     : `${branchName} • ${placeText}`}
                 </Text>
               </View>
+
+              <View style={styles.offerPillsCol} pointerEvents="none">
+                {discountCount > 0 ? (
+                  <OfferPill
+                    icon="gift-outline"
+                    accent={theme.colors.warning}
+                    count={discountCount}
+                    label={discountCount === 1 ? "discount" : "discounts"}
+                  />
+                ) : null}
+                {cashbackCount > 0 ? (
+                  <OfferPill
+                    icon="cash"
+                    accent={theme.colors.success}
+                    count={cashbackCount}
+                    label="cashback"
+                  />
+                ) : null}
+              </View>
             </View>
           </BlurView>
         </View>
       </View>
 
-      <Text
-        numberOfLines={1}
-        style={{
-          color: theme.colors.textMuted,
-          fontFamily: theme.typography.fontFamilyRegular,
-          fontSize: 12,
-          marginTop: 8,
-        }}
-      >
-        Distance: {formatDistance(branch.distance_km)}
-      </Text>
-      <View style={styles.offersRow}>
-        <Text
-          style={{
-            color: theme.colors.primary,
-            fontSize: 16,
-            marginRight: 6,
-          }}
-        >
-          🎁
-        </Text>
-        <Text
-          numberOfLines={1}
-          style={{
-            color: theme.colors.text,
-            fontWeight: "600",
-            fontSize: 14,
-          }}
-        >
-          {offerCount}{" "}
-          {offerCount === 1
-            ? "discount and cashback offer available"
-            : "discount and cashback offers available"}
-        </Text>
+      <View style={styles.travelRow}>
+        <View style={styles.travelChip}>
+          <Ionicons name="walk" size={14} color={theme.colors.textMuted} />
+          <Text
+            style={{
+              color: theme.colors.text,
+              fontFamily: theme.typography.fontFamilySemiBold,
+              fontSize: 12,
+            }}
+          >
+            {walkMin != null ? formatTravel(walkMin) : "—"}
+          </Text>
+        </View>
+        <View style={styles.travelChip}>
+          <Ionicons name="car" size={14} color={theme.colors.textMuted} />
+          <Text
+            style={{
+              color: theme.colors.text,
+              fontFamily: theme.typography.fontFamilySemiBold,
+              fontSize: 12,
+            }}
+          >
+            {driveMin != null ? formatTravel(driveMin) : "—"}
+          </Text>
+        </View>
+        {branch.distance_km != null ? (
+          <Text
+            style={{
+              color: theme.colors.textMuted,
+              fontFamily: theme.typography.fontFamilyRegular,
+              fontSize: 12,
+            }}
+          >
+            · {formatDistance(branch.distance_km)}
+          </Text>
+        ) : null}
       </View>
     </Pressable>
   );
@@ -155,6 +243,14 @@ const styles = StyleSheet.create({
     width: "100%",
     aspectRatio: 16 / 10,
     overflow: "hidden",
+  },
+  offerPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderWidth: 1,
   },
   glassWrap: {
     position: "absolute",
@@ -179,23 +275,19 @@ const styles = StyleSheet.create({
   glassText: {
     flex: 1,
   },
-  arrowButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    alignItems: "center",
-    justifyContent: "center",
+  offerPillsCol: {
+    alignItems: "flex-end",
+    gap: 6,
   },
-  offersRow: {
+  travelRow: {
     flexDirection: "row",
     alignItems: "center",
-    marginTop: 4,
-  },
-  categoryChip: {
-    alignSelf: "flex-start",
-    paddingHorizontal: 8,
-    paddingVertical: 3,
+    gap: 12,
     marginTop: 8,
-    borderWidth: StyleSheet.hairlineWidth,
+  },
+  travelChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
   },
 });

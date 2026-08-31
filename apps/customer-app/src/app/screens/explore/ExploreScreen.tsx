@@ -11,6 +11,8 @@ import {
 import { BlurView } from "expo-blur";
 import { Ionicons } from "@expo/vector-icons";
 import { useInfiniteQuery } from "@tanstack/react-query";
+import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
+import { useNavigation } from "@react-navigation/native";
 import type {
   BranchCategoryValues,
   BranchWithOffers,
@@ -22,6 +24,7 @@ import { useAuthStore } from "../../shared/store/useAuthStore";
 import { customerBranchService } from "../../api/client";
 import { useOffsets } from "../../shared/hooks/useOffsets";
 import { useTheme, useThemeTokens } from "../../shared/theme/ThemeContext";
+import type { AppStackParamList } from "../../navigation/RootNavigator";
 import LocationModal from "./components/LocationModal";
 import CategoryFilterModal, {
   CATEGORY_LABELS,
@@ -45,6 +48,8 @@ export function ExploreScreen() {
   const { resolvedMode } = useTheme();
   const user = useAuthStore((s) => s.user);
   const { tabBarOffset } = useOffsets();
+  const stackNavigation =
+    useNavigation<NativeStackNavigationProp<AppStackParamList>>();
 
   const [searchMode, setSearchMode] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -161,7 +166,6 @@ export function ExploreScreen() {
                 backgroundColor: theme.colors.surface,
                 borderColor: theme.colors.surfaceBorder,
                 borderRadius: theme.radii.pill,
-                opacity: 0.9,
               },
             ]}
             accessibilityRole="button"
@@ -178,7 +182,7 @@ export function ExploreScreen() {
                 marginLeft: 8,
               }}
             >
-              Search branches
+              Search brands and deals
             </Text>
           </Pressable>
           <Pressable
@@ -321,7 +325,14 @@ export function ExploreScreen() {
               item.type === "header" ? (
                 renderSearchArea()
               ) : (
-                <BranchCard branch={item.branch} />
+                <BranchCard
+                  branch={item.branch}
+                  onPress={() =>
+                    stackNavigation.navigate("BranchOffersDetail", {
+                      branch: item.branch,
+                    })
+                  }
+                />
               )
             }
             stickyHeaderIndices={[0]}
@@ -332,6 +343,7 @@ export function ExploreScreen() {
                 <View style={{ height: 20 }} />
               )
             }
+            stickyHeaderHiddenOnScroll
             ListFooterComponent={
               activeQuery.isFetchingNextPage ? (
                 <View style={styles.footerLoader}>
