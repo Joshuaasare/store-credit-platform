@@ -7861,6 +7861,16 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@react-native-masked-view/masked-view@npm:^0.3.2":
+  version: 0.3.2
+  resolution: "@react-native-masked-view/masked-view@npm:0.3.2"
+  peerDependencies:
+    react: ">=16"
+    react-native: ">=0.57"
+  checksum: 10c0/4ec84b7af2ded49dc21f17cc723a0ef341076cbe40cf758dd2daff8734bea63ba83e2fee7e63958984385314b8915b6804135997e07697abdd4141217c847fe9
+  languageName: node
+  linkType: hard
+
 "@react-native/assets-registry@npm:0.83.0":
   version: 0.83.0
   resolution: "@react-native/assets-registry@npm:0.83.0"
@@ -9342,6 +9352,7 @@ __metadata:
     "@expo/vector-icons": "npm:^14.1.0"
     "@hookform/resolvers": "npm:^5.2.2"
     "@react-native-async-storage/async-storage": "npm:2.2.0"
+    "@react-native-masked-view/masked-view": "npm:^0.3.2"
     "@react-navigation/bottom-tabs": "npm:^7.4.16"
     "@react-navigation/drawer": "npm:^7.9.8"
     "@react-navigation/native": "npm:^7.2.2"

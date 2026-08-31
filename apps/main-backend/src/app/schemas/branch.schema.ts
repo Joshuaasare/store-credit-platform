@@ -48,6 +48,10 @@ Type.Null()
 category: Type.Optional(Type.Union([
 BranchCategoryValues,
 Type.Null()
+])),
+purchase_threshold_amount: Type.Optional(Type.Union([
+Type.Number(),
+Type.Null()
 ]))
 })
 
@@ -72,6 +76,10 @@ Type.Null()
 ])),
 category: Type.Optional(Type.Union([
 BranchCategoryValues,
+Type.Null()
+])),
+purchase_threshold_amount: Type.Optional(Type.Union([
+Type.Number(),
 Type.Null()
 ]))
 })

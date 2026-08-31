@@ -74,6 +74,11 @@ const branchSchema = z.object({
     ])
     .nullable()
     .optional(),
+  purchase_threshold_amount: z
+    .number()
+    .min(0.01, "Minimum entry must be greater than zero")
+    .nullable()
+    .optional(),
 });
 
 type BranchFormValues = z.infer<typeof branchSchema>;
@@ -114,6 +119,7 @@ export function BranchEditDialog({
       longitude: null,
       place_id: null,
       category: null,
+      purchase_threshold_amount: null,
     },
   });
 
@@ -129,6 +135,7 @@ export function BranchEditDialog({
         longitude: branch?.longitude ?? null,
         place_id: branch?.place_id ?? null,
         category: branch?.category ?? null,
+        purchase_threshold_amount: branch?.purchase_threshold_amount ?? null,
       });
     }
   }, [open, branch, reset]);
@@ -160,6 +167,7 @@ export function BranchEditDialog({
           longitude: location.longitude,
           place_id: location.place_id,
           category: values.category === "__none" ? null : values.category ?? null,
+          purchase_threshold_amount: values.purchase_threshold_amount ?? null,
         });
         toast.success("Branch updated", successToastProperties);
       } else {
@@ -173,6 +181,7 @@ export function BranchEditDialog({
           longitude: location.longitude,
           place_id: location.place_id,
           category: values.category === "__none" ? null : values.category ?? null,
+          purchase_threshold_amount: values.purchase_threshold_amount ?? null,
         });
         toast.success("Branch added", successToastProperties);
       }
@@ -316,6 +325,32 @@ export function BranchEditDialog({
                 </Select>
               )}
             />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="branch-purchase-threshold">
+              Minimum purchase to earn rewards (GH₵)
+            </Label>
+            <Input
+              id="branch-purchase-threshold"
+              type="number"
+              step="0.01"
+              min="0.01"
+              placeholder="Optional — e.g. 20.00"
+              {...register("purchase_threshold_amount", {
+                setValueAs: (v: unknown) =>
+                  v === "" || v == null ? null : Number(v),
+              })}
+            />
+            <p className="text-xs text-muted-foreground">
+              Purchases below this amount won&apos;t be recorded at this branch.
+              Leave blank to record every purchase.
+            </p>
+            {errors.purchase_threshold_amount && (
+              <p className="text-destructive text-xs">
+                {errors.purchase_threshold_amount.message}
+              </p>
+            )}
           </div>
 
           <DialogFooter>

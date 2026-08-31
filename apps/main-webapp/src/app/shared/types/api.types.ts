@@ -1,6 +1,6 @@
 /**
  * Auto-generated API Types
- * Generated on: 2026-08-28T10:42:07.921Z
+ * Generated on: 2026-08-29T13:45:25.430Z
  * 
  * ⚠️ DO NOT EDIT MANUALLY
  * Source: apps/smartschool-api/src/app/types/
@@ -78,6 +78,7 @@ export interface BaseBranch {
   place_id: string | null;
   place_label: string | null;
   category: BranchCategoryValues | null;
+  purchase_threshold_amount: number | null;
 }
 
 export interface ApiErrorResponse {
@@ -473,6 +474,7 @@ export interface CreateBranchRequest {
   longitude?: number | null;
   place_id?: string | null;
   category?: BranchCategoryValues | null;
+  purchase_threshold_amount?: number | null;
 }
 
 export interface UpdateBranchRequest {
@@ -485,6 +487,7 @@ export interface UpdateBranchRequest {
   longitude?: number | null;
   place_id?: string | null;
   category?: BranchCategoryValues | null;
+  purchase_threshold_amount?: number | null;
 }
 
 export type BranchWithOffers = BaseBranch & {

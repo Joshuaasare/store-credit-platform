@@ -116,6 +116,10 @@ Type.Null()
 category: Type.Union([
 BranchCategoryValues,
 Type.Null()
+]),
+purchase_threshold_amount: Type.Union([
+Type.Number(),
+Type.Null()
 ])
 })
 

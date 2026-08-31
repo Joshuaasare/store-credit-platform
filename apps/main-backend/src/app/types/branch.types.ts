@@ -34,6 +34,7 @@ export interface CreateBranchRequest {
   longitude?: number | null;
   place_id?: string | null;
   category?: BranchCategoryValues | null;
+  purchase_threshold_amount?: number | null;
 }
 
 export interface UpdateBranchRequest {
@@ -46,6 +47,7 @@ export interface UpdateBranchRequest {
   longitude?: number | null;
   place_id?: string | null;
   category?: BranchCategoryValues | null;
+  purchase_threshold_amount?: number | null;
 }
 
 // Branch + its active running/fixed credit configs + nearest distance. Flat shape — branch

@@ -67,6 +67,7 @@ export function AddPurchaseDialog({
     handleSubmit,
     control,
     reset,
+    watch,
     formState: { errors },
   } = useForm<PurchaseFormValues>({
     resolver: zodResolver(purchaseSchema),
@@ -82,6 +83,11 @@ export function AddPurchaseDialog({
       reset({ phone: "", amount: NaN, branchId: userBranchId });
     }
   }, [open, reset, userBranchId]);
+
+  const selectedBranchId = watch("branchId");
+  const selectedBranch =
+    branches.find((b) => b.id === selectedBranchId) ?? null;
+  const entryThreshold = selectedBranch?.purchase_threshold_amount ?? null;
 
   const mutation = useMutation({
     mutationFn: async (values: PurchaseFormValues) => {
@@ -107,6 +113,13 @@ export function AddPurchaseDialog({
   });
 
   const onSubmit = (values: PurchaseFormValues) => {
+    if (entryThreshold != null && values.amount < entryThreshold) {
+      toast.error(
+        `Amount is below ${selectedBranch?.name?.trim() || "this branch"}'s minimum entry of GH₵${entryThreshold.toFixed(2)}`,
+        errorToastProperties,
+      );
+      return;
+    }
     mutation.mutate(values);
   };
 
@@ -159,6 +172,16 @@ export function AddPurchaseDialog({
                 {errors.branchId.message}
               </p>
             )}
+            {entryThreshold != null ? (
+              <p className="text-xs text-muted-foreground">
+                Min. entry for{" "}
+                {selectedBranch?.name?.trim() || "this branch"}:{" "}
+                <span className="font-medium text-foreground">
+                  GH₵{entryThreshold.toFixed(2)}
+                </span>
+                . Purchases below this won&apos;t be recorded.
+              </p>
+            ) : null}
           </div>
 
           <div className="space-y-1.5">

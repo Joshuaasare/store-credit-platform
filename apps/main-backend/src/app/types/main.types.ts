@@ -56,6 +56,7 @@ export interface BaseBranch {
   place_id: string | null;
   place_label: string | null;
   category: BranchCategoryValues | null;
+  purchase_threshold_amount: number | null;
 }
 
 export interface ApiErrorResponse {

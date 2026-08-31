@@ -15,12 +15,8 @@ const configured = Constants.expoConfig?.extra?.apiBaseUrl as
   | string
   | undefined;
 
-export const API_BASE_URL =
-  publicEnv && publicEnv.length > 0
-    ? publicEnv
-    : configured && configured.length > 0
-      ? configured
-      : DEV_API_BASE_URL;
+export const API_BASE_URL = DEV_API_BASE_URL;
+// export const API_BASE_URL = publicEnv ?? configured ?? DEV_API_BASE_URL;
 
 export const SECURE_STORE_KEYS = {
   REFRESH_TOKEN: "customer-app.refresh-token",

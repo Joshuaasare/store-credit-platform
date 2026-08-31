@@ -109,7 +109,8 @@ alter table public.branches
   add column if not exists longitude double precision,
   add column if not exists place_id text,
   add column if not exists place_text text,
-  add column if not exists category public.branch_category;
+  add column if not exists category public.branch_category,
+  add column if not exists purchase_threshold_amount numeric;
 
 -- Why: latitude/longitude were numeric, but PostgREST returns numeric as a JSON
 -- string (arbitrary-precision preservation) while the API schema and generated
