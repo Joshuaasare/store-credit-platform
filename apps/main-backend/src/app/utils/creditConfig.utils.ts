@@ -78,6 +78,23 @@ export function groupFixedRows(
     .sort((a, b) => (b.created_at > a.created_at ? 1 : -1));
 }
 
+// Bump an epoch-ms timestamp to 23:59:59.999 UTC of its calendar day. Fixed
+// config end_date is semantically "through the end of the expiry day" — callers
+// (webapp date picker) may pass midnight, so coerce here for forward defense.
+// Idempotent: an already-end-of-day value maps to itself.
+export function endOfDayUtcEpochMs(epochMs: number): number {
+  const d = new Date(epochMs);
+  return Date.UTC(
+    d.getUTCFullYear(),
+    d.getUTCMonth(),
+    d.getUTCDate(),
+    23,
+    59,
+    59,
+    999,
+  );
+}
+
 export function normalizeFixedValues(
   payload: CreateFixedCreditConfigRequest | UpdateFixedCreditConfigRequest,
 ) {
@@ -85,7 +102,8 @@ export function normalizeFixedValues(
     title: payload.title ?? null,
     description: payload.description ?? null,
     start_date: payload.start_date ?? null,
-    end_date: payload.end_date ?? null,
+    end_date:
+      payload.end_date != null ? endOfDayUtcEpochMs(payload.end_date) : null,
     terms: payload.terms ?? null,
   };
 }

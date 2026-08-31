@@ -110,6 +110,18 @@ export interface ColorTokens {
    * Subtle alpha — the logo stays visible, just grounded.
    */
   imageScrim: string;
+  /**
+   * Full-screen backdrop for the image viewer (lightbox). Opaque black in both
+   * themes — photos read best on pure black regardless of the app theme, and
+   * the viewer is a momentary full-screen layer, not a themed surface.
+   */
+  imageViewerBackdrop: string;
+  /**
+   * Translucent chrome (close-button background) inside the image viewer.
+   * Black at low alpha so the close affordance reads over any photo without
+   * competing with it.
+   */
+  imageViewerChrome: string;
 
   /** Primary text. */
   text: string;
@@ -219,7 +231,9 @@ export const lightColors: ColorTokens = {
   // Slate ink at 45% — dims the photo enough for a white spinner to
   // pop while keeping the image recognisable underneath.
   scrim: "rgba(15,23,42,0.45)",
-  imageScrim: "rgba(15,23,42,0.58)",
+  imageScrim: "rgba(15,23,42,0.20)",
+  imageViewerBackdrop: "#000000",
+  imageViewerChrome: "rgba(0,0,0,0.5)",
 
   // Slate ink — body copy stays legible at all sizes.
   text: "#0f172a",
@@ -291,6 +305,8 @@ export const darkColors: ColorTokens = {
   // as well as over a photo.
   scrim: "rgba(0,0,0,0.65)",
   imageScrim: "rgba(0,0,0,0.58)",
+  imageViewerBackdrop: "#000000",
+  imageViewerChrome: "rgba(0,0,0,0.5)",
 
   // Off-white primary text (pure white is harsh on slate-950). Muted
   // tiers drop in alpha rather than shifting hue.

@@ -1,5 +1,7 @@
 import { useMemo, useState } from "react";
 import {
+  Linking,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -12,7 +14,10 @@ import {
   useRoute,
   type RouteProp,
 } from "@react-navigation/native";
-import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import type {
@@ -22,6 +27,7 @@ import type {
 } from "@store-credit-platform/api-services";
 import ScreenBackground from "../../shared/components/ScreenBackground";
 import MerchantAvatar from "../../shared/components/MerchantAvatar";
+import { ImageLightbox } from "../../shared/components/ImageLightbox";
 import MerchantTabSwitcher from "../credits/components/MerchantTabSwitcher";
 import { useThemeTokens } from "../../shared/theme/ThemeContext";
 import { formatGhs } from "../../shared/utils/formatGhs";
@@ -38,8 +44,7 @@ import type { AppStackParamList } from "../../navigation/RootNavigator";
 type OfferTab = "discounts" | "cashback";
 
 export function BranchOffersDetailScreen() {
-  const route =
-    useRoute<RouteProp<AppStackParamList, "BranchOffersDetail">>();
+  const route = useRoute<RouteProp<AppStackParamList, "BranchOffersDetail">>();
   const branch = route.params.branch;
   const navigation =
     useNavigation<NativeStackNavigationProp<AppStackParamList>>();
@@ -68,6 +73,25 @@ export function BranchOffersDetailScreen() {
   const walkMin = travelMinutes(branch.distance_km, WALK_KMH);
   const driveMin = travelMinutes(branch.distance_km, DRIVE_KMH);
   const entryThreshold = branch.purchase_threshold_amount ?? null;
+
+  const hasCoords =
+    branch.latitude != null && branch.longitude != null;
+  const openInMaps = () => {
+    if (!hasCoords) return;
+    // Universal Google Maps URL — opens the native app on Android, the GM app
+    // or web on iOS. No API key needed for a search-by-coords link.
+    const url = `https://www.google.com/maps/search/?api=1&query=${branch.latitude},${branch.longitude}`;
+    void Linking.openURL(url);
+  };
+
+  const [viewer, setViewer] = useState<{
+    images: string[];
+    start: number;
+  } | null>(null);
+  const openViewer = (images: string[] | null, index: number) => {
+    if (!images || images.length === 0) return;
+    setViewer({ images, start: Math.min(index, images.length - 1) });
+  };
 
   const tabOptions = useMemo<{ value: OfferTab; label: string }[]>(
     () => [
@@ -135,7 +159,11 @@ export function BranchOffersDetailScreen() {
           </View>
 
           <View style={styles.travelRow}>
-            <Ionicons name="walk" size={13} color={theme.colors.textOnPrimary} />
+            <Ionicons
+              name="walk"
+              size={13}
+              color={theme.colors.textOnPrimary}
+            />
             <Text
               style={{
                 color: theme.colors.textOnPrimary,
@@ -175,6 +203,38 @@ export function BranchOffersDetailScreen() {
               >
                 · {formatDistance(branch.distance_km)}
               </Text>
+            ) : null}
+            {hasCoords ? (
+              <TouchableOpacity
+                onPress={openInMaps}
+                accessibilityRole="button"
+                accessibilityLabel="Open branch location in Google Maps"
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                style={[
+                  styles.directionsPill,
+                  {
+                    borderRadius: theme.radii.pill,
+                    borderColor: theme.colors.textOnPrimary,
+                  },
+                ]}
+              >
+                <Ionicons
+                  name="navigate"
+                  size={12}
+                  color={theme.colors.textOnPrimary}
+                />
+                <Text
+                  style={{
+                    color: theme.colors.textOnPrimary,
+                    fontFamily: theme.typography.fontFamilySemiBold,
+                    fontSize: 11,
+                    letterSpacing: 0.3,
+                    textTransform: "uppercase",
+                  }}
+                >
+                  Directions
+                </Text>
+              </TouchableOpacity>
             ) : null}
           </View>
 
@@ -221,7 +281,11 @@ export function BranchOffersDetailScreen() {
             discountOffers.length > 0 ? (
               <View style={styles.list}>
                 {discountOffers.map((c) => (
-                  <DiscountOfferCard key={`fixed-${c.id}`} config={c} />
+                  <DiscountOfferCard
+                    key={`fixed-${c.id}`}
+                    config={c}
+                    onImagePress={(i) => openViewer(c.images, i)}
+                  />
                 ))}
               </View>
             ) : (
@@ -233,7 +297,11 @@ export function BranchOffersDetailScreen() {
           ) : cashbackConfigs.length > 0 ? (
             <View style={styles.list}>
               {cashbackConfigs.map((c) => (
-                <CashbackConfigCard key={`running-${c.id}`} config={c} />
+                <CashbackConfigCard
+                  key={`running-${c.id}`}
+                  config={c}
+                  onImagePress={(i) => openViewer(c.images, i)}
+                />
               ))}
             </View>
           ) : (
@@ -244,17 +312,27 @@ export function BranchOffersDetailScreen() {
           )}
         </ScrollView>
       </View>
+
+      <ImageLightbox
+        images={viewer?.images ?? []}
+        visible={viewer != null}
+        startIndex={viewer?.start ?? 0}
+        onDismiss={() => setViewer(null)}
+      />
     </ScreenBackground>
   );
 }
 
-function DiscountOfferCard({ config }: { config: BaseFixedCreditConfig }) {
+function DiscountOfferCard({
+  config,
+  onImagePress,
+}: {
+  config: BaseFixedCreditConfig;
+  onImagePress: (index: number) => void;
+}) {
   const theme = useThemeTokens();
   const title = config.title ?? "Discount offer";
-  const dateRange = formatFixedDateRange(
-    config.start_date,
-    config.end_date,
-  );
+  const dateRange = formatFixedDateRange(config.start_date, config.end_date);
 
   return (
     <View
@@ -272,7 +350,9 @@ function DiscountOfferCard({ config }: { config: BaseFixedCreditConfig }) {
           name="pricetags-outline"
           size={16}
           color={theme.colors.warning}
+          style={{ paddingTop: 2 }}
         />
+
         <Text
           numberOfLines={2}
           style={{
@@ -280,6 +360,7 @@ function DiscountOfferCard({ config }: { config: BaseFixedCreditConfig }) {
             color: theme.colors.text,
             fontFamily: theme.typography.fontFamilySemiBold,
             fontSize: 16,
+            lineHeight: 21,
           }}
         >
           {title}
@@ -321,12 +402,18 @@ function DiscountOfferCard({ config }: { config: BaseFixedCreditConfig }) {
 
       {config.terms ? <Terms terms={config.terms} /> : null}
 
-      <ImagesRow images={config.images} />
+      <ImagesRow images={config.images} onImagePress={onImagePress} />
     </View>
   );
 }
 
-function CashbackConfigCard({ config }: { config: BaseRunningCreditConfig }) {
+function CashbackConfigCard({
+  config,
+  onImagePress,
+}: {
+  config: BaseRunningCreditConfig;
+  onImagePress: (index: number) => void;
+}) {
   const theme = useThemeTokens();
   const headline = cashbackHeadline(config);
   const metaLine = cashbackMeta(config);
@@ -343,7 +430,12 @@ function CashbackConfigCard({ config }: { config: BaseRunningCreditConfig }) {
       ]}
     >
       <View style={styles.cardTitleRow}>
-        <Ionicons name="cash-outline" size={16} color={theme.colors.success} />
+        <Ionicons
+          name="cash-outline"
+          size={16}
+          color={theme.colors.success}
+          style={{ paddingTop: 2 }}
+        />
         <Text
           numberOfLines={3}
           style={{
@@ -373,7 +465,7 @@ function CashbackConfigCard({ config }: { config: BaseRunningCreditConfig }) {
 
       {config.terms ? <Terms terms={config.terms} /> : null}
 
-      <ImagesRow images={config.images} />
+      <ImagesRow images={config.images} onImagePress={onImagePress} />
     </View>
   );
 }
@@ -410,7 +502,13 @@ function Terms({ terms }: { terms: string }) {
   );
 }
 
-function ImagesRow({ images }: { images: string[] | null }) {
+function ImagesRow({
+  images,
+  onImagePress,
+}: {
+  images: string[] | null;
+  onImagePress: (index: number) => void;
+}) {
   const theme = useThemeTokens();
   if (!images || images.length === 0) return null;
   return (
@@ -421,14 +519,20 @@ function ImagesRow({ images }: { images: string[] | null }) {
       contentContainerStyle={{ paddingHorizontal: 4, gap: 10 }}
     >
       {images.map((uri, i) => (
-        <Image
+        <Pressable
           key={`${uri}-${i}`}
-          source={{ uri }}
-          style={[styles.offerImage, { borderRadius: theme.radii.md }]}
-          contentFit="cover"
-          transition={150}
-          accessibilityIgnoresInvertColors
-        />
+          onPress={() => onImagePress(i)}
+          accessibilityRole="imagebutton"
+          accessibilityLabel={`View image ${i + 1} of ${images.length}`}
+        >
+          <Image
+            source={{ uri }}
+            style={[styles.offerImage, { borderRadius: theme.radii.md }]}
+            contentFit="cover"
+            transition={150}
+            accessibilityIgnoresInvertColors
+          />
+        </Pressable>
       ))}
     </ScrollView>
   );
@@ -471,19 +575,23 @@ function EmptyTabState({
 
 function cashbackHeadline(c: BaseRunningCreditConfig): string {
   const threshold = c.threshold_amount;
+  // eligible_window is the lookback (days) over which spend is summed toward
+  // the threshold. Only surface it when set — null means "current purchase only".
+  const window = c.eligible_window;
+  const windowPhrase = window != null && window > 0 ? ` in ${window} days` : "";
   if (c.credit_type === "percentage") {
     const pct = c.percentage_credit_value;
     if (pct == null) return "Cashback offer";
     if (threshold != null && threshold > 0) {
-      return `Spend ${formatGhs(threshold)}, get ${pct}% back as credit`;
+      return `Spend ${formatGhs(threshold)}${windowPhrase}, get ${pct}% back as credit`;
     }
-    return `Get ${pct}% back as credit`;
+    return `Get ${pct}% back`;
   }
   if (c.credit_type === "fixed") {
     const val = c.fixed_credit_value;
     if (val == null) return "Cashback offer";
     if (threshold != null && threshold > 0) {
-      return `Spend ${formatGhs(threshold)}, get ${formatGhs(val)} back as credit`;
+      return `Spend ${formatGhs(threshold)}${windowPhrase}, get ${formatGhs(val)} back as credit`;
     }
     return `Get ${formatGhs(val)} back as credit`;
   }
@@ -537,6 +645,16 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
+  },
+  directionsPill: {
+    marginLeft: "auto",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderWidth: 1,
+    opacity: 0.92,
   },
   entryRow: {
     flexDirection: "row",

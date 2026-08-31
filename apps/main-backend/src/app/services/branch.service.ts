@@ -191,6 +191,17 @@ export class BranchService {
   ): Promise<BranchesNearbyPage> {
     const { lat, lng, category, limit = 20, offset = 0 } = filters;
     const nowMs = Date.now();
+    // Fixed config end_date is "through the end of the expiry day". Legacy rows
+    // stored at midnight would drop out of the feed at 00:00 of their expiry
+    // day; comparing end_date against UTC start-of-today keeps them in for the
+    // whole day. Equivalent to `now <= endOfDay(end_date)` for both legacy
+    // midnight and normalized 23:59 data, without a backfill.
+    const now = new Date(nowMs);
+    const startOfTodayMs = Date.UTC(
+      now.getUTCFullYear(),
+      now.getUTCMonth(),
+      now.getUTCDate(),
+    );
     let query = supabaseAdmin
       .from("branches")
       .select(
@@ -205,9 +216,7 @@ export class BranchService {
       .eq("running_credit_config.is_active", true)
       .is("running_credit_config.deleted_at", null)
       .eq("fixed_credit_config.is_active", true)
-      .is("fixed_credit_config.deleted_at", null)
-      .lte("fixed_credit_config.start_date", nowMs)
-      .gte("fixed_credit_config.end_date", nowMs);
+      .is("fixed_credit_config.deleted_at", null);
     if (category && category.length > 0) {
       query = query.in("category", category);
     }
@@ -223,10 +232,17 @@ export class BranchService {
         ...c,
         images: coerceImages(c.images),
       }));
-      const fixed = row?.fixed_credit_config?.map((c) => ({
-        ...c,
-        images: coerceImages(c.images),
-      }));
+      // Filter the active window in JS so null start/end ("perpetual" promos)
+      // count as unbounded — DB-level `.lte`/`.gte` exclude nulls, which would
+      // drop perpetual configs from the feed. end_date is "through the end of
+      // the expiry day", so compare against UTC start-of-today (see above).
+      const fixed = row?.fixed_credit_config
+        ?.map((c) => ({ ...c, images: coerceImages(c.images) }))
+        .filter((c) => {
+          const started = c.start_date == null || c.start_date <= nowMs;
+          const notEnded = c.end_date == null || c.end_date >= startOfTodayMs;
+          return started && notEnded;
+        });
       if (running?.length === 0 && fixed?.length === 0) continue;
       const {
         merchant,

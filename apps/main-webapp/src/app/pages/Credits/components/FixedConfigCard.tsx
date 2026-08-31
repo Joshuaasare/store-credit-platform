@@ -24,6 +24,10 @@ import {
   successToastProperties,
 } from "@shared/utils/misc.utils";
 import { formatEpochDate } from "@shared/utils/format";
+import {
+  endOfDayEpochMs,
+  fromEpochMs,
+} from "@shared/utils/date.utils";
 import { ConfirmDialog } from "@shared/components/ConfirmDialog/ConfirmDialog";
 import { FixedConfigDialog } from "./FixedConfigDialog";
 import {
@@ -96,8 +100,15 @@ export function FixedConfigCard({ config, isManager }: FixedConfigCardProps) {
   const start = config.start_date;
   const end = config.end_date;
   const now = Math.floor(Date.now());
+  // end_date is semantically "through the end of the expiry day". Legacy rows
+  // stored at midnight would otherwise flip to expired at 00:00 of that day —
+  // compare against end-of-day so the badge stays "Active" for the whole day.
+  // A null start/end means "perpetual" (no active window set) — treat as
+  // unbounded so the badge reads "Active right now".
+  const effectiveEnd =
+    end != null ? endOfDayEpochMs(fromEpochMs(end) ?? new Date(end)) : null;
   const withinWindow =
-    start != null && end != null && now >= start && now <= end;
+    (start == null || now >= start) && (effectiveEnd == null || now <= effectiveEnd);
   const activeRightNow = config.is_active && withinWindow;
 
   const statusLabel = activeRightNow
