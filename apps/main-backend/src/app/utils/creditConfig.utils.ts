@@ -52,6 +52,7 @@ export function shapeRunningConfig(
     created_at: row.created_at,
     updated_at: row.updated_at,
     deleted_at: row.deleted_at,
+    url: row.url,
     images: coerceImages(row.images),
     branches,
   };
@@ -76,6 +77,7 @@ export function shapeFixedConfig(
     created_at: row.created_at,
     updated_at: row.updated_at,
     deleted_at: row.deleted_at,
+    url: row.url,
     images: coerceImages(row.images),
     branches,
   };
@@ -105,6 +107,12 @@ export function epochMsOrNull(value: number | null | undefined): number | null {
   return value;
 }
 
+// Trimmed empty string means "no link" — an optional marketing URL on a config.
+export function normalizeUrl(url: string | null | undefined): string | null {
+  const trimmed = url?.trim();
+  return trimmed ? trimmed : null;
+}
+
 export function normalizeFixedValues(
   payload: CreateFixedCreditConfigRequest | UpdateFixedCreditConfigRequest,
 ) {
@@ -115,6 +123,7 @@ export function normalizeFixedValues(
     start_date: epochMsOrNull(payload.start_date),
     end_date: end != null ? endOfDayUtcEpochMs(end) : null,
     terms: payload.terms ?? null,
+    url: normalizeUrl(payload.url),
   };
 }
 

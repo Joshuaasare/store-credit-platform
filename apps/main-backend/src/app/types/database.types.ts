@@ -431,6 +431,48 @@ export type Database = {
           },
         ]
       }
+      customer_fixed_config_favorites: {
+        Row: {
+          created_at: string
+          customer_id: number
+          deleted_at: string | null
+          fixed_config_id: number
+          id: number
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          customer_id: number
+          deleted_at?: string | null
+          fixed_config_id: number
+          id?: number
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          customer_id?: number
+          deleted_at?: string | null
+          fixed_config_id?: number
+          id?: number
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_fixed_config_favorites_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_fixed_config_favorites_fixed_config_id_fkey"
+            columns: ["fixed_config_id"]
+            isOneToOne: false
+            referencedRelation: "fixed_credit_config"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       customer_purchases: {
         Row: {
           amount: number
@@ -485,6 +527,48 @@ export type Database = {
             columns: ["customer_id"]
             isOneToOne: false
             referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      customer_running_config_favorites: {
+        Row: {
+          created_at: string
+          customer_id: number
+          deleted_at: string | null
+          id: number
+          running_config_id: number
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          customer_id: number
+          deleted_at?: string | null
+          id?: number
+          running_config_id: number
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          customer_id?: number
+          deleted_at?: string | null
+          id?: number
+          running_config_id?: number
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_running_config_favorites_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_running_config_favorites_running_config_id_fkey"
+            columns: ["running_config_id"]
+            isOneToOne: false
+            referencedRelation: "running_credit_config"
             referencedColumns: ["id"]
           },
         ]
@@ -550,6 +634,7 @@ export type Database = {
       }
       fixed_credit_config: {
         Row: {
+          click_count: number
           created_at: string
           deleted_at: string | null
           description: string | null
@@ -561,8 +646,10 @@ export type Database = {
           terms: string | null
           title: string | null
           updated_at: string | null
+          url: string | null
         }
         Insert: {
+          click_count?: number
           created_at?: string
           deleted_at?: string | null
           description?: string | null
@@ -574,8 +661,10 @@ export type Database = {
           terms?: string | null
           title?: string | null
           updated_at?: string | null
+          url?: string | null
         }
         Update: {
+          click_count?: number
           created_at?: string
           deleted_at?: string | null
           description?: string | null
@@ -587,6 +676,7 @@ export type Database = {
           terms?: string | null
           title?: string | null
           updated_at?: string | null
+          url?: string | null
         }
         Relationships: []
       }
@@ -720,6 +810,7 @@ export type Database = {
       }
       running_credit_config: {
         Row: {
+          click_count: number
           created_at: string
           credit_type: Database["public"]["Enums"]["credit_type"] | null
           credit_validity: number | null
@@ -735,8 +826,10 @@ export type Database = {
           terms: string | null
           threshold_amount: number | null
           updated_at: string | null
+          url: string | null
         }
         Insert: {
+          click_count?: number
           created_at?: string
           credit_type?: Database["public"]["Enums"]["credit_type"] | null
           credit_validity?: number | null
@@ -752,8 +845,10 @@ export type Database = {
           terms?: string | null
           threshold_amount?: number | null
           updated_at?: string | null
+          url?: string | null
         }
         Update: {
+          click_count?: number
           created_at?: string
           credit_type?: Database["public"]["Enums"]["credit_type"] | null
           credit_validity?: number | null
@@ -769,6 +864,7 @@ export type Database = {
           terms?: string | null
           threshold_amount?: number | null
           updated_at?: string | null
+          url?: string | null
         }
         Relationships: []
       }

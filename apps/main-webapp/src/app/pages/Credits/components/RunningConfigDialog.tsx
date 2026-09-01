@@ -58,6 +58,11 @@ const runningSchema = z.object({
   credit_validity: numericNullable,
   cumulative_scope: z.enum(["per_branch", "merchant_wide"]),
   terms: z.string().nullable(),
+  url: z
+    .string()
+    .url("Enter a valid URL, e.g. https://example.com/cashback")
+    .max(500)
+    .nullable(),
   images: z.array(z.string()).nullable(),
 });
 
@@ -103,6 +108,7 @@ export function RunningConfigDialog({
       credit_validity: null,
       cumulative_scope: "per_branch",
       terms: null,
+      url: null,
       images: [],
     },
   });
@@ -123,6 +129,7 @@ export function RunningConfigDialog({
           (config?.cumulative_scope as "per_branch" | "merchant_wide") ??
           "per_branch",
         terms: config?.terms ?? null,
+        url: config?.url ?? null,
         images: config?.images ?? [],
       });
     }
@@ -194,6 +201,7 @@ export function RunningConfigDialog({
         credit_validity: values.credit_validity ?? null,
         cumulative_scope: values.cumulative_scope,
         terms: values.terms ?? null,
+        url: values.url ?? null,
         images: values.images ?? [],
       };
       const res = isEdit
@@ -493,6 +501,27 @@ export function RunningConfigDialog({
                 setValueAs: (v) => (v === "" ? null : v),
               })}
             />
+          </div>
+
+          <div className="space-y-1.5">
+            <FieldInfoLabel
+              htmlFor="url"
+              info="Optional link customers can open from the reward card — e.g. a product page or campaign landing page."
+            >
+              Link
+            </FieldInfoLabel>
+            <Input
+              id="url"
+              type="url"
+              maxLength={500}
+              placeholder="https://example.com/cashback"
+              {...register("url", {
+                setValueAs: (v) => (v === "" ? null : v),
+              })}
+            />
+            {errors.url && (
+              <p className="text-destructive text-xs">{errors.url.message}</p>
+            )}
           </div>
 
           <div className="space-y-1.5">

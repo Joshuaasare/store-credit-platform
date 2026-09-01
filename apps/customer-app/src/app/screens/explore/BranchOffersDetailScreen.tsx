@@ -23,12 +23,13 @@ import { Image } from "expo-image";
 import type {
   BaseFixedCreditConfig,
   BaseRunningCreditConfig,
-  BranchWithOffers,
 } from "@store-credit-platform/api-services";
 import ScreenBackground from "../../shared/components/ScreenBackground";
 import MerchantAvatar from "../../shared/components/MerchantAvatar";
 import { ImageLightbox } from "../../shared/components/ImageLightbox";
 import MerchantTabSwitcher from "../credits/components/MerchantTabSwitcher";
+import PrimaryButton from "../../shared/components/PrimaryButton";
+import { useCustomerFavorites } from "../../shared/hooks/useCustomerFavorites";
 import { useThemeTokens } from "../../shared/theme/ThemeContext";
 import { formatGhs } from "../../shared/utils/formatGhs";
 import { formatShortDate } from "../../shared/utils/date.utils";
@@ -50,6 +51,7 @@ export function BranchOffersDetailScreen() {
     useNavigation<NativeStackNavigationProp<AppStackParamList>>();
   const theme = useThemeTokens();
   const insets = useSafeAreaInsets();
+  const favorites = useCustomerFavorites();
 
   const merchantName = branch.merchant?.name ?? "Merchant";
   const logoUrl = branch.merchant?.logo_url ?? null;
@@ -74,8 +76,7 @@ export function BranchOffersDetailScreen() {
   const driveMin = travelMinutes(branch.distance_km, DRIVE_KMH);
   const entryThreshold = branch.purchase_threshold_amount ?? null;
 
-  const hasCoords =
-    branch.latitude != null && branch.longitude != null;
+  const hasCoords = branch.latitude != null && branch.longitude != null;
   const openInMaps = () => {
     if (!hasCoords) return;
     // Universal Google Maps URL — opens the native app on Android, the GM app
@@ -285,6 +286,11 @@ export function BranchOffersDetailScreen() {
                     key={`fixed-${c.id}`}
                     config={c}
                     onImagePress={(i) => openViewer(c.images, i)}
+                    favorited={favorites.isFavorited("fixed", c.id)}
+                    pending={favorites.pendingFor("fixed", c.id)}
+                    onToggleFavorite={() =>
+                      favorites.toggleFavorite("fixed", c.id)
+                    }
                   />
                 ))}
               </View>
@@ -326,9 +332,15 @@ export function BranchOffersDetailScreen() {
 function DiscountOfferCard({
   config,
   onImagePress,
+  favorited,
+  pending,
+  onToggleFavorite,
 }: {
   config: BaseFixedCreditConfig;
   onImagePress: (index: number) => void;
+  favorited: boolean;
+  pending: boolean;
+  onToggleFavorite: () => void;
 }) {
   const theme = useThemeTokens();
   const title = config.title ?? "Discount offer";
@@ -346,13 +358,6 @@ function DiscountOfferCard({
       ]}
     >
       <View style={styles.cardTitleRow}>
-        <Ionicons
-          name="pricetags-outline"
-          size={16}
-          color={theme.colors.warning}
-          style={{ paddingTop: 2 }}
-        />
-
         <Text
           numberOfLines={2}
           style={{
@@ -365,6 +370,24 @@ function DiscountOfferCard({
         >
           {title}
         </Text>
+
+        <TouchableOpacity
+          onPress={onToggleFavorite}
+          disabled={pending}
+          accessibilityRole="button"
+          accessibilityState={{ selected: favorited }}
+          accessibilityLabel={
+            favorited ? "Remove from favorites" : "Add to favorites"
+          }
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          style={styles.heartButton}
+        >
+          <Ionicons
+            name={favorited ? "heart" : "heart-outline"}
+            size={22}
+            color={favorited ? theme.colors.error : theme.colors.textMuted}
+          />
+        </TouchableOpacity>
       </View>
 
       {dateRange ? (
@@ -403,6 +426,8 @@ function DiscountOfferCard({
       {config.terms ? <Terms terms={config.terms} /> : null}
 
       <ImagesRow images={config.images} onImagePress={onImagePress} />
+
+      {config.url ? <VisitLinkButton url={config.url} /> : null}
     </View>
   );
 }
@@ -430,12 +455,6 @@ function CashbackConfigCard({
       ]}
     >
       <View style={styles.cardTitleRow}>
-        <Ionicons
-          name="cash-outline"
-          size={16}
-          color={theme.colors.success}
-          style={{ paddingTop: 2 }}
-        />
         <Text
           numberOfLines={3}
           style={{
@@ -466,6 +485,8 @@ function CashbackConfigCard({
       {config.terms ? <Terms terms={config.terms} /> : null}
 
       <ImagesRow images={config.images} onImagePress={onImagePress} />
+
+      {config.url ? <VisitLinkButton url={config.url} /> : null}
     </View>
   );
 }
@@ -499,6 +520,22 @@ function Terms({ terms }: { terms: string }) {
         {terms}
       </Text>
     </View>
+  );
+}
+
+function VisitLinkButton({ url }: { url: string }) {
+  const open = () => {
+    void Linking.openURL(url).catch(() => {
+      // Invalid or unopenable URL — silently ignore; the button is optional.
+    });
+  };
+  return (
+    <PrimaryButton
+      title="Visit link"
+      onPress={open}
+      fullWidth
+      style={{ marginTop: 14 }}
+    />
   );
 }
 
@@ -682,6 +719,10 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "flex-start",
     gap: 8,
+  },
+  heartButton: {
+    marginLeft: 4,
+    marginTop: -2,
   },
   metaRow: {
     flexDirection: "row",

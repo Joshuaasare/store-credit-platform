@@ -26,6 +26,7 @@ export interface CreateRunningCreditConfigRequest {
   maximum_allowed_credit?: number | null;
   threshold_amount?: number | null;
   terms?: string | null;
+  url?: string | null;
   cumulative_scope: CumulativeScopeValues;
   images?: string[] | null;
 }
@@ -42,6 +43,7 @@ export interface RunningCreditConfigUpdate {
   maximum_allowed_credit: number | null;
   threshold_amount: number | null;
   terms: string | null;
+  url: string | null;
   cumulative_scope: CumulativeScopeValues;
   images?: string[];
 }
@@ -54,6 +56,7 @@ export interface CreateFixedCreditConfigRequest {
   start_date?: number | null;
   end_date?: number | null;
   terms?: string | null;
+  url?: string | null;
 }
 
 export type UpdateFixedCreditConfigRequest = CreateFixedCreditConfigRequest;
@@ -65,12 +68,43 @@ export interface FixedCreditConfigUpdate {
   start_date: number | null;
   end_date: number | null;
   terms: string | null;
+  url: string | null;
   images?: string[];
 }
 
 export interface ToggleActiveRequest {
   is_active: boolean;
 }
+
+// A config the customer favorited. Favorites are keyed by config only —
+// favoriting at one branch favorites the config at every branch it runs at.
+export type FavoritedRunningCreditConfig = RunningCreditConfig & {
+  favorited_at: string;
+};
+
+export type FavoritedFixedCreditConfig = FixedCreditConfig & {
+  favorited_at: string;
+};
+
+export interface CustomerFavoritesListResponse {
+  success: true;
+  data: {
+    running: FavoritedRunningCreditConfig[];
+    fixed: FavoritedFixedCreditConfig[];
+  };
+}
+
+export interface FavoriteMutationResponse {
+  success: true;
+}
+
+export type CustomerFavoritesListApiResponse =
+  | CustomerFavoritesListResponse
+  | ApiErrorResponse;
+
+export type FavoriteMutationApiResponse =
+  | FavoriteMutationResponse
+  | ApiErrorResponse;
 
 export interface RunningCreditConfigListResponse {
   success: true;

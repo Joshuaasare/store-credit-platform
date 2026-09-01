@@ -15,6 +15,7 @@ import {
 import { BaseCustomerCredit } from "../types/main.types";
 import {
   normalizeFixedValues,
+  normalizeUrl,
   shapeFixedConfig,
   shapeRunningConfig,
   deleteStaleImages,
@@ -116,6 +117,7 @@ function normalizeRunningValues(
     maximum_allowed_credit,
     threshold_amount: payload.threshold_amount ?? null,
     terms: payload.terms ?? null,
+    url: normalizeUrl(payload.url),
     cumulative_scope: payload.cumulative_scope,
   };
 }

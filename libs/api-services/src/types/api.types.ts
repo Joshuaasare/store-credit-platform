@@ -1,6 +1,6 @@
 /**
  * Auto-generated API Types
- * Generated on: 2026-08-31T12:57:36.275Z
+ * Generated on: 2026-09-01T09:37:46.015Z
  * 
  * ⚠️ DO NOT EDIT MANUALLY
  * Source: apps/smartschool-api/src/app/types/
@@ -208,6 +208,7 @@ export interface BaseRunningCreditConfig {
   terms: string | null;
   threshold_amount: number | null;
   updated_at: string | null;
+  url: string | null;
   images: string[] | null;
 }
 
@@ -223,6 +224,7 @@ export interface BaseFixedCreditConfig {
   terms: string | null;
   title: string | null;
   updated_at: string | null;
+  url: string | null;
 }
 
 // ========================================
@@ -571,6 +573,7 @@ export interface CreateRunningCreditConfigRequest {
   maximum_allowed_credit?: number | null;
   threshold_amount?: number | null;
   terms?: string | null;
+  url?: string | null;
   cumulative_scope: CumulativeScopeValues;
   images?: string[] | null;
 }
@@ -586,6 +589,7 @@ export interface RunningCreditConfigUpdate {
   maximum_allowed_credit: number | null;
   threshold_amount: number | null;
   terms: string | null;
+  url: string | null;
   cumulative_scope: CumulativeScopeValues;
   images?: string[];
 }
@@ -598,6 +602,7 @@ export interface CreateFixedCreditConfigRequest {
   start_date?: number | null;
   end_date?: number | null;
   terms?: string | null;
+  url?: string | null;
 }
 
 export type UpdateFixedCreditConfigRequest = CreateFixedCreditConfigRequest;
@@ -608,12 +613,41 @@ export interface FixedCreditConfigUpdate {
   start_date: number | null;
   end_date: number | null;
   terms: string | null;
+  url: string | null;
   images?: string[];
 }
 
 export interface ToggleActiveRequest {
   is_active: boolean;
 }
+
+export type FavoritedRunningCreditConfig = RunningCreditConfig & {
+  favorited_at: string;
+};
+
+export type FavoritedFixedCreditConfig = FixedCreditConfig & {
+  favorited_at: string;
+};
+
+export interface CustomerFavoritesListResponse {
+  success: true;
+  data: {
+    running: FavoritedRunningCreditConfig[];
+    fixed: FavoritedFixedCreditConfig[];
+  };
+}
+
+export interface FavoriteMutationResponse {
+  success: true;
+}
+
+export type CustomerFavoritesListApiResponse =
+  | CustomerFavoritesListResponse
+  | ApiErrorResponse;
+
+export type FavoriteMutationApiResponse =
+  | FavoriteMutationResponse
+  | ApiErrorResponse;
 
 export interface RunningCreditConfigListResponse {
   success: true;

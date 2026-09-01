@@ -81,6 +81,11 @@ const fixedSchema = z.object({
   start_date: z.number().nullable(),
   end_date: z.number().nullable(),
   terms: z.string().nullable(),
+  url: z
+    .string()
+    .url("Enter a valid URL, e.g. https://example.com/promo")
+    .max(500)
+    .nullable(),
 });
 
 type FixedFormValues = z.infer<typeof fixedSchema>;
@@ -164,6 +169,7 @@ export function FixedConfigDialog({
       start_date: null,
       end_date: null,
       terms: null,
+      url: null,
     },
   });
 
@@ -177,6 +183,7 @@ export function FixedConfigDialog({
         start_date: config?.start_date ?? null,
         end_date: config?.end_date ?? null,
         terms: config?.terms ?? null,
+        url: config?.url ?? null,
       });
       setCustomRange({
         from: fromEpochMs(config?.start_date),
@@ -267,6 +274,7 @@ export function FixedConfigDialog({
         start_date: values.start_date,
         end_date: values.end_date,
         terms: values.terms ?? null,
+        url: values.url ?? null,
       };
       const res = isEdit
         ? await creditConfigService.updateFixedConfig(
@@ -601,6 +609,27 @@ export function FixedConfigDialog({
                 setValueAs: (v) => (v === "" ? null : v),
               })}
             />
+          </div>
+
+          <div className="space-y-1.5">
+            <FieldInfoLabel
+              htmlFor="url"
+              info="Optional link customers can open from the promo card — e.g. a product page or campaign landing page."
+            >
+              Link
+            </FieldInfoLabel>
+            <Input
+              id="url"
+              type="url"
+              maxLength={500}
+              placeholder="https://example.com/promo"
+              {...register("url", {
+                setValueAs: (v) => (v === "" ? null : v),
+              })}
+            />
+            {errors.url && (
+              <p className="text-destructive text-xs">{errors.url.message}</p>
+            )}
           </div>
 
           <DialogFooter>

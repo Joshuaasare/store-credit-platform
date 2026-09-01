@@ -5,6 +5,7 @@ import {
   createCustomerRedemptionsService,
   createCustomerProfileService,
   createCustomerBranchService,
+  createCustomerConfigInteractionService,
   createStorageService,
   type ApiClientConfig,
 } from "@store-credit-platform/api-services";
@@ -66,5 +67,8 @@ export const customerRedemptionsService = createCustomerRedemptionsService(rnCon
 export const customerProfileService = createCustomerProfileService(rnConfig);
 
 export const customerBranchService = createCustomerBranchService(rnConfig);
+
+export const customerConfigInteractionService =
+  createCustomerConfigInteractionService(rnConfig);
 
 export const storage = createStorageService(rnConfig);

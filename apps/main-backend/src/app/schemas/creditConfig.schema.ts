@@ -54,6 +54,10 @@ terms: Type.Optional(Type.Union([
 Type.String(),
 Type.Null()
 ])),
+url: Type.Optional(Type.Union([
+Type.String(),
+Type.Null()
+])),
 cumulative_scope: CumulativeScopeValues,
 images: Type.Optional(Type.Union([
 Type.Array(Type.String()),
@@ -98,6 +102,10 @@ terms: Type.Union([
 Type.String(),
 Type.Null()
 ]),
+url: Type.Union([
+Type.String(),
+Type.Null()
+]),
 cumulative_scope: CumulativeScopeValues,
 images: Type.Optional(Type.Array(Type.String()))
 })
@@ -128,6 +136,10 @@ Type.Null()
 terms: Type.Optional(Type.Union([
 Type.String(),
 Type.Null()
+])),
+url: Type.Optional(Type.Union([
+Type.String(),
+Type.Null()
 ]))
 })
 
@@ -156,6 +168,10 @@ terms: Type.Union([
 Type.String(),
 Type.Null()
 ]),
+url: Type.Union([
+Type.String(),
+Type.Null()
+]),
 images: Type.Optional(Type.Array(Type.String()))
 })
 
@@ -163,6 +179,48 @@ export type ToggleActiveRequest = Static<typeof ToggleActiveRequest>
 export const ToggleActiveRequest = Type.Object({
 is_active: Type.Boolean()
 })
+
+export type FavoritedRunningCreditConfig = Static<typeof FavoritedRunningCreditConfig>
+export const FavoritedRunningCreditConfig = Type.Intersect([
+RunningCreditConfig,
+Type.Object({
+favorited_at: Type.String()
+})
+])
+
+export type FavoritedFixedCreditConfig = Static<typeof FavoritedFixedCreditConfig>
+export const FavoritedFixedCreditConfig = Type.Intersect([
+FixedCreditConfig,
+Type.Object({
+favorited_at: Type.String()
+})
+])
+
+export type CustomerFavoritesListResponse = Static<typeof CustomerFavoritesListResponse>
+export const CustomerFavoritesListResponse = Type.Object({
+success: Type.Literal(true),
+data: Type.Object({
+running: Type.Array(FavoritedRunningCreditConfig),
+fixed: Type.Array(FavoritedFixedCreditConfig)
+})
+})
+
+export type FavoriteMutationResponse = Static<typeof FavoriteMutationResponse>
+export const FavoriteMutationResponse = Type.Object({
+success: Type.Literal(true)
+})
+
+export type CustomerFavoritesListApiResponse = Static<typeof CustomerFavoritesListApiResponse>
+export const CustomerFavoritesListApiResponse = Type.Union([
+CustomerFavoritesListResponse,
+ApiErrorResponse
+])
+
+export type FavoriteMutationApiResponse = Static<typeof FavoriteMutationApiResponse>
+export const FavoriteMutationApiResponse = Type.Union([
+FavoriteMutationResponse,
+ApiErrorResponse
+])
 
 export type RunningCreditConfigListResponse = Static<typeof RunningCreditConfigListResponse>
 export const RunningCreditConfigListResponse = Type.Object({

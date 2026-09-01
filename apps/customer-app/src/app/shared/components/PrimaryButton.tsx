@@ -34,7 +34,7 @@ export default function PrimaryButton({
         styles.button,
         {
           backgroundColor: theme.colors.primary,
-          borderRadius: fullWidth ? theme.radii.md : theme.radii.pill,
+          borderRadius: fullWidth ? theme.radii.sm : theme.radii.pill,
         },
         fullWidth ? styles.fullWidth : null,
         isDisabled ? styles.disabled : null,
