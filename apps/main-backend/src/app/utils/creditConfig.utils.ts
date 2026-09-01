@@ -98,15 +98,22 @@ export function endOfDayUtcEpochMs(epochMs: number): number {
   );
 }
 
+// Epoch 0 (Jan 1 1970) and non-finite values mean "no date" — legacy rows stored
+// 0, and endOfDayUtcEpochMs(0) would otherwise mint a fake 1970 window.
+export function epochMsOrNull(value: number | null | undefined): number | null {
+  if (value == null || !Number.isFinite(value) || value <= 0) return null;
+  return value;
+}
+
 export function normalizeFixedValues(
   payload: CreateFixedCreditConfigRequest | UpdateFixedCreditConfigRequest,
 ) {
+  const end = epochMsOrNull(payload.end_date);
   return {
     title: payload.title ?? null,
     description: payload.description ?? null,
-    start_date: payload.start_date ?? null,
-    end_date:
-      payload.end_date != null ? endOfDayUtcEpochMs(payload.end_date) : null,
+    start_date: epochMsOrNull(payload.start_date),
+    end_date: end != null ? endOfDayUtcEpochMs(end) : null,
     terms: payload.terms ?? null,
   };
 }

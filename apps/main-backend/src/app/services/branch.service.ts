@@ -207,8 +207,8 @@ export class BranchService {
       .select(
         `${QueryFragments.BASE_BRANCH},
         merchant:merchants(${QueryFragments.BASE_MERCHANT}),
-        branch_running_credit_config!inner(deleted_at,running_credit_config:running_credit_config!inner(${QueryFragments.BASE_RUNNING_CREDIT_CONFIG})),
-        branch_fixed_credit_config!inner(deleted_at,fixed_credit_config:fixed_credit_config!inner(${QueryFragments.BASE_FIXED_CREDIT_CONFIG}))` as const,
+        branch_running_credit_config(deleted_at,running_credit_config:running_credit_config!inner(${QueryFragments.BASE_RUNNING_CREDIT_CONFIG})),
+        branch_fixed_credit_config(deleted_at,fixed_credit_config:fixed_credit_config!inner(${QueryFragments.BASE_FIXED_CREDIT_CONFIG}))` as const,
       )
       .is("deleted_at", null)
       .eq("is_active", true)
