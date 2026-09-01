@@ -103,6 +103,10 @@ export const useStoreStore = create<StoreState>((set, get) => ({
               ...("country_code" in payload
                 ? { country_code: payload.country_code! }
                 : {}),
+              ...("category" in payload ? { category: payload.category } : {}),
+              ...("latitude" in payload ? { latitude: payload.latitude } : {}),
+              ...("longitude" in payload ? { longitude: payload.longitude } : {}),
+              ...("place_id" in payload ? { place_id: payload.place_id } : {}),
             }
           : b,
       ),

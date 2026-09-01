@@ -20,12 +20,14 @@ import {
   type MerchantCreditBucket,
 } from "./lib/aggregateCredits";
 import type { AppStackParamList } from "../../navigation/RootNavigator";
+import { useOffsets } from "../../shared/hooks/useOffsets";
 
 const CREDITS_QUERY_KEY = ["customer", "credits"] as const;
 const MS_PER_DAY = 1000 * 60 * 60 * 24;
 
 export function CreditsScreen() {
   const theme = useThemeTokens();
+  const { tabBarOffset } = useOffsets();
   const navigation =
     useNavigation<NativeStackNavigationProp<AppStackParamList>>();
 
@@ -42,8 +44,7 @@ export function CreditsScreen() {
     <ScreenBackground>
       <PageHeader />
       <ScreenBody edges={["bottom"]}>
-      <GlassTransition>
-        <View style={styles.container}>
+        <GlassTransition>
           <View style={styles.listArea}>
             {query.isLoading ? (
               <LoadingState />
@@ -61,47 +62,44 @@ export function CreditsScreen() {
                 subtitle="Visit a merchant to start earning credit on your purchases."
               />
             ) : (
-              <GlassCard padding={0} style={styles.listCard}>
-                <FlatList
-                  data={buckets}
-                  keyExtractor={(item) => String(item.merchantId)}
-                  renderItem={({ item }) => (
-                    <Pressable
-                      onPress={() =>
-                        navigation.navigate("CreditsMerchantDetail", {
-                          merchantId: item.merchantId,
-                        })
-                      }
-                      accessibilityRole="button"
-                      accessibilityLabel={`${item.merchantName} credits`}
-                      style={({ pressed }) => [
-                        pressed ? { opacity: 0.7 } : null,
-                      ]}
-                    >
-                      <MerchantActivityRow
-                        kind="merchant-available"
-                        item={merchantRow(item)}
-                        metaTone={merchantRow(item).metaTone}
-                      />
-                    </Pressable>
-                  )}
-                  ItemSeparatorComponent={() => (
-                    <View
-                      style={{
-                        height: 1,
-                        backgroundColor: theme.colors.surfaceBorder,
-                        marginHorizontal: 16,
-                      }}
+              <FlatList
+                data={buckets}
+                keyExtractor={(item) => String(item.merchantId)}
+                renderItem={({ item }) => (
+                  <Pressable
+                    onPress={() =>
+                      navigation.navigate("CreditsMerchantDetail", {
+                        merchantId: item.merchantId,
+                      })
+                    }
+                    accessibilityRole="button"
+                    accessibilityLabel={`${item.merchantName} credits`}
+                    style={({ pressed }) => [pressed ? { opacity: 0.7 } : null]}
+                  >
+                    <MerchantActivityRow
+                      kind="merchant-available"
+                      item={merchantRow(item)}
+                      metaTone={merchantRow(item).metaTone}
                     />
-                  )}
-                  showsVerticalScrollIndicator={false}
-                  contentContainerStyle={styles.listContent}
-                />
-              </GlassCard>
+                  </Pressable>
+                )}
+                ItemSeparatorComponent={() => (
+                  <View
+                    style={{
+                      height: 1,
+                      backgroundColor: theme.colors.surfaceBorder,
+                      marginHorizontal: 10,
+                    }}
+                  />
+                )}
+                showsVerticalScrollIndicator={false}
+                contentContainerStyle={{
+                  ...styles.listContent,
+                }}
+              />
             )}
           </View>
-        </View>
-      </GlassTransition>
+        </GlassTransition>
       </ScreenBody>
     </ScreenBackground>
   );
@@ -164,12 +162,9 @@ function merchantRow(bucket: MerchantCreditBucket): {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    paddingTop: 16,
-  },
   listArea: {
     flex: 1,
+    paddingTop: 16,
   },
   listCard: {
     overflow: "hidden",
@@ -177,4 +172,4 @@ const styles = StyleSheet.create({
   listContent: {
     paddingBottom: 24,
   },
-  });
+});

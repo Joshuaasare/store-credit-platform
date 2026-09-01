@@ -7,6 +7,16 @@ Type.Literal("manager"),
 Type.Literal("cashier")
 ])
 
+export type BranchCategoryValues = Static<typeof BranchCategoryValues>
+export const BranchCategoryValues = Type.Union([
+Type.Literal("electronics"),
+Type.Literal("home_appliances"),
+Type.Literal("furniture"),
+Type.Literal("retail_shops"),
+Type.Literal("restaurants"),
+Type.Literal("schools")
+])
+
 export type CreditTypeValues = Static<typeof CreditTypeValues>
 export const CreditTypeValues = Type.Union([
 Type.Literal("fixed"),
@@ -78,7 +88,39 @@ Type.Null()
 city: Type.String(),
 country_code: Type.String(),
 is_active: Type.Boolean(),
-created_at: Type.String()
+created_at: Type.String(),
+updated_at: Type.Union([
+Type.String(),
+Type.Null()
+]),
+deleted_at: Type.Union([
+Type.String(),
+Type.Null()
+]),
+latitude: Type.Union([
+Type.Number(),
+Type.Null()
+]),
+longitude: Type.Union([
+Type.Number(),
+Type.Null()
+]),
+place_id: Type.Union([
+Type.String(),
+Type.Null()
+]),
+place_label: Type.Union([
+Type.String(),
+Type.Null()
+]),
+category: Type.Union([
+BranchCategoryValues,
+Type.Null()
+]),
+purchase_threshold_amount: Type.Union([
+Type.Number(),
+Type.Null()
+])
 })
 
 export type ApiErrorResponse = Static<typeof ApiErrorResponse>
@@ -126,6 +168,22 @@ created_at: Type.String(),
 deleted_at: Type.Union([
 Type.String(),
 Type.Null()
+]),
+latitude: Type.Union([
+Type.Number(),
+Type.Null()
+]),
+longitude: Type.Union([
+Type.Number(),
+Type.Null()
+]),
+place_id: Type.Union([
+Type.String(),
+Type.Null()
+]),
+place_label: Type.Union([
+Type.String(),
+Type.Null()
 ])
 })
 
@@ -146,6 +204,22 @@ Type.String(),
 Type.Null()
 ]),
 avatar_url: Type.Union([
+Type.String(),
+Type.Null()
+]),
+latitude: Type.Union([
+Type.Number(),
+Type.Null()
+]),
+longitude: Type.Union([
+Type.Number(),
+Type.Null()
+]),
+place_id: Type.Union([
+Type.String(),
+Type.Null()
+]),
+place_label: Type.Union([
 Type.String(),
 Type.Null()
 ])
@@ -285,20 +359,26 @@ deleted_at: Type.Union([
 Type.String(),
 Type.Null()
 ]),
-branch_id: Type.Number()
+branch_id: Type.Number(),
+requested_date: Type.Number(),
+transaction_date: Type.Number()
 })
 
 export type BaseRunningCreditConfig = Static<typeof BaseRunningCreditConfig>
 export const BaseRunningCreditConfig = Type.Object({
-id: Type.Number(),
-config_group_id: Type.String(),
-branch_id: Type.Number(),
+click_count: Type.Number(),
+created_at: Type.String(),
 credit_type: Type.Union([
 CreditTypeValues,
 Type.Null()
 ]),
 credit_validity: Type.Union([
 Type.Number(),
+Type.Null()
+]),
+cumulative_scope: CumulativeScopeValues,
+deleted_at: Type.Union([
+Type.String(),
 Type.Null()
 ]),
 eligible_window: Type.Union([
@@ -309,58 +389,65 @@ fixed_credit_value: Type.Union([
 Type.Number(),
 Type.Null()
 ]),
+id: Type.Number(),
+is_active: Type.Boolean(),
+maximum_allowed_credit: Type.Union([
+Type.Number(),
+Type.Null()
+]),
 percentage_credit_value: Type.Union([
 Type.Number(),
 Type.Null()
 ]),
-maximum_allowed_credit: Type.Union([
-Type.Number(),
+terms: Type.Union([
+Type.String(),
 Type.Null()
 ]),
 threshold_amount: Type.Union([
 Type.Number(),
 Type.Null()
 ]),
-terms: Type.Union([
-Type.String(),
-Type.Null()
-]),
-cumulative_scope: CumulativeScopeValues,
-is_active: Type.Boolean(),
-created_at: Type.String(),
 updated_at: Type.Union([
 Type.String(),
 Type.Null()
 ]),
-deleted_at: Type.Union([
+url: Type.Union([
 Type.String(),
+Type.Null()
+]),
+images: Type.Union([
+Type.Array(Type.String()),
 Type.Null()
 ])
 })
 
 export type BaseFixedCreditConfig = Static<typeof BaseFixedCreditConfig>
 export const BaseFixedCreditConfig = Type.Object({
-id: Type.Number(),
-branch_id: Type.Number(),
-start_date: Type.Union([
-Type.Number(),
+click_count: Type.Number(),
+created_at: Type.String(),
+deleted_at: Type.Union([
+Type.String(),
+Type.Null()
+]),
+description: Type.Union([
+Type.String(),
 Type.Null()
 ]),
 end_date: Type.Union([
 Type.Number(),
 Type.Null()
 ]),
-terms: Type.Union([
-Type.String(),
+id: Type.Number(),
+images: Type.Union([
+Type.Array(Type.String()),
 Type.Null()
 ]),
 is_active: Type.Boolean(),
-created_at: Type.String(),
-updated_at: Type.Union([
-Type.String(),
+start_date: Type.Union([
+Type.Number(),
 Type.Null()
 ]),
-deleted_at: Type.Union([
+terms: Type.Union([
 Type.String(),
 Type.Null()
 ]),
@@ -368,13 +455,12 @@ title: Type.Union([
 Type.String(),
 Type.Null()
 ]),
-config_group_id: Type.String(),
-description: Type.Union([
+updated_at: Type.Union([
 Type.String(),
 Type.Null()
 ]),
-images: Type.Union([
-Type.Array(Type.String()),
+url: Type.Union([
+Type.String(),
 Type.Null()
 ])
 })

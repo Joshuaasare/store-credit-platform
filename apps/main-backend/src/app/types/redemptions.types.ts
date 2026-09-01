@@ -11,15 +11,10 @@ import {
 } from "./main.types";
 
 // redemption_code is INTENTIONALLY OMITTED — the code is customer-only and never returned to the webapp. The merchant reads it via a separate code-entry dialog.
-export interface MerchantPendingRequest {
-  redemption_id: number;
-  customer_id: number;
-  branch_id: number;
-  branch_name: string | null;
-  amount_redeemed: number;
-  requested_date: number;
-  requested_at: string;
-  customer: BaseCustomer & { users: BaseUserProfile | null };
+export interface MerchantPendingRequest
+  extends BaseCustomerCreditRedemption {
+  branch: BaseBranch | null;
+  customer: (BaseCustomer & { users: BaseUserProfile | null }) | null;
   merchant: BaseMerchant;
 }
 

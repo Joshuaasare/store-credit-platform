@@ -2,7 +2,9 @@ import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
+  Heart,
   MoreVertical,
+  MousePointerClick,
   Pause,
   Pencil,
   Play,
@@ -17,13 +19,17 @@ import {
   DropdownMenuTrigger,
 } from "@store-credit-platform/web-components";
 import { creditConfigService } from "@store-credit-platform/api-services";
-import type { FixedCreditConfigGroup } from "@shared/types/api.types";
+import type { FixedCreditConfig } from "@shared/types/api.types";
 import { isApiError } from "@shared/utils/api.utils";
 import {
   errorToastProperties,
   successToastProperties,
 } from "@shared/utils/misc.utils";
 import { formatEpochDate } from "@shared/utils/format";
+import {
+  endOfDayEpochMs,
+  fromEpochMs,
+} from "@shared/utils/date.utils";
 import { ConfirmDialog } from "@shared/components/ConfirmDialog/ConfirmDialog";
 import { FixedConfigDialog } from "./FixedConfigDialog";
 import {
@@ -40,7 +46,7 @@ import {
 } from "./configCardStyles";
 
 interface FixedConfigCardProps {
-  config: FixedCreditConfigGroup;
+  config: FixedCreditConfig;
   isManager: boolean;
 }
 
@@ -56,7 +62,7 @@ export function FixedConfigCard({ config, isManager }: FixedConfigCardProps) {
   const deleteMutation = useMutation({
     mutationFn: async () => {
       const res = await creditConfigService.deleteFixedConfig(
-        config.config_group_id,
+        config.id,
       );
       if (isApiError(res)) throw new Error(res.error);
     },
@@ -74,7 +80,7 @@ export function FixedConfigCard({ config, isManager }: FixedConfigCardProps) {
   const toggleMutation = useMutation({
     mutationFn: async (isActive: boolean) => {
       const res = await creditConfigService.toggleFixedConfigActive(
-        config.config_group_id,
+        config.id,
         isActive,
       );
       if (isApiError(res)) throw new Error(res.error);
@@ -96,8 +102,15 @@ export function FixedConfigCard({ config, isManager }: FixedConfigCardProps) {
   const start = config.start_date;
   const end = config.end_date;
   const now = Math.floor(Date.now());
+  // end_date is semantically "through the end of the expiry day". Legacy rows
+  // stored at midnight would otherwise flip to expired at 00:00 of that day —
+  // compare against end-of-day so the badge stays "Active" for the whole day.
+  // A null start/end means "perpetual" (no active window set) — treat as
+  // unbounded so the badge reads "Active right now".
+  const effectiveEnd =
+    end != null ? endOfDayEpochMs(fromEpochMs(end) ?? new Date(end)) : null;
   const withinWindow =
-    start != null && end != null && now >= start && now <= end;
+    (start == null || now >= start) && (effectiveEnd == null || now <= effectiveEnd);
   const activeRightNow = config.is_active && withinWindow;
 
   const statusLabel = activeRightNow
@@ -206,13 +219,33 @@ export function FixedConfigCard({ config, isManager }: FixedConfigCardProps) {
         </div>
 
         <div className={`mt-4 pt-3 ${DIVIDER}`}>
-          <div className="text-muted-foreground flex items-center gap-2 text-xs">
-            <span className={statusColor} />
-            <span
-              className={isActive ? STATUS_TEXT_ACTIVE : STATUS_TEXT_PAUSED}
-            >
-              {statusLabel}
-            </span>
+          <div className="text-muted-foreground flex items-center justify-between text-xs">
+            <div className="flex items-center gap-2">
+              <span className={statusColor} />
+              <span
+                className={isActive ? STATUS_TEXT_ACTIVE : STATUS_TEXT_PAUSED}
+              >
+                {statusLabel}
+              </span>
+            </div>
+            <div className="flex items-center gap-3">
+              {config.url != null && (
+                <div className="flex items-center gap-1">
+                  <MousePointerClick className="h-3 w-3" />
+                  <span>
+                    {config.click_count}{" "}
+                    {config.click_count === 1 ? "click" : "clicks"}
+                  </span>
+                </div>
+              )}
+              <div className="flex items-center gap-1">
+                <Heart className="h-3 w-3" />
+                <span>
+                  {config.favorite_count}{" "}
+                  {config.favorite_count === 1 ? "favorite" : "favorites"}
+                </span>
+              </div>
+            </div>
           </div>
         </div>
 

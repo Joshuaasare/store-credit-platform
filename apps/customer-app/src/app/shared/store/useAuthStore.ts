@@ -1,7 +1,7 @@
 import { create } from "zustand";
 import type { CustomerAuthUser } from "@store-credit-platform/api-services";
 import * as SecureStore from "expo-secure-store";
-import { customerAuthService, wireAccessToken } from "../../api/client";
+import { customerAuthService, refreshSession, wireAccessToken } from "../../api/client";
 import { SECURE_STORE_KEYS } from "../../config";
 
 export type AuthStatus =
@@ -57,19 +57,17 @@ export const useAuthStore = create<AuthState>((set, get) => {
         set({ status: "unauthenticated" });
         return;
       }
-      try {
-        const res = await customerAuthService.refresh(storedRefresh);
-        if (res.success) {
-          await get().setSession({
-            access_token: res.data.access_token,
-            refresh_token: res.data.refresh_token,
-            user: res.data.user,
-          });
-        } else {
-          await SecureStore.deleteItemAsync(SECURE_STORE_KEYS.REFRESH_TOKEN);
-          set({ status: "unauthenticated", refreshToken: null });
-        }
-      } catch {
+      // Goes through the client's shared refresh promise — a direct
+      // customerAuthService.refresh call here raced the 401-triggered refresh
+      // and the loser's rotation burned the stored token.
+      const res = await refreshSession();
+      if (res?.success) {
+        await get().setSession({
+          access_token: res.data.access_token,
+          refresh_token: res.data.refresh_token,
+          user: res.data.user,
+        });
+      } else {
         await SecureStore.deleteItemAsync(SECURE_STORE_KEYS.REFRESH_TOKEN);
         set({ status: "unauthenticated", refreshToken: null });
       }

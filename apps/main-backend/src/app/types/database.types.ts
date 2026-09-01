@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.15"
+    PostgrestVersion: "14.5"
   }
   graphql_public: {
     Tables: {
@@ -39,44 +39,146 @@ export type Database = {
   }
   public: {
     Tables: {
+      branch_fixed_credit_config: {
+        Row: {
+          branch_id: number
+          created_at: string
+          deleted_at: string | null
+          fixed_credit_config_id: number
+          id: number
+          updated_at: string | null
+        }
+        Insert: {
+          branch_id: number
+          created_at?: string
+          deleted_at?: string | null
+          fixed_credit_config_id: number
+          id?: number
+          updated_at?: string | null
+        }
+        Update: {
+          branch_id?: number
+          created_at?: string
+          deleted_at?: string | null
+          fixed_credit_config_id?: number
+          id?: number
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "branch_fixed_credit_config_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "branch_fixed_credit_config_fixed_credit_config_id_fkey"
+            columns: ["fixed_credit_config_id"]
+            isOneToOne: false
+            referencedRelation: "fixed_credit_config"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      branch_running_credit_config: {
+        Row: {
+          branch_id: number
+          created_at: string
+          deleted_at: string | null
+          id: number
+          running_credit_config_id: number
+          updated_at: string | null
+        }
+        Insert: {
+          branch_id: number
+          created_at?: string
+          deleted_at?: string | null
+          id?: number
+          running_credit_config_id: number
+          updated_at?: string | null
+        }
+        Update: {
+          branch_id?: number
+          created_at?: string
+          deleted_at?: string | null
+          id?: number
+          running_credit_config_id?: number
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "branch_running_credit_config_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "branch_running_credit_config_running_credit_config_id_fkey"
+            columns: ["running_credit_config_id"]
+            isOneToOne: false
+            referencedRelation: "running_credit_config"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       branches: {
         Row: {
           address: string | null
+          category: Database["public"]["Enums"]["branch_category"] | null
           city: string
           country_code: string
           created_at: string
           deleted_at: string | null
           id: number
           is_active: boolean
+          latitude: number | null
+          longitude: number | null
           merchant_id: number
           name: string | null
           phone: string | null
+          place_id: string | null
+          place_label: string | null
+          purchase_threshold_amount: number | null
           updated_at: string | null
         }
         Insert: {
           address?: string | null
+          category?: Database["public"]["Enums"]["branch_category"] | null
           city: string
           country_code: string
           created_at?: string
           deleted_at?: string | null
           id?: number
           is_active?: boolean
+          latitude?: number | null
+          longitude?: number | null
           merchant_id: number
           name?: string | null
           phone?: string | null
+          place_id?: string | null
+          place_label?: string | null
+          purchase_threshold_amount?: number | null
           updated_at?: string | null
         }
         Update: {
           address?: string | null
+          category?: Database["public"]["Enums"]["branch_category"] | null
           city?: string
           country_code?: string
           created_at?: string
           deleted_at?: string | null
           id?: number
           is_active?: boolean
+          latitude?: number | null
+          longitude?: number | null
           merchant_id?: number
           name?: string | null
           phone?: string | null
+          place_id?: string | null
+          place_label?: string | null
+          purchase_threshold_amount?: number | null
           updated_at?: string | null
         }
         Relationships: [
@@ -249,6 +351,128 @@ export type Database = {
           },
         ]
       }
+      customer_discounts: {
+        Row: {
+          approved_at: string | null
+          approved_by_staff_id: number | null
+          branch_id: number
+          created_at: string
+          customer_id: number
+          deleted_at: string | null
+          description: string | null
+          expires_at: number | null
+          fixed_credit_config_id: number | null
+          id: number
+          redemption_code: number | null
+          requested_date: number
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by_staff_id?: number | null
+          branch_id: number
+          created_at?: string
+          customer_id: number
+          deleted_at?: string | null
+          description?: string | null
+          expires_at?: number | null
+          fixed_credit_config_id?: number | null
+          id?: number
+          redemption_code?: number | null
+          requested_date: number
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by_staff_id?: number | null
+          branch_id?: number
+          created_at?: string
+          customer_id?: number
+          deleted_at?: string | null
+          description?: string | null
+          expires_at?: number | null
+          fixed_credit_config_id?: number | null
+          id?: number
+          redemption_code?: number | null
+          requested_date?: number
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_coupons_approved_by_staff_id_fkey"
+            columns: ["approved_by_staff_id"]
+            isOneToOne: false
+            referencedRelation: "staff"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_coupons_branch_id_fkey"
+            columns: ["branch_id"]
+            isOneToOne: false
+            referencedRelation: "branches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_coupons_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_coupons_fixed_credit_config_id_fkey"
+            columns: ["fixed_credit_config_id"]
+            isOneToOne: false
+            referencedRelation: "fixed_credit_config"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      customer_fixed_config_favorites: {
+        Row: {
+          created_at: string
+          customer_id: number
+          deleted_at: string | null
+          fixed_config_id: number
+          id: number
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          customer_id: number
+          deleted_at?: string | null
+          fixed_config_id: number
+          id?: number
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          customer_id?: number
+          deleted_at?: string | null
+          fixed_config_id?: number
+          id?: number
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_fixed_config_favorites_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_fixed_config_favorites_fixed_config_id_fkey"
+            columns: ["fixed_config_id"]
+            isOneToOne: false
+            referencedRelation: "fixed_credit_config"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       customer_purchases: {
         Row: {
           amount: number
@@ -307,14 +531,60 @@ export type Database = {
           },
         ]
       }
+      customer_running_config_favorites: {
+        Row: {
+          created_at: string
+          customer_id: number
+          deleted_at: string | null
+          id: number
+          running_config_id: number
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          customer_id: number
+          deleted_at?: string | null
+          id?: number
+          running_config_id: number
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          customer_id?: number
+          deleted_at?: string | null
+          id?: number
+          running_config_id?: number
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_running_config_favorites_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "customer_running_config_favorites_running_config_id_fkey"
+            columns: ["running_config_id"]
+            isOneToOne: false
+            referencedRelation: "running_credit_config"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       customers: {
         Row: {
           avatar_url: string | null
           created_at: string
           deleted_at: string | null
           id: number
+          latitude: number | null
+          longitude: number | null
           other_names: string | null
           phone: string | null
+          place_id: string | null
+          place_label: string | null
           surname: string | null
           unique_id: string | null
           updated_at: string | null
@@ -325,8 +595,12 @@ export type Database = {
           created_at?: string
           deleted_at?: string | null
           id?: number
+          latitude?: number | null
+          longitude?: number | null
           other_names?: string | null
           phone?: string | null
+          place_id?: string | null
+          place_label?: string | null
           surname?: string | null
           unique_id?: string | null
           updated_at?: string | null
@@ -337,8 +611,12 @@ export type Database = {
           created_at?: string
           deleted_at?: string | null
           id?: number
+          latitude?: number | null
+          longitude?: number | null
           other_names?: string | null
           phone?: string | null
+          place_id?: string | null
+          place_label?: string | null
           surname?: string | null
           unique_id?: string | null
           updated_at?: string | null
@@ -356,8 +634,7 @@ export type Database = {
       }
       fixed_credit_config: {
         Row: {
-          branch_id: number
-          config_group_id: string | null
+          click_count: number
           created_at: string
           deleted_at: string | null
           description: string | null
@@ -369,10 +646,10 @@ export type Database = {
           terms: string | null
           title: string | null
           updated_at: string | null
+          url: string | null
         }
         Insert: {
-          branch_id: number
-          config_group_id?: string | null
+          click_count?: number
           created_at?: string
           deleted_at?: string | null
           description?: string | null
@@ -384,10 +661,10 @@ export type Database = {
           terms?: string | null
           title?: string | null
           updated_at?: string | null
+          url?: string | null
         }
         Update: {
-          branch_id?: number
-          config_group_id?: string | null
+          click_count?: number
           created_at?: string
           deleted_at?: string | null
           description?: string | null
@@ -399,16 +676,9 @@ export type Database = {
           terms?: string | null
           title?: string | null
           updated_at?: string | null
+          url?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "fixed_credit_config_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: false
-            referencedRelation: "branches"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       merchants: {
         Row: {
@@ -540,8 +810,7 @@ export type Database = {
       }
       running_credit_config: {
         Row: {
-          branch_id: number
-          config_group_id: string
+          click_count: number
           created_at: string
           credit_type: Database["public"]["Enums"]["credit_type"] | null
           credit_validity: number | null
@@ -550,16 +819,17 @@ export type Database = {
           eligible_window: number | null
           fixed_credit_value: number | null
           id: number
+          images: Json | null
           is_active: boolean
           maximum_allowed_credit: number | null
           percentage_credit_value: number | null
           terms: string | null
           threshold_amount: number | null
           updated_at: string | null
+          url: string | null
         }
         Insert: {
-          branch_id: number
-          config_group_id?: string
+          click_count?: number
           created_at?: string
           credit_type?: Database["public"]["Enums"]["credit_type"] | null
           credit_validity?: number | null
@@ -568,16 +838,17 @@ export type Database = {
           eligible_window?: number | null
           fixed_credit_value?: number | null
           id?: number
+          images?: Json | null
           is_active?: boolean
           maximum_allowed_credit?: number | null
           percentage_credit_value?: number | null
           terms?: string | null
           threshold_amount?: number | null
           updated_at?: string | null
+          url?: string | null
         }
         Update: {
-          branch_id?: number
-          config_group_id?: string
+          click_count?: number
           created_at?: string
           credit_type?: Database["public"]["Enums"]["credit_type"] | null
           credit_validity?: number | null
@@ -586,22 +857,16 @@ export type Database = {
           eligible_window?: number | null
           fixed_credit_value?: number | null
           id?: number
+          images?: Json | null
           is_active?: boolean
           maximum_allowed_credit?: number | null
           percentage_credit_value?: number | null
           terms?: string | null
           threshold_amount?: number | null
           updated_at?: string | null
+          url?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "branch_credits_branch_id_fkey"
-            columns: ["branch_id"]
-            isOneToOne: false
-            referencedRelation: "branches"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       sessions: {
         Row: {
@@ -712,6 +977,30 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      tags: {
+        Row: {
+          created_at: string
+          deleted_at: string | null
+          id: number
+          name: string
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string
+          deleted_at?: string | null
+          id?: number
+          name: string
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string
+          deleted_at?: string | null
+          id?: number
+          name?: string
+          updated_at?: string | null
+        }
+        Relationships: []
       }
       users: {
         Row: {
@@ -896,6 +1185,13 @@ export type Database = {
       }
     }
     Enums: {
+      branch_category:
+        | "electronics"
+        | "home_appliances"
+        | "furniture"
+        | "retail_shops"
+        | "restaurants"
+        | "schools"
       credit_stacking_policy_type: "stack" | "best_only"
       credit_type: "fixed" | "percentage"
       cumulative_scope_type: "per_branch" | "merchant_wide"
@@ -1031,6 +1327,14 @@ export const Constants = {
   },
   public: {
     Enums: {
+      branch_category: [
+        "electronics",
+        "home_appliances",
+        "furniture",
+        "retail_shops",
+        "restaurants",
+        "schools",
+      ],
       credit_stacking_policy_type: ["stack", "best_only"],
       credit_type: ["fixed", "percentage"],
       cumulative_scope_type: ["per_branch", "merchant_wide"],

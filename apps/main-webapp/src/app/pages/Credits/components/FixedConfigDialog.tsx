@@ -28,7 +28,7 @@ import {
 } from "@store-credit-platform/api-services";
 import type {
   CreateFixedCreditConfigRequest,
-  FixedCreditConfigGroup,
+  FixedCreditConfig,
 } from "@shared/types/api.types";
 import { isApiError } from "@shared/utils/api.utils";
 import {
@@ -81,6 +81,11 @@ const fixedSchema = z.object({
   start_date: z.number().nullable(),
   end_date: z.number().nullable(),
   terms: z.string().nullable(),
+  url: z
+    .string()
+    .url("Enter a valid URL, e.g. https://example.com/promo")
+    .max(500)
+    .nullable(),
 });
 
 type FixedFormValues = z.infer<typeof fixedSchema>;
@@ -88,7 +93,7 @@ type FixedFormValues = z.infer<typeof fixedSchema>;
 interface FixedConfigDialogProps {
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
-  config?: FixedCreditConfigGroup;
+  config?: FixedCreditConfig;
 }
 
 function inRangeDays(visibleMonth: Date, from?: Date, to?: Date): Date[] {
@@ -164,6 +169,7 @@ export function FixedConfigDialog({
       start_date: null,
       end_date: null,
       terms: null,
+      url: null,
     },
   });
 
@@ -177,6 +183,7 @@ export function FixedConfigDialog({
         start_date: config?.start_date ?? null,
         end_date: config?.end_date ?? null,
         terms: config?.terms ?? null,
+        url: config?.url ?? null,
       });
       setCustomRange({
         from: fromEpochMs(config?.start_date),
@@ -185,9 +192,9 @@ export function FixedConfigDialog({
     }
   }, [open, config, reset]);
 
-  // Why: on create, the server mints config_group_id, so uploads go to a temp folder; on edit, use the real group's folder.
+  // Why: on create, the server mints the config id, so uploads go to a temp folder; on edit, use the real config's folder.
   const uploadFolder = isEdit
-    ? `merchant-${slugify(merchant?.name ?? "store", "store")}/promo-images/${config!.config_group_id}`
+    ? `merchant-${slugify(merchant?.name ?? "store", "store")}/promo-images/${config!.id}`
     : `merchant-${slugify(merchant?.name ?? "store", "store")}/promo-images/temp/${crypto.randomUUID()}`;
 
   const titleField = register("title", {
@@ -231,7 +238,7 @@ export function FixedConfigDialog({
         const { publicUrl } = await storage.uploadFile(compressed, {
           bucket: STORE_ASSETS_BUCKET,
           folder: uploadFolder,
-          id: config?.config_group_id ?? crypto.randomUUID(),
+          id: config?.id ?? crypto.randomUUID(),
           contentType: compressed.type || "image/jpeg",
         });
         uploaded.push(publicUrl);
@@ -267,10 +274,11 @@ export function FixedConfigDialog({
         start_date: values.start_date,
         end_date: values.end_date,
         terms: values.terms ?? null,
+        url: values.url ?? null,
       };
       const res = isEdit
         ? await creditConfigService.updateFixedConfig(
-            config!.config_group_id,
+            config!.id,
             payload,
           )
         : await creditConfigService.createFixedConfig(payload);
@@ -601,6 +609,27 @@ export function FixedConfigDialog({
                 setValueAs: (v) => (v === "" ? null : v),
               })}
             />
+          </div>
+
+          <div className="space-y-1.5">
+            <FieldInfoLabel
+              htmlFor="url"
+              info="Optional link customers can open from the promo card — e.g. a product page or campaign landing page."
+            >
+              Link
+            </FieldInfoLabel>
+            <Input
+              id="url"
+              type="url"
+              maxLength={500}
+              placeholder="https://example.com/promo"
+              {...register("url", {
+                setValueAs: (v) => (v === "" ? null : v),
+              })}
+            />
+            {errors.url && (
+              <p className="text-destructive text-xs">{errors.url.message}</p>
+            )}
           </div>
 
           <DialogFooter>

@@ -121,6 +121,7 @@ export default function PageHeader({
               <Image
                 source={{ uri: avatarUrl }}
                 style={StyleSheet.absoluteFill}
+                key={avatarUrl}
                 contentFit="cover"
                 transition={150}
                 accessibilityIgnoresInvertColors

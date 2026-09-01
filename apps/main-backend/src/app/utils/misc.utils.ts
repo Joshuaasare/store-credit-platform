@@ -17,3 +17,7 @@ export const isTimestampInWindow = (
   if (endEpoch != null && timestamp > endEpoch) return false;
   return true;
 };
+
+export function maxMs(values: number[]): number {
+  return values.reduce((max, v) => (v > max ? v : max), 0);
+}

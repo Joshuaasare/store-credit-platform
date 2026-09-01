@@ -1,10 +1,10 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
+import { Loader2, Upload, X } from "lucide-react";
 import {
   Button,
   Dialog,
@@ -17,11 +17,15 @@ import {
   Textarea,
   ToggleGroup,
   ToggleGroupItem,
+  cn,
 } from "@store-credit-platform/web-components";
-import { creditConfigService } from "@store-credit-platform/api-services";
+import {
+  creditConfigService,
+  createStorageService,
+} from "@store-credit-platform/api-services";
 import type {
   CreateRunningCreditConfigRequest,
-  RunningCreditConfigGroup,
+  RunningCreditConfig,
 } from "@shared/types/api.types";
 import { isApiError } from "@shared/utils/api.utils";
 import {
@@ -29,18 +33,22 @@ import {
   successToastProperties,
 } from "@shared/utils/misc.utils";
 import { useStoreStore } from "@shared/stores/storeStore";
+import {
+  compressPromoImage,
+  isHeic,
+} from "@shared/utils/imageCompression.utils";
+import { slugify } from "@shared/utils/string.utils";
 import { BranchMultiSelect } from "./BranchMultiSelect";
 import { FieldInfoLabel } from "./FieldInfoLabel";
 import { RunningConfigSummary } from "./ConfigSummary";
 
-const numericNullable = z
-  .union([z.number(), z.null()])
-  .optional();
+const storage = createStorageService();
+const STORE_ASSETS_BUCKET = "store-assets";
+
+const numericNullable = z.union([z.number(), z.null()]).optional();
 
 const runningSchema = z.object({
-  branch_ids: z
-    .array(z.number())
-    .min(1, "Select at least one branch"),
+  branch_ids: z.array(z.number()).min(1, "Select at least one branch"),
   credit_type: z.enum(["percentage", "fixed"]),
   percentage_credit_value: numericNullable,
   fixed_credit_value: numericNullable,
@@ -50,6 +58,12 @@ const runningSchema = z.object({
   credit_validity: numericNullable,
   cumulative_scope: z.enum(["per_branch", "merchant_wide"]),
   terms: z.string().nullable(),
+  url: z
+    .string()
+    .url("Enter a valid URL, e.g. https://example.com/cashback")
+    .max(500)
+    .nullable(),
+  images: z.array(z.string()).nullable(),
 });
 
 type RunningFormValues = z.infer<typeof runningSchema>;
@@ -57,7 +71,7 @@ type RunningFormValues = z.infer<typeof runningSchema>;
 interface RunningConfigDialogProps {
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
-  config?: RunningCreditConfigGroup;
+  config?: RunningCreditConfig;
 }
 
 const NULLABLE_NUMBER = (v: unknown) =>
@@ -70,7 +84,8 @@ export function RunningConfigDialog({
 }: RunningConfigDialogProps) {
   const isEdit = !!config;
   const queryClient = useQueryClient();
-  const { branches } = useStoreStore();
+  const { branches, merchant } = useStoreStore();
+  const [uploadingCount, setUploadingCount] = useState(0);
 
   const {
     register,
@@ -78,6 +93,7 @@ export function RunningConfigDialog({
     control,
     reset,
     watch,
+    setValue,
     formState: { errors },
   } = useForm<RunningFormValues>({
     resolver: zodResolver(runningSchema),
@@ -92,6 +108,8 @@ export function RunningConfigDialog({
       credit_validity: null,
       cumulative_scope: "per_branch",
       terms: null,
+      url: null,
+      images: [],
     },
   });
 
@@ -99,7 +117,8 @@ export function RunningConfigDialog({
     if (open) {
       reset({
         branch_ids: config?.branches.map((b) => b.id) ?? [],
-        credit_type: (config?.credit_type as "percentage" | "fixed") ?? "percentage",
+        credit_type:
+          (config?.credit_type as "percentage" | "fixed") ?? "percentage",
         percentage_credit_value: config?.percentage_credit_value ?? null,
         fixed_credit_value: config?.fixed_credit_value ?? null,
         maximum_allowed_credit: config?.maximum_allowed_credit ?? null,
@@ -110,9 +129,64 @@ export function RunningConfigDialog({
           (config?.cumulative_scope as "per_branch" | "merchant_wide") ??
           "per_branch",
         terms: config?.terms ?? null,
+        url: config?.url ?? null,
+        images: config?.images ?? [],
       });
     }
   }, [open, config, reset]);
+
+  // Why: on create, the server mints the config id, so uploads go to a temp folder; on edit, use the real config's folder.
+  const uploadFolder = isEdit
+    ? `merchant-${slugify(merchant?.name ?? "store", "store")}/promo-images/${config!.id}`
+    : `merchant-${slugify(merchant?.name ?? "store", "store")}/promo-images/temp/${crypto.randomUUID()}`;
+
+  const images = watch("images") ?? [];
+
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? []);
+    e.target.value = "";
+    if (files.length === 0) return;
+    setUploadingCount(files.length);
+    try {
+      const uploaded: string[] = [];
+      for (const file of files) {
+        if (!file.type.startsWith("image/") && !isHeic(file)) {
+          toast.error("Only image files are allowed");
+          continue;
+        }
+        if (file.size > 5 * 1024 * 1024) {
+          toast.error(`${file.name} exceeds 5MB`);
+          continue;
+        }
+        const compressed = await compressPromoImage(file);
+        const { publicUrl } = await storage.uploadFile(compressed, {
+          bucket: STORE_ASSETS_BUCKET,
+          folder: uploadFolder,
+          id: config?.id ?? crypto.randomUUID(),
+          contentType: compressed.type || "image/jpeg",
+        });
+        uploaded.push(publicUrl);
+      }
+      if (uploaded.length > 0) {
+        setValue("images", [...images, ...uploaded], { shouldDirty: true });
+      }
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : "Upload failed",
+        errorToastProperties,
+      );
+    } finally {
+      setUploadingCount(0);
+    }
+  };
+
+  const removeImage = (url: string) => {
+    setValue(
+      "images",
+      images.filter((u) => u !== url),
+      { shouldDirty: true },
+    );
+  };
 
   const mutation = useMutation({
     mutationFn: async (values: RunningFormValues) => {
@@ -127,10 +201,12 @@ export function RunningConfigDialog({
         credit_validity: values.credit_validity ?? null,
         cumulative_scope: values.cumulative_scope,
         terms: values.terms ?? null,
+        url: values.url ?? null,
+        images: values.images ?? [],
       };
       const res = isEdit
         ? await creditConfigService.updateRunningConfig(
-            config!.config_group_id,
+            config!.id,
             payload,
           )
         : await creditConfigService.createRunningConfig(payload);
@@ -180,9 +256,7 @@ export function RunningConfigDialog({
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div className="space-y-1.5">
-            <FieldInfoLabel
-              info="Pick which of your branches this reward runs at. Customers earn credit at every branch you select."
-            >
+            <FieldInfoLabel info="Pick which of your branches this reward runs at. Customers earn credit at every branch you select.">
               Branches *
             </FieldInfoLabel>
             <Controller
@@ -203,80 +277,87 @@ export function RunningConfigDialog({
             )}
           </div>
 
-          <div className="space-y-1.5">
-            <FieldInfoLabel info="Percentage gives customers a percentage of their spend back as credit. Fixed gives them a flat credit amount each time they qualify.">
-              Reward type *
-            </FieldInfoLabel>
-            <Controller
-              control={control}
-              name="credit_type"
-              render={({ field }) => (
-                <ToggleGroup
-                  type="single"
-                  value={field.value}
-                  onValueChange={(v) =>
-                    field.onChange(v as "percentage" | "fixed")
-                  }
-                  className="bg-muted/40 rounded-lg border p-0.5"
-                >
-                  <ToggleGroupItem
-                    value="percentage"
-                    variant="outline"
-                    className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground flex-none rounded-sm border-transparent px-4"
+          {/* Why: reward type + amount are related inputs — pair them on one row on
+              desktop (md:grid-cols-2) so the eye scans type → value together;
+              stack on mobile where horizontal space is too tight for the tabs + a number input. */}
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+            <div className="space-y-1.5">
+              <FieldInfoLabel info="Percentage gives customers a percentage of their spend back as credit. Fixed gives them a flat credit amount each time they qualify.">
+                Reward type *
+              </FieldInfoLabel>
+              <Controller
+                control={control}
+                name="credit_type"
+                render={({ field }) => (
+                  <ToggleGroup
+                    type="single"
+                    value={field.value}
+                    onValueChange={(v) =>
+                      field.onChange(v as "percentage" | "fixed")
+                    }
+                    className="bg-muted/40 rounded-lg border"
                   >
-                    Percentage
-                  </ToggleGroupItem>
-                  <ToggleGroupItem
-                    value="fixed"
-                    variant="outline"
-                    className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground flex-none rounded-sm border-transparent px-4"
-                  >
-                    Fixed
-                  </ToggleGroupItem>
-                </ToggleGroup>
-              )}
-            />
-          </div>
+                    <ToggleGroupItem
+                      value="percentage"
+                      variant="outline"
+                      className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground flex-none rounded-sm border-transparent px-4"
+                    >
+                      Percentage
+                    </ToggleGroupItem>
+                    <ToggleGroupItem
+                      value="fixed"
+                      variant="outline"
+                      className="data-[state=on]:bg-primary data-[state=on]:text-primary-foreground flex-none rounded-sm border-transparent px-4"
+                    >
+                      Fixed
+                    </ToggleGroupItem>
+                  </ToggleGroup>
+                )}
+              />
+            </div>
 
-          {creditType === "percentage" ? (
             <div className="space-y-1.5">
-              <FieldInfoLabel
-                htmlFor="percentage_credit_value"
-                info="How much of the customer's spend they get back as credit. E.g., 5 means they get 5% back."
-              >
-                Percentage (%) *
-              </FieldInfoLabel>
-              <Input
-                id="percentage_credit_value"
-                type="number"
-                step="0.01"
-                min="0"
-                placeholder="e.g. 5"
-                {...register("percentage_credit_value", {
-                  setValueAs: NULLABLE_NUMBER,
-                })}
-              />
+              {creditType === "percentage" ? (
+                <>
+                  <FieldInfoLabel
+                    htmlFor="percentage_credit_value"
+                    info="How much of the customer's spend they get back as credit. E.g., 5 means they get 5% back."
+                  >
+                    Percentage (%) *
+                  </FieldInfoLabel>
+                  <Input
+                    id="percentage_credit_value"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    placeholder="e.g. 5"
+                    {...register("percentage_credit_value", {
+                      setValueAs: NULLABLE_NUMBER,
+                    })}
+                  />
+                </>
+              ) : (
+                <>
+                  <FieldInfoLabel
+                    htmlFor="fixed_credit_value"
+                    info="The flat credit amount a customer gets each time they qualify. E.g., GH₵10 back per purchase. The max credit is set to match this automatically."
+                  >
+                    Fixed amount (GH₵) *
+                  </FieldInfoLabel>
+                  <Input
+                    id="fixed_credit_value"
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    placeholder="e.g. 10"
+                    {...register("fixed_credit_value", {
+                      setValueAs: NULLABLE_NUMBER,
+                    })}
+                  />
+                </>
+              )}
             </div>
-          ) : (
-            <div className="space-y-1.5">
-              <FieldInfoLabel
-                htmlFor="fixed_credit_value"
-                info="The flat credit amount a customer gets each time they qualify. E.g., GH₵10 back per purchase. The max credit is set to match this automatically."
-              >
-                Fixed amount (GH₵) *
-              </FieldInfoLabel>
-              <Input
-                id="fixed_credit_value"
-                type="number"
-                step="0.01"
-                min="0"
-                placeholder="e.g. 10"
-                {...register("fixed_credit_value", {
-                  setValueAs: NULLABLE_NUMBER,
-                })}
-              />
-            </div>
-          )}
+          </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
@@ -352,7 +433,11 @@ export function RunningConfigDialog({
                 type="number"
                 step="0.01"
                 min="0"
-                placeholder={creditType === "fixed" ? "Matches fixed amount" : "No cap if empty"}
+                placeholder={
+                  creditType === "fixed"
+                    ? "Matches fixed amount"
+                    : "No cap if empty"
+                }
                 disabled={creditType === "fixed"}
                 {...register("maximum_allowed_credit", {
                   setValueAs: NULLABLE_NUMBER,
@@ -416,6 +501,78 @@ export function RunningConfigDialog({
                 setValueAs: (v) => (v === "" ? null : v),
               })}
             />
+          </div>
+
+          <div className="space-y-1.5">
+            <FieldInfoLabel
+              htmlFor="url"
+              info="Optional link customers can open from the reward card — e.g. a product page or campaign landing page."
+            >
+              Link
+            </FieldInfoLabel>
+            <Input
+              id="url"
+              type="url"
+              maxLength={500}
+              placeholder="https://example.com/cashback"
+              {...register("url", {
+                setValueAs: (v) => (v === "" ? null : v),
+              })}
+            />
+            {errors.url && (
+              <p className="text-destructive text-xs">{errors.url.message}</p>
+            )}
+          </div>
+
+          <div className="space-y-1.5">
+            <FieldInfoLabel info="Optional promo images shown alongside this reward. Upload up to 5MB each — they're compressed and stored at ≤500KB as JPEG. JPG/PNG/WebP/HEIC (iPhone).">
+              Images
+            </FieldInfoLabel>
+            <div className="flex flex-wrap gap-2">
+              {images.map((url) => (
+                <div
+                  key={url}
+                  className="border-border relative h-20 w-20 overflow-hidden rounded-md border"
+                >
+                  <img
+                    src={url}
+                    alt=""
+                    className="h-full w-full object-cover"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => removeImage(url)}
+                    className="bg-background/80 absolute right-1 top-1 rounded-full p-0.5"
+                    aria-label="Remove image"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              ))}
+              <label
+                className={cn(
+                  "border-border text-muted-foreground flex h-20 w-20 cursor-pointer flex-col items-center justify-center rounded-md border border-dashed text-xs",
+                  uploadingCount > 0 && "pointer-events-none opacity-50",
+                )}
+              >
+                {uploadingCount > 0 ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <>
+                    <Upload className="mb-1 h-4 w-4" />
+                    <span>Upload</span>
+                  </>
+                )}
+                <input
+                  type="file"
+                  accept="image/*,image/heic,image/heif,.heic,.heif"
+                  multiple
+                  className="hidden"
+                  onChange={handleFileSelect}
+                  disabled={uploadingCount > 0}
+                />
+              </label>
+            </div>
           </div>
 
           <RunningConfigSummary

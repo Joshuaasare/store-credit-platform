@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from "react";
-import { ScrollView, StyleSheet, View } from "react-native";
+import { Platform, ScrollView, StyleSheet, View } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import type { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
 import { useQuery } from "@tanstack/react-query";
@@ -22,6 +22,7 @@ import { useActivitiesFeed } from "./useActivitiesFeed";
 import RecentActivitySection from "./components/RecentActivitySection";
 import NearbyOffersSection from "./components/NearbyOffersSection";
 import HeroBalanceCard from "./components/HeroBalanceCard";
+import { useOffsets } from "../../shared/hooks/useOffsets";
 
 const PREVIEW_ROWS = 4;
 
@@ -31,6 +32,7 @@ const ACTIVITIES_PREVIEW_KEY = ["customer", "activities", "preview"] as const;
 export function HomeScreen() {
   const navigation =
     useNavigation<BottomTabNavigationProp<TabStackParamList>>();
+  const { tabBarOffset } = useOffsets();
 
   // Sum remaining on every credit row, not just live — total wallet position at a glance.
   const creditsQuery = useQuery<CustomerCreditsApiResponse>({
@@ -90,7 +92,13 @@ export function HomeScreen() {
       <ScreenBody edges={["bottom"]}>
         <ScrollView
           showsVerticalScrollIndicator={false}
-          style={{ paddingTop: 24 }}
+          style={{
+            paddingTop: 24,
+          }}
+          contentContainerStyle={{
+            ...styles.scrollContent,
+            paddingBottom: tabBarOffset,
+          }}
         >
           {/* <GlassTransition> */}
           <View style={styles.heroBlock}>
@@ -124,12 +132,13 @@ export function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  scrollContent: {
-    paddingBottom: 96,
-  },
-  bottomSpacer: {
-    height: 16,
-  },
+  // Floating tab bar clearance. The bar is 64 tall + 16 gap = 80 from the
+  // screen bottom (Android: + insets.bottom since it lifts above the system
+  // nav bar). ScreenBody's edges:["bottom"] already reserves 24 + insets.bottom,
+  // so on Android the ScrollView needs 56 more to reach the bar's top edge.
+  // iOS keeps its original layout — ScreenBody's bottom inset covers the 16px
+  // floating gap, no extra scroll padding. Platform-specific per the RN skill.
+  scrollContent: {},
 
   heroBlock: {
     marginBottom: 24,

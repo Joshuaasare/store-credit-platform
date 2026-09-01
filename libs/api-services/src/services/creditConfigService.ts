@@ -34,31 +34,31 @@ export function createCreditConfigService() {
     },
 
     async updateRunningConfig(
-      configGroupId: string,
+      configId: number,
       payload: UpdateRunningCreditConfigRequest,
     ): Promise<RunningCreditConfigMutationApiResponse> {
       return apiRequest<RunningCreditConfigMutationApiResponse>(
-        `/credit-configs/running/${configGroupId}`,
+        `/credit-configs/running/${configId}`,
         { method: "PATCH", body: payload },
       );
     },
 
     async deleteRunningConfig(
-      configGroupId: string,
+      configId: number,
     ): Promise<RunningCreditConfigDeleteApiResponse> {
       return apiRequest<RunningCreditConfigDeleteApiResponse>(
-        `/credit-configs/running/${configGroupId}`,
+        `/credit-configs/running/${configId}`,
         { method: "DELETE" },
       );
     },
 
     async toggleRunningConfigActive(
-      configGroupId: string,
+      configId: number,
       isActive: boolean,
     ): Promise<RunningCreditConfigMutationApiResponse> {
       const body: ToggleActiveRequest = { is_active: isActive };
       return apiRequest<RunningCreditConfigMutationApiResponse>(
-        `/credit-configs/running/${configGroupId}/active`,
+        `/credit-configs/running/${configId}/active`,
         { method: "PATCH", body },
       );
     },
@@ -80,31 +80,31 @@ export function createCreditConfigService() {
     },
 
     async updateFixedConfig(
-      configGroupId: string,
+      configId: number,
       payload: UpdateFixedCreditConfigRequest,
     ): Promise<FixedCreditConfigMutationApiResponse> {
       return apiRequest<FixedCreditConfigMutationApiResponse>(
-        `/credit-configs/fixed/${configGroupId}`,
+        `/credit-configs/fixed/${configId}`,
         { method: "PATCH", body: payload },
       );
     },
 
     async deleteFixedConfig(
-      configGroupId: string,
+      configId: number,
     ): Promise<FixedCreditConfigDeleteApiResponse> {
       return apiRequest<FixedCreditConfigDeleteApiResponse>(
-        `/credit-configs/fixed/${configGroupId}`,
+        `/credit-configs/fixed/${configId}`,
         { method: "DELETE" },
       );
     },
 
     async toggleFixedConfigActive(
-      configGroupId: string,
+      configId: number,
       isActive: boolean,
     ): Promise<FixedCreditConfigMutationApiResponse> {
       const body: ToggleActiveRequest = { is_active: isActive };
       return apiRequest<FixedCreditConfigMutationApiResponse>(
-        `/credit-configs/fixed/${configGroupId}/active`,
+        `/credit-configs/fixed/${configId}/active`,
         { method: "PATCH", body },
       );
     },

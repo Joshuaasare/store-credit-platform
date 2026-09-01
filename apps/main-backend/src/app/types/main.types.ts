@@ -1,5 +1,13 @@
 export type StaffRoleValues = "manager" | "cashier";
 
+export type BranchCategoryValues =
+  | "electronics"
+  | "home_appliances"
+  | "furniture"
+  | "retail_shops"
+  | "restaurants"
+  | "schools";
+
 export type CreditTypeValues = "fixed" | "percentage";
 
 export type CumulativeScopeValues = "per_branch" | "merchant_wide";
@@ -41,6 +49,14 @@ export interface BaseBranch {
   country_code: string;
   is_active: boolean;
   created_at: string;
+  updated_at: string | null;
+  deleted_at: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  place_id: string | null;
+  place_label: string | null;
+  category: BranchCategoryValues | null;
+  purchase_threshold_amount: number | null;
 }
 
 export interface ApiErrorResponse {
@@ -64,6 +80,10 @@ export interface BaseCustomer {
   avatar_url: string | null;
   created_at: string;
   deleted_at: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  place_id: string | null;
+  place_label: string | null;
 }
 
 // Cross-file projection (lives here so auth + customer-auth types share it). id is users.id (uuid); customer_id is the linked numeric customers.id.
@@ -74,6 +94,10 @@ export interface CustomerAuthUser {
   surname: string | null;
   other_names: string | null;
   avatar_url: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  place_id: string | null;
+  place_label: string | null;
 }
 
 export interface BaseCustomerTransaction {
@@ -143,39 +167,42 @@ export interface BaseCustomerCreditRedemption {
   updated_at: string | null;
   deleted_at: string | null;
   branch_id: number;
+  requested_date: number;
+  transaction_date: number;
 }
 
 export interface BaseRunningCreditConfig {
-  id: number;
-  config_group_id: string;
-  branch_id: number;
+  click_count: number;
+  created_at: string;
   credit_type: CreditTypeValues | null;
   credit_validity: number | null;
+  cumulative_scope: CumulativeScopeValues;
+  deleted_at: string | null;
   eligible_window: number | null;
   fixed_credit_value: number | null;
-  percentage_credit_value: number | null;
-  maximum_allowed_credit: number | null;
-  threshold_amount: number | null;
-  terms: string | null;
-  cumulative_scope: CumulativeScopeValues;
+  id: number;
   is_active: boolean;
-  created_at: string;
+  maximum_allowed_credit: number | null;
+  percentage_credit_value: number | null;
+  terms: string | null;
+  threshold_amount: number | null;
   updated_at: string | null;
-  deleted_at: string | null;
+  url: string | null;
+  images: string[] | null;
 }
 
 export interface BaseFixedCreditConfig {
-  id: number;
-  branch_id: number;
-  start_date: number | null;
-  end_date: number | null;
-  terms: string | null;
-  is_active: boolean;
+  click_count: number;
   created_at: string;
-  updated_at: string | null;
   deleted_at: string | null;
-  title: string | null;
-  config_group_id: string;
   description: string | null;
+  end_date: number | null;
+  id: number;
   images: string[] | null;
+  is_active: boolean;
+  start_date: number | null;
+  terms: string | null;
+  title: string | null;
+  updated_at: string | null;
+  url: string | null;
 }

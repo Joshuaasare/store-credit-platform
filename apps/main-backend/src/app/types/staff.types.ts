@@ -59,6 +59,26 @@ export interface UpdateStaffRequest {
   notes?: string | null;
 }
 
+// DB-level update payload for the staff table. Built conditionally in updateStaff — only
+// fields the request actually touches are set; updated_at is added when any field is present.
+export interface StaffUpdate {
+  branch_id?: number;
+  role?: StaffRoleValues | null;
+  access_granted?: boolean;
+  surname?: string | null;
+  other_names?: string | null;
+  address?: string | null;
+  notes?: string | null;
+  updated_at?: string;
+}
+
+// DB-level update payload for the users table in the staff flow. Always advances updated_at;
+// phone is set only when a new normalized phone was resolved + passed uniqueness check.
+export interface UserUpdate {
+  phone?: string;
+  updated_at: string;
+}
+
 export interface SetStaffAccessRequest {
   access_granted: boolean;
 }

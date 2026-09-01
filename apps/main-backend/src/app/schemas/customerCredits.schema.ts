@@ -18,7 +18,9 @@ Type.Null()
 ])
 
 export type CustomerCreditWithBranch = Static<typeof CustomerCreditWithBranch>
-export const CustomerCreditWithBranch = Type.Composite([BaseCustomerCredit, Type.Object({
+export const CustomerCreditWithBranch = Type.Intersect([
+BaseCustomerCredit,
+Type.Object({
 branch: Type.Intersect([
 BaseBranch,
 Type.Object({
@@ -30,7 +32,8 @@ pending_total: Type.Number(),
 remaining: Type.Number(),
 status: CustomerCreditStatus,
 credit_type: CustomerCreditType
-})])
+})
+])
 
 export type CustomerCredits = Static<typeof CustomerCredits>
 export const CustomerCredits = Type.Object({

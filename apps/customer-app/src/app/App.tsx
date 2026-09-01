@@ -9,9 +9,12 @@ import {
 } from "@expo-google-fonts/inter";
 import * as SplashScreen from "expo-splash-screen";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { SafeAreaProvider } from "react-native-safe-area-context";
 import { useAuthStore } from "./shared/store/useAuthStore";
 import { RootNavigator } from "./navigation/RootNavigator";
 import { ThemeProvider, useThemeTokens } from "./shared/theme/ThemeContext";
+import { AppToaster } from "./shared/components/AppToaster";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -60,9 +63,14 @@ function AppShell() {
   }
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <RootNavigator />
-    </QueryClientProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <SafeAreaProvider>
+        <QueryClientProvider client={queryClient}>
+          <RootNavigator />
+          <AppToaster />
+        </QueryClientProvider>
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
   );
 }
 

@@ -1,6 +1,6 @@
 /**
  * Auto-generated API Types
- * Generated on: 2026-08-21T09:53:26.211Z
+ * Generated on: 2026-09-01T14:07:34.779Z
  * 
  * ⚠️ DO NOT EDIT MANUALLY
  * Source: apps/smartschool-api/src/app/types/
@@ -21,6 +21,14 @@
 // SHARED TYPES (from main.types.ts)
 // ========================================
 export type StaffRoleValues = "manager" | "cashier";
+
+export type BranchCategoryValues =
+  | "electronics"
+  | "home_appliances"
+  | "furniture"
+  | "retail_shops"
+  | "restaurants"
+  | "schools";
 
 export type CreditTypeValues = "fixed" | "percentage";
 
@@ -63,6 +71,14 @@ export interface BaseBranch {
   country_code: string;
   is_active: boolean;
   created_at: string;
+  updated_at: string | null;
+  deleted_at: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  place_id: string | null;
+  place_label: string | null;
+  category: BranchCategoryValues | null;
+  purchase_threshold_amount: number | null;
 }
 
 export interface ApiErrorResponse {
@@ -86,6 +102,10 @@ export interface BaseCustomer {
   avatar_url: string | null;
   created_at: string;
   deleted_at: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  place_id: string | null;
+  place_label: string | null;
 }
 
 
@@ -96,6 +116,10 @@ export interface CustomerAuthUser {
   surname: string | null;
   other_names: string | null;
   avatar_url: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  place_id: string | null;
+  place_label: string | null;
 }
 
 export interface BaseCustomerTransaction {
@@ -165,41 +189,44 @@ export interface BaseCustomerCreditRedemption {
   updated_at: string | null;
   deleted_at: string | null;
   branch_id: number;
+  requested_date: number;
+  transaction_date: number;
 }
 
 export interface BaseRunningCreditConfig {
-  id: number;
-  config_group_id: string;
-  branch_id: number;
+  click_count: number;
+  created_at: string;
   credit_type: CreditTypeValues | null;
   credit_validity: number | null;
+  cumulative_scope: CumulativeScopeValues;
+  deleted_at: string | null;
   eligible_window: number | null;
   fixed_credit_value: number | null;
-  percentage_credit_value: number | null;
-  maximum_allowed_credit: number | null;
-  threshold_amount: number | null;
-  terms: string | null;
-  cumulative_scope: CumulativeScopeValues;
+  id: number;
   is_active: boolean;
-  created_at: string;
+  maximum_allowed_credit: number | null;
+  percentage_credit_value: number | null;
+  terms: string | null;
+  threshold_amount: number | null;
   updated_at: string | null;
-  deleted_at: string | null;
+  url: string | null;
+  images: string[] | null;
 }
 
 export interface BaseFixedCreditConfig {
-  id: number;
-  branch_id: number;
-  start_date: number | null;
-  end_date: number | null;
-  terms: string | null;
-  is_active: boolean;
+  click_count: number;
   created_at: string;
-  updated_at: string | null;
   deleted_at: string | null;
-  title: string | null;
-  config_group_id: string;
   description: string | null;
+  end_date: number | null;
+  id: number;
   images: string[] | null;
+  is_active: boolean;
+  start_date: number | null;
+  terms: string | null;
+  title: string | null;
+  updated_at: string | null;
+  url: string | null;
 }
 
 // ========================================
@@ -329,6 +356,9 @@ export interface CustomerRegisterRequest {
   pending_token: string;
   surname: string;
   other_names: string;
+  latitude?: number | null;
+  longitude?: number | null;
+  place_id?: string | null;
 }
 
 export interface CustomerRefreshRequest {
@@ -440,6 +470,11 @@ export interface CreateBranchRequest {
   address?: string;
   city: string;
   country_code: string;
+  latitude?: number | null;
+  longitude?: number | null;
+  place_id?: string | null;
+  category?: BranchCategoryValues | null;
+  purchase_threshold_amount?: number | null;
 }
 
 export interface UpdateBranchRequest {
@@ -448,29 +483,89 @@ export interface UpdateBranchRequest {
   address?: string;
   city?: string;
   country_code?: string;
+  latitude?: number | null;
+  longitude?: number | null;
+  place_id?: string | null;
+  category?: BranchCategoryValues | null;
+  purchase_threshold_amount?: number | null;
+}
+
+export type BranchWithOffers = BaseBranch & {
+  merchant: BaseMerchant | null;
+  running_configs: (BaseRunningCreditConfig & { favorite_count: number })[];
+  fixed_configs: (BaseFixedCreditConfig & { favorite_count: number })[];
+  distance_km: number | null;
+};
+
+export interface BranchesNearbyFilters {
+  lat: number | null;
+  lng: number | null;
+  category?: BranchCategoryValues[] | null;
+  limit?: number;
+  offset?: number;
+}
+
+export interface BranchesNearbyPage {
+  rows: BranchWithOffers[];
+  total: number;
+  offset: number;
+  limit: number;
+}
+
+export interface BranchSearchFilters {
+  lat: number | null;
+  lng: number | null;
+  query: string;
+  limit?: number;
+  offset?: number;
+}
+
+export type BranchSearchPage = BranchesNearbyPage;
+
+export interface BranchesNearbyQuerystring {
+  lat?: number;
+  lng?: number;
+  category?: BranchCategoryValues[] | BranchCategoryValues;
+  limit?: number;
+  offset?: number;
+}
+
+export interface BranchSearchQuerystring {
+  lat?: number;
+  lng?: number;
+  q?: string;
+  limit?: number;
+  offset?: number;
+}
+
+export interface BranchesNearbyResponse {
+  success: true;
+  data: BranchesNearbyPage;
+}
+
+export interface BranchSearchResponse {
+  success: true;
+  data: BranchSearchPage;
 }
 
 export type BranchListApiResponse = BranchListResponse | ApiErrorResponse;
 export type BranchMutationApiResponse =
   | BranchMutationResponse
   | ApiErrorResponse;
+export type BranchesNearbyApiResponse =
+  | BranchesNearbyResponse
+  | ApiErrorResponse;
+export type BranchSearchApiResponse = BranchSearchResponse | ApiErrorResponse;
 
-export interface RunningCreditConfigGroup {
-  config_group_id: string;
+export type RunningCreditConfig = BaseRunningCreditConfig & {
   branches: BaseBranch[];
-  credit_type: CreditTypeValues | null;
-  credit_validity: number | null;
-  eligible_window: number | null;
-  fixed_credit_value: number | null;
-  percentage_credit_value: number | null;
-  maximum_allowed_credit: number | null;
-  threshold_amount: number | null;
-  terms: string | null;
-  cumulative_scope: CumulativeScopeValues;
-  is_active: boolean;
-  created_at: string;
-  updated_at: string | null;
-}
+  favorite_count: number;
+};
+
+export type FixedCreditConfig = BaseFixedCreditConfig & {
+  branches: BaseBranch[];
+  favorite_count: number;
+};
 
 export interface CreateRunningCreditConfigRequest {
   branch_ids: number[];
@@ -482,23 +577,25 @@ export interface CreateRunningCreditConfigRequest {
   maximum_allowed_credit?: number | null;
   threshold_amount?: number | null;
   terms?: string | null;
+  url?: string | null;
   cumulative_scope: CumulativeScopeValues;
+  images?: string[] | null;
 }
 
 export type UpdateRunningCreditConfigRequest = CreateRunningCreditConfigRequest;
 
-export interface FixedCreditConfigGroup {
-  config_group_id: string;
-  branches: BaseBranch[];
-  title: string | null;
-  description: string | null;
-  images: string[] | null;
-  start_date: number | null;
-  end_date: number | null;
+export interface RunningCreditConfigUpdate {
+  credit_type: CreditTypeValues | null;
+  credit_validity: number | null;
+  eligible_window: number | null;
+  fixed_credit_value: number | null;
+  percentage_credit_value: number | null;
+  maximum_allowed_credit: number | null;
+  threshold_amount: number | null;
   terms: string | null;
-  is_active: boolean;
-  created_at: string;
-  updated_at: string | null;
+  url: string | null;
+  cumulative_scope: CumulativeScopeValues;
+  images?: string[];
 }
 
 export interface CreateFixedCreditConfigRequest {
@@ -509,22 +606,101 @@ export interface CreateFixedCreditConfigRequest {
   start_date?: number | null;
   end_date?: number | null;
   terms?: string | null;
+  url?: string | null;
 }
 
 export type UpdateFixedCreditConfigRequest = CreateFixedCreditConfigRequest;
+
+export interface FixedCreditConfigUpdate {
+  title: string | null;
+  description: string | null;
+  start_date: number | null;
+  end_date: number | null;
+  terms: string | null;
+  url: string | null;
+  images?: string[];
+}
 
 export interface ToggleActiveRequest {
   is_active: boolean;
 }
 
+export type FavoritedRunningCreditConfig = RunningCreditConfig & {
+  favorited_at: string;
+};
+
+export type FavoritedFixedCreditConfig = FixedCreditConfig & {
+  favorited_at: string;
+};
+
+export interface CustomerFavoritesListResponse {
+  success: true;
+  data: {
+    running: FavoritedRunningCreditConfig[];
+    fixed: FavoritedFixedCreditConfig[];
+  };
+}
+
+export interface FavoritedMerchantSummary {
+  id: number;
+  name: string | null;
+  logo_url: string | null;
+}
+
+export type FavoritedConfig =
+  | {
+      config_type: "running";
+      config: FavoritedRunningCreditConfig;
+      merchant: FavoritedMerchantSummary | null;
+    }
+  | {
+      config_type: "fixed";
+      config: FavoritedFixedCreditConfig;
+      merchant: FavoritedMerchantSummary | null;
+    };
+
+export interface CustomerFavoritesPage {
+  rows: FavoritedConfig[];
+  total: number;
+  offset: number;
+  limit: number;
+}
+
+export interface CustomerFavoritesPageResponse {
+  success: true;
+  data: CustomerFavoritesPage;
+}
+
+export interface FavoriteMutationResponse {
+  success: true;
+}
+
+export type CustomerFavoritesListApiResponse =
+  | CustomerFavoritesListResponse
+  | ApiErrorResponse;
+
+export type CustomerFavoritesPageApiResponse =
+  | CustomerFavoritesPageResponse
+  | ApiErrorResponse;
+
+export type FavoriteMutationApiResponse =
+  | FavoriteMutationResponse
+  | ApiErrorResponse;
+
+export interface ClickMutationResponse {
+  success: true;
+}
+
+export type ClickMutationApiResponse = ClickMutationResponse | ApiErrorResponse;
+
 export interface RunningCreditConfigListResponse {
   success: true;
-  data: RunningCreditConfigGroup[];
+  data: RunningCreditConfig[];
 }
 
 export interface RunningCreditConfigMutationResponse {
   success: true;
-  data: RunningCreditConfigGroup;
+  data: RunningCreditConfig;
 }
 
 export interface RunningCreditConfigDeleteResponse {
@@ -546,12 +722,12 @@ export type RunningCreditConfigDeleteApiResponse =
 
 export interface FixedCreditConfigListResponse {
   success: true;
-  data: FixedCreditConfigGroup[];
+  data: FixedCreditConfig[];
 }
 
 export interface FixedCreditConfigMutationResponse {
   success: true;
-  data: FixedCreditConfigGroup;
+  data: FixedCreditConfig;
 }
 
 export interface FixedCreditConfigDeleteResponse {
@@ -647,20 +823,14 @@ export type CustomerCreditStatus = "live" | "expired" | "revoked";
 
 export type CustomerCreditType = "running" | "fixed" | null;
 
-export interface CustomerCreditWithBranch extends BaseCustomerCredit {
-  
+export type CustomerCreditWithBranch = BaseCustomerCredit & {
   branch: BaseBranch & { merchant: BaseMerchant };
-  
   redeemed_total: number;
-  
   pending_total: number;
-  
   remaining: number;
-  
   status: CustomerCreditStatus;
-  
   credit_type: CustomerCreditType;
-}
+};
 
 export interface CustomerCredits {
   live: CustomerCreditWithBranch[];
@@ -713,6 +883,22 @@ export interface CustomerProfileUpdateRequest {
   avatar_url?: string | null;
   newPhone?: string;
   phoneVerifiedToken?: string;
+  latitude?: number | null;
+  longitude?: number | null;
+  place_id?: string | null;
+  place_label?: string | null;
+}
+
+export interface CustomerUpdate {
+  surname?: string;
+  other_names?: string;
+  avatar_url?: string | null;
+  phone?: string;
+  latitude?: number | null;
+  longitude?: number | null;
+  place_id?: string | null;
+  place_label?: string | null;
+  updated_at?: string;
 }
 
 export interface CustomerProfileUpdateResponse {
@@ -734,13 +920,13 @@ export type CustomerMerchantBranchesApiResponse =
   | ApiErrorResponse;
 
 export interface CustomerPendingRedemption {
-  redemption_code: number;
-  redemption_id: number;
+  id: number;
   branch_id: number;
-  branch_name: string | null;
   amount_redeemed: number;
+  created_at: string;
+  branch: { id: number; name: string | null } | null;
+  redemption_code: number;
   requested_date: number;
-  requested_at: string;
 }
 
 export interface CustomerPendingRedemptionResponse {
@@ -789,10 +975,10 @@ export type CustomerRedemptionCancelApiResponse =
   | ApiErrorResponse;
 
 export interface CustomerApprovedRedemption {
-  redemption_id: number;
-  amount_redeemed: number;
+  id: number;
   branch_id: number;
-  branch_name: string | null;
+  amount_redeemed: number;
+  branch: { id: number; name: string | null } | null;
   approved_at: number;
 }
 
@@ -935,14 +1121,14 @@ export interface CustomerDetailResponse {
 export type CustomerListApiResponse = CustomerListResponse | ApiErrorResponse;
 export type CustomerDetailApiResponse = CustomerDetailResponse | ApiErrorResponse;
 
-export interface MerchantWithStats extends BaseMerchant {
+export type MerchantWithStats = BaseMerchant & {
   branch_count: number;
   staff_count: number;
   customer_count: number;
   lifetime_credit_issued: number;
   credit_pool_used: number;
   credit_pool_limit: number | null;
-}
+};
 
 export interface UpdateMerchantRequest {
   name?: string;
@@ -969,15 +1155,26 @@ export type MerchantMutationApiResponse =
   | MerchantMutationResponse
   | ApiErrorResponse;
 
-export interface MerchantPendingRequest {
-  redemption_id: number;
-  customer_id: number;
-  branch_id: number;
-  branch_name: string | null;
-  amount_redeemed: number;
-  requested_date: number;
-  requested_at: string;
-  customer: BaseCustomer & { users: BaseUserProfile | null };
+export interface MerchantSearchResult {
+  id: number;
+  name: string;
+  slug: string | null;
+  logo_url: string | null;
+}
+
+export interface CustomerMerchantSearchResponse {
+  success: true;
+  data: MerchantSearchResult[];
+}
+
+export type CustomerMerchantSearchApiResponse =
+  | CustomerMerchantSearchResponse
+  | ApiErrorResponse;
+
+export interface MerchantPendingRequest
+  extends BaseCustomerCreditRedemption {
+  branch: BaseBranch | null;
+  customer: (BaseCustomer & { users: BaseUserProfile | null }) | null;
   merchant: BaseMerchant;
 }
 
@@ -1112,6 +1309,22 @@ export interface UpdateStaffRequest {
   access_granted?: boolean;
   address?: string | null;
   notes?: string | null;
+}
+
+export interface StaffUpdate {
+  branch_id?: number;
+  role?: StaffRoleValues | null;
+  access_granted?: boolean;
+  surname?: string | null;
+  other_names?: string | null;
+  address?: string | null;
+  notes?: string | null;
+  updated_at?: string;
+}
+
+export interface UserUpdate {
+  phone?: string;
+  updated_at: string;
 }
 
 export interface SetStaffAccessRequest {

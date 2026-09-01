@@ -21,11 +21,17 @@ import { computeInitials } from "../../shared/utils/computeInitials";
 import { formatGhanaPhone } from "../../shared/utils/formatGhanaPhone";
 import { compressImageToLocalFile } from "../../shared/utils/compressImage";
 import { customerProfileService, storage } from "../../api/client";
+import PrimaryButton from "../../shared/components/PrimaryButton";
 import { useAuthStore } from "../../shared/store/useAuthStore";
 import { useThemeTokens } from "../../shared/theme/ThemeContext";
 import type { AppStackParamList } from "../../navigation/RootNavigator";
 import AvatarSourcePicker from "./components/AvatarSourcePicker";
 import OtpVerifyModal from "./components/OtpVerifyModal";
+import {
+  LocationPicker,
+  LocationValue,
+} from "../../shared/components/LocationPicker";
+import { toastSuccess, toastError } from "../../shared/utils/toast.utils";
 
 type Props = NativeStackScreenProps<AppStackParamList, "EditProfile">;
 
@@ -36,6 +42,7 @@ export function EditProfileScreen({ navigation }: Props) {
   const theme = useThemeTokens();
   const user = useAuthStore((s) => s.user);
   const setUser = useAuthStore((s) => s.setUser);
+  const logout = useAuthStore((s) => s.logout);
 
   // Strip leading `+` so PhoneInput's value matches its "233XXXXXXXXX" wire format.
   const currentPhone = useMemo(() => {
@@ -71,6 +78,18 @@ export function EditProfileScreen({ navigation }: Props) {
 
   const [submitting, setSubmitting] = useState(false);
   const [pageError, setPageError] = useState<string | null>(null);
+
+  const [location, setLocation] = useState<LocationValue | null>(() =>
+    user?.latitude != null && user?.longitude != null
+      ? {
+          latitude: user.latitude,
+          longitude: user.longitude,
+          place_id: user.place_id ?? null,
+          label: user.place_label ?? "",
+        }
+      : null,
+  );
+  const [locationDirty, setLocationDirty] = useState(false);
 
   const phoneUnchanged = phone === currentPhone;
   const phoneVerified = !phoneUnchanged && phone === verifiedPhone;
@@ -198,9 +217,7 @@ export function EditProfileScreen({ navigation }: Props) {
       }
       setUser(res.data.user);
     } catch (e) {
-      setPageError(
-        e instanceof Error ? e.message : "Failed to update photo",
-      );
+      setPageError(e instanceof Error ? e.message : "Failed to update photo");
     } finally {
       setAvatarUploading(false);
     }
@@ -288,6 +305,10 @@ export function EditProfileScreen({ navigation }: Props) {
         other_names?: string;
         newPhone?: string;
         phoneVerifiedToken?: string;
+        latitude?: number | null;
+        longitude?: number | null;
+        place_id?: string | null;
+        place_label?: string | null;
       } = {};
       if (surnameTrimmed !== (user?.surname ?? ""))
         body.surname = surnameTrimmed;
@@ -297,8 +318,15 @@ export function EditProfileScreen({ navigation }: Props) {
         body.newPhone = phone;
         body.phoneVerifiedToken = phoneVerifiedToken;
       }
+      if (locationDirty) {
+        body.latitude = location?.latitude ?? null;
+        body.longitude = location?.longitude ?? null;
+        body.place_id = location?.place_id ?? null;
+        body.place_label = location?.label ?? null;
+      }
 
       if (
+        !locationDirty &&
         body.surname === undefined &&
         body.other_names === undefined &&
         body.newPhone === undefined
@@ -311,18 +339,19 @@ export function EditProfileScreen({ navigation }: Props) {
       // apiService throws on non-2xx so this is unreachable at runtime;
       // the branch is the union narrowing TS needs for `res.data.user`.
       if (!res.success) {
-        setPageError(res.error);
+        toastError(res.error);
         return;
       }
 
       setUser(res.data.user);
+      toastSuccess("Profile updated");
 
       setPhoneVerifiedToken(null);
       setVerifiedPhone(null);
     } catch (e) {
       const message =
         e instanceof Error ? e.message : "Failed to update profile";
-      setPageError(message);
+      toastError(message);
       // If verification expired between verify and Update, reset so the
       // customer can re-verify — otherwise the Verified chip sticks with no Verify button.
       const lower = message.toLowerCase();
@@ -344,6 +373,7 @@ export function EditProfileScreen({ navigation }: Props) {
         <ScrollView
           contentContainerStyle={styles.scrollBody}
           keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
         >
           <View style={styles.avatarBlock}>
             <TouchableOpacity
@@ -604,6 +634,26 @@ export function EditProfileScreen({ navigation }: Props) {
             ) : null}
           </View>
 
+          <Text
+            style={[
+              styles.label,
+              styles.labelSpacing,
+              {
+                color: theme.colors.textSecondary,
+                fontFamily: theme.typography.fontFamilyMedium,
+              },
+            ]}
+          >
+            Location
+          </Text>
+          <LocationPicker
+            value={location}
+            onChange={(v) => {
+              setLocation(v);
+              setLocationDirty(true);
+            }}
+          />
+
           {pageError ? (
             <Text
               style={[
@@ -624,6 +674,13 @@ export function EditProfileScreen({ navigation }: Props) {
             disabled={!canSubmit}
             onPress={handleSubmit}
             theme={theme}
+          />
+
+          <PrimaryButton
+            title="Log out"
+            onPress={logout}
+            fullWidth
+            style={styles.logoutButton}
           />
         </ScrollView>
       </ScreenBody>
@@ -791,5 +848,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     marginTop: 24,
+  },
+  logoutButton: {
+    marginTop: 12,
   },
 });

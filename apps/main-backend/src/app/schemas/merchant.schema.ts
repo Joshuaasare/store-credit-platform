@@ -4,7 +4,9 @@ import { BaseMerchant, ApiErrorResponse } from './main.schema'
 
 
 export type MerchantWithStats = Static<typeof MerchantWithStats>
-export const MerchantWithStats = Type.Composite([BaseMerchant, Type.Object({
+export const MerchantWithStats = Type.Intersect([
+BaseMerchant,
+Type.Object({
 branch_count: Type.Number(),
 staff_count: Type.Number(),
 customer_count: Type.Number(),
@@ -14,7 +16,8 @@ credit_pool_limit: Type.Union([
 Type.Number(),
 Type.Null()
 ])
-})])
+})
+])
 
 export type UpdateMerchantRequest = Static<typeof UpdateMerchantRequest>
 export const UpdateMerchantRequest = Type.Object({
@@ -59,5 +62,31 @@ ApiErrorResponse
 export type MerchantMutationApiResponse = Static<typeof MerchantMutationApiResponse>
 export const MerchantMutationApiResponse = Type.Union([
 MerchantMutationResponse,
+ApiErrorResponse
+])
+
+export type MerchantSearchResult = Static<typeof MerchantSearchResult>
+export const MerchantSearchResult = Type.Object({
+id: Type.Number(),
+name: Type.String(),
+slug: Type.Union([
+Type.String(),
+Type.Null()
+]),
+logo_url: Type.Union([
+Type.String(),
+Type.Null()
+])
+})
+
+export type CustomerMerchantSearchResponse = Static<typeof CustomerMerchantSearchResponse>
+export const CustomerMerchantSearchResponse = Type.Object({
+success: Type.Literal(true),
+data: Type.Array(MerchantSearchResult)
+})
+
+export type CustomerMerchantSearchApiResponse = Static<typeof CustomerMerchantSearchApiResponse>
+export const CustomerMerchantSearchApiResponse = Type.Union([
+CustomerMerchantSearchResponse,
 ApiErrorResponse
 ])

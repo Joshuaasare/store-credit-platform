@@ -39,6 +39,10 @@ export function createCustomerProfileService(config?: ApiClientConfig) {
       avatar_url?: string | null;
       newPhone?: string;
       phoneVerifiedToken?: string;
+      latitude?: number | null;
+      longitude?: number | null;
+      place_id?: string | null;
+      place_label?: string | null;
     }): Promise<CustomerProfileUpdateApiResponse> {
       return apiRequest<CustomerProfileUpdateApiResponse>(
         `/customers/me/profile`,

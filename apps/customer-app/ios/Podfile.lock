@@ -203,6 +203,8 @@ PODS:
     - ExpoModulesCore
   - ExpoLinearGradient (55.0.16):
     - ExpoModulesCore
+  - ExpoLocation (55.1.13):
+    - ExpoModulesCore
   - ExpoLogBox (55.0.10):
     - React-Core
   - ExpoModulesCore (55.0.20):
@@ -1659,6 +1661,53 @@ PODS:
     - React-RCTFBReactNativeSpec
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
+  - react-native-maps (1.27.2):
+    - react-native-maps/Maps (= 1.27.2)
+  - react-native-maps/Generated (1.27.2):
+    - hermes-engine
+    - RCTRequired
+    - RCTTypeSafety
+    - React-Core
+    - React-Core-prebuilt
+    - React-debug
+    - React-Fabric
+    - React-featureflags
+    - React-graphics
+    - React-ImageManager
+    - React-jsi
+    - React-NativeModulesApple
+    - React-RCTFabric
+    - React-renderercss
+    - React-rendererdebug
+    - React-utils
+    - ReactCodegen
+    - ReactCommon/turbomodule/bridging
+    - ReactCommon/turbomodule/core
+    - ReactNativeDependencies
+    - Yoga
+  - react-native-maps/Maps (1.27.2):
+    - hermes-engine
+    - RCTRequired
+    - RCTTypeSafety
+    - React-Core
+    - React-Core-prebuilt
+    - React-debug
+    - React-Fabric
+    - React-featureflags
+    - React-graphics
+    - React-ImageManager
+    - React-jsi
+    - react-native-maps/Generated
+    - React-NativeModulesApple
+    - React-RCTFabric
+    - React-renderercss
+    - React-rendererdebug
+    - React-utils
+    - ReactCodegen
+    - ReactCommon/turbomodule/bridging
+    - ReactCommon/turbomodule/core
+    - ReactNativeDependencies
+    - Yoga
   - react-native-safe-area-context (5.6.2):
     - hermes-engine
     - RCTRequired
@@ -2134,6 +2183,28 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
+  - RNCMaskedView (0.3.2):
+    - hermes-engine
+    - RCTRequired
+    - RCTTypeSafety
+    - React-Core
+    - React-Core-prebuilt
+    - React-debug
+    - React-Fabric
+    - React-featureflags
+    - React-graphics
+    - React-ImageManager
+    - React-jsi
+    - React-NativeModulesApple
+    - React-RCTFabric
+    - React-renderercss
+    - React-rendererdebug
+    - React-utils
+    - ReactCodegen
+    - ReactCommon/turbomodule/bridging
+    - ReactCommon/turbomodule/core
+    - ReactNativeDependencies
+    - Yoga
   - RNGestureHandler (2.32.0):
     - hermes-engine
     - RCTRequired
@@ -2450,6 +2521,7 @@ DEPENDENCIES:
   - ExpoImagePicker (from `../../../node_modules/expo-image-picker/ios`)
   - ExpoKeepAwake (from `../../../node_modules/expo-keep-awake/ios`)
   - ExpoLinearGradient (from `../../../node_modules/expo-linear-gradient/ios`)
+  - ExpoLocation (from `../../../node_modules/expo-location/ios`)
   - "ExpoLogBox (from `../../../node_modules/@expo/log-box`)"
   - ExpoModulesCore (from `../../../node_modules/expo-modules-core`)
   - ExpoModulesJSI (from `../../../node_modules/expo-modules-core`)
@@ -2497,6 +2569,7 @@ DEPENDENCIES:
   - React-logger (from `../../../node_modules/react-native/ReactCommon/logger`)
   - React-Mapbuffer (from `../../../node_modules/react-native/ReactCommon`)
   - React-microtasksnativemodule (from `../../../node_modules/react-native/ReactCommon/react/nativemodule/microtasks`)
+  - react-native-maps (from `../../../node_modules/react-native-maps`)
   - react-native-safe-area-context (from `../../../node_modules/react-native-safe-area-context`)
   - React-NativeModulesApple (from `../../../node_modules/react-native/ReactCommon/react/nativemodule/core/platform/ios`)
   - React-networking (from `../../../node_modules/react-native/ReactCommon/react/networking`)
@@ -2533,6 +2606,7 @@ DEPENDENCIES:
   - ReactCommon/turbomodule/core (from `../../../node_modules/react-native/ReactCommon`)
   - ReactNativeDependencies (from `../../../node_modules/react-native/third-party-podspecs/ReactNativeDependencies.podspec`)
   - "RNCAsyncStorage (from `../../../node_modules/@react-native-async-storage/async-storage`)"
+  - "RNCMaskedView (from `../../../node_modules/@react-native-masked-view/masked-view`)"
   - RNGestureHandler (from `../../../node_modules/react-native-gesture-handler`)
   - RNReanimated (from `../../../node_modules/react-native-reanimated`)
   - RNScreens (from `../../../node_modules/react-native-screens`)
@@ -2587,6 +2661,8 @@ EXTERNAL SOURCES:
     :path: "../../../node_modules/expo-keep-awake/ios"
   ExpoLinearGradient:
     :path: "../../../node_modules/expo-linear-gradient/ios"
+  ExpoLocation:
+    :path: "../../../node_modules/expo-location/ios"
   ExpoLogBox:
     :path: "../../../node_modules/@expo/log-box"
   ExpoModulesCore:
@@ -2680,6 +2756,8 @@ EXTERNAL SOURCES:
     :path: "../../../node_modules/react-native/ReactCommon"
   React-microtasksnativemodule:
     :path: "../../../node_modules/react-native/ReactCommon/react/nativemodule/microtasks"
+  react-native-maps:
+    :path: "../../../node_modules/react-native-maps"
   react-native-safe-area-context:
     :path: "../../../node_modules/react-native-safe-area-context"
   React-NativeModulesApple:
@@ -2752,6 +2830,8 @@ EXTERNAL SOURCES:
     :podspec: "../../../node_modules/react-native/third-party-podspecs/ReactNativeDependencies.podspec"
   RNCAsyncStorage:
     :path: "../../../node_modules/@react-native-async-storage/async-storage"
+  RNCMaskedView:
+    :path: "../../../node_modules/@react-native-masked-view/masked-view"
   RNGestureHandler:
     :path: "../../../node_modules/react-native-gesture-handler"
   RNReanimated:
@@ -2784,6 +2864,7 @@ SPEC CHECKSUMS:
   ExpoImagePicker: c71470b7e8c6174d27fd9ad28c6e149343948c4a
   ExpoKeepAwake: 5e391c2c712b7af91e044be8ab44b7f542d81f3c
   ExpoLinearGradient: 13c409e8a045bd618daa8b5fcb3df9193722106b
+  ExpoLocation: e62ca70259f476aab9cf6548ed5bd4c037be9a17
   ExpoLogBox: ba1ad09d3e7632ce488e1eeab684ee6fd75f2777
   ExpoModulesCore: df1c817e92ca5c3656fc634a7346fcbd731ba9d2
   ExpoModulesJSI: 1d068cd220d980e6000993a7b753ce8d3c3d1db6
@@ -2833,6 +2914,7 @@ SPEC CHECKSUMS:
   React-logger: 64d31a75111596bd023ae653c0eabf32be3c9302
   React-Mapbuffer: 7055b634a07b9f9e84ee5660ef52cf42658174b7
   React-microtasksnativemodule: 0154a544879e6afeadef9525b0cb17cacf4a93bd
+  react-native-maps: c545a4c303ce633d2dce0c178c1ad84dd286d3b0
   react-native-safe-area-context: 53f796cb6c814661bbe99fbdfd0585d07b996cdd
   React-NativeModulesApple: 943be0fedffc361db7c2ea7b1e54b8d53c6ab178
   React-networking: da2682b36bf57ed5428ef3f06824d8b30f617202
@@ -2869,6 +2951,7 @@ SPEC CHECKSUMS:
   ReactCommon: 89ccc6cb100ca5a0303b46483037ef8f3e06e2e0
   ReactNativeDependencies: 0a654d58780fbaa39cd021940a2e4d7b5fc73a29
   RNCAsyncStorage: e85a99325df9eb0191a6ee2b2a842644c7eb29f4
+  RNCMaskedView: 3c9d7586e2b9bbab573591dcb823918bc4668005
   RNGestureHandler: 5c8e7c3e211d537453ae89192bb03d991450e5cb
   RNReanimated: 0ac9fd3f1b473366c442443b811a1a1858e865f5
   RNScreens: dd61bc3a3e6f6901ad833efa411917d44827cf51
@@ -2880,6 +2963,6 @@ SPEC CHECKSUMS:
   SDWebImageWebPCoder: e38c0a70396191361d60c092933e22c20d5b1380
   Yoga: 21f482cbc18b56cdc477cd3a0c5b8c2c83ac27ce
 
-PODFILE CHECKSUM: b3c74bc9489aadd8793b59f30201efe3741366ea
+PODFILE CHECKSUM: d6a83d5d61caab1e9aec9c32bd5563447f29fce5
 
 COCOAPODS: 1.16.2

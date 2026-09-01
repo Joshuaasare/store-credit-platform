@@ -1,8 +1,8 @@
 import crypto from "crypto";
 import { supabaseAdmin } from "../utils/supabase.client";
-import { SMSTemplates } from "../utils/messaging.service";
+import { SMSTemplates } from "./messaging.service";
 import { normalizePhone } from "../utils/phone.utils";
-import { OtpService } from "../utils/otp.service";
+import { OtpService } from "./otp.service";
 import { QueryFragments } from "../constants/queryFragments";
 import { CustomerAuthUser } from "../types/main.types";
 import {
@@ -87,6 +87,10 @@ export class CustomerAuthService {
         surname: customer.surname,
         other_names: customer.other_names,
         avatar_url: customer.avatar_url,
+        latitude: customer.latitude,
+        longitude: customer.longitude,
+        place_id: customer.place_id,
+        place_label: customer.place_label,
       };
       const session = await this.issueSession(authUser, userAgent, clientIp);
       return { status: "logged_in", ...session };
@@ -170,6 +174,9 @@ export class CustomerAuthService {
           user_id: newUser.id,
           surname: data.surname.trim() || null,
           other_names: data.other_names.trim() || null,
+          latitude: data.latitude ?? null,
+          longitude: data.longitude ?? null,
+          place_id: data.place_id ?? null,
         })
         .eq("id", existingCustomer.id)
         .select(QueryFragments.BASE_CUSTOMER)
@@ -191,6 +198,9 @@ export class CustomerAuthService {
           user_id: newUser.id,
           surname: data.surname.trim() || null,
           other_names: data.other_names.trim() || null,
+          latitude: data.latitude ?? null,
+          longitude: data.longitude ?? null,
+          place_id: data.place_id ?? null,
         })
         .select(QueryFragments.BASE_CUSTOMER)
         .single();
@@ -213,6 +223,10 @@ export class CustomerAuthService {
       surname: data.surname.trim() || null,
       other_names: data.other_names.trim() || null,
       avatar_url: customerAvatarUrl,
+      latitude: data.latitude ?? null,
+      longitude: data.longitude ?? null,
+      place_id: data.place_id ?? null,
+      place_label: null,
     };
 
     return this.issueSession(authUser, userAgent, clientIp);
@@ -242,6 +256,10 @@ export class CustomerAuthService {
       surname: customer.surname,
       other_names: customer.other_names,
       avatar_url: customer.avatar_url,
+      latitude: customer.latitude,
+      longitude: customer.longitude,
+      place_id: customer.place_id,
+      place_label: customer.place_label,
     };
   }
 
@@ -361,6 +379,10 @@ export class CustomerAuthService {
       surname: customer.surname,
       other_names: customer.other_names,
       avatar_url: customer.avatar_url,
+      latitude: customer.latitude,
+      longitude: customer.longitude,
+      place_id: customer.place_id,
+      place_label: customer.place_label,
     };
     const session = await this.issueSession(authUser, userAgent, clientIp);
     return { status: "logged_in", ...session };
@@ -372,6 +394,10 @@ export class CustomerAuthService {
     surname: string | null;
     other_names: string | null;
     avatar_url: string | null;
+    latitude: number | null;
+    longitude: number | null;
+    place_id: string | null;
+    place_label: string | null;
   } | null> {
     const { data } = await supabaseAdmin
       .from("customers")
@@ -386,6 +412,10 @@ export class CustomerAuthService {
           surname: data.surname,
           other_names: data.other_names,
           avatar_url: data.avatar_url,
+          latitude: data.latitude,
+          longitude: data.longitude,
+          place_id: data.place_id,
+          place_label: data.place_label,
         }
       : null;
   }

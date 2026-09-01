@@ -4,18 +4,13 @@ import { BaseMerchant, BaseBranch, ApiErrorResponse, BaseCustomer, BaseUserProfi
 
 
 export type MerchantPendingRequest = Static<typeof MerchantPendingRequest>
-export const MerchantPendingRequest = Type.Object({
-redemption_id: Type.Number(),
-customer_id: Type.Number(),
-branch_id: Type.Number(),
-branch_name: Type.Union([
-Type.String(),
+export const MerchantPendingRequest = Type.Composite([BaseCustomerCreditRedemption, Type.Object({
+branch: Type.Union([
+BaseBranch,
 Type.Null()
 ]),
-amount_redeemed: Type.Number(),
-requested_date: Type.Number(),
-requested_at: Type.String(),
-customer: Type.Intersect([
+customer: Type.Union([
+Type.Intersect([
 BaseCustomer,
 Type.Object({
 users: Type.Union([
@@ -24,8 +19,10 @@ Type.Null()
 ])
 })
 ]),
+Type.Null()
+]),
 merchant: BaseMerchant
-})
+})])
 
 export type MerchantPendingRequestsPage = Static<typeof MerchantPendingRequestsPage>
 export const MerchantPendingRequestsPage = Type.Object({

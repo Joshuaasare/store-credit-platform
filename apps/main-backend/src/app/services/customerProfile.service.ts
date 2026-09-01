@@ -1,11 +1,12 @@
 import { supabaseAdmin } from "../utils/supabase.client";
-import { SMSTemplates } from "../utils/messaging.service";
+import { SMSTemplates } from "./messaging.service";
 import { normalizePhone } from "../utils/phone.utils";
-import { OtpService } from "../utils/otp.service";
+import { OtpService } from "./otp.service";
 import { QueryFragments } from "../constants/queryFragments";
 import { CustomerAuthUser } from "../types/main.types";
 import { TokenService } from "./token.service";
 import { storageService } from "./storage.service";
+import { CustomerUpdate } from "../schemas/customerProfile.schema";
 
 const AVATAR_BUCKET = "customer-avatars";
 
@@ -95,6 +96,10 @@ export class CustomerProfileService {
       avatar_url?: string | null;
       newPhone?: string;
       phoneVerifiedToken?: string;
+      latitude?: number | null;
+      longitude?: number | null;
+      place_id?: string | null;
+      place_label?: string | null;
     },
   ): Promise<CustomerAuthUser> {
     if (body.surname != null) {
@@ -163,17 +168,24 @@ export class CustomerProfileService {
     }
 
     // customers.phone is written here too — the webapp reads customers.phone (get_customers RPC, getCustomerDetail), so it must stay in sync with users.phone.
-    const customersUpdate: Record<string, unknown> = {};
+    const customersUpdate: CustomerUpdate = {};
     if (body.surname != null) customersUpdate.surname = body.surname.trim();
     if (body.other_names != null)
       customersUpdate.other_names = body.other_names.trim();
     if (body.avatar_url !== undefined)
       customersUpdate.avatar_url = body.avatar_url;
     if (normalizedNewPhone != null) customersUpdate.phone = normalizedNewPhone;
+    if (body.latitude !== undefined) customersUpdate.latitude = body.latitude;
+    if (body.longitude !== undefined)
+      customersUpdate.longitude = body.longitude;
+    if (body.place_id !== undefined) customersUpdate.place_id = body.place_id;
+    if (body.place_label !== undefined)
+      customersUpdate.place_label = body.place_label;
 
     const oldAvatarUrl = current.avatar_url;
 
     // Always run the UPDATE (even if only the phone is changing) so updated_at advances on any profile edit.
+    customersUpdate.updated_at = new Date().toISOString();
     const { data: updatedCustomer, error: customerUpdateError } =
       await supabaseAdmin
         .from("customers")
@@ -195,9 +207,7 @@ export class CustomerProfileService {
         .update({ phone: normalizedNewPhone })
         .eq("id", current.userId);
       if (userUpdateError) {
-        throw new Error(
-          `Failed to update phone: ${userUpdateError.message}`,
-        );
+        throw new Error(`Failed to update phone: ${userUpdateError.message}`);
       }
       updatedPhone = normalizedNewPhone;
     }
@@ -205,10 +215,7 @@ export class CustomerProfileService {
     // Old-avatar cleanup — orphan-tolerant: a storage failure is logged but does NOT roll back the profile update.
     const newAvatarUrl =
       body.avatar_url !== undefined ? body.avatar_url : oldAvatarUrl;
-    if (
-      oldAvatarUrl != null &&
-      newAvatarUrl !== oldAvatarUrl
-    ) {
+    if (oldAvatarUrl != null && newAvatarUrl !== oldAvatarUrl) {
       try {
         await storageService.deleteFileByUrl(AVATAR_BUCKET, oldAvatarUrl);
       } catch (err) {
@@ -226,13 +233,15 @@ export class CustomerProfileService {
       surname: updatedCustomer.surname,
       other_names: updatedCustomer.other_names,
       avatar_url: updatedCustomer.avatar_url,
+      latitude: updatedCustomer.latitude,
+      longitude: updatedCustomer.longitude,
+      place_id: updatedCustomer.place_id,
+      place_label: updatedCustomer.place_label,
     };
   }
 
   // Returns userId (uuid), users.phone, and customers.avatar_url — used for newPhone comparison, the users.phone update, and old-avatar cleanup.
-  private async resolveCurrentIdentity(
-    customerId: number,
-  ): Promise<{
+  private async resolveCurrentIdentity(customerId: number): Promise<{
     userId: string | null;
     phone: string | null;
     avatar_url: string | null;

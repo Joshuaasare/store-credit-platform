@@ -294,9 +294,9 @@ const styles = StyleSheet.create({
   },
   sheet: {
     paddingHorizontal: 16,
-    paddingTop: 16,
+    paddingTop: 24,
     paddingBottom: 32,
-    maxHeight: "80%",
+    maxHeight: "90%",
   },
   sheetTitle: {
     fontSize: 18,

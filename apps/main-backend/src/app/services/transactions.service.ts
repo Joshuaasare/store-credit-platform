@@ -98,15 +98,14 @@ export class TransactionService {
       to: number;
     },
   ) {
-    let query = supabaseAdmin
-      .from("customer_purchases")
-      .select(
-        `${QueryFragments.BASE_CUSTOMER_PURCHASE},
+    const purchasesSelect = `${QueryFragments.BASE_CUSTOMER_PURCHASE},
          customer:customers(${QueryFragments.BASE_CUSTOMER},
          users(${QueryFragments.BASE_USER_PROFILE})),
          branch:branches(${QueryFragments.BASE_BRANCH}),
-         recorded_by_staff:staff(${QueryFragments.BASE_STAFF})`,
-      )
+         recorded_by_staff:staff(${QueryFragments.BASE_STAFF})` as const;
+    let query = supabaseAdmin
+      .from("customer_purchases")
+      .select(purchasesSelect)
       .in("branch_id", branchIds)
       .is("deleted_at", null)
       .order("transaction_date", { ascending: false });
@@ -129,13 +128,13 @@ export class TransactionService {
       to: number;
     },
   ) {
+    const creditSelect =
+      `id, customer_id, branch_id, credit_amount, created_at,transaction_date,
+         customer:customers(${QueryFragments.BASE_CUSTOMER}, users(${QueryFragments.BASE_USER_PROFILE})),
+         branch:branches(${QueryFragments.BASE_BRANCH})` as const;
     let query = supabaseAdmin
       .from("customer_credit")
-      .select(
-        `id, customer_id, branch_id, credit_amount, created_at,transaction_date,
-         customer:customers(${QueryFragments.BASE_CUSTOMER}, users(${QueryFragments.BASE_USER_PROFILE})),
-         branch:branches(${QueryFragments.BASE_BRANCH})`,
-      )
+      .select(creditSelect)
       .in("branch_id", branchIds)
       .is("deleted_at", null)
       .is("revoked_at", null)
@@ -159,14 +158,13 @@ export class TransactionService {
       to: number;
     },
   ) {
-    let query = supabaseAdmin
-      .from("customer_credit_redemptions")
-      .select(
-        `${QueryFragments.BASE_CUSTOMER_CREDIT_REDEMPTION},
+    const redemptionSelect = `${QueryFragments.BASE_CUSTOMER_CREDIT_REDEMPTION},
          customer:customers(${QueryFragments.BASE_CUSTOMER}, users(${QueryFragments.BASE_USER_PROFILE})),
          branch:branches(${QueryFragments.BASE_BRANCH}),
-         approved_by_staff:staff!approved_by_staff_id(${QueryFragments.BASE_STAFF})`,
-      )
+         approved_by_staff:staff!approved_by_staff_id(${QueryFragments.BASE_STAFF})` as const;
+    let query = supabaseAdmin
+      .from("customer_credit_redemptions")
+      .select(redemptionSelect)
       .in("branch_id", branchIds)
       .is("deleted_at", null)
       .not("approved_at", "is", null)
@@ -193,6 +191,36 @@ export class TransactionService {
     const branchId = payload.branch_id ?? user.branch_id;
     if (branchId == null) {
       throw new Error("Caller has no assigned branch");
+    }
+
+    // Branch-level purchase_threshold_amount is the minimum a purchase must
+    // meet to be eligible for entry/recording at all — keeps merchants from
+    // having to log every tiny purchase, and only counts worthwhile purchases
+    // toward the cashback threshold. Enforced here (per branch) so the rule is
+    // unambiguous regardless of how many running configs the branch has.
+    const { data: branchRow, error: branchErr } = await supabaseAdmin
+      .from("branches")
+      .select(QueryFragments.BASE_BRANCH)
+      .eq("id", branchId)
+      .maybeSingle();
+    if (branchErr || !branchRow) {
+      throw new Error("Selected branch was not found");
+    }
+    if (branchRow.deleted_at != null || !branchRow.is_active) {
+      throw new Error("Selected branch is not active");
+    }
+    if (branchRow.merchant_id !== merchantId) {
+      const err = new Error(
+        "Forbidden: branch does not belong to your merchant",
+      );
+      (err as Error & { statusCode?: number }).statusCode = 403;
+      throw err;
+    }
+    const entryMin = branchRow.purchase_threshold_amount;
+    if (entryMin != null && Number(payload.amount) < Number(entryMin)) {
+      throw new Error(
+        `Purchase amount GH₵${Number(payload.amount).toFixed(2)} is below this branch's minimum entry of GH₵${Number(entryMin).toFixed(2)}`,
+      );
     }
 
     const phone = normalizePhone(payload.phone);
@@ -235,7 +263,7 @@ export class TransactionService {
         `${QueryFragments.BASE_CUSTOMER_PURCHASE},
          customer:customers(${QueryFragments.BASE_CUSTOMER}, users(${QueryFragments.BASE_USER_PROFILE})),
          branch:branches(${QueryFragments.BASE_BRANCH}),
-         recorded_by_staff:staff(${QueryFragments.BASE_STAFF})`,
+         recorded_by_staff:staff(${QueryFragments.BASE_STAFF})` as const,
       )
       .single();
 

@@ -126,6 +126,9 @@ export interface CustomerRegisterRequest {
   pending_token: string;
   surname: string;
   other_names: string;
+  latitude?: number | null;
+  longitude?: number | null;
+  place_id?: string | null;
 }
 
 export interface CustomerRefreshRequest {

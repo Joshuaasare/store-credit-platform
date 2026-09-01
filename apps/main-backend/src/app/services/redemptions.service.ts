@@ -4,10 +4,8 @@ import { AccessTokenPayload } from "../schemas/auth.schema";
 import {
   MerchantApprovedRedemptionsResponse,
   MerchantAuditFeedFilters,
-  MerchantPendingRequest,
   MerchantPendingRequestFilters,
   MerchantPendingRequestsPage,
-  MerchantPendingRequestsResponse,
   MerchantRedemptionActionBody,
   MerchantRedemptionMutationResponse,
   MerchantRejectedRedemptionsResponse,
@@ -28,10 +26,10 @@ export class RedemptionService {
     const { data, error, count } = await supabaseAdmin
       .from("customer_credit_redemptions")
       .select(
-        `id, customer_id, branch_id, amount_redeemed, requested_date, created_at,
+        `${QueryFragments.BASE_CUSTOMER_CREDIT_REDEMPTION},
          branch:branches(${QueryFragments.BASE_BRANCH}),
          customer:customers(${QueryFragments.BASE_CUSTOMER}, users(${QueryFragments.BASE_USER_PROFILE})),
-         merchant:merchants!inner(${QueryFragments.BASE_MERCHANT})`,
+         merchant:merchants!inner(${QueryFragments.BASE_MERCHANT})` as const,
         { count: "exact" },
       )
       .eq("merchant_id", merchantId)
@@ -46,61 +44,12 @@ export class RedemptionService {
       throw new Error(`Failed to load pending redemptions: ${error.message}`);
     }
 
-    const rows = (data ?? []) as Array<{
-      id: number;
-      customer_id: number;
-      branch_id: number;
-      amount_redeemed: number;
-      requested_date: number;
-      created_at: string;
-      branch: { id: number; name: string | null } | null;
-      customer: {
-        id: number;
-        phone: string | null;
-        unique_id: string | null;
-        user_id: string | null;
-        surname: string | null;
-        other_names: string | null;
-        created_at: string;
-        deleted_at: string | null;
-        users: {
-          id: string;
-          phone: string;
-          last_login_at: string | null;
-          created_at: string;
-          deleted_at: string | null;
-        } | null;
-      } | null;
-      merchant: {
-        id: number;
-        name: string;
-        phone: string;
-        country_code: string;
-        slug: string | null;
-        logo_url: string | null;
-        cover_photo_url: string | null;
-        is_active: boolean;
-        created_at: string;
-      };
-    }>;
+    const rows = data ?? [];
 
-    const composed: MerchantPendingRequest[] = rows
-      .filter((r) => r.customer != null)
-      .map((r) => ({
-        redemption_id: Number(r.id),
-        customer_id: Number(r.customer_id),
-        branch_id: Number(r.branch_id),
-        branch_name: r.branch?.name ?? null,
-        amount_redeemed: Number(r.amount_redeemed),
-        requested_date: Number(r.requested_date),
-        requested_at: String(r.created_at),
-        customer: r.customer as MerchantPendingRequest["customer"],
-        merchant: r.merchant,
-      }));
-
-    const filtered = filters.branch_id != null
-      ? composed.filter((r) => r.branch_id === filters.branch_id)
-      : composed;
+    const filtered =
+      filters.branch_id != null
+        ? rows.filter((r) => r.branch_id === filters.branch_id)
+        : rows;
 
     return {
       rows: filtered,
@@ -235,18 +184,6 @@ export class RedemptionService {
         amount_redeemed: Number(first.amount_redeemed) || 0,
       },
     };
-  }
-
-  buildPendingResponse(page: MerchantPendingRequestsPage): MerchantPendingRequestsResponse {
-    return { success: true, data: page };
-  }
-
-  buildApprovedResponse(page: MerchantApprovedRedemptionsResponse["data"]): MerchantApprovedRedemptionsResponse {
-    return { success: true, data: page };
-  }
-
-  buildRejectedResponse(page: MerchantRejectedRedemptionsResponse["data"]): MerchantRejectedRedemptionsResponse {
-    return { success: true, data: page };
   }
 }
 

@@ -10,7 +10,12 @@ import {
   UpdateBranchRequest,
   BranchListApiResponse,
   BranchMutationApiResponse,
+  BranchesNearbyApiResponse,
+  BranchSearchApiResponse,
+  BranchesNearbyQuerystring,
+  BranchSearchQuerystring,
 } from "../../schemas/branch.schema";
+import { BranchCategoryValues } from "../../types/main.types";
 
 export default async function (fastify: FastifyInstance) {
   fastify.get<{
@@ -153,6 +158,92 @@ export default async function (fastify: FastifyInstance) {
           reply.status(404);
           return { success: false, error: message };
         }
+        reply.status(400);
+        return { success: false, error: message };
+      }
+    },
+  });
+
+  fastify.get<{
+    Querystring: BranchesNearbyQuerystring;
+    Reply: BranchesNearbyApiResponse;
+  }>("/nearby", {
+    preHandler: [requireAuth],
+    schema: {
+      querystring: BranchesNearbyQuerystring,
+      response: {
+        200: BranchesNearbyApiResponse,
+        400: BranchesNearbyApiResponse,
+        401: BranchesNearbyApiResponse,
+      },
+    },
+    handler: async (request, reply) => {
+      try {
+        const q = request.query;
+        const lat = q.lat != null ? Number(q.lat) : null;
+        const lng = q.lng != null ? Number(q.lng) : null;
+        const limit = q.limit != null ? Number(q.limit) : 20;
+        const offset = q.offset != null ? Number(q.offset) : 0;
+        const rawCategory = q.category;
+        const category: BranchCategoryValues[] | null = Array.isArray(rawCategory)
+          ? (rawCategory as BranchCategoryValues[])
+          : rawCategory
+            ? [rawCategory as BranchCategoryValues]
+            : null;
+        const data = await branchService.getBranchesByLocation({
+          lat,
+          lng,
+          category,
+          limit,
+          offset,
+        });
+        return { success: true, data };
+      } catch (error) {
+        const message =
+          error instanceof Error
+            ? error.message
+            : "Failed to load nearby branches";
+        request.log.error(error, "GET /branches/nearby failed");
+        reply.status(400);
+        return { success: false, error: message };
+      }
+    },
+  });
+
+  fastify.get<{
+    Querystring: BranchSearchQuerystring;
+    Reply: BranchSearchApiResponse;
+  }>("/search", {
+    preHandler: [requireAuth],
+    schema: {
+      querystring: BranchSearchQuerystring,
+      response: {
+        200: BranchSearchApiResponse,
+        400: BranchSearchApiResponse,
+        401: BranchSearchApiResponse,
+      },
+    },
+    handler: async (request, reply) => {
+      try {
+        const q = request.query;
+        const lat = q.lat != null ? Number(q.lat) : null;
+        const lng = q.lng != null ? Number(q.lng) : null;
+        const limit = q.limit != null ? Number(q.limit) : 20;
+        const offset = q.offset != null ? Number(q.offset) : 0;
+        const data = await branchService.searchBranchesByLocation({
+          lat,
+          lng,
+          query: q.q ?? "",
+          limit,
+          offset,
+        });
+        return { success: true, data };
+      } catch (error) {
+        const message =
+          error instanceof Error
+            ? error.message
+            : "Failed to search branches";
+        request.log.error(error, "GET /branches/search failed");
         reply.status(400);
         return { success: false, error: message };
       }

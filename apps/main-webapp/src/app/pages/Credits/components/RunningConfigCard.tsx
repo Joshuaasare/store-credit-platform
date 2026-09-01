@@ -3,8 +3,10 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
   ArrowLeft,
+  Heart,
   Info,
   MoreVertical,
+  MousePointerClick,
   Pause,
   Pencil,
   Play,
@@ -19,7 +21,7 @@ import {
   DropdownMenuTrigger,
 } from "@store-credit-platform/web-components";
 import { creditConfigService } from "@store-credit-platform/api-services";
-import type { RunningCreditConfigGroup } from "@shared/types/api.types";
+import type { RunningCreditConfig } from "@shared/types/api.types";
 import { isApiError } from "@shared/utils/api.utils";
 import {
   errorToastProperties,
@@ -47,7 +49,7 @@ import {
 } from "./configCardStyles";
 
 interface RunningConfigCardProps {
-  config: RunningCreditConfigGroup;
+  config: RunningCreditConfig;
   isManager: boolean;
 }
 
@@ -66,7 +68,7 @@ export function RunningConfigCard({
   const deleteMutation = useMutation({
     mutationFn: async () => {
       const res = await creditConfigService.deleteRunningConfig(
-        config.config_group_id,
+        config.id,
       );
       if (isApiError(res)) throw new Error(res.error);
     },
@@ -84,7 +86,7 @@ export function RunningConfigCard({
   const toggleMutation = useMutation({
     mutationFn: async (isActive: boolean) => {
       const res = await creditConfigService.toggleRunningConfigActive(
-        config.config_group_id,
+        config.id,
         isActive,
       );
       if (isApiError(res)) throw new Error(res.error);
@@ -111,6 +113,10 @@ export function RunningConfigCard({
   const isActive = config.is_active;
   const cardClass = isActive ? CARD_CLASS : CARD_CLASS_PAUSED;
   const heroClass = isActive ? HERO_NUMBER : HERO_NUMBER_MUTED;
+
+  const images = config.images ?? [];
+  const visibleImages = images.slice(0, 4);
+  const overflow = images.length - visibleImages.length;
 
   let tagline: string;
   if (config.threshold_amount == null) {
@@ -200,18 +206,56 @@ export function RunningConfigCard({
             </div>
             <p className="text-muted-foreground mt-2 text-sm">{tagline}</p>
 
+            {visibleImages.length > 0 && (
+              <div className="mt-3 flex flex-wrap gap-1.5">
+                {visibleImages.map((url, i) => (
+                  <img
+                    key={url + i}
+                    src={url}
+                    alt=""
+                    className="border-border h-16 w-16 rounded-md border object-cover"
+                  />
+                ))}
+                {overflow > 0 && (
+                  <div className="text-muted-foreground border-border bg-muted/50 flex h-16 w-16 items-center justify-center rounded-md border text-xs font-medium">
+                    +{overflow}
+                  </div>
+                )}
+              </div>
+            )}
+
             <div className={`mt-5 pt-4 ${DIVIDER}`}>
-              <div className="text-muted-foreground flex items-center gap-2 text-xs">
-                <span
-                  className={isActive ? STATUS_DOT_ACTIVE : STATUS_DOT_PAUSED}
-                />
-                <span
-                  className={isActive ? STATUS_TEXT_ACTIVE : STATUS_TEXT_PAUSED}
-                >
-                  {isActive ? "Active" : "Paused"}
-                </span>
-                <span className="text-muted-foreground/40">·</span>
-                <span>{scopeLabel} scope</span>
+              <div className="text-muted-foreground flex items-center justify-between text-xs">
+                <div className="flex items-center gap-2">
+                  <span
+                    className={isActive ? STATUS_DOT_ACTIVE : STATUS_DOT_PAUSED}
+                  />
+                  <span
+                    className={isActive ? STATUS_TEXT_ACTIVE : STATUS_TEXT_PAUSED}
+                  >
+                    {isActive ? "Active" : "Paused"}
+                  </span>
+                  <span className="text-muted-foreground/40">·</span>
+                  <span>{scopeLabel} scope</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  {config.url != null && (
+                    <div className="flex items-center gap-1">
+                      <MousePointerClick className="h-3 w-3" />
+                      <span>
+                        {config.click_count}{" "}
+                        {config.click_count === 1 ? "click" : "clicks"}
+                      </span>
+                    </div>
+                  )}
+                  <div className="flex items-center gap-1">
+                    <Heart className="h-3 w-3" />
+                    <span>
+                      {config.favorite_count}{" "}
+                      {config.favorite_count === 1 ? "favorite" : "favorites"}
+                    </span>
+                  </div>
+                </div>
               </div>
 
               <div className="mt-4 grid grid-cols-2 gap-x-6 gap-y-3">

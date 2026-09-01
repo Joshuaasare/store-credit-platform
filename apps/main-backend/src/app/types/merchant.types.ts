@@ -2,14 +2,14 @@
 
 import { ApiErrorResponse, BaseMerchant } from "./main.types";
 
-export interface MerchantWithStats extends BaseMerchant {
+export type MerchantWithStats = BaseMerchant & {
   branch_count: number;
   staff_count: number;
   customer_count: number;
   lifetime_credit_issued: number;
   credit_pool_used: number;
   credit_pool_limit: number | null;
-}
+};
 
 export interface UpdateMerchantRequest {
   name?: string;
@@ -34,4 +34,20 @@ export type MerchantMeApiResponse = MerchantMeResponse | ApiErrorResponse;
 
 export type MerchantMutationApiResponse =
   | MerchantMutationResponse
+  | ApiErrorResponse;
+
+export interface MerchantSearchResult {
+  id: number;
+  name: string;
+  slug: string | null;
+  logo_url: string | null;
+}
+
+export interface CustomerMerchantSearchResponse {
+  success: true;
+  data: MerchantSearchResult[];
+}
+
+export type CustomerMerchantSearchApiResponse =
+  | CustomerMerchantSearchResponse
   | ApiErrorResponse;

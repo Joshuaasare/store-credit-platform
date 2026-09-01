@@ -7,6 +7,8 @@ import {
   StaffListPage,
   CreateStaffRequest,
   UpdateStaffRequest,
+  StaffUpdate,
+  UserUpdate,
 } from "../schemas/staff.schema";
 import { QueryFragments } from "../constants/queryFragments";
 import { splitSearchTerm } from "../utils/misc.utils";
@@ -185,7 +187,7 @@ export class StaffService {
     }
 
     // users row carries phone only — names + access live on staff.
-    const userUpdate: Record<string, unknown> = {
+    const userUpdate: UserUpdate = {
       updated_at: new Date().toISOString(),
     };
     if (normalizedPhone != null) userUpdate.phone = normalizedPhone;
@@ -198,7 +200,7 @@ export class StaffService {
       throw new Error(`Failed to update user: ${userErr.message}`);
     }
 
-    const staffUpdate: Record<string, unknown> = {};
+    const staffUpdate: StaffUpdate = {};
     if (branch_id != null) staffUpdate.branch_id = branch_id;
     if (roleChanging) staffUpdate.role = role;
     if (access_granted != null) staffUpdate.access_granted = access_granted;
