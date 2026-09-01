@@ -18,7 +18,6 @@ type ConfigTypeParam = Static<typeof ConfigTypeParam>;
 const FavoritesPageQuery = Type.Object({
   limit: Type.Optional(Type.Number({ minimum: 1 })),
   offset: Type.Optional(Type.Number({ minimum: 0 })),
-  search: Type.Optional(Type.String()),
 });
 type FavoritesPageQuery = Static<typeof FavoritesPageQuery>;
 

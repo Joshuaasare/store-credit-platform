@@ -1,7 +1,6 @@
 import { useMemo, useState } from "react";
 import {
   Linking,
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,
@@ -19,17 +18,12 @@ import {
   useSafeAreaInsets,
 } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { Image } from "expo-image";
-import type {
-  BaseFixedCreditConfig,
-  BaseRunningCreditConfig,
-} from "@store-credit-platform/api-services";
 import { customerConfigInteractionService } from "../../api/client";
 import ScreenBackground from "../../shared/components/ScreenBackground";
 import MerchantAvatar from "../../shared/components/MerchantAvatar";
+import OfferDetailsCard from "../../shared/components/OfferDetailsCard";
 import { ImageLightbox } from "../../shared/components/ImageLightbox";
 import MerchantTabSwitcher from "../credits/components/MerchantTabSwitcher";
-import VisitLinkButton from "../../shared/components/VisitLinkButton";
 import { useCustomerFavorites } from "../../shared/hooks/useCustomerFavorites";
 import { useThemeTokens } from "../../shared/theme/ThemeContext";
 import {
@@ -297,10 +291,16 @@ export function BranchOffersDetailScreen() {
             discountOffers.length > 0 ? (
               <View style={styles.list}>
                 {discountOffers.map((c) => (
-                  <DiscountOfferCard
+                  <OfferDetailsCard
                     key={`fixed-${c.id}`}
-                    config={c}
+                    title={c.title ?? "Discount offer"}
+                    metaText={formatFixedDateRange(c.start_date, c.end_date)}
+                    metaIcon="calendar-outline"
+                    description={c.description}
+                    images={c.images}
                     onImagePress={(i) => openViewer(c.images, i)}
+                    terms={c.terms}
+                    url={c.url}
                     onVisit={() => recordVisit("fixed", c.id)}
                     favorited={favorites.isFavorited("fixed", c.id)}
                     favoriteCount={favorites.countFor(
@@ -324,10 +324,15 @@ export function BranchOffersDetailScreen() {
           ) : cashbackConfigs.length > 0 ? (
             <View style={styles.list}>
               {cashbackConfigs.map((c) => (
-                <CashbackConfigCard
+                <OfferDetailsCard
                   key={`running-${c.id}`}
-                  config={c}
+                  title={cashbackHeadline(c)}
+                  titleNumberOfLines={3}
+                  metaText={cashbackMeta(c)}
+                  images={c.images}
                   onImagePress={(i) => openViewer(c.images, i)}
+                  terms={c.terms}
+                  url={c.url}
                   onVisit={() => recordVisit("running", c.id)}
                   favorited={favorites.isFavorited("running", c.id)}
                   favoriteCount={favorites.countFor(
@@ -358,325 +363,6 @@ export function BranchOffersDetailScreen() {
         onDismiss={() => setViewer(null)}
       />
     </ScreenBackground>
-  );
-}
-
-function DiscountOfferCard({
-  config,
-  onImagePress,
-  onVisit,
-  favorited,
-  favoriteCount,
-  pending,
-  onToggleFavorite,
-}: {
-  config: BaseFixedCreditConfig & { favorite_count: number };
-  onImagePress: (index: number) => void;
-  onVisit: () => void;
-  favorited: boolean;
-  favoriteCount: number;
-  pending: boolean;
-  onToggleFavorite: () => void;
-}) {
-  const theme = useThemeTokens();
-  const title = config.title ?? "Discount offer";
-  const dateRange = formatFixedDateRange(config.start_date, config.end_date);
-
-  return (
-    <View
-      style={[
-        styles.card,
-        {
-          backgroundColor: theme.colors.surface,
-          borderColor: theme.colors.surfaceBorder,
-          borderRadius: theme.radii.lg,
-        },
-      ]}
-    >
-      <View style={styles.cardTitleRow}>
-        <Text
-          numberOfLines={2}
-          style={{
-            flex: 1,
-            color: theme.colors.text,
-            fontFamily: theme.typography.fontFamilySemiBold,
-            fontSize: 17,
-            lineHeight: 22,
-            letterSpacing: -0.3,
-          }}
-        >
-          {title}
-        </Text>
-
-        <View style={styles.favGroup}>
-          {favoriteCount > 0 ? (
-            <Text
-              style={{
-                color: theme.colors.textMuted,
-                fontFamily: theme.typography.fontFamilyMedium,
-                fontSize: 12,
-                marginRight: 4,
-              }}
-            >
-              {favoriteCount}
-            </Text>
-          ) : null}
-          <TouchableOpacity
-            onPress={onToggleFavorite}
-            disabled={pending}
-            accessibilityRole="button"
-            accessibilityState={{ selected: favorited }}
-            accessibilityLabel={
-              favorited ? "Remove from favorites" : "Add to favorites"
-            }
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            style={styles.heartButton}
-          >
-            <Ionicons
-              name={favorited ? "heart" : "heart-outline"}
-              size={22}
-              color={favorited ? theme.colors.error : theme.colors.textMuted}
-            />
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      {dateRange ? (
-        <View style={styles.metaRow}>
-          <Ionicons
-            name="calendar-outline"
-            size={12}
-            color={theme.colors.textMuted}
-          />
-          <Text
-            style={{
-              color: theme.colors.textMuted,
-              fontFamily: theme.typography.fontFamilyRegular,
-              fontSize: 12,
-            }}
-          >
-            {dateRange}
-          </Text>
-        </View>
-      ) : null}
-
-      {(config.description != null || (config.images?.length ?? 0) > 0) && (
-        <CardDivider />
-      )}
-
-      {config.description ? (
-        <Text
-          style={{
-            color: theme.colors.textSecondary,
-            fontFamily: theme.typography.fontFamilyRegular,
-            fontSize: 13,
-            lineHeight: 20,
-            marginBottom: 12,
-          }}
-        >
-          {config.description}
-        </Text>
-      ) : null}
-
-      <ImagesRow images={config.images} onImagePress={onImagePress} />
-
-      {config.terms ? <Terms terms={config.terms} /> : null}
-
-      {config.url ? (
-        <VisitLinkButton url={config.url} onVisit={onVisit} />
-      ) : null}
-    </View>
-  );
-}
-
-function CashbackConfigCard({
-  config,
-  onImagePress,
-  onVisit,
-  favorited,
-  favoriteCount,
-  pending,
-  onToggleFavorite,
-}: {
-  config: BaseRunningCreditConfig & { favorite_count: number };
-  onImagePress: (index: number) => void;
-  onVisit: () => void;
-  favorited: boolean;
-  favoriteCount: number;
-  pending: boolean;
-  onToggleFavorite: () => void;
-}) {
-  const theme = useThemeTokens();
-  const headline = cashbackHeadline(config);
-  const metaLine = cashbackMeta(config);
-
-  return (
-    <View
-      style={[
-        styles.card,
-        {
-          backgroundColor: theme.colors.surface,
-          borderColor: theme.colors.surfaceBorder,
-          borderRadius: theme.radii.lg,
-        },
-      ]}
-    >
-      <View style={styles.cardTitleRow}>
-        <Text
-          numberOfLines={3}
-          style={{
-            flex: 1,
-            color: theme.colors.text,
-            fontFamily: theme.typography.fontFamilySemiBold,
-            fontSize: 17,
-            lineHeight: 22,
-            letterSpacing: -0.3,
-          }}
-        >
-          {headline}
-        </Text>
-
-        <View style={styles.favGroup}>
-          {favoriteCount > 0 ? (
-            <Text
-              style={{
-                color: theme.colors.textMuted,
-                fontFamily: theme.typography.fontFamilyMedium,
-                fontSize: 12,
-                marginRight: 4,
-              }}
-            >
-              {favoriteCount}
-            </Text>
-          ) : null}
-          <TouchableOpacity
-            onPress={onToggleFavorite}
-            disabled={pending}
-            accessibilityRole="button"
-            accessibilityState={{ selected: favorited }}
-            accessibilityLabel={
-              favorited ? "Remove from favorites" : "Add to favorites"
-            }
-            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            style={styles.heartButton}
-          >
-            <Ionicons
-              name={favorited ? "heart" : "heart-outline"}
-              size={22}
-              color={favorited ? theme.colors.error : theme.colors.textMuted}
-            />
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      {metaLine ? (
-        <Text
-          style={{
-            color: theme.colors.textMuted,
-            fontFamily: theme.typography.fontFamilyRegular,
-            fontSize: 12,
-            marginTop: 8,
-          }}
-        >
-          {metaLine}
-        </Text>
-      ) : null}
-
-      {(metaLine != null || (config.images?.length ?? 0) > 0) && (
-        <CardDivider />
-      )}
-
-      <ImagesRow images={config.images} onImagePress={onImagePress} />
-
-      {config.terms ? <Terms terms={config.terms} /> : null}
-
-      {config.url ? (
-        <VisitLinkButton url={config.url} onVisit={onVisit} />
-      ) : null}
-    </View>
-  );
-}
-
-function CardDivider() {
-  const theme = useThemeTokens();
-  return (
-    <View
-      style={[
-        styles.cardDivider,
-        { backgroundColor: theme.colors.surfaceBorder },
-      ]}
-    />
-  );
-}
-
-function Terms({ terms }: { terms: string }) {
-  const theme = useThemeTokens();
-  return (
-    <View
-      style={[styles.terms, { borderTopColor: theme.colors.surfaceBorder }]}
-    >
-      <Text
-        style={{
-          color: theme.colors.textMuted,
-          fontFamily: theme.typography.fontFamilyMedium,
-          fontSize: 10,
-          letterSpacing: 0.6,
-          textTransform: "uppercase",
-          marginBottom: 4,
-        }}
-      >
-        Terms
-      </Text>
-      <Text
-        style={{
-          color: theme.colors.textSecondary,
-          fontFamily: theme.typography.fontFamilyRegular,
-          fontSize: 13,
-          lineHeight: 19,
-        }}
-      >
-        {terms}
-      </Text>
-    </View>
-  );
-}
-
-function ImagesRow({
-  images,
-  onImagePress,
-}: {
-  images: string[] | null;
-  onImagePress: (index: number) => void;
-}) {
-  const theme = useThemeTokens();
-  if (!images || images.length === 0) return null;
-  return (
-    <View
-      style={[styles.imageWell, { backgroundColor: theme.colors.surfaceInput }]}
-    >
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={{ gap: 10 }}
-      >
-        {images.map((uri, i) => (
-          <Pressable
-            key={`${uri}-${i}`}
-            onPress={() => onImagePress(i)}
-            accessibilityRole="imagebutton"
-            accessibilityLabel={`View image ${i + 1} of ${images.length}`}
-          >
-            <Image
-              source={{ uri }}
-              style={[styles.offerImage, { borderRadius: theme.radii.sm }]}
-              contentFit="cover"
-              transition={150}
-              accessibilityIgnoresInvertColors
-            />
-          </Pressable>
-        ))}
-      </ScrollView>
-    </View>
   );
 }
 
@@ -759,47 +445,6 @@ const styles = StyleSheet.create({
   },
   scroll: { flex: 1 },
   list: { gap: 12 },
-  card: {
-    padding: 18,
-    borderWidth: 1,
-  },
-  cardDivider: {
-    height: StyleSheet.hairlineWidth,
-    marginTop: 14,
-    marginBottom: 14,
-  },
-  cardTitleRow: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 8,
-  },
-  heartButton: {
-    marginLeft: 4,
-    marginTop: -2,
-  },
-  favGroup: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  metaRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    marginTop: 10,
-  },
-  terms: {
-    marginTop: 14,
-    paddingTop: 12,
-    borderTopWidth: StyleSheet.hairlineWidth,
-  },
-  imageWell: {
-    padding: 10,
-    borderRadius: 12,
-  },
-  offerImage: {
-    width: 200,
-    height: 125,
-  },
   emptyCard: {
     alignItems: "center",
     padding: 32,

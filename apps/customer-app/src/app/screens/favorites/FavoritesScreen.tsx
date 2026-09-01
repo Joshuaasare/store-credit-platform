@@ -5,7 +5,6 @@ import {
   Pressable,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
   type ListRenderItem,
@@ -21,33 +20,22 @@ import { useThemeTokens } from "../../shared/theme/ThemeContext";
 import { cashbackHeadline } from "../../shared/utils/configDisplay";
 import { useFavoritesFeed } from "./useFavoritesFeed";
 import FavoriteDetailsModal from "./FavoriteDetailsModal";
-import useDebounce from "../../shared/hooks/useDebounce";
-
-const DEBOUNCE_MS = 300;
 
 export function FavoritesScreen() {
   const theme = useThemeTokens();
   const favorites = useCustomerFavorites();
   const [selected, setSelected] = useState<FavoritedConfig | null>(null);
 
-  const [searchMode, setSearchMode] = useState(false);
-  const [searchText, setSearchText] = useState("");
-  const debouncedQuery = useDebounce(searchText, DEBOUNCE_MS);
-
-  // Both hooks stay mounted so each keeps its own React Query cache; the
-  // screen just renders whichever matches the current mode (explore pattern).
-  const feedQuery = useFavoritesFeed(null);
-  const searchQuery = useFavoritesFeed(searchMode ? debouncedQuery : null);
-  const activeQuery = searchMode ? searchQuery : feedQuery;
+  const feedQuery = useFavoritesFeed();
 
   const items = useMemo<FavoritedConfig[]>(() => {
-    const pages = activeQuery.data?.pages ?? [];
+    const pages = feedQuery.data?.pages ?? [];
     const out: FavoritedConfig[] = [];
     for (const page of pages) {
       if (page.success) out.push(...page.data.rows);
     }
     return out;
-  }, [activeQuery.data]);
+  }, [feedQuery.data]);
 
   const keyExtractor = useCallback(
     (item: FavoritedConfig) => `${item.config_type}-${item.config.id}`,
@@ -82,8 +70,8 @@ export function FavoritesScreen() {
   );
 
   const ListFooter = useCallback(() => {
-    if ((activeQuery.data?.pages.length ?? 0) <= 1) return null;
-    if (activeQuery.isFetchingNextPage) {
+    if ((feedQuery.data?.pages.length ?? 0) <= 1) return null;
+    if (feedQuery.isFetchingNextPage) {
       return (
         <View style={styles.footerRow}>
           <ActivityIndicator size="small" color={theme.colors.primary} />
@@ -100,7 +88,7 @@ export function FavoritesScreen() {
         </View>
       );
     }
-    if (!activeQuery.hasNextPage) {
+    if (!feedQuery.hasNextPage) {
       return (
         <Text
           style={{
@@ -116,19 +104,10 @@ export function FavoritesScreen() {
       );
     }
     return null;
-  }, [activeQuery, theme]);
+  }, [feedQuery, theme]);
 
   const ListEmpty = useCallback(() => {
-    if (activeQuery.isLoading || !activeQuery.isSuccess) return null;
-    const emptyText = searchMode
-      ? debouncedQuery.trim().length === 0
-        ? "Type to search your favorites"
-        : "No favorites match your search"
-      : "No favorites yet";
-    const subText =
-      searchMode && debouncedQuery.trim().length > 0
-        ? "Try a different merchant or promo name."
-        : "Tap the heart on any offer to save it here.";
+    if (feedQuery.isLoading || !feedQuery.isSuccess) return null;
     return (
       <View style={styles.empty}>
         <View
@@ -154,7 +133,7 @@ export function FavoritesScreen() {
             marginTop: 12,
           }}
         >
-          {emptyText}
+          No favorites yet
         </Text>
         <Text
           style={{
@@ -165,108 +144,16 @@ export function FavoritesScreen() {
             marginTop: 4,
           }}
         >
-          {subText}
+          Tap the heart on any offer to save it here.
         </Text>
       </View>
     );
-  }, [
-    activeQuery.isLoading,
-    activeQuery.isSuccess,
-    searchMode,
-    debouncedQuery,
-    theme,
-  ]);
-
-  const renderSearchArea = () =>
-    !searchMode ? (
-      <Pressable
-        onPress={() => setSearchMode(true)}
-        style={[
-          styles.searchBar,
-          {
-            backgroundColor: theme.colors.surface,
-            borderColor: theme.colors.surfaceBorder,
-            borderRadius: theme.radii.pill,
-          },
-        ]}
-        accessibilityRole="button"
-        accessibilityLabel="Search favorites"
-      >
-        <Ionicons name="search" size={16} color={theme.colors.textMuted} />
-        <Text
-          numberOfLines={1}
-          style={{
-            flex: 1,
-            color: theme.colors.textMuted,
-            fontFamily: theme.typography.fontFamilyRegular,
-            fontSize: 14,
-            marginLeft: 8,
-          }}
-        >
-          Search your favorites
-        </Text>
-      </Pressable>
-    ) : (
-      <View
-        style={[
-          styles.searchInputRow,
-          {
-            backgroundColor: theme.colors.surface,
-            borderColor: theme.colors.surfaceBorder,
-            borderRadius: theme.radii.pill,
-          },
-        ]}
-      >
-        <Pressable
-          onPress={() => {
-            setSearchMode(false);
-            setSearchText("");
-          }}
-          hitSlop={8}
-          accessibilityRole="button"
-          accessibilityLabel="Exit search"
-        >
-          <Ionicons name="arrow-back" size={18} color={theme.colors.text} />
-        </Pressable>
-        <TextInput
-          autoFocus
-          value={searchText}
-          onChangeText={setSearchText}
-          placeholder="Search by merchant or promo"
-          placeholderTextColor={theme.colors.textPlaceholder}
-          style={{
-            flex: 1,
-            marginLeft: 10,
-            color: theme.colors.text,
-            fontFamily: theme.typography.fontFamilyRegular,
-            fontSize: 15,
-            paddingVertical: 0,
-          }}
-          returnKeyType="search"
-          accessibilityLabel="Search favorites"
-        />
-        {searchText.length > 0 ? (
-          <Pressable
-            onPress={() => setSearchText("")}
-            hitSlop={8}
-            accessibilityRole="button"
-            accessibilityLabel="Clear search"
-          >
-            <Ionicons
-              name="close-circle"
-              size={16}
-              color={theme.colors.textMuted}
-            />
-          </Pressable>
-        ) : null}
-      </View>
-    );
+  }, [feedQuery.isLoading, feedQuery.isSuccess, theme]);
 
   return (
     <ScreenBackground>
       <PageHeader />
       <ScreenBody edges={["bottom"]}>
-        {renderSearchArea()}
         <FlatList
           data={items}
           keyExtractor={keyExtractor}
@@ -276,17 +163,16 @@ export function FavoritesScreen() {
           ListEmptyComponent={ListEmpty}
           onEndReached={() => {
             if (
-              activeQuery.hasNextPage &&
-              !activeQuery.isFetching &&
-              !activeQuery.isFetchingNextPage
+              feedQuery.hasNextPage &&
+              !feedQuery.isFetching &&
+              !feedQuery.isFetchingNextPage
             ) {
-              activeQuery.fetchNextPage();
+              feedQuery.fetchNextPage();
             }
           }}
           onEndReachedThreshold={0.5}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.listContent}
-          keyboardShouldPersistTaps="handled"
         />
       </ScreenBody>
       <FavoriteDetailsModal item={selected} onClose={() => setSelected(null)} />
@@ -389,22 +275,6 @@ function FavoriteRow({
 }
 
 const styles = StyleSheet.create({
-  searchBar: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 16,
-    height: 44,
-    borderWidth: 1,
-    marginBottom: 12,
-  },
-  searchInputRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 14,
-    height: 44,
-    borderWidth: 1,
-    marginBottom: 12,
-  },
   listContent: {
     paddingTop: 8,
     paddingBottom: 8,

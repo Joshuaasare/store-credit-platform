@@ -1,10 +1,12 @@
+import { useState } from "react";
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { Image } from "expo-image";
 import type { FavoritedConfig } from "@store-credit-platform/api-services";
 import MerchantAvatar from "../../shared/components/MerchantAvatar";
-import VisitLinkButton from "../../shared/components/VisitLinkButton";
+import OfferDetailsCard from "../../shared/components/OfferDetailsCard";
+import { ImageLightbox } from "../../shared/components/ImageLightbox";
 import { customerConfigInteractionService } from "../../api/client";
+import { useCustomerFavorites } from "../../shared/hooks/useCustomerFavorites";
 import { useThemeTokens } from "../../shared/theme/ThemeContext";
 import {
   cashbackHeadline,
@@ -20,30 +22,26 @@ export default function FavoriteDetailsModal({
   onClose: () => void;
 }) {
   const theme = useThemeTokens();
+  const favorites = useCustomerFavorites();
+  const [viewer, setViewer] = useState<{
+    images: string[];
+    start: number;
+  } | null>(null);
 
-  // Fire-and-forget, same as the explore detail screen.
+  // Fire-and-forget, same as the explore detail screen: the link itself
+  // already opened, so a failed click tally is silently dropped.
   const recordVisit = (configType: "running" | "fixed", configId: number) => {
     void customerConfigInteractionService
       .recordClick({ configType, configId })
-      .catch(() => {
-        // do nothing
-      });
+      .catch(() => {});
   };
 
   if (item == null) return null;
 
-  const config = item.config;
-  const merchantName = item.merchant?.name ?? "Merchant";
-  const logoUrl = item.merchant?.logo_url ?? null;
-  const isFixed = item.config_type === "fixed";
-  const title = isFixed
-    ? item.config.title?.trim() || "Discount offer"
-    : cashbackHeadline(item.config);
-  const metaLine = isFixed
-    ? formatFixedDateRange(item.config.start_date, item.config.end_date)
-    : cashbackMeta(item.config);
-  const description = isFixed ? item.config.description : null;
-  const [heroImage, ...extraImages] = config.images ?? [];
+  const { config, merchant, config_type } = item;
+  const isFixed = config_type === "fixed";
+  const merchantName = merchant?.name ?? "Merchant";
+  const images = config.images ?? [];
 
   return (
     <Modal
@@ -53,63 +51,40 @@ export default function FavoriteDetailsModal({
       onRequestClose={onClose}
       statusBarTranslucent
     >
-      <Pressable style={styles.overlay} onPress={onClose}>
+      <Pressable
+        style={[styles.overlay, { backgroundColor: theme.colors.scrim }]}
+        onPress={onClose}
+      >
         <Pressable
           style={[
             styles.modal,
             {
-              backgroundColor: theme.colors.surface,
-              borderRadius: theme.radii.lg,
+              backgroundColor: theme.colors.backgroundSolid,
+              borderRadius: theme.radii.md,
             },
           ]}
           onPress={(e) => e.stopPropagation()}
         >
-          {heroImage ? (
-            <Image
-              source={{ uri: heroImage }}
-              style={[
-                styles.hero,
-                { borderRadius: theme.radii.lg },
-              ]}
-              contentFit="cover"
-              transition={150}
-            />
-          ) : null}
-
           <View style={styles.header}>
             <MerchantAvatar
               merchantName={merchantName}
-              logoUrl={logoUrl}
-              idSeed={item.merchant?.id}
-              size={36}
+              logoUrl={merchant?.logo_url ?? null}
+              idSeed={merchant?.id}
+              size={34}
             />
-            <View style={styles.headerText}>
-              <Text
-                numberOfLines={1}
-                style={{
-                  color: theme.colors.textMuted,
-                  fontFamily: theme.typography.fontFamilyMedium,
-                  fontSize: 11,
-                  letterSpacing: 0.4,
-                  textTransform: "uppercase",
-                }}
-              >
-                {merchantName}
-              </Text>
-              <Text
-                numberOfLines={2}
-                style={{
-                  color: theme.colors.text,
-                  fontFamily: theme.typography.fontFamilySemiBold,
-                  fontSize: 17,
-                  lineHeight: 22,
-                  letterSpacing: -0.3,
-                  marginTop: 2,
-                }}
-              >
-                {title}
-              </Text>
-            </View>
+            <Text
+              numberOfLines={1}
+              style={{
+                flex: 1,
+                color: theme.colors.primary,
+                fontFamily: theme.typography.fontFamilySemiBold,
+                fontSize: 12,
+                letterSpacing: 0.5,
+                textTransform: "uppercase",
+              }}
+            >
+              {merchantName}
+            </Text>
             <Pressable
               onPress={onClose}
               hitSlop={10}
@@ -125,81 +100,50 @@ export default function FavoriteDetailsModal({
             showsVerticalScrollIndicator={false}
             contentContainerStyle={styles.body}
           >
-            {metaLine ? (
-              <Text
-                style={{
-                  color: theme.colors.textSecondary,
-                  fontFamily: theme.typography.fontFamilyMedium,
-                  fontSize: 13,
-                }}
-              >
-                {metaLine}
-              </Text>
-            ) : null}
-
-            {description ? (
-              <Text
-                style={{
-                  color: theme.colors.textSecondary,
-                  fontFamily: theme.typography.fontFamilyRegular,
-                  fontSize: 14,
-                  lineHeight: 21,
-                  marginTop: metaLine ? 10 : 0,
-                }}
-              >
-                {description}
-              </Text>
-            ) : null}
-
-            {extraImages.length > 0 ? (
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={{ gap: 10 }}
-                style={styles.imageRow}
-              >
-                {extraImages.map((uri, i) => (
-                  <Image
-                    key={`${uri}-${i}`}
-                    source={{ uri }}
-                    style={styles.image}
-                    contentFit="cover"
-                    transition={150}
-                  />
-                ))}
-              </ScrollView>
-            ) : null}
-
-            {config.terms ? (
-              <Text
-                style={{
-                  color: theme.colors.textMuted,
-                  fontFamily: theme.typography.fontFamilyRegular,
-                  fontSize: 12,
-                  lineHeight: 18,
-                  marginTop: 12,
-                }}
-              >
-                {config.terms}
-              </Text>
-            ) : null}
+            <OfferDetailsCard
+              title={
+                isFixed
+                  ? config.title?.trim() || "Discount offer"
+                  : cashbackHeadline(config)
+              }
+              titleNumberOfLines={3}
+              metaText={
+                isFixed
+                  ? formatFixedDateRange(config.start_date, config.end_date)
+                  : cashbackMeta(config)
+              }
+              metaIcon={isFixed ? "calendar-outline" : undefined}
+              description={isFixed ? config.description : null}
+              images={images}
+              onImagePress={
+                images.length > 0
+                  ? (i) => setViewer({ images, start: i })
+                  : undefined
+              }
+              terms={config.terms}
+              url={config.url}
+              onVisit={() => recordVisit(config_type, config.id)}
+              favorited={favorites.isFavorited(config_type, config.id)}
+              favoriteCount={favorites.countFor(
+                config_type,
+                config.id,
+                config.favorite_count,
+              )}
+              pending={favorites.pendingFor(config_type, config.id)}
+              onToggleFavorite={() =>
+                favorites.toggleFavorite(config_type, config.id)
+              }
+            />
           </ScrollView>
-
-          {config.url ? (
-            <View
-              style={[
-                styles.footer,
-                { borderTopColor: theme.colors.surfaceBorder },
-              ]}
-            >
-              <VisitLinkButton
-                url={config.url}
-                onVisit={() => recordVisit(item.config_type, config.id)}
-              />
-            </View>
-          ) : null}
         </Pressable>
       </Pressable>
+
+      <ImageLightbox
+        images={viewer?.images ?? []}
+        visible={viewer != null}
+        startIndex={viewer?.start ?? 0}
+        onDismiss={() => setViewer(null)}
+      />
     </Modal>
   );
 }
@@ -207,7 +151,6 @@ export default function FavoriteDetailsModal({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.45)",
     alignItems: "center",
     justifyContent: "center",
     padding: 20,
@@ -215,49 +158,25 @@ const styles = StyleSheet.create({
   modal: {
     width: "100%",
     maxWidth: 420,
-    maxHeight: "80%",
+    maxHeight: "85%",
     overflow: "hidden",
-  },
-  hero: {
-    width: "100%",
-    height: 160,
   },
   header: {
     flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 12,
-    padding: 16,
-    paddingBottom: 8,
+    alignItems: "center",
+    gap: 10,
+    padding: 14,
+    paddingBottom: 10,
   },
-  headerText: {
-    flex: 1,
-    minWidth: 0,
+  body: {
+    paddingHorizontal: 14,
+    paddingBottom: 14,
   },
   closeButton: {
     width: 28,
     height: 28,
     alignItems: "center",
     justifyContent: "center",
-    marginLeft: 4,
-    marginTop: -2,
-  },
-  body: {
-    paddingHorizontal: 16,
-    paddingTop: 4,
-    paddingBottom: 16,
-  },
-  imageRow: {
-    marginTop: 12,
-  },
-  image: {
-    width: 180,
-    height: 112,
-    borderRadius: 8,
-  },
-  footer: {
-    borderTopWidth: StyleSheet.hairlineWidth,
-    paddingHorizontal: 16,
-    paddingTop: 2,
-    paddingBottom: 16,
+    marginLeft: 2,
   },
 });

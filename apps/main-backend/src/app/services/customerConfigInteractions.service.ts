@@ -187,7 +187,7 @@ class CustomerConfigInteractionsService {
   // in JS — avoids a cross-table cursor with independent id sequences.
   async listMyFavoritesPage(
     customerId: number,
-    opts: { limit?: number; offset?: number; search?: string } = {},
+    opts: { limit?: number; offset?: number } = {},
   ): Promise<CustomerFavoritesPage> {
     const limit = Math.min(Math.max(1, opts.limit ?? 20), 50);
     const offset = Math.max(0, opts.offset ?? 0);
@@ -204,20 +204,9 @@ class CustomerConfigInteractionsService {
         merchant: r.merchant,
       })),
     ].sort((a, b) => (a.config.favorited_at < b.config.favorited_at ? 1 : -1));
-    const q = opts.search?.trim().toLowerCase();
-    const filtered = q
-      ? merged.filter((row) => {
-          const merchant = (row.merchant?.name ?? "").toLowerCase();
-          const title =
-            row.config_type === "fixed"
-              ? (row.config.title ?? "").toLowerCase()
-              : "";
-          return merchant.includes(q) || title.includes(q);
-        })
-      : merged;
     return {
-      rows: filtered.slice(offset, offset + limit),
-      total: filtered.length,
+      rows: merged.slice(offset, offset + limit),
+      total: merged.length,
       offset,
       limit,
     };

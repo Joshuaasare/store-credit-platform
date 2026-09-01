@@ -22,12 +22,11 @@ export function createCustomerConfigInteractionService(
     },
 
     async listFavoritesPage(
-      params: { limit?: number; offset?: number; search?: string } = {},
+      params: { limit?: number; offset?: number } = {},
     ): Promise<CustomerFavoritesPageApiResponse> {
       const search = new URLSearchParams();
       if (params.limit != null) search.set("limit", String(params.limit));
       if (params.offset != null) search.set("offset", String(params.offset));
-      if (params.search) search.set("search", params.search);
       const query = search.toString();
       const endpoint = query
         ? `/customers/me/credit-configs/favorites/page?${query}`
