@@ -166,7 +166,8 @@ export function BranchEditDialog({
           latitude: location.latitude,
           longitude: location.longitude,
           place_id: location.place_id,
-          category: values.category === "__none" ? null : values.category ?? null,
+          category:
+            values.category === "__none" ? null : (values.category ?? null),
           purchase_threshold_amount: values.purchase_threshold_amount ?? null,
         });
         toast.success("Branch updated", successToastProperties);
@@ -180,7 +181,8 @@ export function BranchEditDialog({
           latitude: location.latitude,
           longitude: location.longitude,
           place_id: location.place_id,
-          category: values.category === "__none" ? null : values.category ?? null,
+          category:
+            values.category === "__none" ? null : (values.category ?? null),
           purchase_threshold_amount: values.purchase_threshold_amount ?? null,
         });
         toast.success("Branch added", successToastProperties);
@@ -197,7 +199,7 @@ export function BranchEditDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       {children && <DialogTrigger asChild>{children}</DialogTrigger>}
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>{isEdit ? "Edit branch" : "Add branch"}</DialogTitle>
           <DialogDescription>
@@ -342,7 +344,7 @@ export function BranchEditDialog({
                   v === "" || v == null ? null : Number(v),
               })}
             />
-            <p className="text-xs text-muted-foreground">
+            <p className="text-muted-foreground text-xs">
               Purchases below this amount won&apos;t be recorded at this branch.
               Leave blank to record every purchase.
             </p>
