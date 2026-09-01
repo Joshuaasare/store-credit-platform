@@ -1,6 +1,8 @@
 import { createApiClient, ApiClientConfig } from "./apiService.js";
 import {
+  ClickMutationApiResponse,
   CustomerFavoritesListApiResponse,
+  CustomerFavoritesPageApiResponse,
   FavoriteMutationApiResponse,
 } from "../types/api.types.js";
 
@@ -17,6 +19,22 @@ export function createCustomerConfigInteractionService(
         `/customers/me/credit-configs/favorites`,
         { method: "GET" },
       );
+    },
+
+    async listFavoritesPage(
+      params: { limit?: number; offset?: number; search?: string } = {},
+    ): Promise<CustomerFavoritesPageApiResponse> {
+      const search = new URLSearchParams();
+      if (params.limit != null) search.set("limit", String(params.limit));
+      if (params.offset != null) search.set("offset", String(params.offset));
+      if (params.search) search.set("search", params.search);
+      const query = search.toString();
+      const endpoint = query
+        ? `/customers/me/credit-configs/favorites/page?${query}`
+        : "/customers/me/credit-configs/favorites/page";
+      return apiRequest<CustomerFavoritesPageApiResponse>(endpoint, {
+        method: "GET",
+      });
     },
 
     async addFavorite(params: {
@@ -36,6 +54,16 @@ export function createCustomerConfigInteractionService(
       return apiRequest<FavoriteMutationApiResponse>(
         `/customers/me/credit-configs/${params.configType}/${params.configId}/favorite`,
         { method: "DELETE" },
+      );
+    },
+
+    async recordClick(params: {
+      configType: FavoriteConfigType;
+      configId: number;
+    }): Promise<ClickMutationApiResponse> {
+      return apiRequest<ClickMutationApiResponse>(
+        `/customers/me/credit-configs/${params.configType}/${params.configId}/click`,
+        { method: "POST" },
       );
     },
   };

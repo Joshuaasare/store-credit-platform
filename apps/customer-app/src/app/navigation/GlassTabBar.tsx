@@ -19,7 +19,7 @@ const TAB_ICONS: Record<string, TabIcon> = {
   Home: "home-outline",
   Credits: "wallet-outline",
   Explore: "map-outline",
-  Profile: "person-outline",
+  Favorites: "heart-outline",
 };
 
 const SPRING_CONFIG = { damping: 18, stiffness: 240, mass: 0.8 };

@@ -172,6 +172,7 @@ export interface BaseCustomerCreditRedemption {
 }
 
 export interface BaseRunningCreditConfig {
+  click_count: number;
   created_at: string;
   credit_type: CreditTypeValues | null;
   credit_validity: number | null;
@@ -191,6 +192,7 @@ export interface BaseRunningCreditConfig {
 }
 
 export interface BaseFixedCreditConfig {
+  click_count: number;
   created_at: string;
   deleted_at: string | null;
   description: string | null;

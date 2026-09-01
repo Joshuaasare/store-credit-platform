@@ -24,15 +24,20 @@ import type {
   BaseFixedCreditConfig,
   BaseRunningCreditConfig,
 } from "@store-credit-platform/api-services";
+import { customerConfigInteractionService } from "../../api/client";
 import ScreenBackground from "../../shared/components/ScreenBackground";
 import MerchantAvatar from "../../shared/components/MerchantAvatar";
 import { ImageLightbox } from "../../shared/components/ImageLightbox";
 import MerchantTabSwitcher from "../credits/components/MerchantTabSwitcher";
-import PrimaryButton from "../../shared/components/PrimaryButton";
+import VisitLinkButton from "../../shared/components/VisitLinkButton";
 import { useCustomerFavorites } from "../../shared/hooks/useCustomerFavorites";
 import { useThemeTokens } from "../../shared/theme/ThemeContext";
+import {
+  cashbackHeadline,
+  cashbackMeta,
+  formatFixedDateRange,
+} from "../../shared/utils/configDisplay";
 import { formatGhs } from "../../shared/utils/formatGhs";
-import { formatShortDate } from "../../shared/utils/date.utils";
 import {
   DRIVE_KMH,
   WALK_KMH,
@@ -57,6 +62,16 @@ export function BranchOffersDetailScreen() {
   const logoUrl = branch.merchant?.logo_url ?? null;
   const branchName = branch.name ?? branch.city ?? "Branch";
   const placeText = branch.place_label ?? branch.city ?? null;
+
+  // Fire-and-forget: a visit-link tap bumps the campaign's click tally; a
+  // failed call is silently dropped since the link itself already opened.
+  const recordVisit = (configType: "running" | "fixed", configId: number) => {
+    void customerConfigInteractionService
+      .recordClick({ configType, configId })
+      .catch(() => {
+        // do nothing
+      });
+  };
 
   const discountOffers = useMemo(
     () => branch.fixed_configs ?? [],
@@ -286,7 +301,13 @@ export function BranchOffersDetailScreen() {
                     key={`fixed-${c.id}`}
                     config={c}
                     onImagePress={(i) => openViewer(c.images, i)}
+                    onVisit={() => recordVisit("fixed", c.id)}
                     favorited={favorites.isFavorited("fixed", c.id)}
+                    favoriteCount={favorites.countFor(
+                      "fixed",
+                      c.id,
+                      c.favorite_count,
+                    )}
                     pending={favorites.pendingFor("fixed", c.id)}
                     onToggleFavorite={() =>
                       favorites.toggleFavorite("fixed", c.id)
@@ -307,6 +328,17 @@ export function BranchOffersDetailScreen() {
                   key={`running-${c.id}`}
                   config={c}
                   onImagePress={(i) => openViewer(c.images, i)}
+                  onVisit={() => recordVisit("running", c.id)}
+                  favorited={favorites.isFavorited("running", c.id)}
+                  favoriteCount={favorites.countFor(
+                    "running",
+                    c.id,
+                    c.favorite_count,
+                  )}
+                  pending={favorites.pendingFor("running", c.id)}
+                  onToggleFavorite={() =>
+                    favorites.toggleFavorite("running", c.id)
+                  }
                 />
               ))}
             </View>
@@ -332,13 +364,17 @@ export function BranchOffersDetailScreen() {
 function DiscountOfferCard({
   config,
   onImagePress,
+  onVisit,
   favorited,
+  favoriteCount,
   pending,
   onToggleFavorite,
 }: {
-  config: BaseFixedCreditConfig;
+  config: BaseFixedCreditConfig & { favorite_count: number };
   onImagePress: (index: number) => void;
+  onVisit: () => void;
   favorited: boolean;
+  favoriteCount: number;
   pending: boolean;
   onToggleFavorite: () => void;
 }) {
@@ -364,30 +400,45 @@ function DiscountOfferCard({
             flex: 1,
             color: theme.colors.text,
             fontFamily: theme.typography.fontFamilySemiBold,
-            fontSize: 16,
-            lineHeight: 21,
+            fontSize: 17,
+            lineHeight: 22,
+            letterSpacing: -0.3,
           }}
         >
           {title}
         </Text>
 
-        <TouchableOpacity
-          onPress={onToggleFavorite}
-          disabled={pending}
-          accessibilityRole="button"
-          accessibilityState={{ selected: favorited }}
-          accessibilityLabel={
-            favorited ? "Remove from favorites" : "Add to favorites"
-          }
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          style={styles.heartButton}
-        >
-          <Ionicons
-            name={favorited ? "heart" : "heart-outline"}
-            size={22}
-            color={favorited ? theme.colors.error : theme.colors.textMuted}
-          />
-        </TouchableOpacity>
+        <View style={styles.favGroup}>
+          {favoriteCount > 0 ? (
+            <Text
+              style={{
+                color: theme.colors.textMuted,
+                fontFamily: theme.typography.fontFamilyMedium,
+                fontSize: 12,
+                marginRight: 4,
+              }}
+            >
+              {favoriteCount}
+            </Text>
+          ) : null}
+          <TouchableOpacity
+            onPress={onToggleFavorite}
+            disabled={pending}
+            accessibilityRole="button"
+            accessibilityState={{ selected: favorited }}
+            accessibilityLabel={
+              favorited ? "Remove from favorites" : "Add to favorites"
+            }
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            style={styles.heartButton}
+          >
+            <Ionicons
+              name={favorited ? "heart" : "heart-outline"}
+              size={22}
+              color={favorited ? theme.colors.error : theme.colors.textMuted}
+            />
+          </TouchableOpacity>
+        </View>
       </View>
 
       {dateRange ? (
@@ -409,25 +460,31 @@ function DiscountOfferCard({
         </View>
       ) : null}
 
+      {(config.description != null || (config.images?.length ?? 0) > 0) && (
+        <CardDivider />
+      )}
+
       {config.description ? (
         <Text
           style={{
             color: theme.colors.textSecondary,
             fontFamily: theme.typography.fontFamilyRegular,
             fontSize: 13,
-            lineHeight: 19,
-            marginTop: 10,
+            lineHeight: 20,
+            marginBottom: 12,
           }}
         >
           {config.description}
         </Text>
       ) : null}
 
-      {config.terms ? <Terms terms={config.terms} /> : null}
-
       <ImagesRow images={config.images} onImagePress={onImagePress} />
 
-      {config.url ? <VisitLinkButton url={config.url} /> : null}
+      {config.terms ? <Terms terms={config.terms} /> : null}
+
+      {config.url ? (
+        <VisitLinkButton url={config.url} onVisit={onVisit} />
+      ) : null}
     </View>
   );
 }
@@ -435,9 +492,19 @@ function DiscountOfferCard({
 function CashbackConfigCard({
   config,
   onImagePress,
+  onVisit,
+  favorited,
+  favoriteCount,
+  pending,
+  onToggleFavorite,
 }: {
-  config: BaseRunningCreditConfig;
+  config: BaseRunningCreditConfig & { favorite_count: number };
   onImagePress: (index: number) => void;
+  onVisit: () => void;
+  favorited: boolean;
+  favoriteCount: number;
+  pending: boolean;
+  onToggleFavorite: () => void;
 }) {
   const theme = useThemeTokens();
   const headline = cashbackHeadline(config);
@@ -461,12 +528,45 @@ function CashbackConfigCard({
             flex: 1,
             color: theme.colors.text,
             fontFamily: theme.typography.fontFamilySemiBold,
-            fontSize: 16,
-            lineHeight: 21,
+            fontSize: 17,
+            lineHeight: 22,
+            letterSpacing: -0.3,
           }}
         >
           {headline}
         </Text>
+
+        <View style={styles.favGroup}>
+          {favoriteCount > 0 ? (
+            <Text
+              style={{
+                color: theme.colors.textMuted,
+                fontFamily: theme.typography.fontFamilyMedium,
+                fontSize: 12,
+                marginRight: 4,
+              }}
+            >
+              {favoriteCount}
+            </Text>
+          ) : null}
+          <TouchableOpacity
+            onPress={onToggleFavorite}
+            disabled={pending}
+            accessibilityRole="button"
+            accessibilityState={{ selected: favorited }}
+            accessibilityLabel={
+              favorited ? "Remove from favorites" : "Add to favorites"
+            }
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            style={styles.heartButton}
+          >
+            <Ionicons
+              name={favorited ? "heart" : "heart-outline"}
+              size={22}
+              color={favorited ? theme.colors.error : theme.colors.textMuted}
+            />
+          </TouchableOpacity>
+        </View>
       </View>
 
       {metaLine ? (
@@ -475,19 +575,37 @@ function CashbackConfigCard({
             color: theme.colors.textMuted,
             fontFamily: theme.typography.fontFamilyRegular,
             fontSize: 12,
-            marginTop: 10,
+            marginTop: 8,
           }}
         >
           {metaLine}
         </Text>
       ) : null}
 
-      {config.terms ? <Terms terms={config.terms} /> : null}
+      {(metaLine != null || (config.images?.length ?? 0) > 0) && (
+        <CardDivider />
+      )}
 
       <ImagesRow images={config.images} onImagePress={onImagePress} />
 
-      {config.url ? <VisitLinkButton url={config.url} /> : null}
+      {config.terms ? <Terms terms={config.terms} /> : null}
+
+      {config.url ? (
+        <VisitLinkButton url={config.url} onVisit={onVisit} />
+      ) : null}
     </View>
+  );
+}
+
+function CardDivider() {
+  const theme = useThemeTokens();
+  return (
+    <View
+      style={[
+        styles.cardDivider,
+        { backgroundColor: theme.colors.surfaceBorder },
+      ]}
+    />
   );
 }
 
@@ -523,22 +641,6 @@ function Terms({ terms }: { terms: string }) {
   );
 }
 
-function VisitLinkButton({ url }: { url: string }) {
-  const open = () => {
-    void Linking.openURL(url).catch(() => {
-      // Invalid or unopenable URL — silently ignore; the button is optional.
-    });
-  };
-  return (
-    <PrimaryButton
-      title="Visit link"
-      onPress={open}
-      fullWidth
-      style={{ marginTop: 14 }}
-    />
-  );
-}
-
 function ImagesRow({
   images,
   onImagePress,
@@ -549,29 +651,32 @@ function ImagesRow({
   const theme = useThemeTokens();
   if (!images || images.length === 0) return null;
   return (
-    <ScrollView
-      horizontal
-      showsHorizontalScrollIndicator={false}
-      style={{ marginTop: 14, marginHorizontal: -4 }}
-      contentContainerStyle={{ paddingHorizontal: 4, gap: 10 }}
+    <View
+      style={[styles.imageWell, { backgroundColor: theme.colors.surfaceInput }]}
     >
-      {images.map((uri, i) => (
-        <Pressable
-          key={`${uri}-${i}`}
-          onPress={() => onImagePress(i)}
-          accessibilityRole="imagebutton"
-          accessibilityLabel={`View image ${i + 1} of ${images.length}`}
-        >
-          <Image
-            source={{ uri }}
-            style={[styles.offerImage, { borderRadius: theme.radii.md }]}
-            contentFit="cover"
-            transition={150}
-            accessibilityIgnoresInvertColors
-          />
-        </Pressable>
-      ))}
-    </ScrollView>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={{ gap: 10 }}
+      >
+        {images.map((uri, i) => (
+          <Pressable
+            key={`${uri}-${i}`}
+            onPress={() => onImagePress(i)}
+            accessibilityRole="imagebutton"
+            accessibilityLabel={`View image ${i + 1} of ${images.length}`}
+          >
+            <Image
+              source={{ uri }}
+              style={[styles.offerImage, { borderRadius: theme.radii.sm }]}
+              contentFit="cover"
+              transition={150}
+              accessibilityIgnoresInvertColors
+            />
+          </Pressable>
+        ))}
+      </ScrollView>
+    </View>
   );
 }
 
@@ -608,63 +713,6 @@ function EmptyTabState({
       </Text>
     </View>
   );
-}
-
-function cashbackHeadline(c: BaseRunningCreditConfig): string {
-  const threshold = c.threshold_amount;
-  // eligible_window is the lookback (days) over which spend is summed toward
-  // the threshold. Only surface it when set — null means "current purchase only".
-  const window = c.eligible_window;
-  const windowPhrase = window != null && window > 0 ? ` in ${window} days` : "";
-  if (c.credit_type === "percentage") {
-    const pct = c.percentage_credit_value;
-    if (pct == null) return "Cashback offer";
-    if (threshold != null && threshold > 0) {
-      return `Spend ${formatGhs(threshold)}${windowPhrase}, get ${pct}% back as credit`;
-    }
-    return `Get ${pct}% back`;
-  }
-  if (c.credit_type === "fixed") {
-    const val = c.fixed_credit_value;
-    if (val == null) return "Cashback offer";
-    if (threshold != null && threshold > 0) {
-      return `Spend ${formatGhs(threshold)}${windowPhrase}, get ${formatGhs(val)} back as credit`;
-    }
-    return `Get ${formatGhs(val)} back as credit`;
-  }
-  return "Cashback offer";
-}
-
-function cashbackMeta(c: BaseRunningCreditConfig): string {
-  const parts: string[] = [];
-  if (c.maximum_allowed_credit != null) {
-    parts.push(`Up to ${formatGhs(c.maximum_allowed_credit)} credit`);
-  }
-  if (c.credit_validity != null) {
-    parts.push(
-      c.credit_validity === 1
-        ? "Valid for 1 day"
-        : `Valid for ${c.credit_validity} days`,
-    );
-  }
-  parts.push(
-    c.cumulative_scope === "merchant_wide"
-      ? "Earns across all branches"
-      : "Earns at this branch",
-  );
-  return parts.join(" · ");
-}
-
-function formatFixedDateRange(
-  start: number | null,
-  end: number | null,
-): string {
-  if (start != null && end != null) {
-    return `${formatShortDate(start)} – ${formatShortDate(end)}`;
-  }
-  if (start != null) return `From ${formatShortDate(start)}`;
-  if (end != null) return `Until ${formatShortDate(end)}`;
-  return "";
 }
 
 const styles = StyleSheet.create({
@@ -712,8 +760,13 @@ const styles = StyleSheet.create({
   scroll: { flex: 1 },
   list: { gap: 12 },
   card: {
-    padding: 16,
+    padding: 18,
     borderWidth: 1,
+  },
+  cardDivider: {
+    height: StyleSheet.hairlineWidth,
+    marginTop: 14,
+    marginBottom: 14,
   },
   cardTitleRow: {
     flexDirection: "row",
@@ -723,6 +776,10 @@ const styles = StyleSheet.create({
   heartButton: {
     marginLeft: 4,
     marginTop: -2,
+  },
+  favGroup: {
+    flexDirection: "row",
+    alignItems: "center",
   },
   metaRow: {
     flexDirection: "row",
@@ -734,6 +791,10 @@ const styles = StyleSheet.create({
     marginTop: 14,
     paddingTop: 12,
     borderTopWidth: StyleSheet.hairlineWidth,
+  },
+  imageWell: {
+    padding: 10,
+    borderRadius: 12,
   },
   offerImage: {
     width: 200,

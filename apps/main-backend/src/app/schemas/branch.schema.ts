@@ -92,8 +92,18 @@ merchant: Type.Union([
 BaseMerchant,
 Type.Null()
 ]),
-running_configs: Type.Array(BaseRunningCreditConfig),
-fixed_configs: Type.Array(BaseFixedCreditConfig),
+running_configs: Type.Array(Type.Intersect([
+BaseRunningCreditConfig,
+Type.Object({
+favorite_count: Type.Number()
+})
+])),
+fixed_configs: Type.Array(Type.Intersect([
+BaseFixedCreditConfig,
+Type.Object({
+favorite_count: Type.Number()
+})
+])),
 distance_km: Type.Union([
 Type.Number(),
 Type.Null()

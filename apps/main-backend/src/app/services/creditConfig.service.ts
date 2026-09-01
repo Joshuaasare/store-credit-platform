@@ -13,6 +13,7 @@ import {
   FixedCreditConfigUpdate,
 } from "../schemas/creditConfig.schema";
 import { BaseCustomerCredit } from "../types/main.types";
+import { fetchFavoriteCounts } from "./customerConfigInteractions.service";
 import {
   normalizeFixedValues,
   normalizeUrl,
@@ -39,7 +40,9 @@ async function fetchRunningConfig(configId: number): Promise<RunningCreditConfig
     .maybeSingle();
   if (error) throw new Error(`Failed to fetch config: ${error.message}`);
   if (!data) throw new Error("Config not found");
-  return shapeRunningConfig(data);
+  const shaped = shapeRunningConfig(data);
+  const counts = await fetchFavoriteCounts([shaped.id], []);
+  return { ...shaped, favorite_count: counts.running.get(shaped.id) ?? 0 };
 }
 
 async function fetchFixedConfig(configId: number): Promise<FixedCreditConfig> {
@@ -53,7 +56,9 @@ async function fetchFixedConfig(configId: number): Promise<FixedCreditConfig> {
     .maybeSingle();
   if (error) throw new Error(`Failed to fetch config: ${error.message}`);
   if (!data) throw new Error("Config not found");
-  return shapeFixedConfig(data);
+  const shaped = shapeFixedConfig(data);
+  const counts = await fetchFavoriteCounts([], [shaped.id]);
+  return { ...shaped, favorite_count: counts.fixed.get(shaped.id) ?? 0 };
 }
 
 async function verifyBranchOwnership(merchantId: number, branchIds: number[]) {
@@ -135,10 +140,14 @@ export class CreditConfigService {
     if (error)
       throw new Error(`Failed to list running configs: ${error.message}`);
     const rows = data ?? [];
+    const shaped = rows.map((row) => shapeRunningConfig(row));
+    const counts = await fetchFavoriteCounts(
+      shaped.map((c) => c.id),
+      [],
+    );
     const byId = new Map<number, RunningCreditConfig>();
-    for (const row of rows) {
-      const shaped = shapeRunningConfig(row);
-      byId.set(shaped.id, shaped);
+    for (const c of shaped) {
+      byId.set(c.id, { ...c, favorite_count: counts.running.get(c.id) ?? 0 });
     }
     return Array.from(byId.values()).sort((a, b) =>
       b.created_at > a.created_at ? 1 : -1,
@@ -306,10 +315,14 @@ export class CreditConfigService {
       throw new Error(`Failed to list fixed configs: ${error.message}`);
     }
     const rows = data ?? [];
+    const shaped = rows.map((row) => shapeFixedConfig(row));
+    const counts = await fetchFavoriteCounts(
+      [],
+      shaped.map((c) => c.id),
+    );
     const byId = new Map<number, FixedCreditConfig>();
-    for (const row of rows) {
-      const shaped = shapeFixedConfig(row);
-      byId.set(shaped.id, shaped);
+    for (const c of shaped) {
+      byId.set(c.id, { ...c, favorite_count: counts.fixed.get(c.id) ?? 0 });
     }
     return Array.from(byId.values()).sort((a, b) =>
       b.created_at > a.created_at ? 1 : -1,

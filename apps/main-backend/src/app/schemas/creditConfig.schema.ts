@@ -7,7 +7,8 @@ export type RunningCreditConfig = Static<typeof RunningCreditConfig>
 export const RunningCreditConfig = Type.Intersect([
 BaseRunningCreditConfig,
 Type.Object({
-branches: Type.Array(BaseBranch)
+branches: Type.Array(BaseBranch),
+favorite_count: Type.Number()
 })
 ])
 
@@ -15,7 +16,8 @@ export type FixedCreditConfig = Static<typeof FixedCreditConfig>
 export const FixedCreditConfig = Type.Intersect([
 BaseFixedCreditConfig,
 Type.Object({
-branches: Type.Array(BaseBranch)
+branches: Type.Array(BaseBranch),
+favorite_count: Type.Number()
 })
 ])
 
@@ -205,6 +207,53 @@ fixed: Type.Array(FavoritedFixedCreditConfig)
 })
 })
 
+export type FavoritedMerchantSummary = Static<typeof FavoritedMerchantSummary>
+export const FavoritedMerchantSummary = Type.Object({
+id: Type.Number(),
+name: Type.Union([
+Type.String(),
+Type.Null()
+]),
+logo_url: Type.Union([
+Type.String(),
+Type.Null()
+])
+})
+
+export type FavoritedConfig = Static<typeof FavoritedConfig>
+export const FavoritedConfig = Type.Union([
+Type.Object({
+config_type: Type.Literal("running"),
+config: FavoritedRunningCreditConfig,
+merchant: Type.Union([
+FavoritedMerchantSummary,
+Type.Null()
+])
+}),
+Type.Object({
+config_type: Type.Literal("fixed"),
+config: FavoritedFixedCreditConfig,
+merchant: Type.Union([
+FavoritedMerchantSummary,
+Type.Null()
+])
+})
+])
+
+export type CustomerFavoritesPage = Static<typeof CustomerFavoritesPage>
+export const CustomerFavoritesPage = Type.Object({
+rows: Type.Array(FavoritedConfig),
+total: Type.Number(),
+offset: Type.Number(),
+limit: Type.Number()
+})
+
+export type CustomerFavoritesPageResponse = Static<typeof CustomerFavoritesPageResponse>
+export const CustomerFavoritesPageResponse = Type.Object({
+success: Type.Literal(true),
+data: CustomerFavoritesPage
+})
+
 export type FavoriteMutationResponse = Static<typeof FavoriteMutationResponse>
 export const FavoriteMutationResponse = Type.Object({
 success: Type.Literal(true)
@@ -216,9 +265,26 @@ CustomerFavoritesListResponse,
 ApiErrorResponse
 ])
 
+export type CustomerFavoritesPageApiResponse = Static<typeof CustomerFavoritesPageApiResponse>
+export const CustomerFavoritesPageApiResponse = Type.Union([
+CustomerFavoritesPageResponse,
+ApiErrorResponse
+])
+
 export type FavoriteMutationApiResponse = Static<typeof FavoriteMutationApiResponse>
 export const FavoriteMutationApiResponse = Type.Union([
 FavoriteMutationResponse,
+ApiErrorResponse
+])
+
+export type ClickMutationResponse = Static<typeof ClickMutationResponse>
+export const ClickMutationResponse = Type.Object({
+success: Type.Literal(true)
+})
+
+export type ClickMutationApiResponse = Static<typeof ClickMutationApiResponse>
+export const ClickMutationApiResponse = Type.Union([
+ClickMutationResponse,
 ApiErrorResponse
 ])
 

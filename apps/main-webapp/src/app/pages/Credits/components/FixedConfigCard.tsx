@@ -2,7 +2,9 @@ import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
+  Heart,
   MoreVertical,
+  MousePointerClick,
   Pause,
   Pencil,
   Play,
@@ -217,13 +219,33 @@ export function FixedConfigCard({ config, isManager }: FixedConfigCardProps) {
         </div>
 
         <div className={`mt-4 pt-3 ${DIVIDER}`}>
-          <div className="text-muted-foreground flex items-center gap-2 text-xs">
-            <span className={statusColor} />
-            <span
-              className={isActive ? STATUS_TEXT_ACTIVE : STATUS_TEXT_PAUSED}
-            >
-              {statusLabel}
-            </span>
+          <div className="text-muted-foreground flex items-center justify-between text-xs">
+            <div className="flex items-center gap-2">
+              <span className={statusColor} />
+              <span
+                className={isActive ? STATUS_TEXT_ACTIVE : STATUS_TEXT_PAUSED}
+              >
+                {statusLabel}
+              </span>
+            </div>
+            <div className="flex items-center gap-3">
+              {config.url != null && (
+                <div className="flex items-center gap-1">
+                  <MousePointerClick className="h-3 w-3" />
+                  <span>
+                    {config.click_count}{" "}
+                    {config.click_count === 1 ? "click" : "clicks"}
+                  </span>
+                </div>
+              )}
+              <div className="flex items-center gap-1">
+                <Heart className="h-3 w-3" />
+                <span>
+                  {config.favorite_count}{" "}
+                  {config.favorite_count === 1 ? "favorite" : "favorites"}
+                </span>
+              </div>
+            </div>
           </div>
         </div>
 

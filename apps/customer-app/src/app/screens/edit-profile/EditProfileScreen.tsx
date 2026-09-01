@@ -21,6 +21,7 @@ import { computeInitials } from "../../shared/utils/computeInitials";
 import { formatGhanaPhone } from "../../shared/utils/formatGhanaPhone";
 import { compressImageToLocalFile } from "../../shared/utils/compressImage";
 import { customerProfileService, storage } from "../../api/client";
+import PrimaryButton from "../../shared/components/PrimaryButton";
 import { useAuthStore } from "../../shared/store/useAuthStore";
 import { useThemeTokens } from "../../shared/theme/ThemeContext";
 import type { AppStackParamList } from "../../navigation/RootNavigator";
@@ -41,6 +42,7 @@ export function EditProfileScreen({ navigation }: Props) {
   const theme = useThemeTokens();
   const user = useAuthStore((s) => s.user);
   const setUser = useAuthStore((s) => s.setUser);
+  const logout = useAuthStore((s) => s.logout);
 
   // Strip leading `+` so PhoneInput's value matches its "233XXXXXXXXX" wire format.
   const currentPhone = useMemo(() => {
@@ -673,6 +675,13 @@ export function EditProfileScreen({ navigation }: Props) {
             onPress={handleSubmit}
             theme={theme}
           />
+
+          <PrimaryButton
+            title="Log out"
+            onPress={logout}
+            fullWidth
+            style={styles.logoutButton}
+          />
         </ScrollView>
       </ScreenBody>
 
@@ -839,5 +848,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     marginTop: 24,
+  },
+  logoutButton: {
+    marginTop: 12,
   },
 });

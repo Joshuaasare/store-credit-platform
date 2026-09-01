@@ -10,10 +10,12 @@ import {
 
 export type RunningCreditConfig = BaseRunningCreditConfig & {
   branches: BaseBranch[];
+  favorite_count: number;
 };
 
 export type FixedCreditConfig = BaseFixedCreditConfig & {
   branches: BaseBranch[];
+  favorite_count: number;
 };
 
 export interface CreateRunningCreditConfigRequest {
@@ -94,6 +96,39 @@ export interface CustomerFavoritesListResponse {
   };
 }
 
+export interface FavoritedMerchantSummary {
+  id: number;
+  name: string | null;
+  logo_url: string | null;
+}
+
+// One row of the merged Favorites tab list. Discriminated by config_type so
+// the UI can render cashback vs discount rows type-safely. Merchant is the
+// summary of the config's owning merchant (via any of its branches).
+export type FavoritedConfig =
+  | {
+      config_type: "running";
+      config: FavoritedRunningCreditConfig;
+      merchant: FavoritedMerchantSummary | null;
+    }
+  | {
+      config_type: "fixed";
+      config: FavoritedFixedCreditConfig;
+      merchant: FavoritedMerchantSummary | null;
+    };
+
+export interface CustomerFavoritesPage {
+  rows: FavoritedConfig[];
+  total: number;
+  offset: number;
+  limit: number;
+}
+
+export interface CustomerFavoritesPageResponse {
+  success: true;
+  data: CustomerFavoritesPage;
+}
+
 export interface FavoriteMutationResponse {
   success: true;
 }
@@ -102,9 +137,19 @@ export type CustomerFavoritesListApiResponse =
   | CustomerFavoritesListResponse
   | ApiErrorResponse;
 
+export type CustomerFavoritesPageApiResponse =
+  | CustomerFavoritesPageResponse
+  | ApiErrorResponse;
+
 export type FavoriteMutationApiResponse =
   | FavoriteMutationResponse
   | ApiErrorResponse;
+
+export interface ClickMutationResponse {
+  success: true;
+}
+
+export type ClickMutationApiResponse = ClickMutationResponse | ApiErrorResponse;
 
 export interface RunningCreditConfigListResponse {
   success: true;

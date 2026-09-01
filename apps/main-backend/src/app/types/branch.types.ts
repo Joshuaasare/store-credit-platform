@@ -55,8 +55,8 @@ export interface UpdateBranchRequest {
 // branch_running_credit_config / branch_fixed_credit_config junctions.
 export type BranchWithOffers = BaseBranch & {
   merchant: BaseMerchant | null;
-  running_configs: BaseRunningCreditConfig[];
-  fixed_configs: BaseFixedCreditConfig[];
+  running_configs: (BaseRunningCreditConfig & { favorite_count: number })[];
+  fixed_configs: (BaseFixedCreditConfig & { favorite_count: number })[];
   distance_km: number | null;
 };
 

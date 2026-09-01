@@ -39,6 +39,7 @@ export function shapeRunningConfig(
   }
   return {
     id: row.id,
+    click_count: row.click_count,
     credit_type: row.credit_type,
     credit_validity: row.credit_validity,
     eligible_window: row.eligible_window,
@@ -68,6 +69,7 @@ export function shapeFixedConfig(
   }
   return {
     id: row.id,
+    click_count: row.click_count,
     title: row.title,
     description: row.description,
     start_date: row.start_date,

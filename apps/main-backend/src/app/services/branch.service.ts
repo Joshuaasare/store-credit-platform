@@ -14,6 +14,7 @@ import {
 } from "../types/branch.types";
 import { haversineKm, sortByDistance } from "../utils/geo.utils";
 import { coerceImages } from "../utils/creditConfig.utils";
+import { fetchFavoriteCounts } from "./customerConfigInteractions.service";
 import { maxMs } from "../utils/misc.utils";
 
 // Ownership enforced: every read/write verifies the branch belongs to the requesting merchant.
@@ -228,6 +229,21 @@ export class BranchService {
       throw new Error(`getBranchesByLocation: ${error.message}`);
     }
 
+    const runningIds = new Set<number>();
+    const fixedIds = new Set<number>();
+    for (const row of data) {
+      for (const j of row?.branch_running_credit_config ?? []) {
+        if (!j?.deleted_at) runningIds.add(j.running_credit_config.id);
+      }
+      for (const j of row?.branch_fixed_credit_config ?? []) {
+        if (!j?.deleted_at) fixedIds.add(j.fixed_credit_config.id);
+      }
+    }
+    const favoriteCounts = await fetchFavoriteCounts(
+      [...runningIds],
+      [...fixedIds],
+    );
+
     const results: BranchWithOffers[] = [];
     for (const row of data) {
       const running = (row?.branch_running_credit_config ?? [])
@@ -235,6 +251,8 @@ export class BranchService {
         .map((j) => ({
           ...j.running_credit_config,
           images: coerceImages(j.running_credit_config.images),
+          favorite_count:
+            favoriteCounts.running.get(j.running_credit_config.id) ?? 0,
         }));
       // Filter the active window in JS so null start/end ("perpetual" promos)
       // count as unbounded — DB-level `.lte`/`.gte` exclude nulls, which would
@@ -245,6 +263,8 @@ export class BranchService {
         .map((j) => ({
           ...j.fixed_credit_config,
           images: coerceImages(j.fixed_credit_config.images),
+          favorite_count:
+            favoriteCounts.fixed.get(j.fixed_credit_config.id) ?? 0,
         }))
         .filter((c) => {
           const started = c.start_date == null || c.start_date <= nowMs;

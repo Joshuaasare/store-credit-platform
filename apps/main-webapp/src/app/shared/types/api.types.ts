@@ -1,6 +1,6 @@
 /**
  * Auto-generated API Types
- * Generated on: 2026-09-01T09:37:45.936Z
+ * Generated on: 2026-09-01T14:07:34.632Z
  * 
  * ⚠️ DO NOT EDIT MANUALLY
  * Source: apps/smartschool-api/src/app/types/
@@ -194,6 +194,7 @@ export interface BaseCustomerCreditRedemption {
 }
 
 export interface BaseRunningCreditConfig {
+  click_count: number;
   created_at: string;
   credit_type: CreditTypeValues | null;
   credit_validity: number | null;
@@ -213,6 +214,7 @@ export interface BaseRunningCreditConfig {
 }
 
 export interface BaseFixedCreditConfig {
+  click_count: number;
   created_at: string;
   deleted_at: string | null;
   description: string | null;
@@ -490,8 +492,8 @@ export interface UpdateBranchRequest {
 
 export type BranchWithOffers = BaseBranch & {
   merchant: BaseMerchant | null;
-  running_configs: BaseRunningCreditConfig[];
-  fixed_configs: BaseFixedCreditConfig[];
+  running_configs: (BaseRunningCreditConfig & { favorite_count: number })[];
+  fixed_configs: (BaseFixedCreditConfig & { favorite_count: number })[];
   distance_km: number | null;
 };
 
@@ -557,10 +559,12 @@ export type BranchSearchApiResponse = BranchSearchResponse | ApiErrorResponse;
 
 export type RunningCreditConfig = BaseRunningCreditConfig & {
   branches: BaseBranch[];
+  favorite_count: number;
 };
 
 export type FixedCreditConfig = BaseFixedCreditConfig & {
   branches: BaseBranch[];
+  favorite_count: number;
 };
 
 export interface CreateRunningCreditConfigRequest {
@@ -637,6 +641,36 @@ export interface CustomerFavoritesListResponse {
   };
 }
 
+export interface FavoritedMerchantSummary {
+  id: number;
+  name: string | null;
+  logo_url: string | null;
+}
+
+export type FavoritedConfig =
+  | {
+      config_type: "running";
+      config: FavoritedRunningCreditConfig;
+      merchant: FavoritedMerchantSummary | null;
+    }
+  | {
+      config_type: "fixed";
+      config: FavoritedFixedCreditConfig;
+      merchant: FavoritedMerchantSummary | null;
+    };
+
+export interface CustomerFavoritesPage {
+  rows: FavoritedConfig[];
+  total: number;
+  offset: number;
+  limit: number;
+}
+
+export interface CustomerFavoritesPageResponse {
+  success: true;
+  data: CustomerFavoritesPage;
+}
+
 export interface FavoriteMutationResponse {
   success: true;
 }
@@ -645,9 +679,19 @@ export type CustomerFavoritesListApiResponse =
   | CustomerFavoritesListResponse
   | ApiErrorResponse;
 
+export type CustomerFavoritesPageApiResponse =
+  | CustomerFavoritesPageResponse
+  | ApiErrorResponse;
+
 export type FavoriteMutationApiResponse =
   | FavoriteMutationResponse
   | ApiErrorResponse;
+
+export interface ClickMutationResponse {
+  success: true;
+}
+
+export type ClickMutationApiResponse = ClickMutationResponse | ApiErrorResponse;
 
 export interface RunningCreditConfigListResponse {
   success: true;

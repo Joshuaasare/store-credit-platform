@@ -366,6 +366,7 @@ transaction_date: Type.Number()
 
 export type BaseRunningCreditConfig = Static<typeof BaseRunningCreditConfig>
 export const BaseRunningCreditConfig = Type.Object({
+click_count: Type.Number(),
 created_at: Type.String(),
 credit_type: Type.Union([
 CreditTypeValues,
@@ -422,6 +423,7 @@ Type.Null()
 
 export type BaseFixedCreditConfig = Static<typeof BaseFixedCreditConfig>
 export const BaseFixedCreditConfig = Type.Object({
+click_count: Type.Number(),
 created_at: Type.String(),
 deleted_at: Type.Union([
 Type.String(),
