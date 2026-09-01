@@ -41,7 +41,14 @@ export function NewUserScreen() {
         pendingToken,
         surnameTrimmed,
         otherTrimmed,
-        location ?? undefined,
+        location
+          ? {
+              latitude: location.latitude,
+              longitude: location.longitude,
+              place_id: location.place_id,
+              place_label: location.label,
+            }
+          : undefined,
       );
       if (!res.success) {
         setError(res.error);

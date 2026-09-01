@@ -16,11 +16,11 @@ import Animated, {
   Easing,
 } from "react-native-reanimated";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { LocationPicker, type LocationValue } from "../../../shared/components/LocationPicker";
-import { useAuthStore } from "../../../shared/store/useAuthStore";
-import { customerProfileService } from "../../../api/client";
-import { useThemeTokens } from "../../../shared/theme/ThemeContext";
-import { toastError, toastSuccess } from "../../../shared/utils/toast.utils";
+import { LocationPicker, type LocationValue } from "./LocationPicker";
+import { useAuthStore } from "../store/useAuthStore";
+import { customerProfileService } from "../../api/client";
+import { useThemeTokens } from "../theme/ThemeContext";
+import { toastError, toastSuccess } from "../utils/toast.utils";
 
 const DURATION_IN = 180;
 const DURATION_OUT = 120;

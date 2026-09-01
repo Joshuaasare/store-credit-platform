@@ -359,6 +359,7 @@ export interface CustomerRegisterRequest {
   latitude?: number | null;
   longitude?: number | null;
   place_id?: string | null;
+  place_label?: string | null;
 }
 
 export interface CustomerRefreshRequest {
