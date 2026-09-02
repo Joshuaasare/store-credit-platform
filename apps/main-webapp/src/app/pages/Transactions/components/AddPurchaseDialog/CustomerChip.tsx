@@ -28,7 +28,7 @@ export function CustomerChip({ customer, onChange, disabled }: CustomerChipProps
         "flex items-center gap-3 rounded-md border border-primary/20 bg-primary/5 px-3 py-2",
       )}
     >
-      <Monogram text={initials} seed={seed} size="sm" />
+      <Monogram text={initials} seed={seed} imageUrl={customer.avatar_url} size="sm" />
       <div className="min-w-0 flex-1">
         <div className="truncate text-sm font-semibold tracking-tight">
           {displayName}

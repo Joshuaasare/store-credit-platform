@@ -156,6 +156,7 @@ export default function TransactionsList() {
                   r.customer?.phone ??
                   String(r.customer_id)
                 }
+                imageUrl={r.customer.avatar_url}
                 size="sm"
               />
               <div className="min-w-0">

@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { cn } from "../lib/utils";
 
 export interface MonogramProps {
@@ -7,6 +8,10 @@ export interface MonogramProps {
   seed?: string;
   size?: "sm" | "md" | "lg";
   className?: string;
+  /** Optional avatar URL. When present, it's rendered as an <img>; the
+   *  initials stay in the DOM behind it and become the fallback if the
+   *  image fails to load. */
+  imageUrl?: string | null;
 }
 
 /**
@@ -47,19 +52,30 @@ export function Monogram({
   seed,
   size = "sm",
   className,
+  imageUrl,
 }: MonogramProps) {
   const t = TINTS[hashSeed(seed ?? text) % TINTS.length];
+  const [imgFailed, setImgFailed] = useState(false);
+  const showImage = !!imageUrl && !imgFailed;
   return (
     <span
       className={cn(
-        "inline-flex shrink-0 items-center justify-center rounded-full font-semibold tracking-tight tabular-nums",
+        "relative inline-flex shrink-0 items-center justify-center overflow-hidden rounded-full font-semibold tracking-tight tabular-nums",
         t,
         SIZE[size],
         className,
       )}
       aria-hidden
     >
-      {text}
+      <span className={cn(showImage && "opacity-0")}>{text}</span>
+      {showImage && (
+        <img
+          src={imageUrl}
+          alt=""
+          onError={() => setImgFailed(true)}
+          className="absolute inset-0 h-full w-full object-cover"
+        />
+      )}
     </span>
   );
 }

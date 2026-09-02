@@ -34,7 +34,7 @@ export function PhoneField<T extends FieldValues>({
     <div className="space-y-1.5">
       <div className="flex items-end gap-1.5">
         <div className="flex-1">
-          <PhoneInput<T> name={name} control={control} />
+          <PhoneInput<T> name={name} control={control} maxlength={10} />
         </div>
         {onClear && (
           <Button

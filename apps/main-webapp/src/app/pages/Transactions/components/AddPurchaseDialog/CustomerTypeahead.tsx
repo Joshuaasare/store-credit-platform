@@ -26,7 +26,7 @@ interface CustomerTypeaheadProps {
 }
 
 const MIN_DIGITS = 3;
-const DEBOUNCE_MS = 300;
+const DEBOUNCE_MS = 400;
 const RESULT_LIMIT = 5;
 
 // Strip non-digits to derive a numeric substring search key. The backend
@@ -45,6 +45,10 @@ export function CustomerTypeahead({
   const debounced = useDebounce(digitsOnly(rawPhone), DEBOUNCE_MS);
   const inputContainerRef = useRef<HTMLDivElement | null>(null);
   const hadResultsRef = useRef(false);
+  // After a row is picked, the parent writes the picked phone back into the
+  // form, which triggers another query. Don't reopen the popover for that
+  // echo — only reopen when the user has actually typed something new.
+  const lastPickedDigitsRef = useRef<string | null>(null);
 
   const enabled = debounced.length >= MIN_DIGITS && !disabled;
 
@@ -67,8 +71,21 @@ export function CustomerTypeahead({
 
   useEffect(() => {
     if (rows.length > 0) hadResultsRef.current = true;
-    if (!enabled) setOpen(false);
-  }, [rows.length, enabled]);
+    if (!enabled) {
+      setOpen(false);
+      return;
+    }
+    // Suppress the reopen that comes from the form being refilled with the
+    // picked customer's phone. Once the user starts typing new digits we
+    // want the popover back.
+    if (
+      lastPickedDigitsRef.current &&
+      debounced === lastPickedDigitsRef.current
+    ) {
+      return;
+    }
+    if (rows.length > 0) setOpen(true);
+  }, [rows.length, enabled, debounced]);
 
   return (
     <div ref={inputContainerRef} className="relative">
@@ -98,6 +115,7 @@ export function CustomerTypeahead({
                     key={c.id}
                     value={String(c.id)}
                     onSelect={() => {
+                      lastPickedDigitsRef.current = digitsOnly(c.phone ?? "");
                       onSelect(c);
                       setOpen(false);
                     }}
@@ -110,6 +128,7 @@ export function CustomerTypeahead({
                         phone: c.phone,
                       })}
                       seed={c.user_id ?? c.phone ?? String(c.id)}
+                      imageUrl={c.avatar_url}
                       size="sm"
                     />
                     <div className="min-w-0 flex-1">
