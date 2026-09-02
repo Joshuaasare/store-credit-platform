@@ -17,7 +17,6 @@ import {
 } from "../../api/client";
 import type { TabStackParamList } from "../../navigation/TabNavigator";
 import ActivitiesModal from "./components/ActivitiesModal";
-import { deriveOffers } from "./deriveOffers";
 import { useActivitiesFeed } from "./useActivitiesFeed";
 import RecentActivitySection from "./components/RecentActivitySection";
 import NearbyOffersSection from "./components/NearbyOffersSection";
@@ -70,11 +69,6 @@ export function HomeScreen() {
 
   const [modalVisible, setModalVisible] = useState(false);
 
-  const offers = useMemo(
-    () => deriveOffers(creditsQuery.data),
-    [creditsQuery.data],
-  );
-
   const goToCredits = useCallback(() => {
     navigation.navigate("Credits");
   }, [navigation]);
@@ -117,7 +111,7 @@ export function HomeScreen() {
             onOpenActivitiesModal={openActivitiesModal}
           />
 
-          {offers.length > 0 ? <NearbyOffersSection offers={offers} /> : null}
+          <NearbyOffersSection />
           {/* </GlassTransition> */}
           <ActivitiesModal
             visible={modalVisible}
