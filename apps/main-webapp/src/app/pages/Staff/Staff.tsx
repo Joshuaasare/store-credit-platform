@@ -7,6 +7,7 @@ import {
   Trash2,
   ShieldCheck,
   ShieldOff,
+  Funnel,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -27,6 +28,10 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   cn,
+  useIsMobile,
+  Dialog,
+  DialogContent,
+  DialogHeader,
 } from "@store-credit-platform/web-components";
 import { staffService } from "@store-credit-platform/api-services";
 import { isApiError } from "@shared/utils/api.utils";
@@ -46,12 +51,14 @@ import { DeleteStaffDialog } from "./components/DeleteStaffDialog";
 import SearchInput from "@shared/components/SearchInput/SearchInput";
 import useDebounce from "@shared/hooks/useDebounce";
 import { FilterBar } from "@shared/components/FilterBar/FilterBar";
+import { PageHeader } from "@shared/components/PageHeader";
 import { allBranchOption, roleOptions } from "@shared/utils/options.utils";
 
 export default function Staff() {
   const { branches } = useStoreStore();
   const user = useAuthStore((s) => s.user);
   const queryClient = useQueryClient();
+  const isMobile = useIsMobile();
   const [branchId, setBranchId] = useState<number | null>(null);
   const [roleFilter, setRoleFilter] = useState<"all" | "manager" | "cashier">(
     "all",
@@ -60,6 +67,7 @@ export default function Staff() {
   const [addOpen, setAddOpen] = useState(false);
   const [editing, setEditing] = useState<Staff | null>(null);
   const [deleting, setDeleting] = useState<Staff | null>(null);
+  const [mode, setMode] = useState<"filter">();
   const debouncedSearchQuery = useDebounce(searchInput, 300);
 
   const staffQuery = useQuery({
@@ -86,7 +94,6 @@ export default function Staff() {
   });
 
   const rows = staffQuery.data?.rows ?? [];
-  const total = staffQuery.data?.total ?? 0;
 
   const invalidateStaff = () => {
     void queryClient.invalidateQueries({ queryKey: ["staff"] });
@@ -139,6 +146,10 @@ export default function Staff() {
 
   const visibleRows = useMemo(() => rows, [rows]);
 
+  const onClose = () => {
+    setMode(undefined);
+  };
+
   const renderFilters = () => {
     return (
       <FilterBar
@@ -157,6 +168,7 @@ export default function Staff() {
             label: "Branch",
             placeholder: "Filter by Branch",
             id: "branch-filter",
+            triggerClassName: "w-full md:w-auto",
             disabled: !isEmpty(searchInput),
             value: branchId == null ? "all" : String(branchId),
             options: [allBranchOption].concat(
@@ -172,6 +184,7 @@ export default function Staff() {
             label: "Role",
             placeholder: "Filter by Role",
             id: "role-filter",
+            triggerClassName: "w-full md:w-auto",
             value: roleFilter,
             disabled: !isEmpty(searchInput),
             options: roleOptions,
@@ -183,57 +196,46 @@ export default function Staff() {
 
   return (
     <div className="relative min-h-screen px-4 py-6 md:px-8 md:py-10">
-      <div
-        aria-hidden
-        className="from-primary/5 pointer-events-none absolute inset-x-0 top-0 h-64 bg-gradient-to-b to-transparent"
-      />
       <div className="relative mx-auto max-w-7xl space-y-6">
-        {/* Hero header card */}
-        <div className="bg-card animate-fade-in-up relative overflow-hidden rounded-2xl border p-6 shadow-sm motion-reduce:animate-none">
-          <div
-            aria-hidden
-            className="from-primary/25 via-primary/10 pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-gradient-to-br to-transparent blur-2xl"
-          />
-          <div className="relative flex items-start gap-4">
-            <div className="from-primary to-primary/70 text-primary-foreground flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br shadow-sm">
-              <UserCog className="h-6 w-6 stroke-[1.75]" />
-            </div>
-            <div className="min-w-0 flex-1 space-y-1">
-              <h1 className="text-3xl font-bold tracking-tight">Staff</h1>
-              <p className="text-muted-foreground text-sm">
-                Add, edit, and manage the people who run your store. Assign a
-                role and a branch; disable or remove access any time.
-              </p>
-            </div>
-            <Button onClick={() => setAddOpen(true)} className="shrink-0">
+        {/* Page header */}
+        <PageHeader
+          title="Staff"
+          subtitle="Add, edit, and manage the people who run your store. Assign a role and a branch; disable or remove access any time."
+        >
+          <div className="flex justify-end">
+            <Button onClick={() => setAddOpen(true)} size="sm">
               Add staff
             </Button>
           </div>
-        </div>
+        </PageHeader>
 
         {/* Filters bar */}
-        <Card
-          className="animate-fade-in-up p-4 motion-reduce:animate-none"
+        <div
+          className="animate-fade-in-up flex flex-wrap items-center gap-3 motion-reduce:animate-none"
           style={{ animationDelay: "60ms" }}
         >
-          <div className="flex flex-wrap items-end gap-3">
-            <div className="min-w-[220px] flex-1 space-y-1.5">
-              <div className="relative">
-                <SearchInput
-                  searchPlaceholder="Search staff"
-                  searchQuery={searchInput}
-                  onSearch={setSearchInput}
-                />
-              </div>
-            </div>
-
-            {renderFilters()}
-
-            <div className="text-muted-foreground ml-auto self-end text-xs tabular-nums">
-              {staffQuery.isPending ? "—" : `${total} staff`}
+          <div className="flex flex-1 items-center gap-2 sm:max-w-sm">
+            <div className="relative flex-1">
+              <SearchInput
+                searchPlaceholder="Search staff"
+                searchQuery={searchInput}
+                onSearch={setSearchInput}
+              />
             </div>
           </div>
-        </Card>
+
+          {!isMobile && renderFilters()}
+          {isMobile && (
+            <Button
+              variant="outline"
+              className="relative rounded-sm p-2"
+              onClick={() => setMode("filter")}
+            >
+              <Funnel />
+              <span className="bg-primary absolute right-1 top-1 h-2 w-2 rounded-full" />
+            </Button>
+          )}
+        </div>
 
         {/* Staff table */}
         <Card
@@ -293,6 +295,17 @@ export default function Staff() {
           )}
         </Card>
       </div>
+
+      {mode === "filter" && isMobile && (
+        <Dialog open={mode === "filter" && isMobile} onOpenChange={onClose}>
+          <DialogContent>
+            <DialogHeader>
+              <h2 className="text-left">Filters</h2>
+            </DialogHeader>
+            {renderFilters()}
+          </DialogContent>
+        </Dialog>
+      )}
 
       {/* Create dialog */}
       <StaffDialog

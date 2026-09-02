@@ -2,7 +2,6 @@ import { useMemo, useState } from "react";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { Funnel, Users } from "lucide-react";
 import {
-  Card,
   Skeleton,
   useIsMobile,
   Button,
@@ -19,6 +18,7 @@ import { CustomerCard } from "./components/CustomerCard";
 import useDebounce from "@shared/hooks/useDebounce";
 import SearchInput from "@shared/components/SearchInput/SearchInput";
 import { FilterBar } from "@shared/components/FilterBar/FilterBar";
+import { PageHeader } from "@shared/components/PageHeader";
 import { isEmpty } from "@shared/utils/misc.utils";
 import { allBranchOption } from "@shared/utils/options.utils";
 
@@ -68,10 +68,6 @@ export default function Customers() {
     return out;
   }, [customersQuery.data]);
 
-  const lastPage =
-    customersQuery.data?.pages?.[customersQuery.data.pages.length - 1];
-  const total = lastPage?.success ? lastPage.data.total : 0;
-
   const hasNextPage = customersQuery.hasNextPage;
   const isFetching = customersQuery.isFetching;
 
@@ -93,6 +89,7 @@ export default function Customers() {
             label: "Branch",
             placeholder: "Filter by Branch",
             id: "branch-filter",
+            triggerClassName: "w-full md:w-auto",
             disabled: !isEmpty(searchInput),
             options: [allBranchOption].concat(
               branches.map((branch) => ({
@@ -108,68 +105,40 @@ export default function Customers() {
 
   return (
     <div className="relative min-h-screen px-4 py-6 md:px-8 md:py-10">
-      <div
-        aria-hidden
-        className="from-primary/5 pointer-events-none absolute inset-x-0 top-0 h-64 bg-gradient-to-b to-transparent"
-      />
-      <div className="relative mx-auto max-w-7xl space-y-6">
-        {/* Hero header card */}
-        <div className="bg-card animate-fade-in-up relative overflow-hidden rounded-2xl border p-6 shadow-sm motion-reduce:animate-none">
-          <div
-            aria-hidden
-            className="from-primary/25 via-primary/10 pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-gradient-to-br to-transparent blur-2xl"
-          />
-          <div
-            aria-hidden
-            className="from-primary/20 via-primary/5 pointer-events-none absolute -bottom-20 right-24 h-40 w-40 rounded-full bg-gradient-to-br to-transparent blur-2xl"
-          />
-          <div className="relative flex items-start gap-4">
-            <div className="from-primary to-primary/70 text-primary-foreground flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br shadow-sm">
-              <Users className="h-6 w-6 stroke-[1.75]" />
-            </div>
-            <div className="space-y-1">
-              <h1 className="text-3xl font-bold tracking-tight">Customers</h1>
-              <p className="text-muted-foreground text-sm">
-                Every customer who has made a purchase at your store, their
-                total spend, and the credit they have available.
-              </p>
-            </div>
-          </div>
-        </div>
+      <div className="relative mx-auto max-w-7xl space-y-8">
+        {/* Page header */}
+        <PageHeader
+          title="Customers"
+          subtitle="Every customer who has made a purchase at your store, their total spend, and the credit they have available."
+        />
 
         {/* Filters bar */}
-        <Card
-          className="animate-fade-in-up p-4 motion-reduce:animate-none"
+        <div
+          className="animate-fade-in-up flex flex-wrap items-center gap-3 motion-reduce:animate-none"
           style={{ animationDelay: "60ms" }}
         >
-          <div className="flex flex-wrap items-end gap-3">
-            <div className="min-w-[220px] flex-1 space-y-1.5">
-              <div className="relative">
-                <SearchInput
-                  searchPlaceholder="Search staff"
-                  searchQuery={searchInput}
-                  onSearch={setSearchInput}
-                />
-              </div>
-            </div>
-
-            {!isMobile && renderFilters()}
-            {isMobile && (
-              <Button
-                variant="outline"
-                className="relative rounded-sm p-2"
-                onClick={() => setMode("filter")}
-              >
-                <Funnel />
-                <span className="bg-primary absolute right-1 top-1 h-2 w-2 rounded-full" />
-              </Button>
-            )}
-
-            <div className="text-muted-foreground ml-auto self-end text-xs tabular-nums">
-              {customersQuery.isPending ? "—" : `${total} customers`}
+          <div className="flex flex-1 items-center gap-2 sm:max-w-sm">
+            <div className="relative flex-1">
+              <SearchInput
+                searchPlaceholder="Search staff"
+                searchQuery={searchInput}
+                onSearch={setSearchInput}
+              />
             </div>
           </div>
-        </Card>
+
+          {!isMobile && renderFilters()}
+          {isMobile && (
+            <Button
+              variant="outline"
+              className="relative rounded-sm p-2"
+              onClick={() => setMode("filter")}
+            >
+              <Funnel />
+              <span className="bg-primary absolute right-1 top-1 h-2 w-2 rounded-full" />
+            </Button>
+          )}
+        </div>
 
         {/* Card grid */}
         <div

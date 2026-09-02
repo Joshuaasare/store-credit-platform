@@ -10,6 +10,8 @@ import {
   CustomerListPage,
   CustomerDetail,
   CustomerDetailCreditRow,
+  GlobalCustomerSearchFilters,
+  GlobalCustomerSearchPage,
 } from "../schemas/customers.schema";
 import { BaseUserProfile } from "../schemas/main.schema";
 import { BaseCustomer } from "../types/main.types";
@@ -183,9 +185,7 @@ export class CustomerService {
     if (mbErr) {
       throw new Error(`Failed to load merchant branches: ${mbErr.message}`);
     }
-    const merchantBranchIds = (mbRows ?? []).map(
-      (b: { id: number }) => b.id,
-    );
+    const merchantBranchIds = (mbRows ?? []).map((b: { id: number }) => b.id);
 
     if (merchantBranchIds.length === 0) {
       throw new Error("Customer not found");
@@ -208,7 +208,9 @@ export class CustomerService {
     // Names live on the customer row; the user join carries phone / access / last_login only.
     const { data: customer, error: custErr } = await supabaseAdmin
       .from("customers")
-      .select(`id, phone, user_id, surname, other_names, users(${QueryFragments.BASE_USER_PROFILE})`)
+      .select(
+        `id, phone, user_id, surname, other_names, users(${QueryFragments.BASE_USER_PROFILE})`,
+      )
       .eq("id", customerId)
       .maybeSingle();
     if (custErr) {
@@ -219,7 +221,8 @@ export class CustomerService {
     }
     const linkedUser = customer.users;
 
-    const CREDIT_COLS = `${QueryFragments.BASE_CUSTOMER_CREDIT},branch:branches(${QueryFragments.BASE_BRANCH})` as const;
+    const CREDIT_COLS =
+      `${QueryFragments.BASE_CUSTOMER_CREDIT},branch:branches(${QueryFragments.BASE_BRANCH})` as const;
     const { data: creditRows, error: creditErr } = await supabaseAdmin
       .from("customer_credit")
       .select(CREDIT_COLS)
@@ -285,15 +288,12 @@ export class CustomerService {
     const availableCredits = credits.reduce((s, c) => s + c.remaining, 0);
     const liveCreditCount = credits.filter((c) => c.remaining > 0).length;
 
-    const lastCreditEpoch = merchantCredits.reduce<number | null>(
-      (max, r) => {
-        const created = r.created_at;
-        if (!created) return max;
-        const d = Math.floor(new Date(created).getTime());
-        return max == null || d > max ? d : max;
-      },
-      null,
-    );
+    const lastCreditEpoch = merchantCredits.reduce<number | null>((max, r) => {
+      const created = r.created_at;
+      if (!created) return max;
+      const d = Math.floor(new Date(created).getTime());
+      return max == null || d > max ? d : max;
+    }, null);
 
     const { data: purchaseRows, error: purchaseErr } = await supabaseAdmin
       .from("customer_purchases")
@@ -333,7 +333,8 @@ export class CustomerService {
       );
 
     const surname = (customer as { surname: string | null }).surname ?? null;
-    const otherNames = (customer as { other_names: string | null }).other_names ?? null;
+    const otherNames =
+      (customer as { other_names: string | null }).other_names ?? null;
     const fullName = `${surname ?? ""} ${otherNames ?? ""}`.trim();
     const customerName = fullName || "Unnamed customer";
 
@@ -363,6 +364,33 @@ export class CustomerService {
       throw new Error(`getCustomerById: ${error.message}`);
     }
     return data;
+  }
+
+  // Whole-platform phone lookup used by the Add-a-purchase typeahead. No
+  // merchant scoping — staff are explicitly allowed to surface any matching
+  // customer so first-time purchases at this merchant still recognise the
+  // customer by name.
+  async globalSearchByPhone(
+    filters: GlobalCustomerSearchFilters,
+  ): Promise<GlobalCustomerSearchPage> {
+    const phone = filters.phone.replace(/\D/g, "");
+
+    if (phone.length === 0) {
+      return { rows: [], total: 0, limit: filters.limit ?? 5 };
+    }
+    const limit = filters.limit ?? 5;
+
+    const { data, error } = await supabaseAdmin
+      .from("customers")
+      .select(QueryFragments.BASE_CUSTOMER)
+      .ilike("phone", `%${phone}%`)
+      .limit(limit);
+
+    if (error) {
+      throw new Error(`Failed to search customers by phone: ${error.message}`);
+    }
+
+    return { rows: data, total: data.length, limit };
   }
 }
 

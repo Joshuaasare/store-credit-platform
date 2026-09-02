@@ -40,7 +40,7 @@
   --radius: 0.625rem;
 }
 
-/* Light theme (default) — teal brand voltage */
+/* Light theme (default) — teal brand voltage (~#0F9E91) */
 [data-theme="light"] {
   --background: 0 0% 100%;
   --foreground: 0 0% 15%;
@@ -225,8 +225,15 @@
   }
   body {
     @apply bg-background text-foreground;
-    font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI",
-      Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-family:
+      "Inter",
+      -apple-system,
+      BlinkMacSystemFont,
+      "Segoe UI",
+      Roboto,
+      "Helvetica Neue",
+      Arial,
+      sans-serif;
     /* Quiet dot-grid texture — gives the eye something to land on without
      * competing with content. Opacity is set on the dot color itself
      * (not the whole background) so the `bg-background` color underneath

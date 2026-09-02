@@ -6,6 +6,7 @@ import {
   CustomerListQuerystring,
   CustomerListApiResponse,
   CustomerDetailApiResponse,
+  GlobalCustomerSearchApiResponse,
 } from "../types/api.types.js";
 
 export function createCustomerService() {
@@ -54,6 +55,16 @@ export function createCustomerService() {
       const qs = buildQS(params as Record<string, unknown>);
       return apiRequest<LeaderboardStatsApiResponse>(
         `/customers/leaderboard-stats${qs}`,
+        { method: "GET" },
+      );
+    },
+
+    async globalSearchByPhone(
+      phone: string,
+      limit?: number,
+    ): Promise<GlobalCustomerSearchApiResponse> {
+      return apiRequest<GlobalCustomerSearchApiResponse>(
+        `/customers/global-search${buildQS({ phone, limit })}`,
         { method: "GET" },
       );
     },

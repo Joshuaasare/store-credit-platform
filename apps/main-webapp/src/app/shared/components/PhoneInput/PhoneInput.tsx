@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Control, FieldValues, Path, useController } from "react-hook-form";
 
 import {
@@ -61,6 +61,28 @@ export function PhoneInput<T extends FieldValues>({
   const [localNumber, setLocalNumber] = useState<string>(
     initialParsed.localNumber || "",
   );
+  // Last value we wrote into the form via updateFormValue. Used to skip the
+  // external-sync effect on our own keystrokes (which round-trip through
+  // formatPhoneWithCountry and would otherwise stomp a leading "0" the user
+  // just typed).
+  const lastWrittenRef = useRef<string>("");
+
+  // Sync local display state only when the form value changes from outside
+  // this component (e.g. picking a row in the AddPurchaseDialog typeahead
+  // calls reset() with a different phone).
+  useEffect(() => {
+    if (field.value === lastWrittenRef.current) return;
+    lastWrittenRef.current = field.value ?? "";
+    if (!field.value || field.value === "") {
+      if (localNumber !== "") setLocalNumber("");
+      return;
+    }
+    const parsed = parsePhoneNumber(field.value);
+    const nextCountry = parsed.country || defaultCountry;
+    const nextLocal = parsed.localNumber || "";
+    setSelectedCountry(nextCountry);
+    setLocalNumber(nextLocal);
+  }, [field.value]);
 
   const countryOptions = countries.map((country) => ({
     label: country.name,
@@ -75,12 +97,14 @@ export function PhoneInput<T extends FieldValues>({
     if (storeInternationalFormat) {
       // International format without +, e.g. "233501234567".
       const formatted = formatPhoneWithCountry(newLocalNumber, newCountry.code);
+      lastWrittenRef.current = formatted;
       field.onChange(formatted);
     } else {
       // Local format, e.g. "0501234567".
       const cleanLocal = newLocalNumber.startsWith("0")
         ? newLocalNumber
         : `0${newLocalNumber}`;
+      lastWrittenRef.current = cleanLocal;
       field.onChange(cleanLocal);
     }
   };
@@ -88,7 +112,7 @@ export function PhoneInput<T extends FieldValues>({
   const handleLocalNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     const cleaned = value.replace(/\D/g, "");
-    if (cleaned.length <= 15) {
+    if (cleaned.length <= 10) {
       setLocalNumber(cleaned);
       updateFormValue(cleaned, selectedCountry);
     }
@@ -153,6 +177,9 @@ export function PhoneInput<T extends FieldValues>({
           <Input
             id={name}
             type="tel"
+            inputMode="tel"
+            autoComplete="off"
+            name={`phone_${name}`}
             value={localNumber}
             onChange={handleLocalNumberChange}
             placeholder={placeholder}

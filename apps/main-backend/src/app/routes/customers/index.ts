@@ -14,6 +14,7 @@ import {
   CustomerListQuerystring,
   CustomerListApiResponse,
   CustomerDetailApiResponse,
+  GlobalCustomerSearchApiResponse,
 } from "../../schemas/customers.schema";
 import { CustomerCreditsApiResponse } from "../../schemas/customerCredits.schema";
 import { CustomerActivitiesApiResponse } from "../../schemas/customerActivities.schema";
@@ -37,12 +38,21 @@ import {
 
 // cursor is the numeric id of the last item from the previous page (stringified in the querystring, coerced to number in the handler).
 const CustomerActivitiesQuerystring = Type.Object({
-  cursor: Type.Optional(
-    Type.Union([Type.String(), Type.Number()]),
-  ),
+  cursor: Type.Optional(Type.Union([Type.String(), Type.Number()])),
   limit: Type.Optional(Type.Integer({ minimum: 1, maximum: 50 })),
 });
-type CustomerActivitiesQuerystring = Static<typeof CustomerActivitiesQuerystring>;
+type CustomerActivitiesQuerystring = Static<
+  typeof CustomerActivitiesQuerystring
+>;
+
+// phone is required and digits-only; limit caps the result set for the typeahead.
+const GlobalCustomerSearchQuerystring = Type.Object({
+  phone: Type.String({ minLength: 1 }),
+  limit: Type.Optional(Type.Integer({ minimum: 1, maximum: 25 })),
+});
+type GlobalCustomerSearchQuerystring = Static<
+  typeof GlobalCustomerSearchQuerystring
+>;
 
 async function resolveMerchantId(
   request: FastifyRequest,
@@ -131,10 +141,7 @@ export default async function (fastify: FastifyInstance) {
             : "Failed to load customer detail";
         const notFound = message.includes("not found");
         reply.status(notFound ? 404 : 400);
-        request.log.error(
-          error,
-          "GET /customers/:customerId failed",
-        );
+        request.log.error(error, "GET /customers/:customerId failed");
         return { success: false, error: message };
       }
     },
@@ -217,6 +224,38 @@ export default async function (fastify: FastifyInstance) {
         const message =
           error instanceof Error ? error.message : "Failed to load stats";
         request.log.error(error, "GET /customers/leaderboard-stats failed");
+        reply.status(400);
+        return { success: false, error: message };
+      }
+    },
+  });
+
+  // Any authenticated merchant user. No merchant scoping — the Add-a-purchase
+  // typeahead should surface customers who have never shopped here yet.
+  fastify.get<{
+    Querystring: GlobalCustomerSearchQuerystring;
+    Reply: GlobalCustomerSearchApiResponse;
+  }>("/global-search", {
+    preHandler: [requireAuth],
+    schema: {
+      querystring: GlobalCustomerSearchQuerystring,
+      response: {
+        200: GlobalCustomerSearchApiResponse,
+        400: GlobalCustomerSearchApiResponse,
+        401: GlobalCustomerSearchApiResponse,
+      },
+    },
+    handler: async (request, reply) => {
+      try {
+        const page = await customerService.globalSearchByPhone({
+          phone: request?.query?.phone,
+          limit: request?.query?.limit ?? 5,
+        });
+        return { success: true, data: page };
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : "Failed to search customers";
+        request.log.error(error, "GET /customers/global-search failed");
         reply.status(400);
         return { success: false, error: message };
       }
@@ -491,19 +530,33 @@ export default async function (fastify: FastifyInstance) {
           };
         }
         const body = request.body;
-        if (typeof body.amount !== "number" || Number.isNaN(body.amount) || body.amount < 0) {
+        if (
+          typeof body.amount !== "number" ||
+          Number.isNaN(body.amount) ||
+          body.amount < 0
+        ) {
           reply.status(400);
-          return { success: false, error: "Invalid amount: must be a non-negative number" };
+          return {
+            success: false,
+            error: "Invalid amount: must be a non-negative number",
+          };
         }
-        if (typeof body.branchId !== "number" || !Number.isFinite(body.branchId)) {
+        if (
+          typeof body.branchId !== "number" ||
+          !Number.isFinite(body.branchId)
+        ) {
           reply.status(400);
-          return { success: false, error: "Invalid branchId: must be a number" };
+          return {
+            success: false,
+            error: "Invalid branchId: must be a number",
+          };
         }
-        const result = await customerRedemptionsService.createMyRedemptionRequest(
-          customerId,
-          Number(request.params.merchantId),
-          body,
-        );
+        const result =
+          await customerRedemptionsService.createMyRedemptionRequest(
+            customerId,
+            Number(request.params.merchantId),
+            body,
+          );
         return { success: true, data: result };
       } catch (error) {
         const message =
@@ -549,19 +602,33 @@ export default async function (fastify: FastifyInstance) {
           };
         }
         const body = request.body;
-        if (typeof body.amount !== "number" || Number.isNaN(body.amount) || body.amount < 0) {
+        if (
+          typeof body.amount !== "number" ||
+          Number.isNaN(body.amount) ||
+          body.amount < 0
+        ) {
           reply.status(400);
-          return { success: false, error: "Invalid amount: must be a non-negative number" };
+          return {
+            success: false,
+            error: "Invalid amount: must be a non-negative number",
+          };
         }
-        if (typeof body.branchId !== "number" || !Number.isFinite(body.branchId)) {
+        if (
+          typeof body.branchId !== "number" ||
+          !Number.isFinite(body.branchId)
+        ) {
           reply.status(400);
-          return { success: false, error: "Invalid branchId: must be a number" };
+          return {
+            success: false,
+            error: "Invalid branchId: must be a number",
+          };
         }
-        const result = await customerRedemptionsService.updateMyRedemptionRequest(
-          customerId,
-          Number(request.params.merchantId),
-          body,
-        );
+        const result =
+          await customerRedemptionsService.updateMyRedemptionRequest(
+            customerId,
+            Number(request.params.merchantId),
+            body,
+          );
         return { success: true, data: result };
       } catch (error) {
         const message =
@@ -605,10 +672,11 @@ export default async function (fastify: FastifyInstance) {
             error: "Forbidden: this endpoint is for customer accounts only",
           };
         }
-        const result = await customerRedemptionsService.cancelMyRedemptionRequest(
-          customerId,
-          Number(request.params.merchantId),
-        );
+        const result =
+          await customerRedemptionsService.cancelMyRedemptionRequest(
+            customerId,
+            Number(request.params.merchantId),
+          );
         return { success: true, data: result };
       } catch (error) {
         const message =
@@ -770,9 +838,7 @@ export default async function (fastify: FastifyInstance) {
         return { success: true, data: { user } };
       } catch (error) {
         const message =
-          error instanceof Error
-            ? error.message
-            : "Failed to update profile";
+          error instanceof Error ? error.message : "Failed to update profile";
         const statusCode =
           (error as Error & { statusCode?: number }).statusCode ?? 400;
         request.log.error(error, "PATCH /customers/me/profile failed");
