@@ -1,6 +1,6 @@
 /**
  * Auto-generated API Types
- * Generated on: 2026-09-01T14:07:34.779Z
+ * Generated on: 2026-09-02T16:33:20.800Z
  * 
  * ⚠️ DO NOT EDIT MANUALLY
  * Source: apps/smartschool-api/src/app/types/
@@ -1120,7 +1120,29 @@ export interface CustomerDetailResponse {
 }
 
 export type CustomerListApiResponse = CustomerListResponse | ApiErrorResponse;
-export type CustomerDetailApiResponse = CustomerDetailResponse | ApiErrorResponse;
+export type CustomerDetailApiResponse =
+  | CustomerDetailResponse
+  | ApiErrorResponse;
+
+export interface GlobalCustomerSearchFilters {
+  phone: string;
+  limit?: number;
+}
+
+export interface GlobalCustomerSearchPage {
+  rows: BaseCustomer[];
+  total: number;
+  limit: number;
+}
+
+export interface GlobalCustomerSearchResponse {
+  success: true;
+  data: GlobalCustomerSearchPage;
+}
+
+export type GlobalCustomerSearchApiResponse =
+  | GlobalCustomerSearchResponse
+  | ApiErrorResponse;
 
 export type MerchantWithStats = BaseMerchant & {
   branch_count: number;

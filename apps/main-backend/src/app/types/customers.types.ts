@@ -1,4 +1,10 @@
-import { ApiErrorResponse, BaseBranch, BaseCustomerCredit, BaseUserProfile } from "./main.types";
+import {
+  ApiErrorResponse,
+  BaseBranch,
+  BaseCustomer,
+  BaseCustomerCredit,
+  BaseUserProfile,
+} from "./main.types";
 
 export type LeaderboardSort =
   | "purchases"
@@ -122,4 +128,29 @@ export interface CustomerDetailResponse {
 }
 
 export type CustomerListApiResponse = CustomerListResponse | ApiErrorResponse;
-export type CustomerDetailApiResponse = CustomerDetailResponse | ApiErrorResponse;
+export type CustomerDetailApiResponse =
+  | CustomerDetailResponse
+  | ApiErrorResponse;
+
+// /customers/global-search: any authenticated merchant user can look up
+// customers by phone digits (no merchant scoping) so the Add-a-purchase
+// typeahead can surface customers who haven't shopped at this merchant yet.
+export interface GlobalCustomerSearchFilters {
+  phone: string;
+  limit?: number;
+}
+
+export interface GlobalCustomerSearchPage {
+  rows: BaseCustomer[];
+  total: number;
+  limit: number;
+}
+
+export interface GlobalCustomerSearchResponse {
+  success: true;
+  data: GlobalCustomerSearchPage;
+}
+
+export type GlobalCustomerSearchApiResponse =
+  | GlobalCustomerSearchResponse
+  | ApiErrorResponse;
