@@ -25,7 +25,7 @@ import { customerBranchService } from "../../api/client";
 import { useOffsets } from "../../shared/hooks/useOffsets";
 import { useTheme, useThemeTokens } from "../../shared/theme/ThemeContext";
 import type { AppStackParamList } from "../../navigation/RootNavigator";
-import LocationModal from "./components/LocationModal";
+import LocationModal from "../../shared/components/LocationModal";
 import CategoryFilterModal, {
   CATEGORY_LABELS,
 } from "./components/CategoryFilterModal";

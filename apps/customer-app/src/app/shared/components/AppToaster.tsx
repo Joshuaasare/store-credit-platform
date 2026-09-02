@@ -1,9 +1,11 @@
 import { Toaster } from "sonner-native";
 import { Ionicons } from "@expo/vector-icons";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useThemeTokens } from "../theme/ThemeContext";
 
 export function AppToaster() {
   const theme = useThemeTokens();
+  const insets = useSafeAreaInsets();
   const { colors, radii, spacing, typography, dark } = theme;
 
   return (
@@ -11,7 +13,9 @@ export function AppToaster() {
       theme={dark ? "dark" : "light"}
       position="top-center"
       duration={4000}
-      offset={spacing.base}
+      // sonner-native ignores the safe-area inset when `offset` is set — it
+      // would otherwise land in the device notch.
+      offset={insets.top + spacing.base}
       gap={spacing.sm}
       closeButton={true}
       swipeToDismissDirection="up"

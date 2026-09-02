@@ -177,6 +177,7 @@ export class CustomerAuthService {
           latitude: data.latitude ?? null,
           longitude: data.longitude ?? null,
           place_id: data.place_id ?? null,
+          place_label: data.place_label ?? null,
         })
         .eq("id", existingCustomer.id)
         .select(QueryFragments.BASE_CUSTOMER)
@@ -201,6 +202,7 @@ export class CustomerAuthService {
           latitude: data.latitude ?? null,
           longitude: data.longitude ?? null,
           place_id: data.place_id ?? null,
+          place_label: data.place_label ?? null,
         })
         .select(QueryFragments.BASE_CUSTOMER)
         .single();
@@ -226,7 +228,7 @@ export class CustomerAuthService {
       latitude: data.latitude ?? null,
       longitude: data.longitude ?? null,
       place_id: data.place_id ?? null,
-      place_label: null,
+      place_label: data.place_label ?? null,
     };
 
     return this.issueSession(authUser, userAgent, clientIp);

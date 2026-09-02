@@ -2,6 +2,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { View, type StyleProp, type ViewStyle } from "react-native";
 import type { ReactNode } from "react";
 import { useThemeTokens } from "../theme/ThemeContext";
+import DiscountPattern from "./DiscountPattern";
 
 // No padding or safe-area insets — screens that bleed edge-to-edge (e.g. the
 // merchant-detail pink header) can do so without fighting a global wrapper.
@@ -24,6 +25,7 @@ export default function ScreenBackground({
         colors={[theme.colors.backgroundStart, theme.colors.backgroundEnd]}
         style={{ flex: 1 }}
       >
+        <DiscountPattern />
         {children}
       </LinearGradient>
     </View>

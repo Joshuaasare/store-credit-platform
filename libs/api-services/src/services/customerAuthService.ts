@@ -46,6 +46,7 @@ export function createCustomerAuthService(config?: ApiClientConfig) {
         latitude?: number | null;
         longitude?: number | null;
         place_id?: string | null;
+        place_label?: string | null;
       },
     ): Promise<CustomerRegisterApiResponse> {
       const body: CustomerRegisterRequest = {
@@ -55,6 +56,7 @@ export function createCustomerAuthService(config?: ApiClientConfig) {
         latitude: location?.latitude ?? undefined,
         longitude: location?.longitude ?? undefined,
         place_id: location?.place_id ?? undefined,
+        place_label: location?.place_label ?? undefined,
       };
       return publicApiRequest<CustomerRegisterApiResponse>(
         "/customer-auth/register",
