@@ -6,13 +6,11 @@ import {
   Button,
   Card,
   Skeleton,
-  Badge,
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-  cn,
   Monogram,
 } from "@store-credit-platform/web-components";
 import { DataTable } from "@shared/components/DataTable/DataTable";
@@ -36,11 +34,8 @@ import {
 } from "./components/TransactionsFilters";
 import { AddPurchaseDialog } from "./components/AddPurchaseDialog";
 import { TransactionDetailDialog } from "./components/TransactionDetailDialog";
-import {
-  AMOUNT_COLOR,
-  formatDisplayNumber,
-  TYPE_META,
-} from "@shared/utils/ui.utils";
+import { formatDisplayNumber } from "@shared/utils/ui.utils";
+import { TransactionTypeTag } from "@shared/components/TransactionTypeTag";
 
 const LIMIT = 20;
 
@@ -126,10 +121,6 @@ export default function TransactionsList() {
     return out;
   }, [transactionsQuery.data]);
 
-  const lastPage =
-    transactionsQuery.data?.pages?.[transactionsQuery.data.pages.length - 1];
-  const total = lastPage?.success ? lastPage.data.total : 0;
-
   const hasNextPage = transactionsQuery.hasNextPage;
   const isFetching = transactionsQuery.isFetching;
 
@@ -189,28 +180,15 @@ export default function TransactionsList() {
       {
         id: "type",
         header: "Type",
-        cell: ({ row }) => {
-          const meta = TYPE_META[row.original.transaction_type];
-          return (
-            <Badge
-              variant="outline"
-              className={cn("border bg-transparent", meta.chip)}
-            >
-              {meta.label}
-            </Badge>
-          );
-        },
+        cell: ({ row }) => (
+          <TransactionTypeTag type={row.original.transaction_type} />
+        ),
       },
       {
         id: "amount",
         header: "Amount",
         cell: ({ row }) => (
-          <span
-            className={cn(
-              "font-medium tabular-nums",
-              AMOUNT_COLOR[row.original.transaction_type],
-            )}
-          >
+          <span className="text-foreground font-medium tabular-nums">
             {formatGHS(row.original.amount)}
           </span>
         ),
@@ -237,27 +215,16 @@ export default function TransactionsList() {
   return (
     <div className="space-y-6">
       {/* Filters bar + Add a purchase */}
-      <Card
-        className="animate-fade-in-up p-4 motion-reduce:animate-none"
+      <div
+        className="animate-fade-in-up motion-reduce:animate-none"
         style={{ animationDelay: "0ms" }}
       >
         <TransactionsFilters
           value={filters}
           onChange={(next) => setFilters(next)}
           branches={branches}
-          rightSlot={
-            <AddPurchaseDialog open={addOpen} onOpenChange={setAddOpen}>
-              <Button
-                onClick={() => setAddOpen(true)}
-                size="sm"
-                className="rounded-sm shadow-sm"
-              >
-                <Plus className="mr-1.5 h-4 w-4" /> Add a purchase
-              </Button>
-            </AddPurchaseDialog>
-          }
         />
-      </Card>
+      </div>
 
       {/* Table card */}
       <Card
@@ -271,20 +238,26 @@ export default function TransactionsList() {
               onValueChange={(v) => setTypeFilter(v as TransactionTypeFilter)}
             >
               <SelectTrigger className="h-8 w-[180px] text-sm font-semibold tracking-tight">
-                <SelectValue />
+                <SelectValue placeholder="All transactions" />
               </SelectTrigger>
               <SelectContent>
                 {TYPE_FILTERS.map((f) => (
-                  <SelectItem key={f.value} value={f.value}>
+                  <SelectItem key={f.value} value={f.value} className="text-sm">
                     {f.label}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
-            <span className="bg-muted/50 text-muted-foreground inline-flex h-5 items-center rounded-full border px-2 text-[11px] font-medium tabular-nums">
-              {total}
-            </span>
           </div>
+          <AddPurchaseDialog open={addOpen} onOpenChange={setAddOpen}>
+            <Button
+              onClick={() => setAddOpen(true)}
+              size="sm"
+              className="rounded-sm shadow-sm"
+            >
+              <Plus className="mr-1.5 h-4 w-4" /> Add purchase
+            </Button>
+          </AddPurchaseDialog>
         </div>
 
         <InfiniteScroll

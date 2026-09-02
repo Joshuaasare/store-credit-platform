@@ -1,10 +1,14 @@
+import { useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, Users, ShoppingBag, Coins, Wallet } from "lucide-react";
+import { ArrowLeft, ChevronDown, Coins, Users } from "lucide-react";
 import {
   Card,
   Skeleton,
   Monogram,
+  Collapsible,
+  CollapsibleTrigger,
+  CollapsibleContent,
   cn,
 } from "@store-credit-platform/web-components";
 import { customerService } from "@store-credit-platform/api-services";
@@ -13,6 +17,7 @@ import { formatEpochDate, formatGHS } from "@shared/utils/format";
 import { customerRowInitials } from "@shared/utils/customers.utils";
 import { formatDisplayNumber } from "@shared/utils/ui.utils";
 import { CustomerDetailCreditCard } from "./components/CustomerDetailCreditCard";
+import { CustomerDetailRedeemedList } from "./components/CustomerDetailRedeemedList";
 
 export default function CustomerDetail() {
   const { customerId } = useParams<{ customerId: string }>();
@@ -36,12 +41,15 @@ export default function CustomerDetail() {
     detail.customer_name &&
     detail.customer_name !== "Unnamed customer";
 
+  const { liveCredits, redeemedCredits } = useMemo(() => {
+    if (!detail) return { liveCredits: [], redeemedCredits: [] };
+    const live = detail.credits.filter((c) => c.remaining > 0);
+    const redeemed = detail.credits.filter((c) => c.remaining <= 0);
+    return { liveCredits: live, redeemedCredits: redeemed };
+  }, [detail]);
+
   return (
     <div className="relative min-h-screen px-4 py-6 md:px-8 md:py-10">
-      <div
-        aria-hidden
-        className="from-primary/5 pointer-events-none absolute inset-x-0 top-0 h-64 bg-gradient-to-b to-transparent"
-      />
       <div className="relative mx-auto max-w-5xl space-y-6">
         {/* Back button */}
         <button
@@ -74,13 +82,13 @@ export default function CustomerDetail() {
           </div>
         ) : (
           <>
-            {/* Header card */}
-            <div className="bg-card animate-fade-in-up relative overflow-hidden rounded-2xl border p-6 shadow-sm motion-reduce:animate-none">
-              <div
+            {/* Header card — soft tinted surface so it reads as a profile, not a block */}
+            <div className="bg-primary/5 dark:bg-primary/10 ring-primary/10 relative overflow-hidden rounded-2xl p-6 shadow-sm ring-1 ring-inset">
+              <span
                 aria-hidden
-                className="from-primary/25 via-primary/10 pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-gradient-to-br to-transparent blur-2xl"
+                className="bg-primary absolute left-0 top-6 h-12 w-[3px] rounded-full"
               />
-              <div className="relative flex items-start gap-4">
+              <div className="relative flex items-start gap-4 pl-3">
                 <Monogram
                   text={customerRowInitials(detail)}
                   seed={
@@ -100,55 +108,51 @@ export default function CustomerDetail() {
                       {formatDisplayNumber(detail.phone)}
                     </p>
                   )}
-                  <p className="text-muted-foreground text-[11px] tabular-nums">
-                    Customer #{detail.customer_id}
-                  </p>
                 </div>
               </div>
 
-              {/* Totals row */}
-              <div className="relative mt-5 grid grid-cols-2 gap-4 border-t pt-4 sm:grid-cols-4">
-                <StatTile
-                  icon={<ShoppingBag className="h-4 w-4 stroke-[1.75]" />}
+              {/* Totals row — flat label/value, even scale */}
+              <div className="relative mt-6 grid grid-cols-2 gap-x-6 gap-y-4 pl-3 sm:grid-cols-4">
+                <StatLine
                   label="Total purchases"
                   value={formatGHS(detail.total_purchases)}
+                  tone="primary"
                 />
-                <StatTile
-                  icon={<Wallet className="h-4 w-4 stroke-[1.75]" />}
+                <StatLine
                   label="Available credits"
                   value={formatGHS(detail.available_credits)}
                   tone="primary"
                 />
-                <StatTile
-                  icon={<Coins className="h-4 w-4 stroke-[1.75]" />}
+                <StatLine
                   label="Live credits"
                   value={String(detail.live_credit_count)}
+                  tone="primary"
                 />
-                <StatTile
-                  icon={<Users className="h-4 w-4 stroke-[1.75]" />}
+                <StatLine
                   label="Last activity"
                   value={
                     detail.last_activity_epoch == null
                       ? "—"
                       : formatEpochDate(detail.last_activity_epoch)
                   }
+                  tone="primary"
                 />
               </div>
             </div>
 
-            {/* Credits section */}
+            {/* Live credits */}
             <div className="animate-fade-in-up space-y-3 motion-reduce:animate-none">
               <div className="flex items-center justify-between">
                 <h2 className="text-base font-semibold tracking-tight">
-                  Available credits
+                  Live credits
                 </h2>
                 <span className="text-muted-foreground text-xs tabular-nums">
-                  {detail.credits.length}{" "}
-                  {detail.credits.length === 1 ? "credit" : "credits"}
+                  {liveCredits.length}{" "}
+                  {liveCredits.length === 1 ? "credit" : "credits"}
                 </span>
               </div>
 
-              {detail.credits.length === 0 ? (
+              {liveCredits.length === 0 ? (
                 <Card className="flex flex-col items-center justify-center gap-2 py-12 text-center">
                   <Coins className="text-muted-foreground h-8 w-8" />
                   <p className="text-sm font-medium">No live credits</p>
@@ -159,7 +163,7 @@ export default function CustomerDetail() {
                 </Card>
               ) : (
                 <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-                  {detail.credits.map((credit) => (
+                  {liveCredits.map((credit) => (
                     <CustomerDetailCreditCard
                       key={credit.id}
                       row={credit}
@@ -168,6 +172,31 @@ export default function CustomerDetail() {
                 </div>
               )}
             </div>
+
+            {/* Redeemed credits — collapsed by default */}
+            {redeemedCredits.length > 0 && (
+              <Collapsible
+                defaultOpen={false}
+                className="animate-fade-in-up motion-reduce:animate-none"
+              >
+                <div className="rounded-2xl border bg-card">
+                  <CollapsibleTrigger className="flex w-full items-center justify-between gap-3 px-5 py-4 text-left transition-colors hover:bg-muted/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                    <div className="flex items-center gap-2.5">
+                      <h2 className="text-base font-semibold tracking-tight">
+                        Redeemed credits
+                      </h2>
+                      <span className="text-muted-foreground text-xs tabular-nums">
+                        {redeemedCredits.length}
+                      </span>
+                    </div>
+                    <ChevronDown className="text-muted-foreground h-4 w-4 transition-transform [[data-state=open]>&]:rotate-180" />
+                  </CollapsibleTrigger>
+                  <CollapsibleContent>
+                    <CustomerDetailRedeemedList credits={redeemedCredits} />
+                  </CollapsibleContent>
+                </div>
+              </Collapsible>
+            )}
           </>
         )}
       </div>
@@ -175,31 +204,16 @@ export default function CustomerDetail() {
   );
 }
 
-interface StatTileProps {
-  icon: React.ReactNode;
+interface StatLineProps {
   label: string;
   value: string;
   tone?: "primary" | "default";
 }
 
-function StatTile({ icon, label, value, tone = "default" }: StatTileProps) {
+function StatLine({ label, value, tone = "default" }: StatLineProps) {
   return (
     <div>
-      <div className="flex items-center gap-1.5">
-        <span
-          className={cn(
-            "inline-flex h-6 w-6 items-center justify-center rounded-md",
-            tone === "primary"
-              ? "bg-primary/10 text-primary"
-              : "bg-muted text-muted-foreground",
-          )}
-        >
-          {icon}
-        </span>
-        <span className="text-muted-foreground text-[11px] font-medium uppercase tracking-wide">
-          {label}
-        </span>
-      </div>
+      <div className="text-muted-foreground text-xs">{label}</div>
       <div
         className={cn(
           "mt-1 text-lg font-semibold tabular-nums tracking-tight",

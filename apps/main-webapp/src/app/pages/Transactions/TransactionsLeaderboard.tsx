@@ -176,8 +176,8 @@ export default function TransactionsLeaderboard() {
   return (
     <div className="space-y-6">
       {/* Filters */}
-      <Card
-        className="animate-fade-in-up p-4 motion-reduce:animate-none"
+      <div
+        className="animate-fade-in-up motion-reduce:animate-none"
         style={{ animationDelay: "180ms" }}
       >
         <TransactionsFilters
@@ -186,7 +186,7 @@ export default function TransactionsLeaderboard() {
           branches={branches}
           showSort
         />
-      </Card>
+      </div>
       {/* Stats row */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <StatCard

@@ -39,6 +39,7 @@ import {
 } from "@shared/utils/misc.utils";
 import { formatDisplayNumber } from "@shared/utils/ui.utils";
 import RedemptionCodeDialog from "./components/RedemptionCodeDialog";
+import { PageHeader } from "@shared/components/PageHeader";
 
 const LIMIT = 20;
 
@@ -223,11 +224,7 @@ const approvedByColumn: ColumnDef<MerchantApprovedRedemption> = {
     if (!s) return <span className="text-muted-foreground text-sm">—</span>;
     const name =
       `${s.surname ?? ""}${s.other_names ? " " + s.other_names : ""}`.trim();
-    return (
-      <span className="truncate">
-        {name || `Staff #${s.id}`}
-      </span>
-    );
+    return <span className="truncate">{name || `Staff #${s.id}`}</span>;
   },
 };
 
@@ -237,15 +234,12 @@ export default function Redemptions() {
   const [tab, setTab] = useState<Tab>("pending");
   const [branchId, setBranchId] = useState<number | null>(null);
 
-  const [dialog, setDialog] = useState<
-    | {
-        customerId: number;
-        redemptionId: number;
-        customerName: string;
-        kind: "approve" | "reject";
-      }
-    | null
-  >(null);
+  const [dialog, setDialog] = useState<{
+    customerId: number;
+    redemptionId: number;
+    customerName: string;
+    kind: "approve" | "reject";
+  } | null>(null);
 
   const pendingQuery = useInfiniteQuery({
     queryKey: ["redemptions", "pending", { branchId, limit: LIMIT }],
@@ -302,9 +296,7 @@ export default function Redemptions() {
   }, [approvedQuery.data]);
 
   const activeQuery = tab === "pending" ? pendingQuery : approvedQuery;
-  const lastPage =
-    activeQuery.data?.pages?.[activeQuery.data.pages.length - 1];
-  const total = lastPage?.success ? lastPage.data.total : 0;
+
   const hasNextPage = activeQuery.hasNextPage;
   const isFetching = activeQuery.isFetching;
   const activeRows = tab === "pending" ? pendingRows : approvedRows;
@@ -468,94 +460,60 @@ export default function Redemptions() {
     [],
   );
 
-  const activeColumns =
-    tab === "pending" ? pendingColumns : approvedColumns;
+  const activeColumns = tab === "pending" ? pendingColumns : approvedColumns;
   const activeTypedRows: unknown[] = activeRows;
 
   const emptyCopy = EMPTY_COPY[tab];
 
   return (
     <div className="relative min-h-screen px-4 py-6 md:px-8 md:py-10">
-      <div
-        aria-hidden
-        className="from-primary/5 pointer-events-none absolute inset-x-0 top-0 h-64 bg-gradient-to-b to-transparent"
-      />
       <div className="relative mx-auto max-w-7xl space-y-6">
-        {/* Hero header card */}
-        <div className="bg-card animate-fade-in-up relative overflow-hidden rounded-2xl border p-6 shadow-sm motion-reduce:animate-none">
-          <div
-            aria-hidden
-            className="from-primary/25 via-primary/10 pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full bg-gradient-to-br to-transparent blur-2xl"
-          />
-          <div
-            aria-hidden
-            className="from-primary/20 via-primary/5 pointer-events-none absolute -bottom-20 right-24 h-40 w-40 rounded-full bg-gradient-to-br to-transparent blur-2xl"
-          />
-          <div className="relative flex items-start gap-4">
-            <div className="from-primary to-primary/70 text-primary-foreground flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br shadow-sm">
-              <Ticket className="h-6 w-6 stroke-[1.75]" />
-            </div>
-            <div className="space-y-1">
-              <h1 className="text-3xl font-bold tracking-tight">
-                Credit Redemptions
-              </h1>
-              <p className="text-muted-foreground text-sm">
-                Review and approve customer-initiated credit redemption requests
-                across your branches. Customers show you a 4-digit code at
-                the till — enter it to approve or reject.
-              </p>
-            </div>
-          </div>
-        </div>
+        {/* Page header */}
+        <PageHeader
+          title="Credit Redemptions"
+          subtitle="Review and approve customer-initiated credit redemption requests across your branches. Customers show you a 4-digit code at the till — enter it to approve or reject."
+        >
+          <Tabs
+            value={tab}
+            onValueChange={(v) => setTab(v as Tab)}
+            className="w-full"
+          >
+            <TabsList className="bg-muted/40 rounded-lg border p-0.5">
+              {STATUS_TABS.map((t) => (
+                <TabsTrigger
+                  key={t.value}
+                  value={t.value}
+                  className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-sm px-4"
+                >
+                  {t.label}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </Tabs>
+        </PageHeader>
 
-        {/* Tabs + branch filter */}
-        <Card
-          className="animate-fade-in-up p-4 motion-reduce:animate-none"
+        {/* Branch filter */}
+        <div
+          className="animate-fade-in-up flex flex-wrap items-center gap-3 motion-reduce:animate-none"
           style={{ animationDelay: "60ms" }}
         >
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <Tabs
-              value={tab}
-              onValueChange={(v) => setTab(v as Tab)}
-              className="w-auto"
-            >
-              <TabsList className="bg-muted/40 rounded-lg border p-0.5">
-                {STATUS_TABS.map((t) => (
-                  <TabsTrigger
-                    key={t.value}
-                    value={t.value}
-                    className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-sm px-4"
-                  >
-                    {t.label}
-                  </TabsTrigger>
-                ))}
-              </TabsList>
-            </Tabs>
-            <div className="flex items-center gap-2">
-              <Select
-                value={branchId == null ? "all" : String(branchId)}
-                onValueChange={(v) =>
-                  setBranchId(v === "all" ? null : Number(v))
-                }
-              >
-                <SelectTrigger className="h-8 w-[180px] text-sm font-semibold tracking-tight">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All branches</SelectItem>
-                  {branches.map((b) => (
-                    <SelectItem key={b.id} value={String(b.id)}>
-                      {b.name?.trim() || `Branch #${b.id}`}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <span className="bg-muted/50 text-muted-foreground inline-flex h-5 items-center rounded-full border px-2 text-[11px] font-medium tabular-nums">
-                {total}
-              </span>
-            </div>
-          </div>
-        </Card>
+          <Select
+            value={branchId == null ? "all" : String(branchId)}
+            onValueChange={(v) => setBranchId(v === "all" ? null : Number(v))}
+          >
+            <SelectTrigger className="h-8 w-[180px] text-sm font-semibold tracking-tight">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All branches</SelectItem>
+              {branches.map((b) => (
+                <SelectItem key={b.id} value={String(b.id)}>
+                  {b.name?.trim() || `Branch #${b.id}`}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
 
         {/* Table card */}
         <Card

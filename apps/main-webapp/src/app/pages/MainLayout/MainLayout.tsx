@@ -109,9 +109,8 @@ export default function MainLayout() {
       : location.pathname.startsWith(i.url),
   );
 
-  // Mirrors the StoreHero treatment — token-driven so it adapts to both themes.
-  const surfaceGradient = "bg-gradient-to-br from-primary/10 via-card to-card";
-  const surfaceRing = "ring-1 ring-primary/10";
+  // Solid surface — no gradient, matches customer-app's flat surfaces.
+  const surfaceRing = "ring-1 ring-border";
   const shadow = isLight
     ? "shadow-[0_8px_30px_rgba(0,0,0,0.12)]"
     : "shadow-[0_8px_30px_rgba(0,0,0,0.45)]";
@@ -130,10 +129,9 @@ export default function MainLayout() {
   }, [mobileOpen]);
 
   const hamburgerButtonClass = cn(
-    "fixed left-4 top-5 z-[60] flex h-11 w-11 items-center justify-center rounded-2xl border",
-    surfaceGradient,
+    "fixed left-4 top-5 z-[60] flex h-11 w-11 items-center justify-center rounded-2xl border bg-card",
     surfaceRing,
-    "backdrop-blur-2xl transition-all hover:border-primary/30 hover:shadow-md",
+    "transition-all hover:border-primary/30 hover:shadow-md",
     "outline-none focus-visible:ring-2 focus-visible:ring-ring",
     isLight
       ? "shadow-[0_8px_30px_rgba(0,0,0,0.12)]"
@@ -174,7 +172,7 @@ export default function MainLayout() {
             className={cn(
               "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition-all duration-300",
               isActive
-                ? "from-primary/20 to-primary/5 text-primary ring-primary/20 bg-gradient-to-br ring-1"
+                ? "bg-primary/10 text-primary ring-primary/20 ring-1"
                 : "bg-muted/60 text-muted-foreground",
             )}
           >
@@ -199,7 +197,7 @@ export default function MainLayout() {
       <Toaster richColors position="top-right" />
       <ThemeToggle />
 
-      <main className={cn("text-foreground flex-1", isMobile && "pt-20")}>
+      <main className={cn("text-foreground flex-1", isMobile && "pt-10")}>
         <Outlet />
       </main>
 
@@ -236,9 +234,9 @@ export default function MainLayout() {
           <nav
             className={cn(
               "fixed left-4 top-20 z-[60] flex w-56 flex-col items-start gap-2 rounded-2xl border px-2 py-3",
-              "bg-card/80",
+              "bg-card",
               surfaceRing,
-              "overflow-hidden backdrop-blur-2xl",
+              "overflow-hidden",
               isLight
                 ? "shadow-[0_8px_30px_rgba(0,0,0,0.12)]"
                 : "shadow-[0_8px_30px_rgba(0,0,0,0.45)]",
@@ -250,11 +248,6 @@ export default function MainLayout() {
             aria-label="Primary navigation"
             aria-hidden={!mobileOpen}
           >
-            {/* decorative primary blob */}
-            <div
-              aria-hidden
-              className="bg-primary/10 pointer-events-none absolute -left-8 -top-8 h-20 w-20 rounded-full blur-2xl"
-            />
             {navItems.map((item, index) => renderRoute(item, index))}
           </nav>
         </>
@@ -265,19 +258,14 @@ export default function MainLayout() {
             "flex flex-col items-start gap-2",
             "w-[4.5rem] hover:w-44",
             "rounded-2xl border px-2 py-3",
+            "bg-card",
             shadow,
             surfaceRing,
             "transition-[width] duration-300 ease-out",
             "overflow-hidden",
-            surfaceGradient,
           )}
           aria-label="Primary navigation"
         >
-          {/* decorative primary blob */}
-          <div
-            aria-hidden
-            className="bg-primary/15 pointer-events-none absolute -left-8 -top-8 h-24 w-24 rounded-full blur-2xl"
-          />
           {navItems.map((item, index) => {
             const isActive = index === activeIndex;
             if (!item.icon) return null;
@@ -315,7 +303,7 @@ export default function MainLayout() {
                   className={cn(
                     "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl transition-all duration-300",
                     isActive
-                      ? "from-primary/20 to-primary/5 text-primary ring-primary/20 bg-gradient-to-br ring-1"
+                      ? "bg-primary/10 text-primary ring-primary/20 ring-1"
                       : "bg-muted/60 text-muted-foreground group-hover/nav:bg-primary/10 group-hover/nav:text-primary",
                   )}
                 >

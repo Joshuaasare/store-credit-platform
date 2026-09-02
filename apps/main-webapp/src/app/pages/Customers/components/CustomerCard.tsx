@@ -1,11 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { ArrowRight, Clock } from "lucide-react";
-import {
-  Card,
-  Monogram,
-  Badge,
-  cn,
-} from "@store-credit-platform/web-components";
+import { Card, Monogram, cn } from "@store-credit-platform/web-components";
 import { CustomerListRow } from "@shared/types/api.types";
 import { formatEpochDate, formatGHS } from "@shared/utils/format";
 import { customerDirectoryInitials } from "@shared/utils/customers.utils";
@@ -67,49 +62,38 @@ export function CustomerCard({ row, className, style }: CustomerCardProps) {
               {secondaryLabel}
             </div>
           )}
-          <div className="text-muted-foreground mt-0.5 text-[11px] tabular-nums">
-            Customer #{row.customer_id}
-          </div>
         </div>
         <ArrowRight className="text-muted-foreground group-hover:text-primary h-4 w-4 shrink-0 transition-colors" />
       </div>
 
-      <div className="mt-3 grid grid-cols-2 gap-3 border-t pt-3">
+      <div className="mt-3 grid grid-cols-2 gap-3">
         <div>
-          <div className="text-muted-foreground text-[11px] font-medium uppercase tracking-wide">
-            Total purchases
-          </div>
+          <div className="text-muted-foreground text-xs">Total purchases</div>
           <div className="mt-0.5 text-base font-semibold tabular-nums">
             {formatGHS(row.total_purchases)}
           </div>
         </div>
         <div>
-          <div className="text-muted-foreground text-[11px] font-medium uppercase tracking-wide">
-            Available credits
-          </div>
+          <div className="text-muted-foreground text-xs">Available credits</div>
           <div className="text-primary mt-0.5 text-base font-semibold tabular-nums">
             {formatGHS(row.available_credits)}
           </div>
         </div>
       </div>
 
-      <div className="mt-3 flex items-center justify-between">
-        <Badge
-          variant="outline"
+      <div className="mt-3 flex items-center justify-between text-xs">
+        <span
           className={cn(
-            "border bg-transparent",
-            hasCredits
-              ? "border-primary/20 text-primary"
-              : "text-muted-foreground",
+            "tabular-nums",
+            hasCredits ? "text-primary" : "text-muted-foreground",
           )}
         >
-          {row.live_credit_count} live{" "}
-          {row.live_credit_count === 1 ? "credit" : "credits"}
-        </Badge>
-        <div className="text-muted-foreground flex items-center gap-1 text-[11px] tabular-nums">
+          {row.live_credit_count} live {row.live_credit_count === 1 ? "credit" : "credits"}
+        </span>
+        <span className="text-muted-foreground inline-flex items-center gap-1 tabular-nums">
           <Clock className="h-3 w-3" />
           {hasActivity ? formatEpochDate(row.last_activity_epoch!) : "No activity"}
-        </div>
+        </span>
       </div>
     </Card>
   );
