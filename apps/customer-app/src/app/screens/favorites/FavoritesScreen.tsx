@@ -14,7 +14,6 @@ import type { FavoritedConfig } from "@store-credit-platform/api-services";
 import ScreenBackground from "../../shared/components/ScreenBackground";
 import ScreenBody from "../../shared/components/ScreenBody";
 import PageHeader from "../../shared/components/PageHeader";
-import DiscountPattern from "../../shared/components/DiscountPattern";
 import MerchantAvatar from "../../shared/components/MerchantAvatar";
 import { useCustomerFavorites } from "../../shared/hooks/useCustomerFavorites";
 import { useThemeTokens } from "../../shared/theme/ThemeContext";
@@ -153,7 +152,6 @@ export function FavoritesScreen() {
 
   return (
     <ScreenBackground>
-      <DiscountPattern />
       <PageHeader />
       <ScreenBody edges={["bottom"]}>
         <FlatList
