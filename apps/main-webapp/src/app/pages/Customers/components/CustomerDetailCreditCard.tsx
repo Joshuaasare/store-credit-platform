@@ -2,7 +2,6 @@ import { useState } from "react";
 import { CalendarClock, ChevronDown, MapPin } from "lucide-react";
 import {
   Card,
-  Badge,
   Collapsible,
   CollapsibleTrigger,
   CollapsibleContent,
@@ -47,20 +46,22 @@ export function CustomerDetailCreditCard({
           )}
         >
           <div className="min-w-0 flex-1">
-            <div className="flex items-baseline gap-3">
-              <div
+            <div className="flex items-center gap-3">
+              <span
                 className={cn(
-                  "text-xl font-semibold tabular-nums",
-                  isFullyRedeemed && "text-muted-foreground",
+                  "inline-flex h-9 items-center justify-center rounded-lg px-3 text-base font-semibold tabular-nums",
+                  isFullyRedeemed
+                    ? "bg-muted text-muted-foreground"
+                    : "bg-primary/10 text-primary",
                 )}
               >
                 {formatGHS(row.remaining)}
-              </div>
-              <div className="text-muted-foreground text-xs">
+              </span>
+              <span className="text-muted-foreground text-xs">
                 of {formatGHS(row.credit_amount)}
-              </div>
+              </span>
             </div>
-            <div className="text-muted-foreground mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
+            <div className="text-muted-foreground mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
               <span className="inline-flex items-center gap-1">
                 <CalendarClock className="h-3 w-3" />
                 {row.expires_at == null
@@ -76,25 +77,12 @@ export function CustomerDetailCreditCard({
               </span>
             </div>
           </div>
-          <div className="flex shrink-0 items-center gap-2">
-            <Badge
-              variant="outline"
-              className={cn(
-                "border bg-transparent",
-                isFullyRedeemed
-                  ? "text-muted-foreground"
-                  : "border-primary/20 text-primary",
-              )}
-            >
-              {isFullyRedeemed ? "Fully redeemed" : "Live"}
-            </Badge>
-            <ChevronDown
-              className={cn(
-                "text-muted-foreground h-4 w-4 transition-transform",
-                open && "rotate-180",
-              )}
-            />
-          </div>
+          <ChevronDown
+            className={cn(
+              "text-muted-foreground mt-2.5 h-4 w-4 shrink-0 transition-transform",
+              open && "rotate-180",
+            )}
+          />
         </CollapsibleTrigger>
 
         <CollapsibleContent>

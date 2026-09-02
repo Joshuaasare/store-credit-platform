@@ -82,18 +82,20 @@ export default function CustomerDetail() {
           </div>
         ) : (
           <>
-            {/* Header card — brand berry primary so the customer's name has weight */}
-            <div className="bg-primary text-primary-foreground animate-fade-in-up relative overflow-hidden rounded-2xl p-6 shadow-sm motion-reduce:animate-none">
-              <div className="relative flex items-start gap-4">
-                <div className="rounded-full bg-card p-1.5">
-                  <Monogram
-                    text={customerRowInitials(detail)}
-                    seed={
-                      detail.user_id ?? detail.phone ?? String(detail.customer_id)
-                    }
-                    size="lg"
-                  />
-                </div>
+            {/* Header card — soft tinted surface so it reads as a profile, not a block */}
+            <div className="bg-primary/5 dark:bg-primary/10 ring-primary/10 relative overflow-hidden rounded-2xl p-6 shadow-sm ring-1 ring-inset">
+              <span
+                aria-hidden
+                className="bg-primary absolute left-0 top-6 h-12 w-[3px] rounded-full"
+              />
+              <div className="relative flex items-start gap-4 pl-3">
+                <Monogram
+                  text={customerRowInitials(detail)}
+                  seed={
+                    detail.user_id ?? detail.phone ?? String(detail.customer_id)
+                  }
+                  size="lg"
+                />
                 <div className="min-w-0 flex-1 space-y-1">
                   <h1 className="text-2xl font-bold tracking-tight">
                     {isLinked
@@ -102,32 +104,29 @@ export default function CustomerDetail() {
                         "Unnamed customer")}
                   </h1>
                   {isLinked && detail.phone && (
-                    <p className="text-primary-foreground/80 text-sm tabular-nums">
+                    <p className="text-muted-foreground text-sm tabular-nums">
                       {formatDisplayNumber(detail.phone)}
                     </p>
                   )}
-                  <p className="text-primary-foreground/70 text-[11px] tabular-nums">
-                    Customer #{detail.customer_id}
-                  </p>
                 </div>
               </div>
 
-              {/* Totals row — flat label/value, no icon shell, no separator */}
-              <div className="relative mt-6 grid grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-4">
+              {/* Totals row — flat label/value, even scale */}
+              <div className="relative mt-6 grid grid-cols-2 gap-x-6 gap-y-4 pl-3 sm:grid-cols-4">
                 <StatLine
                   label="Total purchases"
                   value={formatGHS(detail.total_purchases)}
-                  tone="inverted"
+                  tone="primary"
                 />
                 <StatLine
                   label="Available credits"
                   value={formatGHS(detail.available_credits)}
-                  tone="inverted-strong"
+                  tone="primary"
                 />
                 <StatLine
                   label="Live credits"
                   value={String(detail.live_credit_count)}
-                  tone="inverted"
+                  tone="primary"
                 />
                 <StatLine
                   label="Last activity"
@@ -136,7 +135,7 @@ export default function CustomerDetail() {
                       ? "—"
                       : formatEpochDate(detail.last_activity_epoch)
                   }
-                  tone="inverted"
+                  tone="primary"
                 />
               </div>
             </div>
@@ -208,28 +207,17 @@ export default function CustomerDetail() {
 interface StatLineProps {
   label: string;
   value: string;
-  tone?: "primary" | "default" | "inverted" | "inverted-strong";
+  tone?: "primary" | "default";
 }
 
 function StatLine({ label, value, tone = "default" }: StatLineProps) {
-  const isInverted = tone === "inverted" || tone === "inverted-strong";
   return (
     <div>
+      <div className="text-muted-foreground text-xs">{label}</div>
       <div
         className={cn(
-          "text-xs",
-          isInverted ? "text-primary-foreground/80" : "text-muted-foreground",
-        )}
-      >
-        {label}
-      </div>
-      <div
-        className={cn(
-          "mt-1 font-semibold tabular-nums tracking-tight",
-          tone === "primary" && "text-primary text-lg",
-          tone === "inverted" && "text-primary-foreground text-lg",
-          tone === "inverted-strong" &&
-            "text-primary-foreground text-2xl",
+          "mt-1 text-lg font-semibold tabular-nums tracking-tight",
+          tone === "primary" && "text-primary",
         )}
       >
         {value}

@@ -40,7 +40,7 @@
   --radius: 0.625rem;
 }
 
-/* Light theme (default) — berry brand voltage (#5C0435), matches customer-app */
+/* Light theme (default) — teal brand voltage (~#0F9E91) */
 [data-theme="light"] {
   --background: 0 0% 100%;
   --foreground: 0 0% 15%;
@@ -48,20 +48,20 @@
   --card-foreground: 0 0% 15%;
   --popover: 0 0% 100%;
   --popover-foreground: 0 0% 15%;
-  --primary: 327 92% 19%;
+  --primary: 173 80% 32%;
   --primary-foreground: 0 0% 100%;
-  --primary-active: 334 98% 19%;
+  --primary-active: 173 80% 26%;
   --secondary: 0 0% 97%;
   --secondary-foreground: 0 0% 20%;
   --muted: 0 0% 97%;
   --muted-foreground: 0 0% 55%;
-  --accent: 327 30% 96%;
-  --accent-foreground: 327 60% 25%;
+  --accent: 173 30% 96%;
+  --accent-foreground: 173 60% 22%;
   --destructive: 0 75% 50%;
   --destructive-foreground: 0 0% 100%;
-  --border: 333 36% 89%;
-  --input: 333 36% 89%;
-  --ring: 327 92% 19%;
+  --border: 0 0% 92%;
+  --input: 0 0% 92%;
+  --ring: 173 80% 32%;
   --ring-offset-background: 0 0% 100%;
   --chart-1: 25 95% 53%;
   --chart-2: 184 71% 60%;
@@ -70,12 +70,12 @@
   --chart-5: 70 70% 75%;
   --sidebar: 0 0% 100%;
   --sidebar-foreground: 0 0% 15%;
-  --sidebar-primary: 327 92% 19%;
+  --sidebar-primary: 173 80% 32%;
   --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent: 327 30% 96%;
-  --sidebar-accent-foreground: 327 60% 25%;
-  --sidebar-border: 333 36% 89%;
-  --sidebar-ring: 327 92% 19%;
+  --sidebar-accent: 173 30% 96%;
+  --sidebar-accent-foreground: 173 60% 22%;
+  --sidebar-border: 0 0% 92%;
+  --sidebar-ring: 173 80% 32%;
 
   /** custom styles */
   --custom-yellow-100: #f5eed2;
@@ -181,7 +181,7 @@
   --sidebar-ring: 25 70% 55%;
 }
 
-/* Slate theme — lifted berry (#B23A6A) on slate-900, matches customer-app dark */
+/* Slate theme — teal voltage, quieter for dark surfaces */
 [data-theme="slate"] {
   --background: 215 25% 15%; /* slate-900 */
   --foreground: 215 10% 98%; /* Very light text for contrast */
@@ -189,20 +189,20 @@
   --card-foreground: 215 10% 98%;
   --popover: 215 25% 17%;
   --popover-foreground: 215 10% 98%;
-  --primary: 336 51% 46%; /* lifted berry for dark bg readability */
-  --primary-foreground: 0 0% 100%;
-  --primary-active: 330 81% 60%; /* #EC4899 — saturated press state */
+  --primary: 175 70% 55%; /* lighter teal for dark bg readability */
+  --primary-foreground: 215 25% 15%;
+  --primary-active: 175 70% 48%;
   --secondary: 215 20% 25%; /* Slightly lighter slate */
   --secondary-foreground: 215 10% 98%;
   --muted: 215 20% 25%;
   --muted-foreground: 215 10% 70%;
-  --accent: 336 30% 22%; /* subtle berry wash for dark */
-  --accent-foreground: 329 80% 75%;
+  --accent: 175 30% 22%; /* subtle teal wash for dark */
+  --accent-foreground: 175 60% 75%;
   --destructive: 0 75% 60%; /* Keep destructive consistent */
   --destructive-foreground: 215 10% 98%;
   --border: 215 20% 30%;
   --input: 215 20% 30%;
-  --ring: 336 51% 46%;
+  --ring: 175 70% 55%;
   --ring-offset-background: 215 25% 15%;
   --chart-1: 210 70% 70%;
   --chart-2: 180 65% 65%;
@@ -211,12 +211,12 @@
   --chart-5: 120 65% 60%;
   --sidebar: 215 25% 20%; /* Slightly different from main background */
   --sidebar-foreground: 215 10% 98%;
-  --sidebar-primary: 336 51% 46%;
-  --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent: 336 30% 22%;
-  --sidebar-accent-foreground: 329 80% 75%;
+  --sidebar-primary: 175 70% 55%;
+  --sidebar-primary-foreground: 215 25% 15%;
+  --sidebar-accent: 175 30% 22%;
+  --sidebar-accent-foreground: 175 60% 75%;
   --sidebar-border: 215 20% 30%;
-  --sidebar-ring: 336 51% 46%;
+  --sidebar-ring: 175 70% 55%;
 }
 
 @layer base {
