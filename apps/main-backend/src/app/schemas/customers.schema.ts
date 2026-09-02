@@ -1,5 +1,5 @@
 import { Type, Static } from '@sinclair/typebox'
-import { BaseBranch, ApiErrorResponse, BaseUserProfile, BaseCustomerCredit } from './main.schema'
+import { BaseBranch, ApiErrorResponse, BaseCustomer, BaseUserProfile, BaseCustomerCredit } from './main.schema'
 
 
 
@@ -198,5 +198,30 @@ ApiErrorResponse
 export type CustomerDetailApiResponse = Static<typeof CustomerDetailApiResponse>
 export const CustomerDetailApiResponse = Type.Union([
 CustomerDetailResponse,
+ApiErrorResponse
+])
+
+export type GlobalCustomerSearchFilters = Static<typeof GlobalCustomerSearchFilters>
+export const GlobalCustomerSearchFilters = Type.Object({
+phone: Type.String(),
+limit: Type.Optional(Type.Number())
+})
+
+export type GlobalCustomerSearchPage = Static<typeof GlobalCustomerSearchPage>
+export const GlobalCustomerSearchPage = Type.Object({
+rows: Type.Array(BaseCustomer),
+total: Type.Number(),
+limit: Type.Number()
+})
+
+export type GlobalCustomerSearchResponse = Static<typeof GlobalCustomerSearchResponse>
+export const GlobalCustomerSearchResponse = Type.Object({
+success: Type.Literal(true),
+data: GlobalCustomerSearchPage
+})
+
+export type GlobalCustomerSearchApiResponse = Static<typeof GlobalCustomerSearchApiResponse>
+export const GlobalCustomerSearchApiResponse = Type.Union([
+GlobalCustomerSearchResponse,
 ApiErrorResponse
 ])

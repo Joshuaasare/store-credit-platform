@@ -1,18 +1,18 @@
-import { useEffect } from "react";
-import { useForm, Controller } from "react-hook-form";
+import { useEffect, useState } from "react";
+import { Controller, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { Loader2 } from "lucide-react";
 import {
+  Button,
   Dialog,
-  DialogTrigger,
   DialogContent,
-  DialogHeader,
-  DialogTitle,
   DialogDescription,
   DialogFooter,
-  Button,
+  DialogHeader,
+  DialogTitle,
   Input,
   Label,
   Select,
@@ -24,13 +24,17 @@ import {
 import { transactionService } from "@store-credit-platform/api-services";
 import { useStoreStore } from "@shared/stores/storeStore";
 import { useAuthStore } from "@shared/stores/authStore";
-import { PhoneInput } from "@shared/components/PhoneInput/PhoneInput";
+import { BaseCustomer } from "@shared/types/api.types";
 import {
   errorToastProperties,
   successToastProperties,
 } from "@shared/utils/misc.utils";
 import { isApiError } from "@shared/utils/api.utils";
-import { Loader2 } from "lucide-react";
+import { normalizePhone } from "@shared/utils/phone.utils";
+import { QrScanner } from "./QrScanner";
+import { PhoneField } from "./PhoneField";
+import { CustomerTypeahead } from "./CustomerTypeahead";
+import { CustomerChip } from "./CustomerChip";
 
 const purchaseSchema = z.object({
   phone: z
@@ -45,22 +49,27 @@ const purchaseSchema = z.object({
 
 type PurchaseFormValues = z.infer<typeof purchaseSchema>;
 
+type Mode = "phone" | "scan" | "form";
+
 interface AddPurchaseDialogProps {
-  open?: boolean;
-  onOpenChange?: (open: boolean) => void;
-  children?: React.ReactNode;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  entryMode: Mode;
+  onEntryModeConsumed?: () => void;
 }
 
 export function AddPurchaseDialog({
   open,
   onOpenChange,
-  children,
+  entryMode,
+  onEntryModeConsumed,
 }: AddPurchaseDialogProps) {
   const queryClient = useQueryClient();
   const { branches } = useStoreStore();
   const user = useAuthStore((s) => s.user);
-
   const userBranchId = user?.branch_id ?? null;
+  const [identified, setIdentified] = useState<BaseCustomer | null>(null);
+  const [readOnlyPhone, setReadOnlyPhone] = useState(false);
 
   const {
     register,
@@ -78,11 +87,28 @@ export function AddPurchaseDialog({
     },
   });
 
+  const phoneValue = watch("phone") ?? "";
+
   useEffect(() => {
     if (open) {
       reset({ phone: "", amount: NaN, branchId: userBranchId });
+      setIdentified(null);
+      setReadOnlyPhone(false);
     }
   }, [open, reset, userBranchId]);
+
+  // Apply the entry mode from the trigger dropdown. "phone" or "scan" stays
+  // visible until the user finishes; "form" is the post-scan state.
+  useEffect(() => {
+    if (!open) return;
+    if (entryMode === "phone") {
+      setReadOnlyPhone(false);
+    } else if (entryMode === "scan") {
+      setReadOnlyPhone(false);
+    } else if (entryMode === "form") {
+      setReadOnlyPhone(true);
+    }
+  }, [open, entryMode]);
 
   const selectedBranchId = watch("branchId");
   const selectedBranch =
@@ -92,7 +118,7 @@ export function AddPurchaseDialog({
   const mutation = useMutation({
     mutationFn: async (values: PurchaseFormValues) => {
       const res = await transactionService.createPurchase({
-        phone: values.phone,
+        phone: normalizePhone(values.phone),
         amount: values.amount,
         branch_id: values.branchId,
       });
@@ -102,7 +128,7 @@ export function AddPurchaseDialog({
     onSuccess: () => {
       toast.success("Purchase recorded", successToastProperties);
       void queryClient.invalidateQueries({ queryKey: ["transactions"] });
-      onOpenChange?.(false);
+      onOpenChange(false);
     },
     onError: (err) => {
       toast.error(
@@ -123,9 +149,34 @@ export function AddPurchaseDialog({
     mutation.mutate(values);
   };
 
+  const handleScanSuccess = (phone: string) => {
+    reset(
+      { phone, amount: watch("amount"), branchId: watch("branchId") },
+      { keepDirty: false },
+    );
+    setReadOnlyPhone(true);
+    onEntryModeConsumed?.();
+  };
+
+  const handleSwitchToManual = () => {
+    setReadOnlyPhone(false);
+    onEntryModeConsumed?.();
+  };
+
+  const handleClearIdentified = () => {
+    setIdentified(null);
+    setReadOnlyPhone(false);
+    reset({ phone: "", amount: watch("amount"), branchId: watch("branchId") });
+  };
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      {children && <DialogTrigger asChild>{children}</DialogTrigger>}
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        if (mutation.isPending) return;
+        onOpenChange(next);
+      }}
+    >
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Add a purchase</DialogTitle>
@@ -136,9 +187,37 @@ export function AddPurchaseDialog({
         </DialogHeader>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          {entryMode === "scan" && !readOnlyPhone && (
+            <QrScanner
+              onDecode={handleScanSuccess}
+              onSwitchToManual={handleSwitchToManual}
+            />
+          )}
+
           <div className="space-y-1.5">
-            <Label>Customer phone *</Label>
-            <PhoneInput name="phone" control={control} />
+            {!readOnlyPhone && <Label>Customer phone *</Label>}
+            <PhoneField
+              name="phone"
+              control={control}
+              readOnly={readOnlyPhone}
+              onClear={readOnlyPhone ? handleClearIdentified : undefined}
+            />
+            {!readOnlyPhone && (
+              <CustomerTypeahead
+                rawPhone={phoneValue}
+                onSelect={(c) => {
+                  setIdentified(c);
+                }}
+                disabled={mutation.isPending}
+              />
+            )}
+            {identified && (
+              <CustomerChip
+                customer={identified}
+                onChange={handleClearIdentified}
+                disabled={mutation.isPending}
+              />
+            )}
             {errors.phone && (
               <p className="text-destructive text-xs">{errors.phone.message}</p>
             )}
@@ -153,6 +232,7 @@ export function AddPurchaseDialog({
                 <Select
                   value={field.value == null ? "" : String(field.value)}
                   onValueChange={(v) => field.onChange(Number(v))}
+                  disabled={mutation.isPending}
                 >
                   <SelectTrigger id="purchase-branch" className="w-full">
                     <SelectValue placeholder="Select a branch" />
@@ -192,6 +272,7 @@ export function AddPurchaseDialog({
               step="0.01"
               min="0.01"
               placeholder="e.g. 50.00"
+              disabled={mutation.isPending}
               {...register("amount", {
                 setValueAs: (v: unknown) =>
                   v === "" || v == null ? NaN : Number(v),
@@ -208,7 +289,7 @@ export function AddPurchaseDialog({
             <Button
               type="button"
               variant="outline"
-              onClick={() => onOpenChange?.(false)}
+              onClick={() => onOpenChange(false)}
               disabled={mutation.isPending}
             >
               Cancel
@@ -217,7 +298,7 @@ export function AddPurchaseDialog({
               {mutation.isPending && (
                 <Loader2 className="h-4 w-4 animate-spin" />
               )}
-              Record purchase
+              {mutation.isPending ? "Recording…" : "Record purchase"}
             </Button>
           </DialogFooter>
         </form>

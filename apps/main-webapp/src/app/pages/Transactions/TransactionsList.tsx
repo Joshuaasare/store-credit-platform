@@ -1,9 +1,8 @@
 import { useMemo, useState } from "react";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { ColumnDef } from "@tanstack/react-table";
-import { Plus, Receipt } from "lucide-react";
+import { Receipt } from "lucide-react";
 import {
-  Button,
   Card,
   Skeleton,
   Select,
@@ -32,7 +31,11 @@ import {
   TransactionsFilters,
   TransactionsFiltersValue,
 } from "./components/TransactionsFilters";
-import { AddPurchaseDialog } from "./components/AddPurchaseDialog";
+import {
+  AddPurchaseTrigger,
+  type AddPurchaseEntryMode,
+} from "@shared/components/AddPurchaseTrigger";
+import { AddPurchaseDialog } from "./components/AddPurchaseDialog/AddPurchaseDialog";
 import { TransactionDetailDialog } from "./components/TransactionDetailDialog";
 import { formatDisplayNumber } from "@shared/utils/ui.utils";
 import { TransactionTypeTag } from "@shared/components/TransactionTypeTag";
@@ -80,6 +83,7 @@ export default function TransactionsList() {
   }));
   const [typeFilter, setTypeFilter] = useState<TransactionTypeFilter>("all");
   const [addOpen, setAddOpen] = useState(false);
+  const [entryMode, setEntryMode] = useState<AddPurchaseEntryMode>("phone");
   const [detailRow, setDetailRow] = useState<CustomerTransactions | null>(null);
 
   const transactionsQuery = useInfiniteQuery({
@@ -249,15 +253,12 @@ export default function TransactionsList() {
               </SelectContent>
             </Select>
           </div>
-          <AddPurchaseDialog open={addOpen} onOpenChange={setAddOpen}>
-            <Button
-              onClick={() => setAddOpen(true)}
-              size="sm"
-              className="rounded-sm shadow-sm"
-            >
-              <Plus className="mr-1.5 h-4 w-4" /> Add purchase
-            </Button>
-          </AddPurchaseDialog>
+          <AddPurchaseTrigger
+            onPick={(mode) => {
+              setEntryMode(mode);
+              setAddOpen(true);
+            }}
+          />
         </div>
 
         <InfiniteScroll
@@ -307,6 +308,13 @@ export default function TransactionsList() {
       <TransactionDetailDialog
         row={detailRow}
         onOpenChange={(open) => !open && setDetailRow(null)}
+      />
+
+      <AddPurchaseDialog
+        open={addOpen}
+        onOpenChange={setAddOpen}
+        entryMode={entryMode}
+        onEntryModeConsumed={() => setEntryMode("phone")}
       />
     </div>
   );

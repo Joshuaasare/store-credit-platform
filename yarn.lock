@@ -9537,6 +9537,7 @@ __metadata:
     heic2any: "npm:^0.0.4"
     highcharts: "npm:^12.4.0"
     highcharts-react-official: "npm:^3.2.2"
+    html5-qrcode: "npm:^2.3.8"
     jest: "npm:^30.0.2"
     jest-environment-jsdom: "npm:^30.0.2"
     jest-environment-node: "npm:^30.0.2"
@@ -18414,6 +18415,13 @@ __metadata:
   version: 2.0.2
   resolution: "html-escaper@npm:2.0.2"
   checksum: 10c0/208e8a12de1a6569edbb14544f4567e6ce8ecc30b9394fcaa4e7bb1e60c12a7c9a1ed27e31290817157e8626f3a4f29e76c8747030822eb84a6abb15c255f0a0
+  languageName: node
+  linkType: hard
+
+"html5-qrcode@npm:^2.3.8":
+  version: 2.3.8
+  resolution: "html5-qrcode@npm:2.3.8"
+  checksum: 10c0/3d7d0b3687e41a6fc0a06345f67e89ad3c7c00a3d0d8846d6fd31985e1ed2ac1c310e625f0b650dbc689f6b83469e3378417e7431ae5a9194178f1172bf6a93a
   languageName: node
   linkType: hard
 
