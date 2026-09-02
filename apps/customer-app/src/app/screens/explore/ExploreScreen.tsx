@@ -20,6 +20,7 @@ import type {
 import ScreenBackground from "../../shared/components/ScreenBackground";
 import ScreenBody from "../../shared/components/ScreenBody";
 import PageHeader from "../../shared/components/PageHeader";
+import DiscountPattern from "../../shared/components/DiscountPattern";
 import { useAuthStore } from "../../shared/store/useAuthStore";
 import { customerBranchService } from "../../api/client";
 import { useOffsets } from "../../shared/hooks/useOffsets";
@@ -302,6 +303,7 @@ export function ExploreScreen() {
 
   return (
     <ScreenBackground>
+      <DiscountPattern />
       <PageHeader />
       <ScreenBody edges={["bottom"]} padding={0}>
         {branches.length === 0 ? (

@@ -23,6 +23,7 @@ import RecentActivitySection from "./components/RecentActivitySection";
 import NearbyOffersSection from "./components/NearbyOffersSection";
 import HeroBalanceCard from "./components/HeroBalanceCard";
 import { useOffsets } from "../../shared/hooks/useOffsets";
+import DiscountPattern from "../../shared/components/DiscountPattern";
 
 const PREVIEW_ROWS = 4;
 
@@ -88,6 +89,7 @@ export function HomeScreen() {
 
   return (
     <ScreenBackground>
+      <DiscountPattern />
       <PageHeader unreadNotifications={5} />
       <ScreenBody edges={["bottom"]}>
         <ScrollView

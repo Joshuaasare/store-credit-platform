@@ -6,6 +6,7 @@ import { useNavigation } from "@react-navigation/native";
 import ScreenBackground from "../../shared/components/ScreenBackground";
 import ScreenBody from "../../shared/components/ScreenBody";
 import PageHeader from "../../shared/components/PageHeader";
+import DiscountPattern from "../../shared/components/DiscountPattern";
 import GlassTransition from "../../shared/components/GlassTransition";
 import GlassCard from "../../shared/components/GlassCard";
 import MerchantActivityRow from "../../shared/components/MerchantActivityRow";
@@ -42,6 +43,7 @@ export function CreditsScreen() {
 
   return (
     <ScreenBackground>
+      <DiscountPattern />
       <PageHeader />
       <ScreenBody edges={["bottom"]}>
         <GlassTransition>
