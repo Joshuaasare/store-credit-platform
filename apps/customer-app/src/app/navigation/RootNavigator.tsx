@@ -8,6 +8,7 @@ import { TabNavigator } from "./TabNavigator";
 import { MerchantCreditsScreen } from "../screens/credits/MerchantCreditsScreen";
 import { EditProfileScreen } from "../screens/edit-profile/EditProfileScreen";
 import { BranchOffersDetailScreen } from "../screens/explore/BranchOffersDetailScreen";
+import { NearbyOffersScreen } from "../screens/offers/NearbyOffersScreen";
 import type { BranchWithOffers } from "@store-credit-platform/api-services";
 import { useThemeTokens } from "../shared/theme/ThemeContext";
 import { buildNavTheme } from "../shared/theme/navTheme";
@@ -25,6 +26,7 @@ export type AppStackParamList = {
     autoOpenRedemption?: boolean;
   };
   BranchOffersDetail: { branch: BranchWithOffers };
+  NearbyOffers: undefined;
   EditProfile: undefined;
 };
 
@@ -56,6 +58,7 @@ function AppStackNavigator() {
         name="BranchOffersDetail"
         component={BranchOffersDetailScreen}
       />
+      <AppStack.Screen name="NearbyOffers" component={NearbyOffersScreen} />
       <AppStack.Screen
         name="EditProfile"
         component={EditProfileScreen}
