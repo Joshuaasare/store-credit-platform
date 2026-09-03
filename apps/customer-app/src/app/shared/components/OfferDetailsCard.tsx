@@ -278,7 +278,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   offerImage: {
-    width: 200,
-    height: 125,
+    width: 150,
+    height: 150,
   },
 });
