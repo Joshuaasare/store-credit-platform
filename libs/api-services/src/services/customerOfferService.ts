@@ -1,10 +1,5 @@
 import { createApiClient, ApiClientConfig } from "./apiService.js";
-import {
-  NearbyOffersApiResponse,
-  OfferBranchesApiResponse,
-} from "../types/api.types.js";
-
-export type OfferConfigType = "running" | "fixed";
+import { NearbyOffersApiResponse } from "../types/api.types.js";
 
 export function createCustomerOfferService(config?: ApiClientConfig) {
   const { apiRequest } = createApiClient(config);
@@ -25,22 +20,6 @@ export function createCustomerOfferService(config?: ApiClientConfig) {
         `/customers/me/offers/nearby?${search.toString()}`,
         { method: "GET" },
       );
-    },
-
-    async getOfferBranches(params: {
-      configType: OfferConfigType;
-      configId: number;
-      lat: number | null;
-      lng: number | null;
-    }): Promise<OfferBranchesApiResponse> {
-      const search = new URLSearchParams();
-      if (params.lat != null) search.set("lat", String(params.lat));
-      if (params.lng != null) search.set("lng", String(params.lng));
-      const query = search.toString();
-      const endpoint = `/customers/me/offers/${params.configType}/${params.configId}/branches${
-        query ? `?${query}` : ""
-      }`;
-      return apiRequest<OfferBranchesApiResponse>(endpoint, { method: "GET" });
     },
   };
 }

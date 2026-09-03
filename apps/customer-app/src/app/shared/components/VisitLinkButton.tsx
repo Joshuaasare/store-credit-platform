@@ -6,10 +6,10 @@ export default function VisitLinkButton({
   onVisit,
 }: {
   url: string;
-  onVisit: () => void;
+  onVisit?: () => void;
 }) {
   const open = () => {
-    onVisit();
+    onVisit?.();
     void Linking.openURL(url).catch(() => {
       // Invalid or unopenable URL — silently ignore; the button is optional.
     });

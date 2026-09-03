@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -14,7 +14,15 @@ import type { NearbyOfferRow } from "@store-credit-platform/api-services";
 import ScreenBackground from "../../shared/components/ScreenBackground";
 import ScreenBody from "../../shared/components/ScreenBody";
 import PageHeader from "../../shared/components/PageHeader";
-import NearbyOfferCard from "./NearbyOfferCard";
+import OfferCard from "../../shared/components/OfferCard";
+import {
+  offerHeadline,
+  offerStripIcon,
+  offerStripLabel,
+  offerThumbUri,
+} from "../../shared/utils/offers.utils";
+import { formatDistance } from "../../shared/utils/travel.utils";
+import NearbyOfferDetailsModal from "./NearbyOfferDetailsModal";
 import { useNearbyOffersFeed } from "./useNearbyOffersFeed";
 import { useThemeTokens } from "../../shared/theme/ThemeContext";
 import type { AppStackParamList } from "../../navigation/RootNavigator";
@@ -24,6 +32,7 @@ export function NearbyOffersScreen() {
   const navigation =
     useNavigation<NativeStackNavigationProp<AppStackParamList>>();
   const { hasLocation, query } = useNearbyOffersFeed();
+  const [selected, setSelected] = useState<NearbyOfferRow | null>(null);
 
   const offers = useMemo<NearbyOfferRow[]>(() => {
     if (!query.data) return [];
@@ -32,27 +41,27 @@ export function NearbyOffersScreen() {
     );
   }, [query.data]);
 
-  const openOffer = useCallback(
-    (offer: NearbyOfferRow) => {
-      navigation.navigate("OfferBranches", {
-        config_type: offer.config_type,
-        config_id: offer.config.id,
-      });
-    },
-    [navigation],
-  );
-
   const renderItem = useCallback<ListRenderItem<NearbyOfferRow>>(
-    ({ item }) => <NearbyOfferCard offer={item} onPress={() => openOffer(item)} style={styles.fullWidthCard} />,
-    [openOffer],
+    ({ item }) => (
+      <OfferCard
+        stripText={offerStripLabel(item)}
+        stripIcon={offerStripIcon(item)}
+        headline={offerHeadline(item)}
+        thumbUri={offerThumbUri(item)}
+        merchantName={item.merchant?.name ?? "Merchant"}
+        merchantLogoUrl={item.merchant?.logo_url ?? null}
+        distanceLabel={
+          item.distance_km != null ? formatDistance(item.distance_km) : null
+        }
+        onPress={() => setSelected(item)}
+        style={styles.fullWidthCard}
+      />
+    ),
+    [],
   );
 
   const ItemSeparator = useCallback(
-    () => (
-      <View
-        style={[styles.separator, { backgroundColor: theme.colors.surfaceBorder }]}
-      />
-    ),
+    () => <View style={styles.separator} />,
     [theme],
   );
 
@@ -124,10 +133,7 @@ export function NearbyOffersScreen() {
 
   return (
     <ScreenBackground>
-      <PageHeader
-        backLabel="Home"
-        onBackPress={() => navigation.goBack()}
-      />
+      <PageHeader backLabel="Back" onBackPress={() => navigation.goBack()} />
       <ScreenBody edges={["bottom"]}>
         {!hasLocation ? (
           <ListEmpty />
@@ -163,6 +169,11 @@ export function NearbyOffersScreen() {
             contentContainerStyle={styles.listContent}
           />
         )}
+
+        <NearbyOfferDetailsModal
+          offer={selected}
+          onClose={() => setSelected(null)}
+        />
       </ScreenBody>
     </ScreenBackground>
   );
@@ -177,7 +188,7 @@ const styles = StyleSheet.create({
     width: "100%",
   },
   separator: {
-    height: 1,
+    height: 15,
     marginHorizontal: 7,
   },
   footerRow: {

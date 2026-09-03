@@ -46,7 +46,8 @@ export default function OfferDetailsCard({
 }) {
   const theme = useThemeTokens();
 
-  const hasBody = (description != null && description.length > 0) ||
+  const hasBody =
+    (description != null && description.length > 0) ||
     (images != null && images.length > 0);
 
   return (
@@ -150,7 +151,7 @@ export default function OfferDetailsCard({
 
       {terms ? <Terms terms={terms} /> : null}
 
-      {url ? <VisitLinkButton url={url} onVisit={onVisit ?? (() => {})} /> : null}
+      {url ? <VisitLinkButton url={url} onVisit={onVisit} /> : null}
     </View>
   );
 }

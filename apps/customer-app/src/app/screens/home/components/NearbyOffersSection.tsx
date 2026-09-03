@@ -1,9 +1,17 @@
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { FlatList, Pressable, StyleSheet, Text, View } from "react-native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useNavigation } from "@react-navigation/native";
 import type { NearbyOfferRow } from "@store-credit-platform/api-services";
-import NearbyOfferCard from "../../offers/NearbyOfferCard";
+import OfferCard from "../../../shared/components/OfferCard";
+import {
+  offerHeadline,
+  offerStripIcon,
+  offerStripLabel,
+  offerThumbUri,
+} from "../../../shared/utils/offers.utils";
+import { formatDistance } from "../../../shared/utils/travel.utils";
+import NearbyOfferDetailsModal from "../../offers/NearbyOfferDetailsModal";
 import { useNearbyOffersFeed } from "../../offers/useNearbyOffersFeed";
 import { useThemeTokens } from "../../../shared/theme/ThemeContext";
 import type { AppStackParamList } from "../../../navigation/RootNavigator";
@@ -15,6 +23,7 @@ export default function NearbyOffersSection() {
   const navigation =
     useNavigation<NativeStackNavigationProp<AppStackParamList>>();
   const { hasLocation, query } = useNearbyOffersFeed();
+  const [selected, setSelected] = useState<NearbyOfferRow | null>(null);
 
   const offers = useMemo<NearbyOfferRow[]>(() => {
     if (!query.data) return [];
@@ -27,16 +36,6 @@ export default function NearbyOffersSection() {
   const openBrowseAll = useCallback(() => {
     navigation.navigate("NearbyOffers");
   }, [navigation]);
-
-  const openOffer = useCallback(
-    (offer: NearbyOfferRow) => {
-      navigation.navigate("OfferBranches", {
-        config_type: offer.config_type,
-        config_id: offer.config.id,
-      });
-    },
-    [navigation],
-  );
 
   if (!hasLocation || offers.length === 0) return null;
 
@@ -79,8 +78,26 @@ export default function NearbyOffersSection() {
         contentContainerStyle={styles.listContent}
         ItemSeparatorComponent={() => <View style={styles.gap} />}
         renderItem={({ item }) => (
-          <NearbyOfferCard offer={item} onPress={() => openOffer(item)} />
+          <OfferCard
+            stripText={offerStripLabel(item)}
+            stripIcon={offerStripIcon(item)}
+            headline={offerHeadline(item)}
+            thumbUri={offerThumbUri(item)}
+            merchantName={item.merchant?.name ?? "Merchant"}
+            merchantLogoUrl={item.merchant?.logo_url ?? null}
+            distanceLabel={
+              item.distance_km != null
+                ? formatDistance(item.distance_km)
+                : null
+            }
+            onPress={() => setSelected(item)}
+          />
         )}
+      />
+
+      <NearbyOfferDetailsModal
+        offer={selected}
+        onClose={() => setSelected(null)}
       />
     </View>
   );

@@ -5,7 +5,6 @@ import {
   BaseFixedCreditConfig,
   BaseRunningCreditConfig,
 } from './main.schema'
-import { BranchWithOffers } from './branch.schema'
 
 export type OfferMerchantSummary = Static<typeof OfferMerchantSummary>
 export const OfferMerchantSummary = Type.Object({
@@ -19,22 +18,6 @@ Type.String(),
 Type.Null()
 ])
 })
-
-export type OfferConfig = Static<typeof OfferConfig>
-export const OfferConfig = Type.Union([
-Type.Intersect([
-BaseRunningCreditConfig,
-Type.Object({
-favorite_count: Type.Number()
-})
-]),
-Type.Intersect([
-BaseFixedCreditConfig,
-Type.Object({
-favorite_count: Type.Number()
-})
-])
-])
 
 export type NearbyOfferRow = Static<typeof NearbyOfferRow>
 export const NearbyOfferRow = Type.Union([
@@ -98,38 +81,8 @@ success: Type.Literal(true),
 data: NearbyOffersPage
 })
 
-export type OfferBranchesParams = Static<typeof OfferBranchesParams>
-export const OfferBranchesParams = Type.Object({
-configType: Type.Union([
-Type.Literal("running"),
-Type.Literal("fixed")
-]),
-configId: Type.String()
-})
-
-export type OfferBranchesQuerystring = Static<typeof OfferBranchesQuerystring>
-export const OfferBranchesQuerystring = Type.Object({
-lat: Type.Optional(Type.Number()),
-lng: Type.Optional(Type.Number())
-})
-
-export type OfferBranchesResponse = Static<typeof OfferBranchesResponse>
-export const OfferBranchesResponse = Type.Object({
-success: Type.Literal(true),
-data: Type.Object({
-config: OfferConfig,
-branches: Type.Array(BranchWithOffers)
-})
-})
-
 export type NearbyOffersApiResponse = Static<typeof NearbyOffersApiResponse>
 export const NearbyOffersApiResponse = Type.Union([
 NearbyOffersResponse,
-ApiErrorResponse
-])
-
-export type OfferBranchesApiResponse = Static<typeof OfferBranchesApiResponse>
-export const OfferBranchesApiResponse = Type.Union([
-OfferBranchesResponse,
 ApiErrorResponse
 ])

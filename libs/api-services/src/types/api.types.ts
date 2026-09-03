@@ -529,10 +529,6 @@ export interface OfferMerchantSummary {
   logo_url: string | null;
 }
 
-export type NearbyOfferConfig =
-  | (BaseRunningCreditConfig & { favorite_count: number })
-  | (BaseFixedCreditConfig & { favorite_count: number });
-
 export type NearbyOfferRow =
   | {
       config_type: "running";
@@ -561,18 +557,7 @@ export interface NearbyOffersResponse {
   data: NearbyOffersPage;
 }
 
-export interface OfferBranchesData {
-  config: NearbyOfferConfig;
-  branches: BranchWithOffers[];
-}
-
-export interface OfferBranchesResponse {
-  success: true;
-  data: OfferBranchesData;
-}
-
 export type NearbyOffersApiResponse = NearbyOffersResponse | ApiErrorResponse;
-export type OfferBranchesApiResponse = OfferBranchesResponse | ApiErrorResponse;
 
 export interface BranchesNearbyQuerystring {
   lat?: number;

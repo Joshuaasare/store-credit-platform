@@ -9,7 +9,6 @@ import { MerchantCreditsScreen } from "../screens/credits/MerchantCreditsScreen"
 import { EditProfileScreen } from "../screens/edit-profile/EditProfileScreen";
 import { BranchOffersDetailScreen } from "../screens/explore/BranchOffersDetailScreen";
 import { NearbyOffersScreen } from "../screens/offers/NearbyOffersScreen";
-import { OfferBranchesScreen } from "../screens/offers/OfferBranchesScreen";
 import type { BranchWithOffers } from "@store-credit-platform/api-services";
 import { useThemeTokens } from "../shared/theme/ThemeContext";
 import { buildNavTheme } from "../shared/theme/navTheme";
@@ -28,10 +27,6 @@ export type AppStackParamList = {
   };
   BranchOffersDetail: { branch: BranchWithOffers };
   NearbyOffers: undefined;
-  OfferBranches: {
-    config_type: "fixed" | "running";
-    config_id: number;
-  };
   EditProfile: undefined;
 };
 
@@ -64,7 +59,6 @@ function AppStackNavigator() {
         component={BranchOffersDetailScreen}
       />
       <AppStack.Screen name="NearbyOffers" component={NearbyOffersScreen} />
-      <AppStack.Screen name="OfferBranches" component={OfferBranchesScreen} />
       <AppStack.Screen
         name="EditProfile"
         component={EditProfileScreen}

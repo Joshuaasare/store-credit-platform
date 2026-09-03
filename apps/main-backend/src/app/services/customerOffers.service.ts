@@ -1,20 +1,13 @@
-import { supabaseAdmin } from "../utils/supabase.client";
-import { QueryFragments } from "../constants/queryFragments";
 import { branchService } from "./branch.service";
-import { fetchFavoriteCounts } from "./customerConfigInteractions.service";
-import { shapeFixedConfig, shapeRunningConfig } from "../utils/creditConfig.utils";
 import {
   NearbyOfferRow,
   NearbyOffersFilters,
   NearbyOffersPage,
-  OfferBranchesData,
 } from "../types/customerOffers.types";
 import type { BranchWithOffers } from "../types/branch.types";
-import { BaseFixedCreditConfig, BaseRunningCreditConfig } from "../types/main.types";
 
-export type CustomerOfferConfigType = "running" | "fixed";
 
-const offerKey = (configType: CustomerOfferConfigType, configId: number) =>
+const offerKey = (configType: "running" | "fixed", configId: number) =>
   `${configType}:${configId}`;
 
 // Flattens branches (already distance-sorted) into one row per config, deduped
@@ -108,64 +101,6 @@ export class CustomerOffersService {
       offset,
       limit,
     };
-  }
-
-  async getOfferBranches(
-    configType: CustomerOfferConfigType,
-    configId: number,
-    lat: number | null,
-    lng: number | null,
-  ): Promise<OfferBranchesData> {
-    const config =
-      configType === "running"
-        ? await this.loadRunningConfig(configId)
-        : await this.loadFixedConfig(configId);
-    const all = await branchService.getBranchesByLocation({
-      lat,
-      lng,
-      limit: Number.MAX_SAFE_INTEGER,
-      offset: 0,
-    });
-    const branches = all.rows.filter((b) =>
-      configType === "running"
-        ? b.running_configs.some((c) => c.id === configId)
-        : b.fixed_configs.some((c) => c.id === configId),
-    );
-    return { config, branches };
-  }
-
-  private async loadRunningConfig(
-    configId: number,
-  ): Promise<BaseRunningCreditConfig & { favorite_count: number }> {
-    const { data, error } = await supabaseAdmin
-      .from("running_credit_config")
-      .select(QueryFragments.BASE_RUNNING_CREDIT_CONFIG)
-      .eq("id", configId)
-      .eq("is_active", true)
-      .is("deleted_at", null)
-      .maybeSingle();
-    if (error) throw new Error(`Failed to load offer: ${error.message}`);
-    if (!data) throw new Error("Offer not found");
-    const counts = await fetchFavoriteCounts([configId], []);
-    const { branches: _branches, ...config } = shapeRunningConfig(data);
-    return { ...config, favorite_count: counts.running.get(configId) ?? 0 };
-  }
-
-  private async loadFixedConfig(
-    configId: number,
-  ): Promise<BaseFixedCreditConfig & { favorite_count: number }> {
-    const { data, error } = await supabaseAdmin
-      .from("fixed_credit_config")
-      .select(QueryFragments.BASE_FIXED_CREDIT_CONFIG)
-      .eq("id", configId)
-      .eq("is_active", true)
-      .is("deleted_at", null)
-      .maybeSingle();
-    if (error) throw new Error(`Failed to load offer: ${error.message}`);
-    if (!data) throw new Error("Offer not found");
-    const counts = await fetchFavoriteCounts([], [configId]);
-    const { branches: _branches, ...config } = shapeFixedConfig(data);
-    return { ...config, favorite_count: counts.fixed.get(configId) ?? 0 };
   }
 }
 
