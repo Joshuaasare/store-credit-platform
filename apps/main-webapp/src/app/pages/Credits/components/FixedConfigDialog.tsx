@@ -4,7 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Loader2, Upload, X } from "lucide-react";
+import { Loader2, Sparkles, Upload, X } from "lucide-react";
 import type { DateRange } from "react-day-picker";
 import {
   Button,
@@ -42,11 +42,15 @@ import {
   toEpochMs,
 } from "@shared/utils/date.utils";
 import { useStoreStore } from "@shared/stores/storeStore";
-import { compressPromoImage, isHeic } from "@shared/utils/imageCompression.utils";
+import {
+  compressPromoImage,
+  isHeic,
+} from "@shared/utils/imageCompression.utils";
 import { slugify } from "@shared/utils/string.utils";
 import { BranchMultiSelect } from "./BranchMultiSelect";
 import { EmojiPicker } from "./EmojiPicker";
 import { FieldInfoLabel } from "./FieldInfoLabel";
+import { PromoImageCreator } from "@shared/components/PromoImageCreator/PromoImageCreator";
 
 const storage = createStorageService();
 const STORE_ASSETS_BUCKET = "store-assets";
@@ -147,6 +151,7 @@ export function FixedConfigDialog({
     return startOfMonth(new Date(d.getFullYear(), d.getMonth() + 1, 1));
   });
   const [uploadingCount, setUploadingCount] = useState(0);
+  const [showCreator, setShowCreator] = useState(false);
 
   const titleRef = useRef<HTMLInputElement>(null);
   const descriptionRef = useRef<HTMLTextAreaElement>(null);
@@ -185,6 +190,7 @@ export function FixedConfigDialog({
         terms: config?.terms ?? null,
         url: config?.url ?? null,
       });
+      setShowCreator(false);
       setCustomRange({
         from: fromEpochMs(config?.start_date),
         to: fromEpochMs(config?.end_date),
@@ -277,10 +283,7 @@ export function FixedConfigDialog({
         url: values.url ?? null,
       };
       const res = isEdit
-        ? await creditConfigService.updateFixedConfig(
-            config!.id,
-            payload,
-          )
+        ? await creditConfigService.updateFixedConfig(config!.id, payload)
         : await creditConfigService.createFixedConfig(payload);
       if (isApiError(res)) throw new Error(res.error);
       return res.data;
@@ -337,321 +340,356 @@ export function FixedConfigDialog({
       <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>
-            {isEdit ? "Edit promo banner" : "New promo banner"}
+            {showCreator
+              ? "Create promo image"
+              : isEdit
+                ? "Edit promo banner"
+                : "New promo banner"}
           </DialogTitle>
           <DialogDescription>
-            Promotional banners with a title, description, and images shown to
-            customers across selected branches.
+            {showCreator
+              ? "Design a promo image from a template — it's saved to your images list."
+              : "Promotional banners with a title, description, and images shown to customers across selected branches."}
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          <div className="space-y-1.5">
-            <FieldInfoLabel info="Pick which of your branches this promo is shown at.">
-              Branches *
-            </FieldInfoLabel>
-            <Controller
-              control={control}
-              name="branch_ids"
-              render={({ field }) => (
-                <BranchMultiSelect
-                  value={field.value}
-                  onChange={field.onChange}
-                  branches={branches}
-                />
-              )}
-            />
-            {errors.branch_ids && (
-              <p className="text-destructive text-xs">
-                {errors.branch_ids.message}
-              </p>
-            )}
-          </div>
-
-          <div className="space-y-1.5">
-            <FieldInfoLabel htmlFor="title" info="The headline shown on the promo banner.">
-              Title
-            </FieldInfoLabel>
-            <div className="flex gap-2">
-              <Input
-                id="title"
-                type="text"
-                maxLength={120}
-                placeholder="e.g. Double Cashback Weekend 🎉"
-                className="flex-1"
-                {...titleField}
-                ref={(el) => {
-                  titleField.ref(el);
-                  titleRef.current = el;
-                }}
-              />
-              <EmojiPicker onPick={pickTitleEmoji} />
-            </div>
-          </div>
-
-          <div className="space-y-1.5">
-            <FieldInfoLabel
-              htmlFor="description"
-              info="Short description shown under the title. Keep it brief — customers see this at a glance."
-            >
-              Description
-            </FieldInfoLabel>
-            <div className="flex gap-2">
-              <Textarea
-                id="description"
-                rows={3}
-                maxLength={1000}
-                placeholder="What's the promo about?"
-                className="flex-1"
-                {...descriptionField}
-                ref={(el) => {
-                  descriptionField.ref(el);
-                  descriptionRef.current = el;
-                }}
-              />
-              <EmojiPicker onPick={pickDescriptionEmoji} />
-            </div>
-          </div>
-
-          <div className="space-y-1.5">
-            <FieldInfoLabel info="Images shown on the promo banner. Upload up to 5MB each — they're compressed and stored at ≤500KB as JPEG. JPG/PNG/WebP/HEIC (iPhone).">
-              Images
-            </FieldInfoLabel>
-            <div className="flex flex-wrap gap-2">
-              {images.map((url) => (
-                <div
-                  key={url}
-                  className="border-border relative h-20 w-20 overflow-hidden rounded-md border"
-                >
-                  <img
-                    src={url}
-                    alt=""
-                    className="h-full w-full object-cover"
+        {showCreator ? (
+          <PromoImageCreator
+            uploadFolder={uploadFolder}
+            initialText={{ headline: (watchTitle ?? "").slice(0, 24) }}
+            onBack={() => setShowCreator(false)}
+            onSaved={(url) => {
+              setValue("images", [...images, url], { shouldDirty: true });
+              toast.success("Promo image created", successToastProperties);
+              setShowCreator(false);
+            }}
+          />
+        ) : (
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+            <div className="space-y-1.5">
+              <FieldInfoLabel info="Pick which of your branches this promo is shown at.">
+                Branches *
+              </FieldInfoLabel>
+              <Controller
+                control={control}
+                name="branch_ids"
+                render={({ field }) => (
+                  <BranchMultiSelect
+                    value={field.value}
+                    onChange={field.onChange}
+                    branches={branches}
                   />
-                  <button
-                    type="button"
-                    onClick={() => removeImage(url)}
-                    className="bg-background/80 absolute right-1 top-1 rounded-full p-0.5"
-                    aria-label="Remove image"
-                  >
-                    <X className="h-3.5 w-3.5" />
-                  </button>
-                </div>
-              ))}
-              <label
-                className={cn(
-                  "border-border flex h-20 w-20 cursor-pointer flex-col items-center justify-center rounded-md border border-dashed text-xs text-muted-foreground",
-                  uploadingCount > 0 && "pointer-events-none opacity-50",
                 )}
-              >
-                {uploadingCount > 0 ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <>
-                    <Upload className="mb-1 h-4 w-4" />
-                    <span>Upload</span>
-                  </>
-                )}
-                <input
-                  type="file"
-                  accept="image/*,image/heic,image/heif,.heic,.heif"
-                  multiple
-                  className="hidden"
-                  onChange={handleFileSelect}
-                  disabled={uploadingCount > 0}
-                />
-              </label>
+              />
+              {errors.branch_ids && (
+                <p className="text-destructive text-xs">
+                  {errors.branch_ids.message}
+                </p>
+              )}
             </div>
-          </div>
 
-          <div className="space-y-1.5">
-            <FieldInfoLabel info="The dates this promo is shown as 'Active'. Optional — leave empty for an always-on banner.">
-              Promo window
-            </FieldInfoLabel>
-            <Popover
-              open={rangeOpen}
-              onOpenChange={(o) => {
-                setRangeOpen(o);
-                if (o) {
-                  setCustomRange({
-                    from: fromEpochMs(startDate),
-                    to: fromEpochMs(endDate),
-                  });
-                  setFromMonth(
-                    startOfMonth(fromEpochMs(startDate) ?? new Date()),
-                  );
-                  setToMonth(
-                    startOfMonth(
-                      fromEpochMs(endDate) ??
-                        new Date(
-                          new Date().getFullYear(),
-                          new Date().getMonth() + 1,
-                          1,
-                        ),
-                    ),
-                  );
-                }
-              }}
-            >
-              <PopoverTrigger asChild>
+            <div className="space-y-1.5">
+              <FieldInfoLabel
+                htmlFor="title"
+                info="The headline shown on the promo banner."
+              >
+                Title
+              </FieldInfoLabel>
+              <div className="flex gap-2">
+                <Input
+                  id="title"
+                  type="text"
+                  maxLength={120}
+                  placeholder="e.g. Double Cashback Weekend 🎉"
+                  className="flex-1"
+                  {...titleField}
+                  ref={(el) => {
+                    titleField.ref(el);
+                    titleRef.current = el;
+                  }}
+                />
+                <EmojiPicker onPick={pickTitleEmoji} />
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <FieldInfoLabel
+                htmlFor="description"
+                info="Short description shown under the title. Keep it brief — customers see this at a glance."
+              >
+                Description
+              </FieldInfoLabel>
+              <div className="flex gap-2">
+                <Textarea
+                  id="description"
+                  rows={3}
+                  maxLength={1000}
+                  placeholder="What's the promo about?"
+                  className="flex-1"
+                  {...descriptionField}
+                  ref={(el) => {
+                    descriptionField.ref(el);
+                    descriptionRef.current = el;
+                  }}
+                />
+                <EmojiPicker onPick={pickDescriptionEmoji} />
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <FieldInfoLabel info="Images shown on the promo banner. Upload up to 5MB each — they're compressed and stored at ≤500KB as JPEG. JPG/PNG/WebP/HEIC (iPhone).">
+                Images
+              </FieldInfoLabel>
+              <div className="flex flex-wrap gap-2">
+                {images.map((url) => (
+                  <div
+                    key={url}
+                    className="border-border relative h-20 w-20 overflow-hidden rounded-md border"
+                  >
+                    <img
+                      src={url}
+                      alt=""
+                      className="h-full w-full object-cover"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => removeImage(url)}
+                      className="bg-background/80 absolute right-1 top-1 rounded-full p-0.5"
+                      aria-label="Remove image"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                ))}
+                <label
+                  className={cn(
+                    "border-border text-muted-foreground flex h-20 w-20 cursor-pointer flex-col items-center justify-center rounded-md border border-dashed text-xs",
+                    uploadingCount > 0 && "pointer-events-none opacity-50",
+                  )}
+                >
+                  {uploadingCount > 0 ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <>
+                      <Upload className="mb-1 h-4 w-4" />
+                      <span>Upload</span>
+                    </>
+                  )}
+                  <input
+                    type="file"
+                    accept="image/*,image/heic,image/heif,.heic,.heif"
+                    multiple
+                    className="hidden"
+                    onChange={handleFileSelect}
+                    disabled={uploadingCount > 0}
+                  />
+                </label>
                 <button
                   type="button"
-                  className="border-input shadow-xs flex h-9 w-full items-center justify-between rounded-md border bg-transparent px-3 py-1.5 text-sm outline-none focus-visible:ring-[3px]"
+                  onClick={() => setShowCreator(true)}
+                  disabled={uploadingCount > 0}
+                  className={cn(
+                    "border-border text-muted-foreground hover:text-foreground hover:border-primary/50 flex h-20 w-20 cursor-pointer flex-col items-center justify-center rounded-md border border-dashed text-xs",
+                    uploadingCount > 0 && "pointer-events-none opacity-50",
+                  )}
                 >
-                  <span
-                    className={cn(
-                      "min-w-0 truncate",
-                      !(from || to) && "text-muted-foreground",
-                    )}
-                  >
-                    {formatRangeLabel({ from, to })}
-                  </span>
+                  <Sparkles className="mb-1 h-4 w-4" />
+                  <span>Create</span>
                 </button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-3" align="start">
-                <div className="space-y-3">
-                  <div className="text-muted-foreground text-xs font-medium">
-                    Promo window
-                  </div>
-                  <div className="flex flex-col gap-4 sm:flex-row">
-                    <div className="space-y-1">
-                      <div className="text-primary px-1 text-[11px] font-semibold uppercase tracking-wide">
-                        From
-                      </div>
-                      <CalendarPicker
-                        mode="single"
-                        month={fromMonth}
-                        onMonthChange={setFromMonth}
-                        selected={customRange?.from}
-                        onSelect={setFrom}
-                        endMonth={customRange?.to}
-                        disabled={
-                          customRange?.to
-                            ? { after: customRange.to }
-                            : undefined
-                        }
-                        modifiers={{
-                          range: inRangeDays(
-                            fromMonth,
-                            customRange?.from,
-                            customRange?.to,
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <FieldInfoLabel info="The dates this promo is shown as 'Active'. Optional — leave empty for an always-on banner.">
+                Promo window
+              </FieldInfoLabel>
+              <Popover
+                open={rangeOpen}
+                onOpenChange={(o) => {
+                  setRangeOpen(o);
+                  if (o) {
+                    setCustomRange({
+                      from: fromEpochMs(startDate),
+                      to: fromEpochMs(endDate),
+                    });
+                    setFromMonth(
+                      startOfMonth(fromEpochMs(startDate) ?? new Date()),
+                    );
+                    setToMonth(
+                      startOfMonth(
+                        fromEpochMs(endDate) ??
+                          new Date(
+                            new Date().getFullYear(),
+                            new Date().getMonth() + 1,
+                            1,
                           ),
-                        }}
-                        modifiersClassNames={{
-                          range: "bg-accent text-accent-foreground rounded-md",
-                        }}
-                        className="rounded-md border"
-                      />
+                      ),
+                    );
+                  }
+                }}
+              >
+                <PopoverTrigger asChild>
+                  <button
+                    type="button"
+                    className="border-input shadow-xs flex h-9 w-full items-center justify-between rounded-md border bg-transparent px-3 py-1.5 text-sm outline-none focus-visible:ring-[3px]"
+                  >
+                    <span
+                      className={cn(
+                        "min-w-0 truncate",
+                        !(from || to) && "text-muted-foreground",
+                      )}
+                    >
+                      {formatRangeLabel({ from, to })}
+                    </span>
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-3" align="start">
+                  <div className="space-y-3">
+                    <div className="text-muted-foreground text-xs font-medium">
+                      Promo window
                     </div>
-                    <div className="space-y-1">
-                      <div className="px-1 text-[11px] font-semibold uppercase tracking-wide text-emerald-600 dark:text-emerald-400">
-                        To
+                    <div className="flex flex-col gap-4 sm:flex-row">
+                      <div className="space-y-1">
+                        <div className="text-primary px-1 text-[11px] font-semibold uppercase tracking-wide">
+                          From
+                        </div>
+                        <CalendarPicker
+                          mode="single"
+                          month={fromMonth}
+                          onMonthChange={setFromMonth}
+                          selected={customRange?.from}
+                          onSelect={setFrom}
+                          endMonth={customRange?.to}
+                          disabled={
+                            customRange?.to
+                              ? { after: customRange.to }
+                              : undefined
+                          }
+                          modifiers={{
+                            range: inRangeDays(
+                              fromMonth,
+                              customRange?.from,
+                              customRange?.to,
+                            ),
+                          }}
+                          modifiersClassNames={{
+                            range:
+                              "bg-accent text-accent-foreground rounded-md",
+                          }}
+                          className="rounded-md border"
+                        />
                       </div>
-                      <CalendarPicker
-                        mode="single"
-                        month={toMonth}
-                        onMonthChange={setToMonth}
-                        selected={customRange?.to}
-                        onSelect={setTo}
-                        startMonth={customRange?.from}
-                        disabled={
-                          customRange?.from
-                            ? { before: customRange.from }
-                            : undefined
-                        }
-                        modifiers={{
-                          range: inRangeDays(
-                            toMonth,
-                            customRange?.from,
-                            customRange?.to,
-                          ),
-                        }}
-                        modifiersClassNames={{
-                          range: "bg-accent text-accent-foreground rounded-md",
-                        }}
-                        className="rounded-md border"
-                      />
+                      <div className="space-y-1">
+                        <div className="px-1 text-[11px] font-semibold uppercase tracking-wide text-emerald-600 dark:text-emerald-400">
+                          To
+                        </div>
+                        <CalendarPicker
+                          mode="single"
+                          month={toMonth}
+                          onMonthChange={setToMonth}
+                          selected={customRange?.to}
+                          onSelect={setTo}
+                          startMonth={customRange?.from}
+                          disabled={
+                            customRange?.from
+                              ? { before: customRange.from }
+                              : undefined
+                          }
+                          modifiers={{
+                            range: inRangeDays(
+                              toMonth,
+                              customRange?.from,
+                              customRange?.to,
+                            ),
+                          }}
+                          modifiersClassNames={{
+                            range:
+                              "bg-accent text-accent-foreground rounded-md",
+                          }}
+                          className="rounded-md border"
+                        />
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-end gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setRangeOpen(false)}
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        size="sm"
+                        onClick={applyCustomRange}
+                        disabled={!customRange?.from || !customRange?.to}
+                      >
+                        Apply
+                      </Button>
                     </div>
                   </div>
-                  <div className="flex items-center justify-end gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setRangeOpen(false)}
-                    >
-                      Cancel
-                    </Button>
-                    <Button
-                      size="sm"
-                      onClick={applyCustomRange}
-                      disabled={!customRange?.from || !customRange?.to}
-                    >
-                      Apply
-                    </Button>
-                  </div>
-                </div>
-              </PopoverContent>
-            </Popover>
-          </div>
+                </PopoverContent>
+              </Popover>
+            </div>
 
-          <div className="space-y-1.5">
-            <FieldInfoLabel
-              htmlFor="terms"
-              info="Optional customer-facing terms shown with the promo. E.g., 'Valid on Saturdays only.'"
-            >
-              Terms
-            </FieldInfoLabel>
-            <Textarea
-              id="terms"
-              rows={3}
-              placeholder="Optional customer-facing terms"
-              {...register("terms", {
-                setValueAs: (v) => (v === "" ? null : v),
-              })}
-            />
-          </div>
+            <div className="space-y-1.5">
+              <FieldInfoLabel
+                htmlFor="terms"
+                info="Optional customer-facing terms shown with the promo. E.g., 'Valid on Saturdays only.'"
+              >
+                Terms
+              </FieldInfoLabel>
+              <Textarea
+                id="terms"
+                rows={3}
+                placeholder="Optional customer-facing terms"
+                {...register("terms", {
+                  setValueAs: (v) => (v === "" ? null : v),
+                })}
+              />
+            </div>
 
-          <div className="space-y-1.5">
-            <FieldInfoLabel
-              htmlFor="url"
-              info="Optional link customers can open from the promo card — e.g. a product page or campaign landing page."
-            >
-              Link
-            </FieldInfoLabel>
-            <Input
-              id="url"
-              type="url"
-              maxLength={500}
-              placeholder="https://example.com/promo"
-              {...register("url", {
-                setValueAs: (v) => (v === "" ? null : v),
-              })}
-            />
-            {errors.url && (
-              <p className="text-destructive text-xs">{errors.url.message}</p>
-            )}
-          </div>
-
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange?.(false)}
-              disabled={mutation.isPending || uploadingCount > 0}
-            >
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              disabled={mutation.isPending || uploadingCount > 0}
-            >
-              {mutation.isPending && (
-                <Loader2 className="h-4 w-4 animate-spin" />
+            <div className="space-y-1.5">
+              <FieldInfoLabel
+                htmlFor="url"
+                info="Optional link customers can open from the promo card — e.g. a product page or campaign landing page."
+              >
+                Link
+              </FieldInfoLabel>
+              <Input
+                id="url"
+                type="url"
+                maxLength={500}
+                placeholder="https://example.com/promo"
+                {...register("url", {
+                  setValueAs: (v) => (v === "" ? null : v),
+                })}
+              />
+              {errors.url && (
+                <p className="text-destructive text-xs">{errors.url.message}</p>
               )}
-              {isEdit ? "Save changes" : "Create promo"}
-            </Button>
-          </DialogFooter>
-        </form>
+            </div>
+
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => onOpenChange?.(false)}
+                disabled={mutation.isPending || uploadingCount > 0}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={mutation.isPending || uploadingCount > 0}
+              >
+                {mutation.isPending && (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                )}
+                {isEdit ? "Save changes" : "Create promo"}
+              </Button>
+            </DialogFooter>
+          </form>
+        )}
       </DialogContent>
     </Dialog>
   );
