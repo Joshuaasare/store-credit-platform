@@ -56,7 +56,7 @@ export default function OfferDetailsCard({
         styles.card,
         {
           backgroundColor: theme.colors.surface,
-          borderColor: theme.colors.surfaceBorder,
+          borderColor: theme.colors.surfaceBorderStrong,
           borderRadius: theme.radii.lg,
         },
       ]}
@@ -216,6 +216,8 @@ function ImagesRow({
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
+        snapToInterval={210}
+        decelerationRate="fast"
         contentContainerStyle={{ gap: 10 }}
       >
         {images.map((uri, i) => (
@@ -278,7 +280,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   offerImage: {
-    width: 150,
-    height: 150,
+    width: 200,
+    height: 200,
   },
 });

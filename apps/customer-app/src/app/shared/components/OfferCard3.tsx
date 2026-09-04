@@ -13,11 +13,9 @@ import { useThemeTokens } from "../theme/ThemeContext";
 
 type StripIcon = keyof typeof Ionicons.glyphMap;
 
-// Promo-poster card: merchant name top-left, oversized value + muted subtitle
-// bottom-left, and the promo image as a rotated sticker bleeding off the
-// top-right corner (clipped by the card's rounded edge). Without an image the
-// sticker is a berry block with the deal glyph.
-export default function OfferCard({
+// Experiment: OfferCard on a deep berry base with white content, to compare
+// against OfferCard2's light-berry treatment.
+export default function OfferCard3({
   value,
   subtitle,
   stripIcon = "pricetag",
@@ -52,8 +50,8 @@ export default function OfferCard({
         style={[
           styles.card,
           {
-            backgroundColor: theme.colors.surface,
-            borderColor: theme.colors.surfaceBorderStrong,
+            backgroundColor: theme.colors.heroSurfaceCta,
+            borderColor: theme.colors.heroSurfaceCta,
             borderRadius: theme.radii.md,
           },
         ]}
@@ -73,7 +71,7 @@ export default function OfferCard({
                 styles.stickerImage,
                 styles.stickerFallback,
                 {
-                  backgroundColor: theme.colors.primary,
+                  backgroundColor: theme.colors.surface,
                   borderRadius: theme.radii.sm,
                 },
               ]}
@@ -81,7 +79,7 @@ export default function OfferCard({
               <Ionicons
                 name={stripIcon}
                 size={36}
-                color={theme.colors.textOnPrimary}
+                color={theme.colors.primary}
                 style={styles.fallbackGlyph}
               />
             </View>
@@ -100,7 +98,8 @@ export default function OfferCard({
                 numberOfLines={1}
                 style={{
                   flex: 1,
-                  color: theme.colors.textSecondary,
+                  color: theme.colors.textOnPrimary,
+                  opacity: 0.85,
                   fontFamily: theme.typography.fontFamilyMedium,
                   fontSize: 10,
                   letterSpacing: 0.5,
@@ -116,7 +115,7 @@ export default function OfferCard({
           <Text
             numberOfLines={2}
             style={{
-              color: theme.colors.text,
+              color: theme.colors.textOnPrimary,
               fontFamily: theme.typography.fontFamilySemiBold,
               fontSize: 14,
               lineHeight: 19,
@@ -130,7 +129,8 @@ export default function OfferCard({
           <Text
             numberOfLines={1}
             style={{
-              color: theme.colors.textMuted,
+              color: theme.colors.textOnPrimary,
+              opacity: 0.75,
               fontFamily: theme.typography.fontFamilyRegular,
               fontSize: 12,
               marginTop: "auto",

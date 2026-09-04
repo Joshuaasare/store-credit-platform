@@ -91,6 +91,7 @@ export interface ColorTokens {
   surfaceInput: string;
   /** Glass hairline border. */
   surfaceBorder: string;
+  surfaceBorderStrong: string;
   /** Floating pill / active indicator fill. */
   surfacePill: string;
   /** Pill hairline. */
@@ -226,6 +227,8 @@ export const lightColors: ColorTokens = {
   glassWash: "rgba(255,255,255,0.32)",
   surfaceInput: "rgba(15,23,42,0.04)",
   surfaceBorder: "rgba(137, 2, 62, 0.15)",
+  /** Card-outline stroke — deeper than the in-between hairlines. */
+  surfaceBorderStrong: "rgba(137, 2, 62, 0.45)",
   surfacePill: "rgba(137, 2, 62, 0.06)",
   surfacePillBorder: "rgba(137, 2, 62, 0.12)",
   // Slate ink at 45% — dims the photo enough for a white spinner to
@@ -299,6 +302,7 @@ export const darkColors: ColorTokens = {
   glassWash: "rgba(255,255,255,0.03)",
   surfaceInput: "rgba(255,255,255,0.04)",
   surfaceBorder: "rgba(255,255,255,0.10)",
+  surfaceBorderStrong: "rgba(255,255,255,0.18)",
   surfacePill: "rgba(61, 49, 66, 0.16)",
   surfacePillBorder: "rgba(61, 49, 66, 0.28)",
   // Heavier than light mode so the spinner reads over the dark backdrop

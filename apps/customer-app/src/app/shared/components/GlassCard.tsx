@@ -18,7 +18,7 @@ export default function GlassCard({
         styles.card,
         {
           borderRadius: theme.radii.md,
-          borderColor: theme.colors.surfaceBorder,
+          borderColor: theme.colors.surfaceBorderStrong,
           backgroundColor: theme.colors.surface,
         },
         style,

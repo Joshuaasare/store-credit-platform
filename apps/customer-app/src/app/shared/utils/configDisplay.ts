@@ -12,17 +12,17 @@ export function cashbackHeadline(c: BaseRunningCreditConfig): string {
     const pct = c.percentage_credit_value;
     if (pct == null) return "Cashback offer";
     if (threshold != null && threshold > 0) {
-      return `Spend ${formatGhs(threshold)}${windowPhrase}, get ${pct}% back as credit`;
+      return `Get ${pct}% cashback when you spend ${formatGhs(threshold)}${windowPhrase}`;
     }
-    return `Get ${pct}% back`;
+    return `Get ${pct}% cashback`;
   }
   if (c.credit_type === "fixed") {
     const val = c.fixed_credit_value;
     if (val == null) return "Cashback offer";
     if (threshold != null && threshold > 0) {
-      return `Spend ${formatGhs(threshold)}${windowPhrase}, get ${formatGhs(val)} back as credit`;
+      return `Get ${formatGhs(val)} cashback when you spend ${formatGhs(threshold)}${windowPhrase}`;
     }
-    return `Get ${formatGhs(val)} back as credit`;
+    return `Get ${formatGhs(val)} cashback`;
   }
   return "Cashback offer";
 }
