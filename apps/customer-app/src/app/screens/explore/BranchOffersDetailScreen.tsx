@@ -13,11 +13,9 @@ import {
   useRoute,
   type RouteProp,
 } from "@react-navigation/native";
-import {
-  SafeAreaView,
-  useSafeAreaInsets,
-} from "react-native-safe-area-context";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
+import { Image } from "expo-image";
 import { customerConfigInteractionService } from "../../api/client";
 import ScreenBackground from "../../shared/components/ScreenBackground";
 import MerchantAvatar from "../../shared/components/MerchantAvatar";
@@ -29,7 +27,8 @@ import { useThemeTokens } from "../../shared/theme/ThemeContext";
 import {
   cashbackHeadline,
   cashbackMeta,
-  formatFixedDateRange,
+  fixedExpiryMeta,
+  fixedExpiryTone,
 } from "../../shared/utils/configDisplay";
 import { formatGhs } from "../../shared/utils/formatGhs";
 import {
@@ -54,6 +53,7 @@ export function BranchOffersDetailScreen() {
 
   const merchantName = branch.merchant?.name ?? "Merchant";
   const logoUrl = branch.merchant?.logo_url ?? null;
+  const coverUrl = branch.merchant?.cover_photo_url ?? null;
   const branchName = branch.name ?? branch.city ?? "Branch";
   const placeText = branch.place_label ?? branch.city ?? null;
 
@@ -114,10 +114,32 @@ export function BranchOffersDetailScreen() {
   return (
     <ScreenBackground>
       <View style={styles.container}>
-        <SafeAreaView
-          edges={["top"]}
-          style={[styles.header, { backgroundColor: theme.colors.primary }]}
+        <View
+          style={[
+            styles.header,
+            { paddingTop: insets.top + 10 },
+            coverUrl == null ? { backgroundColor: theme.colors.primary } : null,
+          ]}
         >
+          {coverUrl != null ? (
+            <>
+              <Image
+                source={{ uri: coverUrl }}
+                style={StyleSheet.absoluteFill}
+                contentFit="cover"
+                blurRadius={14}
+                transition={200}
+                accessibilityIgnoresInvertColors
+              />
+              <View
+                style={[
+                  StyleSheet.absoluteFill,
+                  { backgroundColor: "black", opacity: 0.5 },
+                ]}
+                pointerEvents="none"
+              />
+            </>
+          ) : null}
           <TouchableOpacity
             onPress={() => navigation.goBack()}
             style={styles.headerBackRow}
@@ -247,28 +269,7 @@ export function BranchOffersDetailScreen() {
               </TouchableOpacity>
             ) : null}
           </View>
-
-          {entryThreshold != null ? (
-            <View style={styles.entryRow}>
-              <Ionicons
-                name="pricetag-outline"
-                size={12}
-                color={theme.colors.textOnPrimary}
-              />
-              <Text
-                style={{
-                  color: theme.colors.textOnPrimary,
-                  fontFamily: theme.typography.fontFamilyMedium,
-                  fontSize: 11.5,
-                  opacity: 0.92,
-                  marginLeft: 4,
-                }}
-              >
-                Eligible on purchases ≥ {formatGhs(entryThreshold)}
-              </Text>
-            </View>
-          ) : null}
-        </SafeAreaView>
+        </View>
 
         <View style={styles.tabWrap}>
           <MerchantTabSwitcher
@@ -294,7 +295,8 @@ export function BranchOffersDetailScreen() {
                   <OfferDetailsCard
                     key={`fixed-${c.id}`}
                     title={c.title ?? "Discount offer"}
-                    metaText={formatFixedDateRange(c.start_date, c.end_date)}
+                    metaText={fixedExpiryMeta(c.end_date)}
+                    metaTone={fixedExpiryTone(c.end_date)}
                     metaIcon="calendar-outline"
                     description={c.description}
                     images={c.images}
@@ -322,30 +324,52 @@ export function BranchOffersDetailScreen() {
               />
             )
           ) : cashbackConfigs.length > 0 ? (
-            <View style={styles.list}>
-              {cashbackConfigs.map((c) => (
-                <OfferDetailsCard
-                  key={`running-${c.id}`}
-                  title={cashbackHeadline(c)}
-                  titleNumberOfLines={3}
-                  metaText={cashbackMeta(c)}
-                  images={c.images}
-                  onImagePress={(i) => openViewer(c.images, i)}
-                  terms={c.terms}
-                  url={c.url}
-                  onVisit={() => recordVisit("running", c.id)}
-                  favorited={favorites.isFavorited("running", c.id)}
-                  favoriteCount={favorites.countFor(
-                    "running",
-                    c.id,
-                    c.favorite_count,
-                  )}
-                  pending={favorites.pendingFor("running", c.id)}
-                  onToggleFavorite={() =>
-                    favorites.toggleFavorite("running", c.id)
-                  }
-                />
-              ))}
+            <View>
+              {entryThreshold != null ? (
+                <View style={styles.entryRow}>
+                  <Ionicons
+                    name="pricetag-outline"
+                    size={12}
+                    color={theme.colors.primary}
+                  />
+                  <Text
+                    style={{
+                      color: theme.colors.textSecondary,
+                      fontFamily: theme.typography.fontFamilyMedium,
+                      fontSize: 12,
+                      marginLeft: 4,
+                    }}
+                  >
+                    Eligible on purchases ≥ {formatGhs(entryThreshold)}
+                  </Text>
+                </View>
+              ) : null}
+              <View style={styles.list}>
+                {cashbackConfigs.map((c) => (
+                  <OfferDetailsCard
+                    key={`running-${c.id}`}
+                    title={cashbackHeadline(c)}
+                    titleNumberOfLines={3}
+                    metaText={cashbackMeta(c)}
+                    metaTone="success"
+                    images={c.images}
+                    onImagePress={(i) => openViewer(c.images, i)}
+                    terms={c.terms}
+                    url={c.url}
+                    onVisit={() => recordVisit("running", c.id)}
+                    favorited={favorites.isFavorited("running", c.id)}
+                    favoriteCount={favorites.countFor(
+                      "running",
+                      c.id,
+                      c.favorite_count,
+                    )}
+                    pending={favorites.pendingFor("running", c.id)}
+                    onToggleFavorite={() =>
+                      favorites.toggleFavorite("running", c.id)
+                    }
+                  />
+                ))}
+              </View>
             </View>
           ) : (
             <EmptyTabState
@@ -404,7 +428,6 @@ function EmptyTabState({
 const styles = StyleSheet.create({
   container: { flex: 1 },
   header: {
-    paddingTop: 10,
     paddingBottom: 18,
     paddingHorizontal: 20,
     gap: 12,
@@ -430,8 +453,10 @@ const styles = StyleSheet.create({
   entryRow: {
     flexDirection: "row",
     alignItems: "center",
-    alignSelf: "flex-start",
+    justifyContent: "center",
     gap: 2,
+    flex: 1,
+    paddingBottom: 10,
   },
   travelDot: {
     width: 3,

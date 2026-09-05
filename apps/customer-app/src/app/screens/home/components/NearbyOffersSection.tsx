@@ -10,7 +10,7 @@ import {
   offerSubtitle,
   offerValueLabel,
 } from "../../../shared/utils/offers.utils";
-import NearbyOfferDetailsModal from "../../offers/NearbyOfferDetailsModal";
+import OfferDetailsModal from "../../../shared/components/OfferDetailsModal";
 import { useNearbyOffersFeed } from "../../offers/useNearbyOffersFeed";
 import { useThemeTokens } from "../../../shared/theme/ThemeContext";
 import type { AppStackParamList } from "../../../navigation/RootNavigator";
@@ -79,7 +79,7 @@ export default function NearbyOffersSection() {
         contentContainerStyle={styles.listContent}
         ItemSeparatorComponent={() => <View style={styles.gap} />}
         renderItem={({ item }) => (
-          <OfferCard3
+          <OfferCard
             value={offerValueLabel(item)}
             subtitle={offerSubtitle(item)}
             stripIcon={offerStripIcon(item)}
@@ -91,7 +91,7 @@ export default function NearbyOffersSection() {
         )}
       />
 
-      <NearbyOfferDetailsModal
+      <OfferDetailsModal
         offer={selected}
         onClose={() => setSelected(null)}
       />

@@ -22,7 +22,7 @@ import {
   offerSubtitle,
   offerValueLabel,
 } from "../../shared/utils/offers.utils";
-import NearbyOfferDetailsModal from "./NearbyOfferDetailsModal";
+import OfferDetailsModal from "../../shared/components/OfferDetailsModal";
 import { useNearbyOffersFeed } from "./useNearbyOffersFeed";
 import { useThemeTokens } from "../../shared/theme/ThemeContext";
 import type { AppStackParamList } from "../../navigation/RootNavigator";
@@ -155,90 +155,88 @@ export function NearbyOffersScreen() {
   return (
     <ScreenBackground>
       <PageHeader backLabel="Back" onBackPress={() => navigation.goBack()} />
-      <ScreenBody edges={["bottom"]}>
-        <View style={styles.bodyWrap}>
-          <Animated.View style={[styles.heroCopy, heroStyle]}>
-            <View style={styles.heroRow}>
-              <Ionicons
-                name="cart-outline"
-                size={40}
-                color={theme.colors.primary}
-              />
-              <View style={styles.heroTextCol}>
-                <Text
-                  style={{
-                    color: theme.colors.text,
-                    fontFamily: theme.typography.fontFamilyBold,
-                    fontSize: 20,
-                    lineHeight: 26,
-                    letterSpacing: -0.5,
-                  }}
-                >
-                  Explore deals{" "}
-                  <Text style={{ color: theme.colors.primary }}>near you</Text>
-                </Text>
-                <Text
-                  numberOfLines={1}
-                  style={{
-                    color: theme.colors.textMuted,
-                    fontFamily: theme.typography.fontFamilyRegular,
-                    fontSize: 13,
-                    lineHeight: 17,
-                    marginTop: 2,
-                  }}
-                >
-                  Deals from merchants close to you
-                </Text>
-              </View>
-            </View>
-          </Animated.View>
-          {!hasLocation ? (
-            <ListEmpty />
-          ) : query.isLoading ? (
-            <View style={styles.loadingWrap}>
-              <ActivityIndicator size="large" color={theme.colors.primary} />
+      <View style={styles.bodyWrap}>
+        <Animated.View style={[styles.heroCopy, heroStyle]}>
+          <View style={styles.heroRow}>
+            <Ionicons
+              name="cart-outline"
+              size={40}
+              color={theme.colors.primary}
+            />
+            <View style={styles.heroTextCol}>
               <Text
+                style={{
+                  color: theme.colors.text,
+                  fontFamily: theme.typography.fontFamilyBold,
+                  fontSize: 20,
+                  lineHeight: 26,
+                  letterSpacing: -0.5,
+                }}
+              >
+                Explore deals{" "}
+                <Text style={{ color: theme.colors.primary }}>near you</Text>
+              </Text>
+              <Text
+                numberOfLines={1}
                 style={{
                   color: theme.colors.textMuted,
                   fontFamily: theme.typography.fontFamilyRegular,
                   fontSize: 13,
-                  marginTop: 12,
+                  lineHeight: 17,
+                  marginTop: 2,
                 }}
               >
-                Loading nearby offers…
+                Deals from merchants close to you
               </Text>
             </View>
-          ) : (
-            <FlatList
-              data={offers}
-              keyExtractor={(o) => `${o.config_type}-${o.config.id}`}
-              renderItem={renderItem}
-              ItemSeparatorComponent={ItemSeparator}
-              ListFooterComponent={ListFooter}
-              ListEmptyComponent={ListEmpty}
-              onScroll={Animated.event(
-                [{ nativeEvent: { contentOffset: { y: scrollY } } }],
-                // JS driver — the native driver rejects a VirtualizedList event target.
-                { useNativeDriver: false },
-              )}
-              scrollEventThrottle={16}
-              onEndReached={() => {
-                if (query.hasNextPage && !query.isFetchingNextPage) {
-                  query.fetchNextPage();
-                }
+          </View>
+        </Animated.View>
+        {!hasLocation ? (
+          <ListEmpty />
+        ) : query.isLoading ? (
+          <View style={styles.loadingWrap}>
+            <ActivityIndicator size="large" color={theme.colors.primary} />
+            <Text
+              style={{
+                color: theme.colors.textMuted,
+                fontFamily: theme.typography.fontFamilyRegular,
+                fontSize: 13,
+                marginTop: 12,
               }}
-              onEndReachedThreshold={0.5}
-              showsVerticalScrollIndicator={false}
-              contentContainerStyle={styles.listContent}
-            />
-          )}
-
-          <NearbyOfferDetailsModal
-            offer={selected}
-            onClose={() => setSelected(null)}
+            >
+              Loading nearby offers…
+            </Text>
+          </View>
+        ) : (
+          <FlatList
+            data={offers}
+            keyExtractor={(o) => `${o.config_type}-${o.config.id}`}
+            renderItem={renderItem}
+            ItemSeparatorComponent={ItemSeparator}
+            ListFooterComponent={ListFooter}
+            ListEmptyComponent={ListEmpty}
+            onScroll={Animated.event(
+              [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+              // JS driver — the native driver rejects a VirtualizedList event target.
+              { useNativeDriver: false },
+            )}
+            scrollEventThrottle={16}
+            onEndReached={() => {
+              if (query.hasNextPage && !query.isFetchingNextPage) {
+                query.fetchNextPage();
+              }
+            }}
+            onEndReachedThreshold={0.5}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.listContent}
           />
-        </View>
-      </ScreenBody>
+        )}
+
+        <OfferDetailsModal
+          offer={selected}
+          onClose={() => setSelected(null)}
+        />
+      </View>
     </ScreenBackground>
   );
 }
@@ -246,6 +244,7 @@ export function NearbyOffersScreen() {
 const styles = StyleSheet.create({
   bodyWrap: {
     flex: 1,
+    paddingHorizontal: 24,
   },
   heroCopy: {
     position: "absolute",
@@ -254,6 +253,7 @@ const styles = StyleSheet.create({
     right: 0,
     zIndex: 1,
     paddingTop: 15,
+    paddingHorizontal: 24,
   },
   heroRow: {
     flexDirection: "row",

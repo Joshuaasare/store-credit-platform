@@ -35,15 +35,15 @@ export function cashbackMeta(c: BaseRunningCreditConfig): string {
   if (c.credit_validity != null) {
     parts.push(
       c.credit_validity === 1
-        ? "Valid for 1 day"
-        : `Valid for ${c.credit_validity} days`,
+        ? "1 day validity"
+        : `${c.credit_validity} days validity`,
     );
   }
-  parts.push(
-    c.cumulative_scope === "merchant_wide"
-      ? "Earns across all branches"
-      : "Earns at this branch",
-  );
+  // parts.push(
+  //   c.cumulative_scope === "merchant_wide"
+  //     ? "Earns across all branches"
+  //     : "Earns at this branch",
+  // );
   return parts.join(" · ");
 }
 
@@ -57,4 +57,25 @@ export function formatFixedDateRange(
   if (start != null) return `From ${formatShortDate(start)}`;
   if (end != null) return `Until ${formatShortDate(end)}`;
   return "";
+}
+
+// Fixed-campaign meta line: how long is left on the expiry rather than raw
+// dates. No end date → the campaign simply runs ("Active").
+export function fixedExpiryMeta(end: number | null): string {
+  if (end == null) return "Active";
+  const days = Math.ceil((end - Date.now()) / 86_400_000);
+  if (days <= 0) return "Expired";
+  if (days === 1) return "Active - Expires today";
+  return `Active - Expires in ${days} days`;
+}
+
+// Same clock as fixedExpiryMeta, as a pill tone: green while there's runway,
+// amber inside the last 5 days, red once expired.
+export function fixedExpiryTone(
+  end: number | null,
+): "success" | "warning" | "danger" {
+  if (end == null) return "success";
+  const days = Math.ceil((end - Date.now()) / 86_400_000);
+  if (days <= 0) return "danger";
+  return days <= 5 ? "warning" : "success";
 }
