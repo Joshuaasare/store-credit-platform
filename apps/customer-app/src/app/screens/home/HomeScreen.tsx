@@ -31,7 +31,7 @@ const ACTIVITIES_PREVIEW_KEY = ["customer", "activities", "preview"] as const;
 export function HomeScreen() {
   const navigation =
     useNavigation<BottomTabNavigationProp<TabStackParamList>>();
-  const { tabBarOffset } = useOffsets();
+  const { tabBarOffset, bottomOffset } = useOffsets();
 
   // Sum remaining on every credit row, not just live — total wallet position at a glance.
   const creditsQuery = useQuery<CustomerCreditsApiResponse>({
@@ -83,7 +83,7 @@ export function HomeScreen() {
   return (
     <ScreenBackground>
       <PageHeader unreadNotifications={5} />
-      <ScreenBody edges={["bottom"]}>
+      <ScreenBody edges={["bottom"]} padding={0}>
         <ScrollView
           showsVerticalScrollIndicator={false}
           style={{
@@ -91,7 +91,7 @@ export function HomeScreen() {
           }}
           contentContainerStyle={{
             ...styles.scrollContent,
-            paddingBottom: tabBarOffset,
+            paddingBottom: tabBarOffset + bottomOffset,
           }}
         >
           {/* <GlassTransition> */}
@@ -136,5 +136,8 @@ const styles = StyleSheet.create({
 
   heroBlock: {
     marginBottom: 24,
+    paddingHorizontal: 24,
   },
+
+  sectionContainer: {},
 });

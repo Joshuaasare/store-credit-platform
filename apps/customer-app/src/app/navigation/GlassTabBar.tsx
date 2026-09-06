@@ -18,8 +18,8 @@ type TabIcon = keyof typeof Ionicons.glyphMap;
 const TAB_ICONS: Record<string, TabIcon> = {
   Home: "home-outline",
   Credits: "wallet-outline",
-  Explore: "map-outline",
-  Favorites: "heart-outline",
+  Brands: "storefront-outline",
+  Saved: "heart-outline",
 };
 
 const SPRING_CONFIG = { damping: 18, stiffness: 240, mass: 0.8 };

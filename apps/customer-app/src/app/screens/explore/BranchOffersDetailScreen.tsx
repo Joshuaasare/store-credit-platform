@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import {
   Linking,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -127,14 +128,14 @@ export function BranchOffersDetailScreen() {
                 source={{ uri: coverUrl }}
                 style={StyleSheet.absoluteFill}
                 contentFit="cover"
-                blurRadius={14}
+                blurRadius={Platform.OS === "android" ? 3 : 14}
                 transition={200}
                 accessibilityIgnoresInvertColors
               />
               <View
                 style={[
                   StyleSheet.absoluteFill,
-                  { backgroundColor: "black", opacity: 0.5 },
+                  { backgroundColor: "black", opacity: 0.6 },
                 ]}
                 pointerEvents="none"
               />

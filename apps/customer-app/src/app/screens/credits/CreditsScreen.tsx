@@ -27,7 +27,7 @@ const MS_PER_DAY = 1000 * 60 * 60 * 24;
 
 export function CreditsScreen() {
   const theme = useThemeTokens();
-  const { tabBarOffset } = useOffsets();
+  const { tabBarOffset, bottomOffset } = useOffsets();
   const navigation =
     useNavigation<NativeStackNavigationProp<AppStackParamList>>();
 
@@ -95,6 +95,7 @@ export function CreditsScreen() {
                 showsVerticalScrollIndicator={false}
                 contentContainerStyle={{
                   ...styles.listContent,
+                  paddingBottom: tabBarOffset + bottomOffset,
                 }}
               />
             )}

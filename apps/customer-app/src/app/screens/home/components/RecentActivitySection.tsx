@@ -132,6 +132,7 @@ export default function RecentActivitySection({
 const styles = StyleSheet.create({
   section: {
     marginBottom: 24,
+    paddingHorizontal: 24,
   },
   cardHeader: {
     flexDirection: "row",

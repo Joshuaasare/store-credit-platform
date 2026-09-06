@@ -41,7 +41,7 @@ export default function NearbyOffersSection() {
   if (!hasLocation || offers.length === 0) return null;
 
   return (
-    <View style={styles.section}>
+    <View>
       <View style={styles.sectionHeaderRow}>
         <Text
           style={{
@@ -91,24 +91,21 @@ export default function NearbyOffersSection() {
         )}
       />
 
-      <OfferDetailsModal
-        offer={selected}
-        onClose={() => setSelected(null)}
-      />
+      <OfferDetailsModal offer={selected} onClose={() => setSelected(null)} />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  section: {},
   sectionHeaderRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     marginBottom: 12,
+    paddingHorizontal: 24,
   },
   listContent: {
-    paddingHorizontal: 0,
+    paddingHorizontal: 24,
   },
   gap: {
     width: 12,

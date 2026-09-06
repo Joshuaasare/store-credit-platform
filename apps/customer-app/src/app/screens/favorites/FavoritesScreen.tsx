@@ -1,6 +1,7 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Animated,
   FlatList,
   StyleSheet,
   Text,
@@ -22,10 +23,34 @@ import {
 } from "../../shared/utils/offers.utils";
 import { useFavoritesFeed } from "./useFavoritesFeed";
 import OfferDetailsModal from "../../shared/components/OfferDetailsModal";
+import { useOffsets } from "../../shared/hooks/useOffsets";
+
+// Headline collapses fully within this scroll distance and only returns
+// when the list is back at the very top.
+const HERO_COLLAPSE_RANGE = 60;
 
 export function FavoritesScreen() {
   const theme = useThemeTokens();
   const [selected, setSelected] = useState<FavoritedConfig | null>(null);
+  const { tabBarOffset, bottomOffset } = useOffsets();
+  const scrollY = useRef(new Animated.Value(0)).current;
+
+  const heroStyle = {
+    transform: [
+      {
+        translateY: scrollY.interpolate({
+          inputRange: [0, HERO_COLLAPSE_RANGE],
+          outputRange: [0, -HERO_COLLAPSE_RANGE],
+          extrapolate: "clamp",
+        }),
+      },
+    ],
+    opacity: scrollY.interpolate({
+      inputRange: [0, HERO_COLLAPSE_RANGE * 0.8],
+      outputRange: [1, 0],
+      extrapolate: "clamp",
+    }),
+  };
 
   const feedQuery = useFavoritesFeed();
 
@@ -59,7 +84,10 @@ export function FavoritesScreen() {
     [],
   );
 
-  const ItemSeparator = useCallback(() => <View style={styles.separator} />, []);
+  const ItemSeparator = useCallback(
+    () => <View style={styles.separator} />,
+    [],
+  );
 
   const ListFooter = useCallback(() => {
     if ((feedQuery.data?.pages.length ?? 0) <= 1) return null;
@@ -146,6 +174,41 @@ export function FavoritesScreen() {
     <ScreenBackground>
       <PageHeader />
       <ScreenBody edges={["bottom"]}>
+        <Animated.View style={[styles.heroCopy, heroStyle]}>
+          <View style={styles.heroRow}>
+            <Ionicons
+              name="heart-outline"
+              size={40}
+              color={theme.colors.primary}
+            />
+            <View style={styles.heroTextCol}>
+              <Text
+                style={{
+                  color: theme.colors.text,
+                  fontFamily: theme.typography.fontFamilyBold,
+                  fontSize: 20,
+                  lineHeight: 26,
+                  letterSpacing: -0.5,
+                }}
+              >
+                Your <Text style={{ color: theme.colors.primary }}>favorite</Text>{" "}
+                offers
+              </Text>
+              <Text
+                numberOfLines={1}
+                style={{
+                  color: theme.colors.textMuted,
+                  fontFamily: theme.typography.fontFamilyRegular,
+                  fontSize: 13,
+                  lineHeight: 17,
+                  marginTop: 2,
+                }}
+              >
+                Offers you've hearted from merchants
+              </Text>
+            </View>
+          </View>
+        </Animated.View>
         <FlatList
           data={items}
           keyExtractor={keyExtractor}
@@ -153,6 +216,12 @@ export function FavoritesScreen() {
           ItemSeparatorComponent={ItemSeparator}
           ListFooterComponent={ListFooter}
           ListEmptyComponent={ListEmpty}
+          onScroll={Animated.event(
+            [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+            // JS driver — the native driver rejects a VirtualizedList event target.
+            { useNativeDriver: false },
+          )}
+          scrollEventThrottle={16}
           onEndReached={() => {
             if (
               feedQuery.hasNextPage &&
@@ -164,7 +233,11 @@ export function FavoritesScreen() {
           }}
           onEndReachedThreshold={0.5}
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.listContent}
+          contentContainerStyle={{
+            ...styles.listContent,
+
+            paddingBottom: tabBarOffset + bottomOffset,
+          }}
         />
       </ScreenBody>
       <OfferDetailsModal offer={selected} onClose={() => setSelected(null)} />
@@ -173,8 +246,25 @@ export function FavoritesScreen() {
 }
 
 const styles = StyleSheet.create({
+  heroCopy: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 1,
+    paddingTop: 15,
+    paddingHorizontal: 24,
+  },
+  heroRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  heroTextCol: {
+    flex: 1,
+  },
   listContent: {
-    paddingTop: 8,
+    paddingTop: 80,
     paddingBottom: 8,
   },
   separator: {
