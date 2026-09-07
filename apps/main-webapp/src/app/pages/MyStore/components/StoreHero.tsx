@@ -17,7 +17,7 @@ import {
 import { createStorageService } from "@store-credit-platform/api-services";
 import { getCountryByCode } from "@shared/utils/countries";
 import { CountryFlag } from "@shared/components/CountryFlag/CountryFlag";
-import { compressImage } from "@shared/utils/imageCompression.utils";
+import { compressStoreImage } from "@shared/utils/imageCompression.utils";
 import { useStoreStore } from "@shared/stores/storeStore";
 import { MerchantEditDialog } from "./MerchantEditDialog";
 import {
@@ -51,13 +51,17 @@ function useStoreImageUpload(
       toast.error("Please select an image file");
       return;
     }
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error("Image must be under 5MB");
+    // Only a sanity ceiling — compression below handles everything smaller.
+    if (file.size > 25 * 1024 * 1024) {
+      toast.error("Image must be under 25MB");
       return;
     }
     try {
       setIsWorking(true);
-      const compressed = await compressImage(file);
+      const compressed = await compressStoreImage(
+        file,
+        field === "cover_photo_url",
+      );
       const { publicUrl } = await storage.uploadFile(compressed, {
         bucket: STORE_ASSETS_BUCKET,
         folder: `${merchantFolder}/${folder}`,

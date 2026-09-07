@@ -1,10 +1,10 @@
 import type { PromoTemplateProps } from "../types";
 import { PromoCanvas, valueFontSize } from "./Canvas";
+import FitText from "./FitText";
 
 export default function RoundStamp({
   value,
   headline,
-  subline,
   palette,
   font,
 }: PromoTemplateProps) {
@@ -51,26 +51,12 @@ export default function RoundStamp({
           >
             ★ ★ ★
           </span>
-          <span
-            style={{
-              fontSize: valueFontSize(value.length),
-              fontWeight: 700,
-              lineHeight: 1,
-              whiteSpace: "nowrap",
-            }}
-          >
-            {value}
-          </span>
-          <span
-            style={{
-              fontSize: 38,
-              fontWeight: 700,
-              letterSpacing: 6,
-              textTransform: "uppercase",
-            }}
-          >
-            {subline}
-          </span>
+          <FitText
+            text={value}
+            baseFontSize={valueFontSize(value.length)}
+            maxWidth={680}
+            style={{ fontWeight: 700, lineHeight: 1 }}
+          />
         </div>
       </div>
     </PromoCanvas>

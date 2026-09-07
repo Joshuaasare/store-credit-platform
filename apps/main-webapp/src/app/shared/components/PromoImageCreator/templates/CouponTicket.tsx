@@ -1,12 +1,12 @@
 import type { PromoTemplateProps } from "../types";
 import { PromoCanvas, valueFontSize } from "./Canvas";
+import FitText from "./FitText";
 
 const NOTCH = 84;
 
 export default function CouponTicket({
   value,
   headline,
-  subline,
   palette,
   font,
 }: PromoTemplateProps) {
@@ -58,17 +58,16 @@ export default function CouponTicket({
             padding: "40px 24px",
           }}
         >
-          <span
+          <FitText
+            text={value}
+            baseFontSize={valueFontSize(value.length) * 0.8}
+            maxWidth={340}
             style={{
-              fontSize: valueFontSize(value.length) * 0.8,
               fontWeight: 700,
               lineHeight: 1.1,
               color: palette.bg,
-              whiteSpace: "nowrap",
             }}
-          >
-            {value}
-          </span>
+          />
         </div>
         <div
           style={{
@@ -99,17 +98,6 @@ export default function CouponTicket({
             }}
           >
             {headline}
-          </span>
-          <span
-            style={{
-              fontSize: 40,
-              fontWeight: 700,
-              letterSpacing: 5,
-              textTransform: "uppercase",
-              color: palette.bg,
-            }}
-          >
-            {subline}
           </span>
         </div>
       </div>

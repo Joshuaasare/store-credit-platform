@@ -1,26 +1,34 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { Loader2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button, Input, cn } from "@store-credit-platform/web-components";
 import { createStorageService } from "@store-credit-platform/api-services";
 import { compressPromoImage } from "@shared/utils/imageCompression.utils";
 import { errorToastProperties } from "@shared/utils/misc.utils";
-import { PROMO_TEMPLATES, getPromoTemplate } from "./registry";
+import {
+  PROMO_FIELD_SETS,
+  getPromoTemplates,
+  getPromoTemplate,
+} from "./registry";
 import { PROMO_PALETTES, getPromoPalette } from "./palettes";
 import { PROMO_FONTS, getPromoFont } from "./fonts";
 import { renderPromoImage } from "./renderPromoImage";
-import { PROMO_IMAGE_SIZE, type PromoDesignConfig } from "./types";
+import {
+  PROMO_IMAGE_SIZE,
+  type PromoConfigType,
+  type PromoDesignConfig,
+} from "./types";
 
 const storage = createStorageService();
 const STORE_ASSETS_BUCKET = "store-assets";
 
-const VALUE_MAX = 12;
-const HEADLINE_MAX = 24;
-const SUBLINE_MAX = 32;
-
 interface PromoImageCreatorProps {
+  configType: PromoConfigType;
   uploadFolder: string;
-  initialText?: { value?: string; headline?: string; subline?: string };
+  initialText?: {
+    value?: string;
+    headline?: string;
+  };
   onBack: () => void;
   onSaved: (publicUrl: string) => void;
 }
@@ -53,16 +61,18 @@ function PromoThumb({
 }
 
 export function PromoImageCreator({
+  configType,
   uploadFolder,
   initialText,
   onBack,
   onSaved,
 }: PromoImageCreatorProps) {
+  const templates = getPromoTemplates(configType);
+  const textFields = PROMO_FIELD_SETS[configType];
   const [config, setConfig] = useState<PromoDesignConfig>({
-    templateId: PROMO_TEMPLATES[0].id,
+    templateId: templates[0].id,
     value: initialText?.value ?? "",
     headline: initialText?.headline ?? "",
-    subline: initialText?.subline ?? "",
     paletteId: PROMO_PALETTES[0].id,
     fontId: "archivo-black",
   });
@@ -84,13 +94,39 @@ export function PromoImageCreator({
     return () => observer.disconnect();
   }, []);
 
+  const stripRef = useRef<HTMLDivElement | null>(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+
+  const updateStripArrows = () => {
+    const el = stripRef.current;
+    if (!el) return;
+    setCanScrollLeft(el.scrollLeft > 1);
+    setCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 1);
+  };
+
+  useEffect(() => {
+    updateStripArrows();
+    const el = stripRef.current;
+    if (!el) return;
+    const observer = new ResizeObserver(updateStripArrows);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [templates.length]);
+
+  const scrollStrip = (direction: 1 | -1) => {
+    stripRef.current?.scrollBy({ left: direction * 220, behavior: "smooth" });
+  };
+
   const palette = getPromoPalette(config.paletteId);
   const font = getPromoFont(config.fontId);
-  const SelectedTemplate = getPromoTemplate(config.templateId).Component;
+  const SelectedTemplate = getPromoTemplate(
+    config.templateId,
+    configType,
+  ).Component;
   const templateProps = {
     value: config.value,
     headline: config.headline,
-    subline: config.subline,
     palette,
     font,
   };
@@ -100,11 +136,10 @@ export function PromoImageCreator({
     if (!value || exporting) return;
     setExporting(true);
     try {
-      const template = getPromoTemplate(config.templateId);
+      const template = getPromoTemplate(config.templateId, configType);
       const blob = await renderPromoImage(template.Component, {
         value,
         headline: config.headline.trim(),
-        subline: config.subline.trim(),
         palette,
         font,
       });
@@ -130,70 +165,79 @@ export function PromoImageCreator({
   };
 
   return (
-    <div className="space-y-4">
+    <div className="min-w-0 space-y-4">
       <div className="space-y-1.5">
         <span className="text-sm font-medium">Template</span>
-        <div className="flex gap-2 overflow-x-auto pb-1">
-          {PROMO_TEMPLATES.map((t) => (
+        <div className="flex min-w-0 items-center gap-2">
+          {canScrollLeft && (
             <button
-              key={t.id}
               type="button"
-              onClick={() => update({ templateId: t.id })}
-              className={cn(
-                "shrink-0 cursor-pointer rounded-md border p-1 transition-colors",
-                config.templateId === t.id
-                  ? "border-primary ring-primary/30 ring-2"
-                  : "border-border hover:border-primary/50",
-              )}
+              aria-label="Scroll templates left"
+              onClick={() => scrollStrip(-1)}
+              className="border-border text-foreground hover:bg-muted shrink-0 cursor-pointer rounded-full border p-1.5"
             >
-              <PromoThumb width={88}>
-                <t.Component {...templateProps} />
-              </PromoThumb>
-              <span className="text-foreground block pt-0.5 text-center text-[11px]">
-                {t.label}
-              </span>
+              <ChevronLeft className="h-4 w-4" />
             </button>
-          ))}
+          )}
+          <div
+            ref={stripRef}
+            onScroll={updateStripArrows}
+            className="flex min-w-0 flex-1 gap-2 overflow-x-auto scroll-smooth pb-1"
+          >
+            {templates.map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => update({ templateId: t.id })}
+                className={cn(
+                  "shrink-0 cursor-pointer rounded-md border p-1 transition-colors",
+                  config.templateId === t.id
+                    ? "border-primary ring-primary/30 ring-2"
+                    : "border-border hover:border-primary/50",
+                )}
+              >
+                <PromoThumb width={88}>
+                  <t.Component {...templateProps} />
+                </PromoThumb>
+                <span className="text-foreground block pt-0.5 text-center text-[11px]">
+                  {t.label}
+                </span>
+              </button>
+            ))}
+          </div>
+          {canScrollRight && (
+            <button
+              type="button"
+              aria-label="Scroll templates right"
+              onClick={() => scrollStrip(1)}
+              className="border-border text-foreground hover:bg-muted shrink-0 cursor-pointer rounded-full border p-1.5"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          )}
         </div>
       </div>
 
       <div className="grid grid-cols-1 gap-3">
-        <div className="space-y-1.5">
-          <label htmlFor="promo-value" className="text-sm font-medium">
-            Value *
-          </label>
-          <Input
-            id="promo-value"
-            value={config.value}
-            maxLength={VALUE_MAX}
-            placeholder="e.g. 50% OFF"
-            onChange={(e) => update({ value: e.target.value })}
-          />
-        </div>
-        <div className="space-y-1.5">
-          <label htmlFor="promo-headline" className="text-sm font-medium">
-            Headline
-          </label>
-          <Input
-            id="promo-headline"
-            value={config.headline}
-            maxLength={HEADLINE_MAX}
-            placeholder="e.g. SPECIAL OFFER"
-            onChange={(e) => update({ headline: e.target.value })}
-          />
-        </div>
-        <div className="space-y-1.5">
-          <label htmlFor="promo-subline" className="text-sm font-medium">
-            Subline
-          </label>
-          <Input
-            id="promo-subline"
-            value={config.subline}
-            maxLength={SUBLINE_MAX}
-            placeholder="e.g. LIMITED TIME ONLY"
-            onChange={(e) => update({ subline: e.target.value })}
-          />
-        </div>
+        {textFields.map((f) => (
+          <div key={f.id} className="space-y-1.5">
+            <label htmlFor={`promo-${f.id}`} className="text-sm font-medium">
+              {f.label}
+              {f.required ? " *" : ""}
+            </label>
+            <Input
+              id={`promo-${f.id}`}
+              value={config[f.id]}
+              maxLength={f.maxLength}
+              placeholder={f.placeholder}
+              onChange={(e) => {
+                const next = { ...config };
+                next[f.id] = e.target.value;
+                setConfig(next);
+              }}
+            />
+          </div>
+        ))}
       </div>
 
       <div className="space-y-1.5">

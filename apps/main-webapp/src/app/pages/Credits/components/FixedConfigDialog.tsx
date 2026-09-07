@@ -4,7 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Loader2, Sparkles, Upload, X } from "lucide-react";
+import { Loader2, Sparkles, Upload } from "lucide-react";
 import type { DateRange } from "react-day-picker";
 import {
   Button,
@@ -50,6 +50,7 @@ import { slugify } from "@shared/utils/string.utils";
 import { BranchMultiSelect } from "./BranchMultiSelect";
 import { EmojiPicker } from "./EmojiPicker";
 import { FieldInfoLabel } from "./FieldInfoLabel";
+import { SortableImageTiles } from "./SortableImageTiles";
 import { PromoImageCreator } from "@shared/components/PromoImageCreator/PromoImageCreator";
 
 const storage = createStorageService();
@@ -355,6 +356,7 @@ export function FixedConfigDialog({
 
         {showCreator ? (
           <PromoImageCreator
+            configType="fixed"
             uploadFolder={uploadFolder}
             initialText={{ headline: (watchTitle ?? "").slice(0, 24) }}
             onBack={() => setShowCreator(false)}
@@ -441,26 +443,13 @@ export function FixedConfigDialog({
                 Images
               </FieldInfoLabel>
               <div className="flex flex-wrap gap-2">
-                {images.map((url) => (
-                  <div
-                    key={url}
-                    className="border-border relative h-20 w-20 overflow-hidden rounded-md border"
-                  >
-                    <img
-                      src={url}
-                      alt=""
-                      className="h-full w-full object-cover"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => removeImage(url)}
-                      className="bg-background/80 absolute right-1 top-1 rounded-full p-0.5"
-                      aria-label="Remove image"
-                    >
-                      <X className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-                ))}
+                <SortableImageTiles
+                  images={images}
+                  onReorder={(next) =>
+                    setValue("images", next, { shouldDirty: true })
+                  }
+                  onRemove={removeImage}
+                />
                 <label
                   className={cn(
                     "border-border text-muted-foreground flex h-20 w-20 cursor-pointer flex-col items-center justify-center rounded-md border border-dashed text-xs",
@@ -497,6 +486,11 @@ export function FixedConfigDialog({
                   <span>Create</span>
                 </button>
               </div>
+              {images.length > 1 && (
+                <p className="text-muted-foreground text-xs">
+                  Drag images to reorder — the first one is the cover.
+                </p>
+              )}
             </div>
 
             <div className="space-y-1.5">

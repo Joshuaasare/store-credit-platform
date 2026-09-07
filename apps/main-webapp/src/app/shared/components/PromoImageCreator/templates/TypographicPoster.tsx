@@ -1,10 +1,10 @@
 import type { PromoTemplateProps } from "../types";
 import { PromoCanvas } from "./Canvas";
+import FitText from "./FitText";
 
 export default function TypographicPoster({
   value,
   headline,
-  subline,
   palette,
   font,
 }: PromoTemplateProps) {
@@ -22,17 +22,16 @@ export default function TypographicPoster({
       >
         {headline}
       </p>
-      <span
+      <FitText
+        text={value}
+        baseFontSize={valueSize}
+        maxWidth={1000}
         style={{
-          fontSize: valueSize,
           fontWeight: 700,
           lineHeight: 1.05,
-          whiteSpace: "nowrap",
           marginTop: 30,
         }}
-      >
-        {value}
-      </span>
+      />
       <div
         style={{
           width: 560,
@@ -41,19 +40,6 @@ export default function TypographicPoster({
           marginTop: 40,
         }}
       />
-      <p
-        style={{
-          margin: 0,
-          marginTop: 46,
-          fontSize: 50,
-          fontWeight: 700,
-          letterSpacing: 12,
-          textTransform: "uppercase",
-          color: palette.accent,
-        }}
-      >
-        {subline}
-      </p>
     </PromoCanvas>
   );
 }

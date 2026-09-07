@@ -4,7 +4,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Loader2, Sparkles, Upload, X } from "lucide-react";
+import { Loader2, Sparkles, Upload } from "lucide-react";
 import {
   Button,
   Dialog,
@@ -41,6 +41,7 @@ import { slugify } from "@shared/utils/string.utils";
 import { BranchMultiSelect } from "./BranchMultiSelect";
 import { FieldInfoLabel } from "./FieldInfoLabel";
 import { RunningConfigSummary } from "./ConfigSummary";
+import { SortableImageTiles } from "./SortableImageTiles";
 import { PromoImageCreator } from "@shared/components/PromoImageCreator/PromoImageCreator";
 
 const storage = createStorageService();
@@ -231,22 +232,28 @@ export function RunningConfigDialog({
   const creditType = watch("credit_type");
   const percentageValue = watch("percentage_credit_value");
   const fixedValue = watch("fixed_credit_value");
-
-  const creatorInitialText = {
-    value:
-      creditType === "percentage"
-        ? percentageValue != null
-          ? `${percentageValue}% OFF`
-          : ""
-        : fixedValue != null
-          ? `GH₵${fixedValue}`
-          : "",
-  };
   const thresholdAmount = watch("threshold_amount");
   const eligibleWindow = watch("eligible_window");
   const creditValidity = watch("credit_validity");
   const maximumAllowed = watch("maximum_allowed_credit");
   const cumulativeScope = watch("cumulative_scope");
+
+  const creatorInitialText = {
+    value:
+      creditType === "percentage"
+        ? percentageValue != null
+          ? `${percentageValue}% Cashback`
+          : ""
+        : fixedValue != null
+          ? `GH₵${fixedValue} Cashback`
+          : "",
+    headline:
+      thresholdAmount != null
+        ? eligibleWindow != null
+          ? `For purchases over GH₵${thresholdAmount} in ${eligibleWindow} days`
+          : `For purchases over GH₵${thresholdAmount}`
+        : "",
+  };
 
   const onSubmit = (values: RunningFormValues) => {
     mutation.mutate(values);
@@ -272,6 +279,7 @@ export function RunningConfigDialog({
 
         {showCreator ? (
           <PromoImageCreator
+            configType="running"
             uploadFolder={uploadFolder}
             initialText={creatorInitialText}
             onBack={() => setShowCreator(false)}
@@ -557,26 +565,13 @@ export function RunningConfigDialog({
                 Images
               </FieldInfoLabel>
               <div className="flex flex-wrap gap-2">
-                {images.map((url) => (
-                  <div
-                    key={url}
-                    className="border-border relative h-20 w-20 overflow-hidden rounded-md border"
-                  >
-                    <img
-                      src={url}
-                      alt=""
-                      className="h-full w-full object-cover"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => removeImage(url)}
-                      className="bg-background/80 absolute right-1 top-1 rounded-full p-0.5"
-                      aria-label="Remove image"
-                    >
-                      <X className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-                ))}
+                <SortableImageTiles
+                  images={images}
+                  onReorder={(next) =>
+                    setValue("images", next, { shouldDirty: true })
+                  }
+                  onRemove={removeImage}
+                />
                 <label
                   className={cn(
                     "border-border text-muted-foreground flex h-20 w-20 cursor-pointer flex-col items-center justify-center rounded-md border border-dashed text-xs",
@@ -613,6 +608,11 @@ export function RunningConfigDialog({
                   <span>Create</span>
                 </button>
               </div>
+              {images.length > 1 && (
+                <p className="text-muted-foreground text-xs">
+                  Drag images to reorder — the first one is the cover.
+                </p>
+              )}
             </div>
 
             <RunningConfigSummary

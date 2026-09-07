@@ -20,7 +20,6 @@ export interface PromoFontOption {
 export interface PromoTemplateProps {
   value: string;
   headline: string;
-  subline: string;
   palette: PromoPalette;
   font: PromoFontOption;
 }
@@ -29,13 +28,23 @@ export interface PromoDesignConfig {
   templateId: string;
   value: string;
   headline: string;
-  subline: string;
   paletteId: string;
   fontId: string;
+}
+
+export type PromoConfigType = "fixed" | "running";
+
+export interface PromoTextFieldDef {
+  id: "value" | "headline";
+  label: string;
+  placeholder: string;
+  maxLength: number;
+  required?: boolean;
 }
 
 export interface PromoTemplateDef {
   id: string;
   label: string;
+  configType: PromoConfigType;
   Component: ComponentType<PromoTemplateProps>;
 }

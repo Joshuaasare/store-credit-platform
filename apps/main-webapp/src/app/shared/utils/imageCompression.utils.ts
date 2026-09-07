@@ -62,3 +62,30 @@ export async function compressPromoImage(file: File): Promise<File> {
   }
   return compressed;
 }
+
+// Covers can arrive straight from a phone camera (often well over 5MB), so
+// they take the promo-style wide ramp; logos keep the smaller default ramp.
+export const coverImageCompressionOptions: Options = {
+  maxSizeMB: 0.49,
+  maxWidthOrHeight: 1600,
+  useWebWorker: true,
+  fileType: "image/jpeg",
+  maxIteration: 25,
+};
+
+const STORE_IMAGE_MAX_BYTES = 500 * 1024;
+
+export async function compressStoreImage(
+  file: File,
+  isCover: boolean,
+): Promise<File> {
+  const input = isHeic(file) ? await convertHeicToJpeg(file) : file;
+  const compressed = await compressImage(
+    input,
+    isCover ? coverImageCompressionOptions : defaultImageCompressionOptions,
+  );
+  if (compressed.size > STORE_IMAGE_MAX_BYTES) {
+    throw new Error(`${file.name} could not be compressed below 500KB`);
+  }
+  return compressed;
+}

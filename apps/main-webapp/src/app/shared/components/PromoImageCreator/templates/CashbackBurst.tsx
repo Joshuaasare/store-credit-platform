@@ -1,5 +1,5 @@
 import type { PromoTemplateProps } from "../types";
-import { PromoCanvas, valueFontSize } from "./Canvas";
+import { PromoCanvas, runningValueFontSize } from "./Canvas";
 import FitText from "./FitText";
 
 function burstPoints(spikes: number, outer: number, inner: number): string {
@@ -14,12 +14,14 @@ function burstPoints(spikes: number, outer: number, inner: number): string {
   return points.join(" ");
 }
 
-export default function RadialBurst({
+export default function CashbackBurst({
   value,
   headline,
   palette,
   font,
 }: PromoTemplateProps) {
+  // All text sits inside the starburst and shares the value's color, so the
+  // whole design reads as one badge (contrast comes from the burst fill).
   return (
     <PromoCanvas palette={palette} font={font}>
       <svg
@@ -30,36 +32,39 @@ export default function RadialBurst({
       >
         <polygon points={burstPoints(28, 470, 402)} fill={palette.accent} />
       </svg>
-      <p
-        style={{
-          position: "absolute",
-          top: 110,
-          left: 0,
-          right: 0,
-          margin: 0,
-          textAlign: "center",
-          fontSize: 62,
-          fontWeight: 700,
-          letterSpacing: 12,
-          textTransform: "uppercase",
-        }}
-      >
-        {headline}
-      </p>
-      <FitText
-        text={value}
-        baseFontSize={valueFontSize(value.length)}
-        maxWidth={700}
+      <div
         style={{
           position: "absolute",
           top: "50%",
           left: "50%",
-          transform: "translate(-50%, -52%)",
-          fontWeight: 700,
+          transform: "translate(-50%, -50%)",
+          width: 560,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          textAlign: "center",
           color: palette.accentFg,
-          lineHeight: 1,
         }}
-      />
+      >
+        <FitText
+          text={value}
+          baseFontSize={runningValueFontSize(value.length)}
+          maxWidth={560}
+          style={{ fontWeight: 700, lineHeight: 1 }}
+        />
+        {headline && (
+          <p
+            style={{
+              margin: "40px 0 0",
+              fontSize: 44,
+              fontWeight: 600,
+              lineHeight: 1.25,
+            }}
+          >
+            {headline}
+          </p>
+        )}
+      </div>
     </PromoCanvas>
   );
 }

@@ -40,3 +40,13 @@ export function valueFontSize(length: number): number {
   if (length > 4) return 185;
   return 235;
 }
+
+// Running values read like "5% Cashback" (longer than a fixed "50% OFF"),
+// so the type ramps smaller.
+export function runningValueFontSize(length: number): number {
+  if (length > 14) return 88;
+  if (length > 11) return 105;
+  if (length > 8) return 125;
+  if (length > 4) return 170;
+  return 210;
+}

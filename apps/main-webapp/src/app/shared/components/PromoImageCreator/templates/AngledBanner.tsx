@@ -1,10 +1,10 @@
 import type { PromoTemplateProps } from "../types";
 import { PromoCanvas, valueFontSize } from "./Canvas";
+import FitText from "./FitText";
 
 export default function AngledBanner({
   value,
   headline,
-  subline,
   palette,
   font,
 }: PromoTemplateProps) {
@@ -51,34 +51,17 @@ export default function AngledBanner({
           justifyContent: "center",
         }}
       >
-        <span
+        <FitText
+          text={value}
+          baseFontSize={valueFontSize(value.length)}
+          maxWidth={980}
           style={{
-            fontSize: valueFontSize(value.length),
             fontWeight: 700,
             color: palette.accentFg,
             lineHeight: 1,
-            whiteSpace: "nowrap",
           }}
-        >
-          {value}
-        </span>
+        />
       </div>
-      <p
-        style={{
-          position: "absolute",
-          bottom: 130,
-          left: 0,
-          right: 0,
-          margin: 0,
-          textAlign: "center",
-          fontSize: 48,
-          fontWeight: 700,
-          letterSpacing: 10,
-          textTransform: "uppercase",
-        }}
-      >
-        {subline}
-      </p>
     </PromoCanvas>
   );
 }
