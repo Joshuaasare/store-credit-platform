@@ -7,6 +7,8 @@ import { useThemeTokens } from "../../../shared/theme/ThemeContext";
 import { formatRelativeTimestamp } from "../../../shared/utils/date.utils";
 import type { CustomerApprovedRedemption } from "@store-credit-platform/api-services";
 import { getInitials } from "../../../shared/utils/ui.utils";
+import ScreenBody from "../../../shared/components/ScreenBody";
+import { useOffsets } from "../../../shared/hooks/useOffsets";
 
 export function CreditsMerchantApproved({
   items,
@@ -28,6 +30,7 @@ export function CreditsMerchantApproved({
   refetch: () => void;
 }) {
   const theme = useThemeTokens();
+  const { bottomOffset } = useOffsets();
 
   if (isLoading) {
     return (
@@ -94,89 +97,97 @@ export function CreditsMerchantApproved({
 
   return (
     <View style={styles.cardWrap}>
-      <GlassCard padding={0} style={styles.listCard}>
-        <FlatList
-          data={items}
-          keyExtractor={(item) => String(item.id)}
-          renderItem={({ item }) => {
-            const title = item.branch?.name ?? "—";
-            const meta = `Approved ${formatRelativeTimestamp(item.approved_at)}`;
-            return (
-              <MerchantActivityRow
-                kind="merchant-approved"
-                item={{
-                  key: String(item.id),
-                  initials: getInitials(title),
-                  logoUrl: null,
-                  title,
-                  meta,
-                  amount: item.amount_redeemed,
-                  idSeed: item.branch_id,
+      <ScreenBody
+        style={{ paddingBottom: bottomOffset + 20 }}
+        edges={["bottom"]}
+        padding={0}
+      >
+        <GlassCard padding={0} style={styles.listCard}>
+          <FlatList
+            data={items}
+            keyExtractor={(item) => String(item.id)}
+            renderItem={({ item }) => {
+              const title = item.branch?.name ?? "—";
+              const meta = `Approved ${formatRelativeTimestamp(item.approved_at)}`;
+              return (
+                <MerchantActivityRow
+                  kind="merchant-approved"
+                  item={{
+                    key: String(item.id),
+                    initials: getInitials(title),
+                    logoUrl: null,
+                    title,
+                    meta,
+                    amount: item.amount_redeemed,
+                    idSeed: item.branch_id,
+                  }}
+                />
+              );
+            }}
+            ItemSeparatorComponent={() => (
+              <View
+                style={{
+                  height: 1,
+                  backgroundColor: theme.colors.surfaceBorder,
+                  marginHorizontal: 16,
                 }}
               />
-            );
-          }}
-          ItemSeparatorComponent={() => (
-            <View
-              style={{
-                height: 1,
-                backgroundColor: theme.colors.surfaceBorder,
-                marginHorizontal: 16,
-              }}
-            />
-          )}
-          contentContainerStyle={styles.listContent}
-          ListFooterComponent={
-            isFetchingNextPage ? (
-              <View style={styles.footer}>
-                <Text
-                  style={{
-                    color: theme.colors.textMuted,
-                    fontFamily: theme.typography.fontFamilyRegular,
-                    fontSize: 13,
-                  }}
-                >
-                  Loading more…
-                </Text>
-              </View>
-            ) : !hasNextPage ? (
-              <View style={styles.footer}>
-                <Text
-                  style={{
-                    color: theme.colors.textMuted,
-                    fontFamily: theme.typography.fontFamilyRegular,
-                    fontSize: 12,
-                    opacity: 0.7,
-                  }}
-                >
-                  End of approved history
-                </Text>
-              </View>
-            ) : null
-          }
-          onEndReached={() => {
-            if (hasNextPage && !isFetchingNextPage) {
-              fetchNextPage();
+            )}
+            contentContainerStyle={styles.listContent}
+            ListFooterComponent={
+              isFetchingNextPage ? (
+                <View style={styles.footer}>
+                  <Text
+                    style={{
+                      color: theme.colors.textMuted,
+                      fontFamily: theme.typography.fontFamilyRegular,
+                      fontSize: 13,
+                    }}
+                  >
+                    Loading more…
+                  </Text>
+                </View>
+              ) : !hasNextPage ? (
+                <View style={styles.footer}>
+                  <Text
+                    style={{
+                      color: theme.colors.textMuted,
+                      fontFamily: theme.typography.fontFamilyRegular,
+                      fontSize: 12,
+                      opacity: 0.7,
+                    }}
+                  >
+                    End of approved history
+                  </Text>
+                </View>
+              ) : null
             }
-          }}
-          onEndReachedThreshold={0.5}
-          refreshing={false}
-          onRefresh={refetch}
-        />
-      </GlassCard>
+            onEndReached={() => {
+              if (hasNextPage && !isFetchingNextPage) {
+                fetchNextPage();
+              }
+            }}
+            onEndReachedThreshold={0.5}
+            refreshing={false}
+            onRefresh={refetch}
+          />
+        </GlassCard>
+      </ScreenBody>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   cardWrap: {
-    paddingTop: 4,
+    flex: 1,
   },
   listCard: {
     overflow: "hidden",
+    paddingHorizontal: 15,
+    paddingBottom: 10,
   },
   listContent: {
-    paddingBottom: 8,
+    paddingBottom: 5,
   },
   centerFill: {
     flex: 1,

@@ -13,11 +13,9 @@ import { useThemeTokens } from "../theme/ThemeContext";
 
 type StripIcon = keyof typeof Ionicons.glyphMap;
 
-// Promo-poster card: merchant name top-left, oversized value + muted subtitle
-// bottom-left, and the promo image as a rotated sticker bleeding off the
-// top-right corner (clipped by the card's rounded edge). Without an image the
-// sticker is a berry block with the deal glyph.
-export default function OfferCard({
+// Experiment: OfferCard on a lighter berry base with ink/berry content, so
+// the two can alternate in a feed without touching the original.
+export default function OfferCard2({
   value,
   subtitle,
   stripIcon = "pricetag",
@@ -52,8 +50,8 @@ export default function OfferCard({
         style={[
           styles.card,
           {
-            backgroundColor: theme.colors.surface,
-            borderColor: theme.colors.surfaceBorderStrong,
+            backgroundColor: theme.colors.mainSurface,
+            borderColor: theme.colors.surfaceBorder,
             borderRadius: theme.radii.md,
           },
         ]}
@@ -116,7 +114,7 @@ export default function OfferCard({
           <Text
             numberOfLines={2}
             style={{
-              color: theme.colors.text,
+              color: theme.colors.primary,
               fontFamily: theme.typography.fontFamilySemiBold,
               fontSize: 14,
               lineHeight: 19,

@@ -1,6 +1,7 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Animated,
   FlatList,
   StyleSheet,
   Text,
@@ -14,18 +15,23 @@ import type { NearbyOfferRow } from "@store-credit-platform/api-services";
 import ScreenBackground from "../../shared/components/ScreenBackground";
 import ScreenBody from "../../shared/components/ScreenBody";
 import PageHeader from "../../shared/components/PageHeader";
-import OfferCard from "../../shared/components/OfferCard";
+import OfferCard3 from "../../shared/components/OfferCard3";
 import {
-  offerHeadline,
+  offerImageUri,
   offerStripIcon,
-  offerStripLabel,
-  offerThumbUri,
+  offerSubtitle,
+  offerValueLabel,
 } from "../../shared/utils/offers.utils";
-import { formatDistance } from "../../shared/utils/travel.utils";
-import NearbyOfferDetailsModal from "./NearbyOfferDetailsModal";
+import OfferDetailsModal from "../../shared/components/OfferDetailsModal";
 import { useNearbyOffersFeed } from "./useNearbyOffersFeed";
 import { useThemeTokens } from "../../shared/theme/ThemeContext";
 import type { AppStackParamList } from "../../navigation/RootNavigator";
+import OfferCard from "../../shared/components/OfferCard";
+import OfferCard2 from "../../shared/components/OfferCard2";
+
+// Headline collapses fully within this scroll distance and only returns
+// when the list is back at the very top.
+const HERO_COLLAPSE_RANGE = 60;
 
 export function NearbyOffersScreen() {
   const theme = useThemeTokens();
@@ -33,6 +39,24 @@ export function NearbyOffersScreen() {
     useNavigation<NativeStackNavigationProp<AppStackParamList>>();
   const { hasLocation, query } = useNearbyOffersFeed();
   const [selected, setSelected] = useState<NearbyOfferRow | null>(null);
+  const scrollY = useRef(new Animated.Value(0)).current;
+
+  const heroStyle = {
+    transform: [
+      {
+        translateY: scrollY.interpolate({
+          inputRange: [0, HERO_COLLAPSE_RANGE],
+          outputRange: [0, -HERO_COLLAPSE_RANGE],
+          extrapolate: "clamp",
+        }),
+      },
+    ],
+    opacity: scrollY.interpolate({
+      inputRange: [0, HERO_COLLAPSE_RANGE * 0.8],
+      outputRange: [1, 0],
+      extrapolate: "clamp",
+    }),
+  };
 
   const offers = useMemo<NearbyOfferRow[]>(() => {
     if (!query.data) return [];
@@ -44,15 +68,12 @@ export function NearbyOffersScreen() {
   const renderItem = useCallback<ListRenderItem<NearbyOfferRow>>(
     ({ item }) => (
       <OfferCard
-        stripText={offerStripLabel(item)}
+        value={offerValueLabel(item)}
+        subtitle={offerSubtitle(item)}
         stripIcon={offerStripIcon(item)}
-        headline={offerHeadline(item)}
-        thumbUri={offerThumbUri(item)}
+        imageUri={offerImageUri(item)}
         merchantName={item.merchant?.name ?? "Merchant"}
         merchantLogoUrl={item.merchant?.logo_url ?? null}
-        distanceLabel={
-          item.distance_km != null ? formatDistance(item.distance_km) : null
-        }
         onPress={() => setSelected(item)}
         style={styles.fullWidthCard}
       />
@@ -134,7 +155,42 @@ export function NearbyOffersScreen() {
   return (
     <ScreenBackground>
       <PageHeader backLabel="Back" onBackPress={() => navigation.goBack()} />
-      <ScreenBody edges={["bottom"]}>
+      <View style={styles.bodyWrap}>
+        <Animated.View style={[styles.heroCopy, heroStyle]}>
+          <View style={styles.heroRow}>
+            <Ionicons
+              name="cart-outline"
+              size={40}
+              color={theme.colors.primary}
+            />
+            <View style={styles.heroTextCol}>
+              <Text
+                style={{
+                  color: theme.colors.text,
+                  fontFamily: theme.typography.fontFamilyBold,
+                  fontSize: 20,
+                  lineHeight: 26,
+                  letterSpacing: -0.5,
+                }}
+              >
+                Explore deals{" "}
+                <Text style={{ color: theme.colors.primary }}>near you</Text>
+              </Text>
+              <Text
+                numberOfLines={1}
+                style={{
+                  color: theme.colors.textMuted,
+                  fontFamily: theme.typography.fontFamilyRegular,
+                  fontSize: 13,
+                  lineHeight: 17,
+                  marginTop: 2,
+                }}
+              >
+                Deals from merchants close to you
+              </Text>
+            </View>
+          </View>
+        </Animated.View>
         {!hasLocation ? (
           <ListEmpty />
         ) : query.isLoading ? (
@@ -159,6 +215,12 @@ export function NearbyOffersScreen() {
             ItemSeparatorComponent={ItemSeparator}
             ListFooterComponent={ListFooter}
             ListEmptyComponent={ListEmpty}
+            onScroll={Animated.event(
+              [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+              // JS driver — the native driver rejects a VirtualizedList event target.
+              { useNativeDriver: false },
+            )}
+            scrollEventThrottle={16}
             onEndReached={() => {
               if (query.hasNextPage && !query.isFetchingNextPage) {
                 query.fetchNextPage();
@@ -170,18 +232,39 @@ export function NearbyOffersScreen() {
           />
         )}
 
-        <NearbyOfferDetailsModal
+        <OfferDetailsModal
           offer={selected}
           onClose={() => setSelected(null)}
         />
-      </ScreenBody>
+      </View>
     </ScreenBackground>
   );
 }
 
 const styles = StyleSheet.create({
+  bodyWrap: {
+    flex: 1,
+    paddingHorizontal: 24,
+  },
+  heroCopy: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 1,
+    paddingTop: 15,
+    paddingHorizontal: 24,
+  },
+  heroRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  heroTextCol: {
+    flex: 1,
+  },
   listContent: {
-    paddingTop: 8,
+    paddingTop: 80,
     paddingBottom: 8,
   },
   fullWidthCard: {

@@ -6,10 +6,12 @@ export default function GlassCard({
   children,
   style,
   padding = 24,
+  contentStyle,
 }: {
   children: ReactNode;
   style?: StyleProp<ViewStyle>;
   padding?: number;
+  contentStyle?: StyleProp<ViewStyle>;
 }) {
   const theme = useThemeTokens();
   return (
@@ -18,13 +20,13 @@ export default function GlassCard({
         styles.card,
         {
           borderRadius: theme.radii.md,
-          borderColor: theme.colors.surfaceBorder,
+          borderColor: theme.colors.surfaceBorderStrong,
           backgroundColor: theme.colors.surface,
         },
         style,
       ]}
     >
-      <View style={{ padding }}>{children}</View>
+      <View style={[{ padding }, contentStyle]}>{children}</View>
     </View>
   );
 }

@@ -47,7 +47,7 @@ export function ExploreScreen() {
   const theme = useThemeTokens();
   const { resolvedMode } = useTheme();
   const user = useAuthStore((s) => s.user);
-  const { tabBarOffset } = useOffsets();
+  const { tabBarOffset, bottomOffset } = useOffsets();
   const stackNavigation =
     useNavigation<NativeStackNavigationProp<AppStackParamList>>();
 
@@ -352,7 +352,7 @@ export function ExploreScreen() {
               ) : null
             }
             contentContainerStyle={{
-              paddingBottom: tabBarOffset,
+              paddingBottom: tabBarOffset + bottomOffset,
               paddingHorizontal: 24,
             }}
             showsVerticalScrollIndicator={false}

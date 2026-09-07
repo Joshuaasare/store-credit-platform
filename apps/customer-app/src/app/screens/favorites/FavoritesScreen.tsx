@@ -1,11 +1,10 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Animated,
   FlatList,
-  Pressable,
   StyleSheet,
   Text,
-  TouchableOpacity,
   View,
   type ListRenderItem,
 } from "react-native";
@@ -14,17 +13,44 @@ import type { FavoritedConfig } from "@store-credit-platform/api-services";
 import ScreenBackground from "../../shared/components/ScreenBackground";
 import ScreenBody from "../../shared/components/ScreenBody";
 import PageHeader from "../../shared/components/PageHeader";
-import MerchantAvatar from "../../shared/components/MerchantAvatar";
-import { useCustomerFavorites } from "../../shared/hooks/useCustomerFavorites";
+import OfferCard from "../../shared/components/OfferCard";
 import { useThemeTokens } from "../../shared/theme/ThemeContext";
-import { cashbackHeadline } from "../../shared/utils/configDisplay";
+import {
+  offerImageUri,
+  offerStripIcon,
+  offerSubtitle,
+  offerValueLabel,
+} from "../../shared/utils/offers.utils";
 import { useFavoritesFeed } from "./useFavoritesFeed";
-import FavoriteDetailsModal from "./FavoriteDetailsModal";
+import OfferDetailsModal from "../../shared/components/OfferDetailsModal";
+import { useOffsets } from "../../shared/hooks/useOffsets";
+
+// Headline collapses fully within this scroll distance and only returns
+// when the list is back at the very top.
+const HERO_COLLAPSE_RANGE = 60;
 
 export function FavoritesScreen() {
   const theme = useThemeTokens();
-  const favorites = useCustomerFavorites();
   const [selected, setSelected] = useState<FavoritedConfig | null>(null);
+  const { tabBarOffset, bottomOffset } = useOffsets();
+  const scrollY = useRef(new Animated.Value(0)).current;
+
+  const heroStyle = {
+    transform: [
+      {
+        translateY: scrollY.interpolate({
+          inputRange: [0, HERO_COLLAPSE_RANGE],
+          outputRange: [0, -HERO_COLLAPSE_RANGE],
+          extrapolate: "clamp",
+        }),
+      },
+    ],
+    opacity: scrollY.interpolate({
+      inputRange: [0, HERO_COLLAPSE_RANGE * 0.8],
+      outputRange: [1, 0],
+      extrapolate: "clamp",
+    }),
+  };
 
   const feedQuery = useFavoritesFeed();
 
@@ -44,29 +70,23 @@ export function FavoritesScreen() {
 
   const renderItem = useCallback<ListRenderItem<FavoritedConfig>>(
     ({ item }) => (
-      <FavoriteRow
-        item={item}
-        favorited={favorites.isFavorited(item.config_type, item.config.id)}
-        pending={favorites.pendingFor(item.config_type, item.config.id)}
-        onToggleFavorite={() =>
-          favorites.toggleFavorite(item.config_type, item.config.id)
-        }
+      <OfferCard
+        value={offerValueLabel(item)}
+        subtitle={offerSubtitle(item)}
+        stripIcon={offerStripIcon(item)}
+        imageUri={offerImageUri(item)}
+        merchantName={item.merchant?.name ?? "Merchant"}
+        merchantLogoUrl={item.merchant?.logo_url ?? null}
         onPress={() => setSelected(item)}
+        style={styles.fullWidthCard}
       />
     ),
-    [favorites],
+    [],
   );
 
   const ItemSeparator = useCallback(
-    () => (
-      <View
-        style={[
-          styles.separator,
-          { backgroundColor: theme.colors.surfaceBorder },
-        ]}
-      />
-    ),
-    [theme],
+    () => <View style={styles.separator} />,
+    [],
   );
 
   const ListFooter = useCallback(() => {
@@ -154,6 +174,41 @@ export function FavoritesScreen() {
     <ScreenBackground>
       <PageHeader />
       <ScreenBody edges={["bottom"]}>
+        <Animated.View style={[styles.heroCopy, heroStyle]}>
+          <View style={styles.heroRow}>
+            <Ionicons
+              name="heart-outline"
+              size={40}
+              color={theme.colors.primary}
+            />
+            <View style={styles.heroTextCol}>
+              <Text
+                style={{
+                  color: theme.colors.text,
+                  fontFamily: theme.typography.fontFamilyBold,
+                  fontSize: 20,
+                  lineHeight: 26,
+                  letterSpacing: -0.5,
+                }}
+              >
+                Your <Text style={{ color: theme.colors.primary }}>favorite</Text>{" "}
+                offers
+              </Text>
+              <Text
+                numberOfLines={1}
+                style={{
+                  color: theme.colors.textMuted,
+                  fontFamily: theme.typography.fontFamilyRegular,
+                  fontSize: 13,
+                  lineHeight: 17,
+                  marginTop: 2,
+                }}
+              >
+                Offers you've hearted from merchants
+              </Text>
+            </View>
+          </View>
+        </Animated.View>
         <FlatList
           data={items}
           keyExtractor={keyExtractor}
@@ -161,6 +216,12 @@ export function FavoritesScreen() {
           ItemSeparatorComponent={ItemSeparator}
           ListFooterComponent={ListFooter}
           ListEmptyComponent={ListEmpty}
+          onScroll={Animated.event(
+            [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+            // JS driver — the native driver rejects a VirtualizedList event target.
+            { useNativeDriver: false },
+          )}
+          scrollEventThrottle={16}
           onEndReached={() => {
             if (
               feedQuery.hasNextPage &&
@@ -172,138 +233,46 @@ export function FavoritesScreen() {
           }}
           onEndReachedThreshold={0.5}
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.listContent}
+          contentContainerStyle={{
+            ...styles.listContent,
+
+            paddingBottom: tabBarOffset + bottomOffset,
+          }}
         />
       </ScreenBody>
-      <FavoriteDetailsModal item={selected} onClose={() => setSelected(null)} />
+      <OfferDetailsModal offer={selected} onClose={() => setSelected(null)} />
     </ScreenBackground>
   );
 }
 
-// Same row anatomy as MerchantActivityRow: ringed avatar, title + meta stack,
-// trailing action — inside one shared GlassCard like the credits lists.
-function FavoriteRow({
-  item,
-  favorited,
-  pending,
-  onToggleFavorite,
-  onPress,
-}: {
-  item: FavoritedConfig;
-  favorited: boolean;
-  pending: boolean;
-  onToggleFavorite: () => void;
-  onPress: () => void;
-}) {
-  const theme = useThemeTokens();
-
-  const merchantName = item.merchant?.name ?? "Merchant";
-  const logoUrl = item.merchant?.logo_url ?? null;
-  const title =
-    item.config_type === "fixed"
-      ? item.config.title?.trim() || "Discount offer"
-      : cashbackHeadline(item.config);
-
-  return (
-    <Pressable
-      onPress={onPress}
-      accessibilityRole="button"
-      style={({ pressed }) => [styles.row, pressed && { opacity: 0.7 }]}
-    >
-      <View
-        style={[
-          styles.ring,
-          {
-            borderColor: theme.colors.surfaceBorder,
-            backgroundColor: theme.colors.surface,
-          },
-        ]}
-      >
-        <MerchantAvatar
-          merchantName={merchantName}
-          logoUrl={logoUrl}
-          idSeed={item.merchant?.id}
-          size={32}
-        />
-      </View>
-      <View style={styles.center}>
-        <Text
-          numberOfLines={1}
-          style={{
-            color: theme.colors.text,
-            fontFamily: theme.typography.fontFamilySemiBold,
-            fontSize: 14,
-            letterSpacing: 0.1,
-          }}
-        >
-          {title}
-        </Text>
-        <Text
-          numberOfLines={1}
-          style={{
-            color: theme.colors.textMuted,
-            fontFamily: theme.typography.fontFamilyRegular,
-            fontSize: 12,
-            marginTop: 2,
-          }}
-        >
-          {merchantName}
-        </Text>
-      </View>
-      <TouchableOpacity
-        onPress={onToggleFavorite}
-        disabled={pending}
-        accessibilityRole="button"
-        accessibilityState={{ selected: favorited }}
-        accessibilityLabel="Remove from favorites"
-        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-        style={styles.heartButton}
-      >
-        <Ionicons
-          name={favorited ? "heart" : "heart-outline"}
-          size={20}
-          color={favorited ? theme.colors.error : theme.colors.textMuted}
-        />
-      </TouchableOpacity>
-      <Ionicons
-        name="chevron-forward"
-        size={16}
-        color={theme.colors.textMuted}
-      />
-    </Pressable>
-  );
-}
-
 const styles = StyleSheet.create({
+  heroCopy: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 1,
+    paddingTop: 15,
+    paddingHorizontal: 24,
+  },
+  heroRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  heroTextCol: {
+    flex: 1,
+  },
   listContent: {
-    paddingTop: 8,
+    paddingTop: 80,
     paddingBottom: 8,
   },
   separator: {
-    height: 1,
+    height: 15,
     marginHorizontal: 7,
   },
-  row: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 14,
-    gap: 8,
-  },
-  ring: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    borderWidth: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  center: {
-    flex: 1,
-    minWidth: 0,
-    marginLeft: 4,
-  },
-  heartButton: {
-    marginRight: 6,
+  fullWidthCard: {
+    width: "100%",
   },
   footerRow: {
     flexDirection: "row",

@@ -126,7 +126,7 @@ export function CreditsMerchantPending({
 
   return (
     <View style={styles.scrollWrap}>
-      <GlassCard padding={0} style={styles.listCard}>
+      <GlassCard padding={16} style={styles.listCard}>
         <MerchantActivityRow
           kind="merchant-approved"
           metaTone="warning"

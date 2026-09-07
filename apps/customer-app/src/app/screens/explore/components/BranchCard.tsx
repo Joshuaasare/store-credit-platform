@@ -20,53 +20,32 @@ import {
   travelMinutes,
 } from "../../../shared/utils/travel.utils";
 import { useThemeTokens } from "../../../shared/theme/ThemeContext";
+import MerchantAvatar from "../../../shared/components/MerchantAvatar";
+import { getInitials } from "../../../shared/utils/ui.utils";
 
-// Solid surface pill carrying one offer count. The semantic accent (amber for
-// discount, green for cashback) is carried by the border + filled icon + bold
-// label together, so the type reads at a glance — not just from a tiny label.
-function OfferPill({
-  icon,
-  accent,
-  count,
-  label,
-}: {
-  icon: keyof typeof Ionicons.glyphMap;
-  accent: string;
-  count: number;
-  label: string;
-}) {
+// Single berry chip summarizing all offers on the branch.
+function OfferCountChip({ count }: { count: number }) {
   const theme = useThemeTokens();
   return (
     <View
       style={[
         styles.offerPill,
         {
+          backgroundColor: theme.colors.primary,
           borderRadius: theme.radii.pill,
-          backgroundColor: theme.colors.surface,
-          borderColor: accent,
         },
       ]}
     >
-      <Ionicons name={icon} size={16} color={accent} />
+      <Ionicons name="pricetag" size={15} color={theme.colors.textOnPrimary} />
       <Text
         style={{
-          color: theme.colors.text,
-          fontFamily: theme.typography.fontFamilyBold,
-          fontSize: 15,
+          color: theme.colors.textOnPrimary,
+          fontFamily: theme.typography.fontFamilySemiBold,
+          fontSize: 13,
+          letterSpacing: 0.2,
         }}
       >
-        {count}
-      </Text>
-      <Text
-        style={{
-          color: accent,
-          fontFamily: theme.typography.fontFamilyBold,
-          fontSize: 10.5,
-          letterSpacing: 0.6,
-          textTransform: "uppercase",
-        }}
-      >
-        {label}
+        {count} {count === 1 ? "Offer" : "Offers"}
       </Text>
     </View>
   );
@@ -114,8 +93,14 @@ export default function BranchCard({
         {branch.merchant?.logo_url ? (
           <>
             <Image
-              source={{ uri: branch.merchant!.logo_url! }}
-              style={[StyleSheet.absoluteFill, { borderRadius: theme.radii.lg }]}
+              source={{
+                uri:
+                  branch.merchant?.cover_photo_url ?? branch.merchant?.logo_url,
+              }}
+              style={[
+                StyleSheet.absoluteFill,
+                { borderRadius: theme.radii.lg },
+              ]}
               contentFit="cover"
               transition={150}
               accessibilityIgnoresInvertColors
@@ -124,7 +109,10 @@ export default function BranchCard({
               colors={["transparent", theme.colors.imageScrim]}
               start={{ x: 0, y: 0 }}
               end={{ x: 0, y: 1 }}
-              style={[StyleSheet.absoluteFill, { borderRadius: theme.radii.lg }]}
+              style={[
+                StyleSheet.absoluteFill,
+                { borderRadius: theme.radii.lg },
+              ]}
               pointerEvents="none"
             />
           </>
@@ -147,13 +135,19 @@ export default function BranchCard({
             style={[styles.blur, { borderRadius: theme.radii.lg }]}
           >
             <View style={styles.glassContent}>
+              <MerchantAvatar
+                logoUrl={branch?.merchant?.logo_url ?? null}
+                size={30}
+                merchantName={merchantName}
+                initials={getInitials(merchantName)}
+              />
               <View style={styles.glassText}>
                 <Text
                   numberOfLines={1}
                   style={{
                     color: theme.colors.textOnPrimary,
                     fontFamily: theme.typography.fontFamilySemiBold,
-                    fontSize: 15,
+                    fontSize: 13,
                   }}
                 >
                   {merchantName}
@@ -163,7 +157,7 @@ export default function BranchCard({
                   style={{
                     color: theme.colors.textOnPrimary,
                     fontFamily: theme.typography.fontFamilyRegular,
-                    fontSize: 12,
+                    fontSize: 11,
                     opacity: 0.85,
                     marginTop: 2,
                   }}
@@ -175,21 +169,8 @@ export default function BranchCard({
               </View>
 
               <View style={styles.offerPillsCol} pointerEvents="none">
-                {discountCount > 0 ? (
-                  <OfferPill
-                    icon="gift-outline"
-                    accent={theme.colors.warning}
-                    count={discountCount}
-                    label={discountCount === 1 ? "discount" : "discounts"}
-                  />
-                ) : null}
-                {cashbackCount > 0 ? (
-                  <OfferPill
-                    icon="cash"
-                    accent={theme.colors.success}
-                    count={cashbackCount}
-                    label="cashback"
-                  />
+                {discountCount + cashbackCount > 0 ? (
+                  <OfferCountChip count={discountCount + cashbackCount} />
                 ) : null}
               </View>
             </View>
@@ -247,10 +228,9 @@ const styles = StyleSheet.create({
   offerPill: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderWidth: 1,
+    gap: 5,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
   },
   glassWrap: {
     position: "absolute",

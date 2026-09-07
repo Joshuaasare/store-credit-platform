@@ -16,6 +16,8 @@ import {
 } from "../lib/aggregateCredits";
 import { customerCreditsService } from "../../../api/client";
 import type { AppStackParamList } from "../../../navigation/RootNavigator";
+import ScreenBody from "../../../shared/components/ScreenBody";
+import { useOffsets } from "../../../shared/hooks/useOffsets";
 
 const CREDITS_QUERY_KEY = ["customer", "credits"] as const;
 
@@ -28,6 +30,7 @@ export function CreditsMerchantAvailable({
   isRedeemDisabled: boolean;
   redeemCtaLabel: string;
 }) {
+  const { bottomOffset } = useOffsets();
   const theme = useThemeTokens();
   const route =
     useRoute<RouteProp<AppStackParamList, "CreditsMerchantDetail">>();
@@ -128,74 +131,80 @@ export function CreditsMerchantAvailable({
 
   return (
     <View style={styles.scrollWrap}>
-      <GlassCard padding={0} style={styles.listCard}>
-        <FlatList
-          data={flatRows}
-          keyExtractor={(row, idx) =>
-            row.kind === "section"
-              ? `section-${row.section.branchId}`
-              : `credit-${row.credit.id}-${idx}`
-          }
-          renderItem={({ item }) =>
-            item.kind === "section" ? (
-              <BranchSectionHeader section={item.section} />
-            ) : (
-              <CreditRow credit={item.credit} />
-            )
-          }
-          ItemSeparatorComponent={({ leadingItem, trailingItem }) => {
-            const trailingIsSection =
-              (trailingItem as DetailRow | null)?.kind === "section";
-            const leadingIsSection =
-              (leadingItem as DetailRow | null)?.kind === "section";
-            // Open up between branches so the next section breathes.
-            if (leadingIsSection || trailingIsSection) {
-              return <View style={styles.sectionGap} />;
-            }
-            return (
-              <View
-                style={{
-                  height: 1,
-                  backgroundColor: theme.colors.surfaceBorder,
-                  marginHorizontal: 16,
-                }}
-              />
-            );
-          }}
-          contentContainerStyle={styles.listContent}
-          showsVerticalScrollIndicator={false}
-        />
-      </GlassCard>
-      <Pressable
-        onPress={onRedeemPress}
-        disabled={isRedeemDisabled}
-        accessibilityRole="button"
-        accessibilityLabel={redeemCtaLabel}
-        style={({ pressed }) => [
-          styles.cta,
-          {
-            backgroundColor: theme.colors.primary,
-            opacity: isRedeemDisabled ? 0.45 : pressed ? 0.85 : 1,
-          },
-        ]}
+      <ScreenBody
+        style={{ paddingBottom: bottomOffset + 20 }}
+        edges={["bottom"]}
+        padding={0}
       >
-        <Text
-          style={{
-            color: theme.colors.textOnPrimary,
-            fontFamily: theme.typography.fontFamilySemiBold,
-            fontSize: 15,
-            letterSpacing: 0.2,
-          }}
+        <GlassCard padding={0} style={styles.listCard}>
+          <FlatList
+            data={flatRows}
+            keyExtractor={(row, idx) =>
+              row.kind === "section"
+                ? `section-${row.section.branchId}`
+                : `credit-${row.credit.id}-${idx}`
+            }
+            renderItem={({ item }) =>
+              item.kind === "section" ? (
+                <BranchSectionHeader section={item.section} />
+              ) : (
+                <CreditRow credit={item.credit} />
+              )
+            }
+            ItemSeparatorComponent={({ leadingItem, trailingItem }) => {
+              const trailingIsSection =
+                (trailingItem as DetailRow | null)?.kind === "section";
+              const leadingIsSection =
+                (leadingItem as DetailRow | null)?.kind === "section";
+              // Open up between branches so the next section breathes.
+              if (leadingIsSection || trailingIsSection) {
+                return <View style={styles.sectionGap} />;
+              }
+              return (
+                <View
+                  style={{
+                    height: 1,
+                    backgroundColor: theme.colors.surfaceBorder,
+                    marginHorizontal: 16,
+                  }}
+                />
+              );
+            }}
+            contentContainerStyle={styles.listContent}
+            showsVerticalScrollIndicator={false}
+          />
+        </GlassCard>
+        <Pressable
+          onPress={onRedeemPress}
+          disabled={isRedeemDisabled}
+          accessibilityRole="button"
+          accessibilityLabel={redeemCtaLabel}
+          style={({ pressed }) => [
+            styles.cta,
+            {
+              backgroundColor: theme.colors.primary,
+              opacity: isRedeemDisabled ? 0.45 : pressed ? 0.85 : 1,
+            },
+          ]}
         >
-          {redeemCtaLabel}
-        </Text>
-        <Ionicons
-          name="gift-outline"
-          size={16}
-          color={theme.colors.textOnPrimary}
-          style={{ marginLeft: 6, marginTop: -1 }}
-        />
-      </Pressable>
+          <Text
+            style={{
+              color: theme.colors.textOnPrimary,
+              fontFamily: theme.typography.fontFamilySemiBold,
+              fontSize: 15,
+              letterSpacing: 0.2,
+            }}
+          >
+            {redeemCtaLabel}
+          </Text>
+          <Ionicons
+            name="gift-outline"
+            size={16}
+            color={theme.colors.textOnPrimary}
+            style={{ marginLeft: 6, marginTop: -1 }}
+          />
+        </Pressable>
+      </ScreenBody>
     </View>
   );
 }
@@ -292,9 +301,11 @@ const styles = StyleSheet.create({
   },
   listCard: {
     overflow: "hidden",
+    paddingHorizontal: 15,
+    paddingBottom: 10,
   },
   listContent: {
-    paddingBottom: 16,
+    paddingBottom: 5,
   },
   cta: {
     flexDirection: "row",
@@ -308,9 +319,8 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingTop: 16,
-    paddingBottom: 6,
+    paddingLeft: 5,
+    paddingTop: 15,
   },
   sectionGap: {
     height: 5,
