@@ -10,8 +10,8 @@ import GlassTransition from "../../shared/components/GlassTransition";
 import GlassCard from "../../shared/components/GlassCard";
 import MerchantActivityRow from "../../shared/components/MerchantActivityRow";
 import EmptyState from "../../shared/components/EmptyState";
+import { RowSkeleton } from "../../shared/components/Skeleton";
 import ErrorState from "./components/ErrorState";
-import LoadingState from "./components/LoadingState";
 import { useThemeTokens } from "../../shared/theme/ThemeContext";
 import { customerCreditsService } from "../../api/client";
 import { formatShortDate } from "../../shared/utils/date.utils";
@@ -42,7 +42,14 @@ export function CreditsScreen() {
 
   const renderContent = () => {
     if (query.isLoading) {
-      return <LoadingState />;
+      return (
+        <View style={styles.skeletonList}>
+          <RowSkeleton />
+          <RowSkeleton />
+          <RowSkeleton />
+          <RowSkeleton />
+        </View>
+      );
     }
     if (query.isError) {
       return (
@@ -182,5 +189,9 @@ const styles = StyleSheet.create({
   },
   listContent: {
     paddingBottom: 24,
+  },
+  skeletonList: {
+    flex: 1,
+    justifyContent: "center",
   },
 });

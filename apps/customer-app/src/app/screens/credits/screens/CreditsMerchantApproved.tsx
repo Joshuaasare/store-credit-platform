@@ -3,6 +3,7 @@ import { FlatList } from "react-native";
 import GlassCard from "../../../shared/components/GlassCard";
 import MerchantActivityRow from "../../../shared/components/MerchantActivityRow";
 import EmptyState from "../../../shared/components/EmptyState";
+import { RowSkeleton } from "../../../shared/components/Skeleton";
 import { useThemeTokens } from "../../../shared/theme/ThemeContext";
 import { formatRelativeTimestamp } from "../../../shared/utils/date.utils";
 import type { CustomerApprovedRedemption } from "@store-credit-platform/api-services";
@@ -35,7 +36,10 @@ export function CreditsMerchantApproved({
   if (isLoading) {
     return (
       <View style={styles.centerFill}>
-        <Text style={{ color: theme.colors.textMuted }}>Loading…</Text>
+        <RowSkeleton />
+        <RowSkeleton />
+        <RowSkeleton />
+        <RowSkeleton />
       </View>
     );
   }

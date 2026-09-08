@@ -22,6 +22,7 @@ import {
 } from "../../shared/utils/offers.utils";
 import OfferDetailsModal from "../../shared/components/OfferDetailsModal";
 import EmptyState from "../../shared/components/EmptyState";
+import { OfferCardSkeleton } from "../../shared/components/Skeleton";
 import { useNearbyOffersFeed } from "./useNearbyOffersFeed";
 import { useThemeTokens } from "../../shared/theme/ThemeContext";
 import type { AppStackParamList } from "../../navigation/RootNavigator";
@@ -124,17 +125,9 @@ export function NearbyOffersScreen() {
     if (query.isLoading) {
       return (
         <View style={styles.loadingWrap}>
-          <ActivityIndicator size="large" color={theme.colors.primary} />
-          <Text
-            style={{
-              color: theme.colors.textMuted,
-              fontFamily: theme.typography.fontFamilyRegular,
-              fontSize: 13,
-              marginTop: 12,
-            }}
-          >
-            Loading nearby offers…
-          </Text>
+          <OfferCardSkeleton />
+          <OfferCardSkeleton />
+          <OfferCardSkeleton />
         </View>
       );
     }
@@ -251,8 +244,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
   },
   loadingWrap: {
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 40,
+    paddingTop: 80,
+    gap: 15,
   },
 });

@@ -1,6 +1,7 @@
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useThemeTokens } from "../../../shared/theme/ThemeContext";
 import EmptyState from "../../../shared/components/EmptyState";
+import { RowSkeleton } from "../../../shared/components/Skeleton";
 import {
   customerCreditsService,
   customerRedemptionsService,
@@ -59,7 +60,9 @@ export function CreditsMerchantPending({
   if (creditsQuery.isLoading) {
     return (
       <View style={styles.centerFill}>
-        <Text style={{ color: theme.colors.textMuted }}>Loading…</Text>
+        <RowSkeleton />
+        <RowSkeleton />
+        <RowSkeleton />
       </View>
     );
   }

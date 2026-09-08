@@ -225,7 +225,7 @@ export const lightColors: ColorTokens = {
   // Frosted-white wash over the home header blur — white at 32% tints the
   // frosted glass whiter without hiding the content scrolling underneath.
   glassWash: "rgba(255,255,255,0.32)",
-  surfaceInput: "rgba(15,23,42,0.04)",
+  surfaceInput: "rgba(15,23,42,0.1)",
   surfaceBorder: "rgba(137, 2, 62, 0.15)",
   /** Card-outline stroke — deeper than the in-between hairlines. */
   surfaceBorderStrong: "rgba(137, 2, 62, 0.45)",

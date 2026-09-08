@@ -18,6 +18,7 @@ import { customerCreditsService } from "../../../api/client";
 import type { AppStackParamList } from "../../../navigation/RootNavigator";
 import ScreenBody from "../../../shared/components/ScreenBody";
 import EmptyState from "../../../shared/components/EmptyState";
+import { RowSkeleton } from "../../../shared/components/Skeleton";
 import { useOffsets } from "../../../shared/hooks/useOffsets";
 
 const CREDITS_QUERY_KEY = ["customer", "credits"] as const;
@@ -92,7 +93,10 @@ export function CreditsMerchantAvailable({
   if (query.isLoading) {
     return (
       <View style={styles.centerFill}>
-        <Text style={{ color: theme.colors.textMuted }}>Loading…</Text>
+        <RowSkeleton />
+        <RowSkeleton />
+        <RowSkeleton />
+        <RowSkeleton />
       </View>
     );
   }

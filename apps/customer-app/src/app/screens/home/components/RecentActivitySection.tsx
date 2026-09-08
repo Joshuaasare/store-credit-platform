@@ -1,5 +1,4 @@
 import {
-  ActivityIndicator,
   FlatList,
   StyleSheet,
   Text,
@@ -11,6 +10,7 @@ import { Ionicons } from "@expo/vector-icons";
 import type { CustomerActivity } from "@store-credit-platform/api-services";
 import ActivityRow from "../../../shared/components/ActivityRow";
 import GlassCard from "../../../shared/components/GlassCard";
+import { RowSkeleton } from "../../../shared/components/Skeleton";
 import { useThemeTokens } from "../../../shared/theme/ThemeContext";
 
 const keyExtractor = (item: CustomerActivity) => `${item.kind}-${item.id}`;
@@ -45,17 +45,8 @@ export default function RecentActivitySection({
     if (previewLoading && previewItems.length === 0) {
       return (
         <View style={styles.placeholderRow}>
-          <ActivityIndicator size="small" color={theme.colors.primary} />
-          <Text
-            style={{
-              color: theme.colors.textSecondary,
-              fontFamily: theme.typography.fontFamilyRegular,
-              fontSize: 14,
-              marginLeft: 8,
-            }}
-          >
-            Loading activity…
-          </Text>
+          <RowSkeleton />
+          <RowSkeleton />
         </View>
       );
     }
@@ -163,8 +154,6 @@ const styles = StyleSheet.create({
     marginLeft: 68, // clears the arrow + avatar + gap (18 + 8 + 42 + 8 = 76, minus a touch)
   },
   placeholderRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 16,
+    paddingVertical: 4,
   },
 });

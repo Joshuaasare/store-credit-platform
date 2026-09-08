@@ -27,6 +27,7 @@ import { useTheme, useThemeTokens } from "../../shared/theme/ThemeContext";
 import type { AppStackParamList } from "../../navigation/RootNavigator";
 import LocationModal from "../../shared/components/LocationModal";
 import EmptyState from "../../shared/components/EmptyState";
+import { BranchCardSkeleton } from "../../shared/components/Skeleton";
 import CategoryFilterModal, {
   CATEGORY_LABELS,
 } from "./components/CategoryFilterModal";
@@ -449,20 +450,11 @@ function SetLocationCta({ onPress }: { onPress: () => void }) {
 }
 
 function LoadingState() {
-  const theme = useThemeTokens();
   return (
     <View style={styles.loadingWrap}>
-      <ActivityIndicator size="large" color={theme.colors.primary} />
-      <Text
-        style={{
-          color: theme.colors.textMuted,
-          fontFamily: theme.typography.fontFamilyRegular,
-          fontSize: 13,
-          marginTop: 12,
-        }}
-      >
-        Loading nearby branches…
-      </Text>
+      <BranchCardSkeleton />
+      <BranchCardSkeleton />
+      <BranchCardSkeleton />
     </View>
   );
 }
@@ -534,9 +526,9 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   loadingWrap: {
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 40,
+    paddingHorizontal: 24,
+    paddingTop: 12,
+    gap: 20,
   },
   footerLoader: {
     paddingVertical: 16,

@@ -17,6 +17,7 @@ import ScreenBody from "../../shared/components/ScreenBody";
 import PageHeader from "../../shared/components/PageHeader";
 import OfferCard from "../../shared/components/OfferCard";
 import EmptyState from "../../shared/components/EmptyState";
+import { OfferCardSkeleton } from "../../shared/components/Skeleton";
 import { useThemeTokens } from "../../shared/theme/ThemeContext";
 import {
   offerImageUri,
@@ -133,7 +134,16 @@ export function FavoritesScreen() {
   }, [feedQuery, theme]);
 
   const ListEmpty = useCallback(() => {
-    if (feedQuery.isLoading || !feedQuery.isSuccess) return null;
+    if (!feedQuery.isSuccess) {
+      if (!feedQuery.isLoading) return null;
+      return (
+        <View style={styles.skeletonList}>
+          <OfferCardSkeleton />
+          <OfferCardSkeleton />
+          <OfferCardSkeleton />
+        </View>
+      );
+    }
     return (
       <EmptyState
         icon="heart-outline"
@@ -254,5 +264,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     paddingVertical: 12,
+  },
+  skeletonList: {
+    paddingTop: 80,
+    gap: 15,
   },
 });
