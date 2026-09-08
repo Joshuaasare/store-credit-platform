@@ -8,7 +8,7 @@ import { GlassTabBar } from "./GlassTabBar";
 export type TabStackParamList = {
   Home: undefined;
   Credits: undefined;
-  Brands: undefined;
+  Explore: undefined;
   Saved: undefined;
 };
 
@@ -26,7 +26,7 @@ export function TabNavigator() {
       }}
     >
       <Tab.Screen name="Home" component={HomeScreen} />
-      <Tab.Screen name="Brands" component={ExploreScreen} />
+      <Tab.Screen name="Explore" component={ExploreScreen} />
       <Tab.Screen name="Credits" component={CreditsScreen} />
       <Tab.Screen name="Saved" component={FavoritesScreen} />
     </Tab.Navigator>

@@ -23,6 +23,7 @@ import MerchantAvatar from "../../shared/components/MerchantAvatar";
 import OfferDetailsCard from "../../shared/components/OfferDetailsCard";
 import { ImageLightbox } from "../../shared/components/ImageLightbox";
 import MerchantTabSwitcher from "../credits/components/MerchantTabSwitcher";
+import EmptyState from "../../shared/components/EmptyState";
 import { useCustomerFavorites } from "../../shared/hooks/useCustomerFavorites";
 import { useThemeTokens } from "../../shared/theme/ThemeContext";
 import {
@@ -398,32 +399,7 @@ function EmptyTabState({
   icon: keyof typeof Ionicons.glyphMap;
   text: string;
 }) {
-  const theme = useThemeTokens();
-  return (
-    <View
-      style={[
-        styles.emptyCard,
-        {
-          backgroundColor: theme.colors.surface,
-          borderColor: theme.colors.surfaceBorder,
-          borderRadius: theme.radii.lg,
-        },
-      ]}
-    >
-      <Ionicons name={icon} size={28} color={theme.colors.textMuted} />
-      <Text
-        style={{
-          color: theme.colors.textSecondary,
-          fontFamily: theme.typography.fontFamilyRegular,
-          fontSize: 13,
-          marginTop: 12,
-          textAlign: "center",
-        }}
-      >
-        {text}
-      </Text>
-    </View>
-  );
+  return <EmptyState compact icon={icon} title={text} />;
 }
 
 const styles = StyleSheet.create({
@@ -471,10 +447,4 @@ const styles = StyleSheet.create({
   },
   scroll: { flex: 1 },
   list: { gap: 12 },
-  emptyCard: {
-    alignItems: "center",
-    padding: 32,
-    borderWidth: 1,
-    marginTop: 8,
-  },
 });

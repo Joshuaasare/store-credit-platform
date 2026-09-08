@@ -9,7 +9,7 @@ import PageHeader from "../../shared/components/PageHeader";
 import GlassTransition from "../../shared/components/GlassTransition";
 import GlassCard from "../../shared/components/GlassCard";
 import MerchantActivityRow from "../../shared/components/MerchantActivityRow";
-import EmptyState from "./components/EmptyState";
+import EmptyState from "../../shared/components/EmptyState";
 import ErrorState from "./components/ErrorState";
 import LoadingState from "./components/LoadingState";
 import { useThemeTokens } from "../../shared/theme/ThemeContext";
@@ -40,66 +40,76 @@ export function CreditsScreen() {
     query.data?.success ? query.data.data.live : [],
   );
 
+  const renderContent = () => {
+    if (query.isLoading) {
+      return <LoadingState />;
+    }
+    if (query.isError) {
+      return (
+        <ErrorState
+          message={
+            query.error instanceof Error
+              ? query.error.message
+              : "Couldn't load your credits."
+          }
+        />
+      );
+    }
+    if (buckets.length === 0) {
+      return (
+        <EmptyState
+          icon="wallet-outline"
+          title="No live credits yet"
+          message="Visit a merchant to start earning credit on your purchases."
+        />
+      );
+    }
+    return (
+      <FlatList
+        data={buckets}
+        keyExtractor={(item) => String(item.merchantId)}
+        renderItem={({ item }) => (
+          <Pressable
+            onPress={() =>
+              navigation.navigate("CreditsMerchantDetail", {
+                merchantId: item.merchantId,
+              })
+            }
+            accessibilityRole="button"
+            accessibilityLabel={`${item.merchantName} credits`}
+            style={({ pressed }) => [pressed ? { opacity: 0.7 } : null]}
+          >
+            <MerchantActivityRow
+              kind="merchant-available"
+              item={merchantRow(item)}
+              metaTone={merchantRow(item).metaTone}
+            />
+          </Pressable>
+        )}
+        ItemSeparatorComponent={() => (
+          <View
+            style={{
+              height: 1,
+              backgroundColor: theme.colors.surfaceBorder,
+              marginHorizontal: 10,
+            }}
+          />
+        )}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{
+          ...styles.listContent,
+          paddingBottom: tabBarOffset + bottomOffset,
+        }}
+      />
+    );
+  };
+
   return (
     <ScreenBackground>
       <PageHeader />
       <ScreenBody edges={["bottom"]}>
         <GlassTransition>
-          <View style={styles.listArea}>
-            {query.isLoading ? (
-              <LoadingState />
-            ) : query.isError ? (
-              <ErrorState
-                message={
-                  query.error instanceof Error
-                    ? query.error.message
-                    : "Couldn't load your credits."
-                }
-              />
-            ) : buckets.length === 0 ? (
-              <EmptyState
-                title="No live credits yet"
-                subtitle="Visit a merchant to start earning credit on your purchases."
-              />
-            ) : (
-              <FlatList
-                data={buckets}
-                keyExtractor={(item) => String(item.merchantId)}
-                renderItem={({ item }) => (
-                  <Pressable
-                    onPress={() =>
-                      navigation.navigate("CreditsMerchantDetail", {
-                        merchantId: item.merchantId,
-                      })
-                    }
-                    accessibilityRole="button"
-                    accessibilityLabel={`${item.merchantName} credits`}
-                    style={({ pressed }) => [pressed ? { opacity: 0.7 } : null]}
-                  >
-                    <MerchantActivityRow
-                      kind="merchant-available"
-                      item={merchantRow(item)}
-                      metaTone={merchantRow(item).metaTone}
-                    />
-                  </Pressable>
-                )}
-                ItemSeparatorComponent={() => (
-                  <View
-                    style={{
-                      height: 1,
-                      backgroundColor: theme.colors.surfaceBorder,
-                      marginHorizontal: 10,
-                    }}
-                  />
-                )}
-                showsVerticalScrollIndicator={false}
-                contentContainerStyle={{
-                  ...styles.listContent,
-                  paddingBottom: tabBarOffset + bottomOffset,
-                }}
-              />
-            )}
-          </View>
+          <View style={styles.listArea}>{renderContent()}</View>
         </GlassTransition>
       </ScreenBody>
     </ScreenBackground>

@@ -41,6 +41,62 @@ export default function RecentActivitySection({
     />
   );
 
+  const renderContent = () => {
+    if (previewLoading && previewItems.length === 0) {
+      return (
+        <View style={styles.placeholderRow}>
+          <ActivityIndicator size="small" color={theme.colors.primary} />
+          <Text
+            style={{
+              color: theme.colors.textSecondary,
+              fontFamily: theme.typography.fontFamilyRegular,
+              fontSize: 14,
+              marginLeft: 8,
+            }}
+          >
+            Loading activity…
+          </Text>
+        </View>
+      );
+    }
+    if (previewError && previewItems.length === 0) {
+      return (
+        <Text
+          style={{
+            color: theme.colors.error,
+            fontFamily: theme.typography.fontFamilyRegular,
+            fontSize: 14,
+          }}
+        >
+          Couldn't load activity.
+        </Text>
+      );
+    }
+    if (previewItems.length === 0) {
+      return (
+        <Text
+          style={{
+            color: theme.colors.textMuted,
+            fontFamily: theme.typography.fontFamilyRegular,
+            fontSize: 14,
+          }}
+        >
+          No activity yet — visit a merchant to get started.
+        </Text>
+      );
+    }
+    return (
+      <FlatList
+        data={previewItems}
+        keyExtractor={keyExtractor}
+        renderItem={renderActivityRow}
+        ItemSeparatorComponent={ItemSeparator}
+        scrollEnabled={false}
+        showsVerticalScrollIndicator={false}
+      />
+    );
+  };
+
   return (
     <View style={styles.section}>
       <GlassCard padding={20}>
@@ -79,51 +135,7 @@ export default function RecentActivitySection({
           </TouchableOpacity>
         </View>
 
-        {/* Body — list, loading, error, or empty, all inside the card */}
-        {previewLoading && previewItems.length === 0 ? (
-          <View style={styles.placeholderRow}>
-            <ActivityIndicator size="small" color={theme.colors.primary} />
-            <Text
-              style={{
-                color: theme.colors.textSecondary,
-                fontFamily: theme.typography.fontFamilyRegular,
-                fontSize: 14,
-                marginLeft: 8,
-              }}
-            >
-              Loading activity…
-            </Text>
-          </View>
-        ) : previewError && previewItems.length === 0 ? (
-          <Text
-            style={{
-              color: theme.colors.error,
-              fontFamily: theme.typography.fontFamilyRegular,
-              fontSize: 14,
-            }}
-          >
-            Couldn't load activity.
-          </Text>
-        ) : previewItems.length === 0 ? (
-          <Text
-            style={{
-              color: theme.colors.textMuted,
-              fontFamily: theme.typography.fontFamilyRegular,
-              fontSize: 14,
-            }}
-          >
-            No activity yet — visit a merchant to get started.
-          </Text>
-        ) : (
-          <FlatList
-            data={previewItems}
-            keyExtractor={keyExtractor}
-            renderItem={renderActivityRow}
-            ItemSeparatorComponent={ItemSeparator}
-            scrollEnabled={false}
-            showsVerticalScrollIndicator={false}
-          />
-        )}
+        {renderContent()}
       </GlassCard>
     </View>
   );

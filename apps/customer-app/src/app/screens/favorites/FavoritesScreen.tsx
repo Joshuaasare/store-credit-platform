@@ -9,11 +9,14 @@ import {
   type ListRenderItem,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import type { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
+import { useNavigation } from "@react-navigation/native";
 import type { FavoritedConfig } from "@store-credit-platform/api-services";
 import ScreenBackground from "../../shared/components/ScreenBackground";
 import ScreenBody from "../../shared/components/ScreenBody";
 import PageHeader from "../../shared/components/PageHeader";
 import OfferCard from "../../shared/components/OfferCard";
+import EmptyState from "../../shared/components/EmptyState";
 import { useThemeTokens } from "../../shared/theme/ThemeContext";
 import {
   offerImageUri,
@@ -22,6 +25,7 @@ import {
   offerValueLabel,
 } from "../../shared/utils/offers.utils";
 import { useFavoritesFeed } from "./useFavoritesFeed";
+import type { TabStackParamList } from "../../navigation/TabNavigator";
 import OfferDetailsModal from "../../shared/components/OfferDetailsModal";
 import { useOffsets } from "../../shared/hooks/useOffsets";
 
@@ -31,6 +35,8 @@ const HERO_COLLAPSE_RANGE = 60;
 
 export function FavoritesScreen() {
   const theme = useThemeTokens();
+  const navigation =
+    useNavigation<BottomTabNavigationProp<TabStackParamList>>();
   const [selected, setSelected] = useState<FavoritedConfig | null>(null);
   const { tabBarOffset, bottomOffset } = useOffsets();
   const scrollY = useRef(new Animated.Value(0)).current;
@@ -129,46 +135,15 @@ export function FavoritesScreen() {
   const ListEmpty = useCallback(() => {
     if (feedQuery.isLoading || !feedQuery.isSuccess) return null;
     return (
-      <View style={styles.empty}>
-        <View
-          style={[
-            styles.emptyIconWrap,
-            {
-              backgroundColor: theme.colors.surfaceInput,
-              borderRadius: theme.radii.pill,
-            },
-          ]}
-        >
-          <Ionicons
-            name="heart-outline"
-            size={32}
-            color={theme.colors.textMuted}
-          />
-        </View>
-        <Text
-          style={{
-            color: theme.colors.textSecondary,
-            fontFamily: theme.typography.fontFamilyMedium,
-            fontSize: 15,
-            marginTop: 12,
-          }}
-        >
-          No favorites yet
-        </Text>
-        <Text
-          style={{
-            color: theme.colors.textMuted,
-            fontFamily: theme.typography.fontFamilyRegular,
-            fontSize: 13,
-            textAlign: "center",
-            marginTop: 4,
-          }}
-        >
-          Tap the heart on any offer to save it here.
-        </Text>
-      </View>
+      <EmptyState
+        icon="heart-outline"
+        title="No favorites yet"
+        message="Tap the heart on any offer to save it here."
+        actionLabel="Explore offers"
+        onAction={() => navigation.navigate("Explore")}
+      />
     );
-  }, [feedQuery.isLoading, feedQuery.isSuccess, theme]);
+  }, [feedQuery.isLoading, feedQuery.isSuccess, navigation]);
 
   return (
     <ScreenBackground>
@@ -279,17 +254,5 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     paddingVertical: 12,
-  },
-  empty: {
-    paddingVertical: 64,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 24,
-  },
-  emptyIconWrap: {
-    width: 64,
-    height: 64,
-    alignItems: "center",
-    justifyContent: "center",
   },
 });
