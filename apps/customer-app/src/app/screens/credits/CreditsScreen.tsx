@@ -5,6 +5,7 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useNavigation } from "@react-navigation/native";
 import ScreenBackground from "../../shared/components/ScreenBackground";
 import ScreenBody from "../../shared/components/ScreenBody";
+import AppRefreshControl from "../../shared/components/AppRefreshControl";
 import PageHeader from "../../shared/components/PageHeader";
 import GlassTransition from "../../shared/components/GlassTransition";
 import GlassCard from "../../shared/components/GlassCard";
@@ -103,6 +104,14 @@ export function CreditsScreen() {
           />
         )}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <AppRefreshControl
+            refreshing={query.isRefetching}
+            onRefresh={() => {
+              void query.refetch();
+            }}
+          />
+        }
         contentContainerStyle={{
           ...styles.listContent,
           paddingBottom: tabBarOffset + bottomOffset,
@@ -115,9 +124,7 @@ export function CreditsScreen() {
     <ScreenBackground>
       <PageHeader />
       <ScreenBody edges={["bottom"]}>
-        <GlassTransition>
-          <View style={styles.listArea}>{renderContent()}</View>
-        </GlassTransition>
+        <View style={styles.listArea}>{renderContent()}</View>
       </ScreenBody>
     </ScreenBackground>
   );

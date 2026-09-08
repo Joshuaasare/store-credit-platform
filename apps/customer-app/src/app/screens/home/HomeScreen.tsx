@@ -2,7 +2,7 @@ import { useCallback, useMemo, useState } from "react";
 import { Platform, ScrollView, StyleSheet, View } from "react-native";
 import { useNavigation } from "@react-navigation/native";
 import type { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type {
   CustomerActivity,
   CustomerActivitiesApiResponse,
@@ -11,6 +11,7 @@ import type {
 import ScreenBackground from "../../shared/components/ScreenBackground";
 import ScreenBody from "../../shared/components/ScreenBody";
 import PageHeader from "../../shared/components/PageHeader";
+import AppRefreshControl from "../../shared/components/AppRefreshControl";
 import {
   customerActivitiesService,
   customerCreditsService,
@@ -31,6 +32,7 @@ const ACTIVITIES_PREVIEW_KEY = ["customer", "activities", "preview"] as const;
 export function HomeScreen() {
   const navigation =
     useNavigation<BottomTabNavigationProp<TabStackParamList>>();
+  const queryClient = useQueryClient();
   const { tabBarOffset, bottomOffset } = useOffsets();
 
   // Sum remaining on every credit row, not just live — total wallet position at a glance.
@@ -80,6 +82,21 @@ export function HomeScreen() {
     setModalVisible(false);
   }, []);
 
+  const [refreshing, setRefreshing] = useState(false);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["customer", "credits"] }),
+        queryClient.invalidateQueries({ queryKey: ["customer", "activities"] }),
+        queryClient.invalidateQueries({ queryKey: ["customer", "offersNearby"] }),
+      ]);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [queryClient]);
+
   return (
     <ScreenBackground>
       <PageHeader unreadNotifications={5} />
@@ -93,6 +110,12 @@ export function HomeScreen() {
             ...styles.scrollContent,
             paddingBottom: tabBarOffset + bottomOffset,
           }}
+          refreshControl={
+            <AppRefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+            />
+          }
         >
           {/* <GlassTransition> */}
           <View style={styles.heroBlock}>

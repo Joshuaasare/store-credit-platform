@@ -13,6 +13,7 @@ import type { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
 import { useNavigation } from "@react-navigation/native";
 import type { FavoritedConfig } from "@store-credit-platform/api-services";
 import ScreenBackground from "../../shared/components/ScreenBackground";
+import AppRefreshControl from "../../shared/components/AppRefreshControl";
 import ScreenBody from "../../shared/components/ScreenBody";
 import PageHeader from "../../shared/components/PageHeader";
 import OfferCard from "../../shared/components/OfferCard";
@@ -218,6 +219,14 @@ export function FavoritesScreen() {
           }}
           onEndReachedThreshold={0.5}
           showsVerticalScrollIndicator={false}
+          refreshControl={
+            <AppRefreshControl
+              refreshing={feedQuery.isRefetching}
+              onRefresh={() => {
+                void feedQuery.refetch();
+              }}
+            />
+          }
           contentContainerStyle={{
             ...styles.listContent,
 

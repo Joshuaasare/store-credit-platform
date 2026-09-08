@@ -17,6 +17,7 @@ import {
 import { customerCreditsService } from "../../../api/client";
 import type { AppStackParamList } from "../../../navigation/RootNavigator";
 import ScreenBody from "../../../shared/components/ScreenBody";
+import AppRefreshControl from "../../../shared/components/AppRefreshControl";
 import EmptyState from "../../../shared/components/EmptyState";
 import { RowSkeleton } from "../../../shared/components/Skeleton";
 import { useOffsets } from "../../../shared/hooks/useOffsets";
@@ -164,6 +165,14 @@ export function CreditsMerchantAvailable({
             }}
             contentContainerStyle={styles.listContent}
             showsVerticalScrollIndicator={false}
+            refreshControl={
+              <AppRefreshControl
+                refreshing={query.isRefetching}
+                onRefresh={() => {
+                  void query.refetch();
+                }}
+              />
+            }
           />
         </GlassCard>
         <Pressable

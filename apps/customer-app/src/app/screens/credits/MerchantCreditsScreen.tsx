@@ -279,6 +279,7 @@ export function MerchantCreditsScreen() {
               isLoading={approvedInfinite.isLoading}
               isError={approvedInfinite.isError}
               error={approvedInfinite.error}
+              isRefetching={approvedInfinite.isRefetching}
               isFetchingNextPage={approvedInfinite.isFetchingNextPage}
               hasNextPage={approvedInfinite.hasNextPage}
               fetchNextPage={approvedInfinite.fetchNextPage}

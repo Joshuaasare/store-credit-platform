@@ -9,6 +9,7 @@ import { formatRelativeTimestamp } from "../../../shared/utils/date.utils";
 import type { CustomerApprovedRedemption } from "@store-credit-platform/api-services";
 import { getInitials } from "../../../shared/utils/ui.utils";
 import ScreenBody from "../../../shared/components/ScreenBody";
+import AppRefreshControl from "../../../shared/components/AppRefreshControl";
 import { useOffsets } from "../../../shared/hooks/useOffsets";
 
 export function CreditsMerchantApproved({
@@ -16,6 +17,7 @@ export function CreditsMerchantApproved({
   isLoading,
   isError,
   error,
+  isRefetching,
   isFetchingNextPage,
   hasNextPage,
   fetchNextPage,
@@ -25,6 +27,7 @@ export function CreditsMerchantApproved({
   isLoading: boolean;
   isError: boolean;
   error: unknown;
+  isRefetching: boolean;
   isFetchingNextPage: boolean;
   hasNextPage: boolean;
   fetchNextPage: () => void;
@@ -155,8 +158,14 @@ export function CreditsMerchantApproved({
               }
             }}
             onEndReachedThreshold={0.5}
-            refreshing={false}
-            onRefresh={refetch}
+            refreshControl={
+              <AppRefreshControl
+                refreshing={isRefetching}
+                onRefresh={() => {
+                  refetch();
+                }}
+              />
+            }
           />
         </GlassCard>
       </ScreenBody>

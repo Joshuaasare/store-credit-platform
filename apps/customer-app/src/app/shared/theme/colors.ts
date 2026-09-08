@@ -90,6 +90,7 @@ export interface ColorTokens {
   /** Recessed field fill (inputs sit slightly below the card). */
   surfaceInput: string;
   /** Glass hairline border. */
+  skeletonSurface: string;
   surfaceBorder: string;
   surfaceBorderStrong: string;
   /** Floating pill / active indicator fill. */
@@ -225,7 +226,8 @@ export const lightColors: ColorTokens = {
   // Frosted-white wash over the home header blur — white at 32% tints the
   // frosted glass whiter without hiding the content scrolling underneath.
   glassWash: "rgba(255,255,255,0.32)",
-  surfaceInput: "rgba(15,23,42,0.1)",
+  surfaceInput: "rgba(15,23,42,0.04)",
+  skeletonSurface: "rgba(15,23,42,0.10)",
   surfaceBorder: "rgba(137, 2, 62, 0.15)",
   /** Card-outline stroke — deeper than the in-between hairlines. */
   surfaceBorderStrong: "rgba(137, 2, 62, 0.45)",
@@ -301,6 +303,7 @@ export const darkColors: ColorTokens = {
   surface: "rgba(255,255,255,0.05)",
   glassWash: "rgba(255,255,255,0.03)",
   surfaceInput: "rgba(255,255,255,0.04)",
+  skeletonSurface: "rgba(255,255,255,0.08)",
   surfaceBorder: "rgba(255,255,255,0.10)",
   surfaceBorderStrong: "rgba(255,255,255,0.18)",
   surfacePill: "rgba(61, 49, 66, 0.16)",

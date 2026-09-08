@@ -52,7 +52,7 @@ export function Skeleton({
           width,
           height,
           borderRadius: radius ?? theme.radii.sm,
-          backgroundColor: color ?? theme.colors.surfaceInput,
+          backgroundColor: color ?? theme.colors.skeletonSurface,
           opacity,
         },
         style,
@@ -62,11 +62,7 @@ export function Skeleton({
 }
 
 // Mirrors OfferCard: bordered 148-tall card with sticker block top-right.
-export function OfferCardSkeleton({
-  style,
-}: {
-  style?: StyleProp<ViewStyle>;
-}) {
+export function OfferCardSkeleton({ style }: { style?: StyleProp<ViewStyle> }) {
   const theme = useThemeTokens();
   return (
     <View

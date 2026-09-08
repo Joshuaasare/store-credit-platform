@@ -13,6 +13,7 @@ import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { NearbyOfferRow } from "@store-credit-platform/api-services";
 import ScreenBackground from "../../shared/components/ScreenBackground";
+import AppRefreshControl from "../../shared/components/AppRefreshControl";
 import PageHeader from "../../shared/components/PageHeader";
 import {
   offerImageUri,
@@ -145,6 +146,14 @@ export function NearbyOffersScreen() {
           { useNativeDriver: false },
         )}
         scrollEventThrottle={16}
+        refreshControl={
+          <AppRefreshControl
+            refreshing={query.isRefetching}
+            onRefresh={() => {
+              void query.refetch();
+            }}
+          />
+        }
         onEndReached={() => {
           if (query.hasNextPage && !query.isFetchingNextPage) {
             query.fetchNextPage();

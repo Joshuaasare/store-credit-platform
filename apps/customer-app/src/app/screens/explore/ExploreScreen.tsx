@@ -19,6 +19,7 @@ import type {
 } from "@store-credit-platform/api-services";
 import ScreenBackground from "../../shared/components/ScreenBackground";
 import ScreenBody from "../../shared/components/ScreenBody";
+import AppRefreshControl from "../../shared/components/AppRefreshControl";
 import PageHeader from "../../shared/components/PageHeader";
 import { useAuthStore } from "../../shared/store/useAuthStore";
 import { customerBranchService } from "../../api/client";
@@ -360,6 +361,14 @@ export function ExploreScreen() {
         }}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
+        refreshControl={
+          <AppRefreshControl
+            refreshing={activeQuery.isRefetching}
+            onRefresh={() => {
+              void activeQuery.refetch();
+            }}
+          />
+        }
       />
     );
   };
