@@ -5,13 +5,15 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useNavigation } from "@react-navigation/native";
 import ScreenBackground from "../../shared/components/ScreenBackground";
 import ScreenBody from "../../shared/components/ScreenBody";
+import AppRefreshControl from "../../shared/components/AppRefreshControl";
 import PageHeader from "../../shared/components/PageHeader";
 import GlassTransition from "../../shared/components/GlassTransition";
 import GlassCard from "../../shared/components/GlassCard";
 import MerchantActivityRow from "../../shared/components/MerchantActivityRow";
-import EmptyState from "./components/EmptyState";
-import ErrorState from "./components/ErrorState";
-import LoadingState from "./components/LoadingState";
+import EmptyState from "../../shared/components/EmptyState";
+import ErrorState from "../../shared/components/ErrorState";
+import { RowSkeleton } from "../../shared/components/Skeleton";
+import { friendlyErrorMessage } from "../../shared/utils/errorDisplay";
 import { useThemeTokens } from "../../shared/theme/ThemeContext";
 import { customerCreditsService } from "../../api/client";
 import { formatShortDate } from "../../shared/utils/date.utils";
@@ -40,67 +42,94 @@ export function CreditsScreen() {
     query.data?.success ? query.data.data.live : [],
   );
 
+  const renderContent = () => {
+    if (query.isLoading) {
+      return (
+        <View style={styles.skeletonList}>
+          <RowSkeleton />
+          <RowSkeleton />
+          <RowSkeleton />
+          <RowSkeleton />
+        </View>
+      );
+    }
+    if (query.isError) {
+      return (
+        <ErrorState
+          title="Couldn't load your credits"
+          message={friendlyErrorMessage(
+            query.error,
+            "We couldn't reach your wallet right now. Please try again.",
+          )}
+          onRetry={() => {
+            void query.refetch();
+          }}
+          retrying={query.isRefetching}
+        />
+      );
+    }
+    if (buckets.length === 0) {
+      return (
+        <EmptyState
+          icon="wallet-outline"
+          title="No live credits yet"
+          message="Visit a merchant to start earning credit on your purchases."
+        />
+      );
+    }
+    return (
+      <FlatList
+        data={buckets}
+        keyExtractor={(item) => String(item.merchantId)}
+        renderItem={({ item }) => (
+          <Pressable
+            onPress={() =>
+              navigation.navigate("CreditsMerchantDetail", {
+                merchantId: item.merchantId,
+              })
+            }
+            accessibilityRole="button"
+            accessibilityLabel={`${item.merchantName} credits`}
+            style={({ pressed }) => [pressed ? { opacity: 0.7 } : null]}
+          >
+            <MerchantActivityRow
+              kind="merchant-available"
+              item={merchantRow(item)}
+              metaTone={merchantRow(item).metaTone}
+            />
+          </Pressable>
+        )}
+        ItemSeparatorComponent={() => (
+          <View
+            style={{
+              height: 1,
+              backgroundColor: theme.colors.surfaceBorder,
+              marginHorizontal: 10,
+            }}
+          />
+        )}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <AppRefreshControl
+            refreshing={query.isRefetching}
+            onRefresh={() => {
+              void query.refetch();
+            }}
+          />
+        }
+        contentContainerStyle={{
+          ...styles.listContent,
+          paddingBottom: tabBarOffset + bottomOffset,
+        }}
+      />
+    );
+  };
+
   return (
     <ScreenBackground>
       <PageHeader />
       <ScreenBody edges={["bottom"]}>
-        <GlassTransition>
-          <View style={styles.listArea}>
-            {query.isLoading ? (
-              <LoadingState />
-            ) : query.isError ? (
-              <ErrorState
-                message={
-                  query.error instanceof Error
-                    ? query.error.message
-                    : "Couldn't load your credits."
-                }
-              />
-            ) : buckets.length === 0 ? (
-              <EmptyState
-                title="No live credits yet"
-                subtitle="Visit a merchant to start earning credit on your purchases."
-              />
-            ) : (
-              <FlatList
-                data={buckets}
-                keyExtractor={(item) => String(item.merchantId)}
-                renderItem={({ item }) => (
-                  <Pressable
-                    onPress={() =>
-                      navigation.navigate("CreditsMerchantDetail", {
-                        merchantId: item.merchantId,
-                      })
-                    }
-                    accessibilityRole="button"
-                    accessibilityLabel={`${item.merchantName} credits`}
-                    style={({ pressed }) => [pressed ? { opacity: 0.7 } : null]}
-                  >
-                    <MerchantActivityRow
-                      kind="merchant-available"
-                      item={merchantRow(item)}
-                      metaTone={merchantRow(item).metaTone}
-                    />
-                  </Pressable>
-                )}
-                ItemSeparatorComponent={() => (
-                  <View
-                    style={{
-                      height: 1,
-                      backgroundColor: theme.colors.surfaceBorder,
-                      marginHorizontal: 10,
-                    }}
-                  />
-                )}
-                showsVerticalScrollIndicator={false}
-                contentContainerStyle={{
-                  ...styles.listContent,
-                  paddingBottom: tabBarOffset + bottomOffset,
-                }}
-              />
-            )}
-          </View>
-        </GlassTransition>
+        <View style={styles.listArea}>{renderContent()}</View>
       </ScreenBody>
     </ScreenBackground>
   );
@@ -172,5 +201,9 @@ const styles = StyleSheet.create({
   },
   listContent: {
     paddingBottom: 24,
+  },
+  skeletonList: {
+    flex: 1,
+    justifyContent: "center",
   },
 });

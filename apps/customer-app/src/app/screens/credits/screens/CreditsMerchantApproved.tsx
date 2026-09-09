@@ -1,13 +1,17 @@
 import { StyleSheet, Text, View } from "react-native";
 import { FlatList } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
 import GlassCard from "../../../shared/components/GlassCard";
 import MerchantActivityRow from "../../../shared/components/MerchantActivityRow";
+import EmptyState from "../../../shared/components/EmptyState";
+import ErrorState from "../../../shared/components/ErrorState";
+import { RowSkeleton } from "../../../shared/components/Skeleton";
+import { friendlyErrorMessage } from "../../../shared/utils/errorDisplay";
 import { useThemeTokens } from "../../../shared/theme/ThemeContext";
 import { formatRelativeTimestamp } from "../../../shared/utils/date.utils";
 import type { CustomerApprovedRedemption } from "@store-credit-platform/api-services";
 import { getInitials } from "../../../shared/utils/ui.utils";
 import ScreenBody from "../../../shared/components/ScreenBody";
+import AppRefreshControl from "../../../shared/components/AppRefreshControl";
 import { useOffsets } from "../../../shared/hooks/useOffsets";
 
 export function CreditsMerchantApproved({
@@ -15,6 +19,7 @@ export function CreditsMerchantApproved({
   isLoading,
   isError,
   error,
+  isRefetching,
   isFetchingNextPage,
   hasNextPage,
   fetchNextPage,
@@ -24,6 +29,7 @@ export function CreditsMerchantApproved({
   isLoading: boolean;
   isError: boolean;
   error: unknown;
+  isRefetching: boolean;
   isFetchingNextPage: boolean;
   hasNextPage: boolean;
   fetchNextPage: () => void;
@@ -35,65 +41,74 @@ export function CreditsMerchantApproved({
   if (isLoading) {
     return (
       <View style={styles.centerFill}>
-        <Text style={{ color: theme.colors.textMuted }}>Loading…</Text>
+        <RowSkeleton />
+        <RowSkeleton />
+        <RowSkeleton />
+        <RowSkeleton />
       </View>
     );
   }
 
   if (isError) {
     return (
-      <View style={styles.centerFill}>
-        <Text
-          style={{
-            color: theme.colors.textSecondary,
-            fontFamily: theme.typography.fontFamilyRegular,
-            fontSize: 14,
-            textAlign: "center",
-          }}
-        >
-          {error instanceof Error
-            ? error.message
-            : "Couldn't load approved redemptions."}
-        </Text>
-      </View>
+      <ErrorState
+        compact
+        title="Couldn't load your history"
+        message={friendlyErrorMessage(
+          error,
+          "We couldn't load your approved redemptions. Please try again.",
+        )}
+        onRetry={refetch}
+        retrying={isRefetching}
+      />
     );
   }
 
   if (items.length === 0) {
     return (
-      <View style={styles.emptyState}>
-        <Ionicons
-          name="checkmark-circle-outline"
-          size={56}
-          color={theme.colors.textMuted}
-          style={styles.emptyIcon}
-        />
-        <Text
-          style={[
-            styles.emptyTitle,
-            {
-              color: theme.colors.text,
-              fontFamily: theme.typography.fontFamilyMedium,
-            },
-          ]}
-        >
-          No approved redemptions
-        </Text>
-        <Text
-          style={[
-            styles.emptySubtitle,
-            {
-              color: theme.colors.textSecondary,
-              fontFamily: theme.typography.fontFamilyRegular,
-            },
-          ]}
-        >
-          Approved redemption requests will appear here once the merchant
-          confirms them.
-        </Text>
-      </View>
+      <EmptyState
+        compact
+        icon="checkmark-circle-outline"
+        title="No approved redemptions"
+        message="Approved redemption requests will appear here once the merchant confirms them."
+      />
     );
   }
+
+  const renderFooter = () => {
+    if (isFetchingNextPage) {
+      return (
+        <View style={styles.footer}>
+          <Text
+            style={{
+              color: theme.colors.textMuted,
+              fontFamily: theme.typography.fontFamilyRegular,
+              fontSize: 13,
+            }}
+          >
+            Loading more…
+          </Text>
+        </View>
+      );
+    }
+    if (!hasNextPage) {
+      return (
+        <View style={styles.footer}>
+          <Text
+            style={{
+              color: theme.colors.textMuted,
+              fontFamily: theme.typography.fontFamilyRegular,
+              fontSize: 12,
+              opacity: 0.7,
+            }}
+          >
+            End of approved history
+          </Text>
+        </View>
+      );
+    }
+    return null;
+  };
 
   return (
     <View style={styles.cardWrap}>
@@ -134,42 +149,21 @@ export function CreditsMerchantApproved({
               />
             )}
             contentContainerStyle={styles.listContent}
-            ListFooterComponent={
-              isFetchingNextPage ? (
-                <View style={styles.footer}>
-                  <Text
-                    style={{
-                      color: theme.colors.textMuted,
-                      fontFamily: theme.typography.fontFamilyRegular,
-                      fontSize: 13,
-                    }}
-                  >
-                    Loading more…
-                  </Text>
-                </View>
-              ) : !hasNextPage ? (
-                <View style={styles.footer}>
-                  <Text
-                    style={{
-                      color: theme.colors.textMuted,
-                      fontFamily: theme.typography.fontFamilyRegular,
-                      fontSize: 12,
-                      opacity: 0.7,
-                    }}
-                  >
-                    End of approved history
-                  </Text>
-                </View>
-              ) : null
-            }
+            ListFooterComponent={renderFooter}
             onEndReached={() => {
               if (hasNextPage && !isFetchingNextPage) {
                 fetchNextPage();
               }
             }}
             onEndReachedThreshold={0.5}
-            refreshing={false}
-            onRefresh={refetch}
+            refreshControl={
+              <AppRefreshControl
+                refreshing={isRefetching}
+                onRefresh={() => {
+                  refetch();
+                }}
+              />
+            }
           />
         </GlassCard>
       </ScreenBody>
@@ -194,25 +188,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     paddingVertical: 64,
-  },
-  emptyState: {
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 48,
-    paddingHorizontal: 32,
-    gap: 6,
-  },
-  emptyIcon: {
-    marginBottom: 8,
-  },
-  emptyTitle: {
-    fontSize: 18,
-    letterSpacing: -0.2,
-  },
-  emptySubtitle: {
-    fontSize: 13,
-    lineHeight: 19,
-    textAlign: "center",
   },
   footer: {
     alignItems: "center",

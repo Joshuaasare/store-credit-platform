@@ -1,12 +1,7 @@
-import {
-  ActivityIndicator,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
+import { Skeleton } from "../../../shared/components/Skeleton";
 import { useThemeTokens } from "../../../shared/theme/ThemeContext";
 import { formatGhs } from "../../../shared/utils/formatGhs";
 
@@ -45,7 +40,7 @@ export default function HeroBalanceCard({
 
       <View style={styles.balanceBlock}>
         {creditsLoading ? (
-          <ActivityIndicator size="large" color="#ffffff" />
+          <Skeleton width={220} height={40} radius={theme.radii.md} color="rgba(255,255,255,0.25)" />
         ) : (
           <Text
             style={styles.balance}

@@ -1,6 +1,9 @@
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import { Ionicons } from "@expo/vector-icons";
 import { useThemeTokens } from "../../../shared/theme/ThemeContext";
+import EmptyState from "../../../shared/components/EmptyState";
+import ErrorState from "../../../shared/components/ErrorState";
+import { RowSkeleton } from "../../../shared/components/Skeleton";
+import { friendlyErrorMessage } from "../../../shared/utils/errorDisplay";
 import {
   customerCreditsService,
   customerRedemptionsService,
@@ -30,8 +33,6 @@ export function CreditsMerchantPending({
   onCancelRequest: () => void;
   onEditRequest: () => void;
 }) {
-  const theme = useThemeTokens();
-
   const creditsQuery = useQuery<CustomerCreditsApiResponse>({
     queryKey: CREDITS_QUERY_KEY,
     queryFn: () => customerCreditsService.getMyCredits(),
@@ -59,61 +60,37 @@ export function CreditsMerchantPending({
   if (creditsQuery.isLoading) {
     return (
       <View style={styles.centerFill}>
-        <Text style={{ color: theme.colors.textMuted }}>Loading…</Text>
+        <RowSkeleton />
+        <RowSkeleton />
+        <RowSkeleton />
       </View>
     );
   }
   if (creditsQuery.isError) {
     return (
-      <View style={styles.centerFill}>
-        <Text
-          style={{
-            color: theme.colors.textSecondary,
-            fontFamily: theme.typography.fontFamilyRegular,
-            fontSize: 14,
-            textAlign: "center",
-          }}
-        >
-          {creditsQuery.error instanceof Error
-            ? creditsQuery.error.message
-            : "Couldn't load your pending request."}
-        </Text>
-      </View>
+      <ErrorState
+        compact
+        title="Couldn't load your request"
+        message={friendlyErrorMessage(
+          creditsQuery.error,
+          "We couldn't load your pending redemption. Please try again.",
+        )}
+        onRetry={() => {
+          void creditsQuery.refetch();
+        }}
+        retrying={creditsQuery.isRefetching}
+      />
     );
   }
 
   if (total <= 0) {
     return (
-      <View style={styles.emptyState}>
-        <Ionicons
-          name="time-outline"
-          size={56}
-          color={theme.colors.textMuted}
-          style={styles.emptyIcon}
-        />
-        <Text
-          style={[
-            styles.emptyTitle,
-            {
-              color: theme.colors.text,
-              fontFamily: theme.typography.fontFamilyMedium,
-            },
-          ]}
-        >
-          No pending request
-        </Text>
-        <Text
-          style={[
-            styles.emptySubtitle,
-            {
-              color: theme.colors.textSecondary,
-              fontFamily: theme.typography.fontFamilyRegular,
-            },
-          ]}
-        >
-          You don't have any pending redemption at {merchantName}.
-        </Text>
-      </View>
+      <EmptyState
+        compact
+        icon="time-outline"
+        title="No pending request"
+        message={`You don't have any pending redemption at ${merchantName}.`}
+      />
     );
   }
 
@@ -328,25 +305,6 @@ const styles = StyleSheet.create({
   },
   listCard: {
     overflow: "hidden",
-  },
-  emptyState: {
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 48,
-    paddingHorizontal: 32,
-    gap: 6,
-  },
-  emptyIcon: {
-    marginBottom: 8,
-  },
-  emptyTitle: {
-    fontSize: 18,
-    letterSpacing: -0.2,
-  },
-  emptySubtitle: {
-    fontSize: 13,
-    lineHeight: 19,
-    textAlign: "center",
   },
   codeBlock: {
     alignItems: "center",

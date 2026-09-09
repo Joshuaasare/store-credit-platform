@@ -19,6 +19,7 @@ import type {
 } from "@store-credit-platform/api-services";
 import ScreenBackground from "../../shared/components/ScreenBackground";
 import ScreenBody from "../../shared/components/ScreenBody";
+import AppRefreshControl from "../../shared/components/AppRefreshControl";
 import PageHeader from "../../shared/components/PageHeader";
 import { useAuthStore } from "../../shared/store/useAuthStore";
 import { customerBranchService } from "../../api/client";
@@ -26,6 +27,10 @@ import { useOffsets } from "../../shared/hooks/useOffsets";
 import { useTheme, useThemeTokens } from "../../shared/theme/ThemeContext";
 import type { AppStackParamList } from "../../navigation/RootNavigator";
 import LocationModal from "../../shared/components/LocationModal";
+import EmptyState from "../../shared/components/EmptyState";
+import ErrorState from "../../shared/components/ErrorState";
+import { BranchCardSkeleton } from "../../shared/components/Skeleton";
+import { friendlyErrorMessage } from "../../shared/utils/errorDisplay";
 import CategoryFilterModal, {
   CATEGORY_LABELS,
 } from "./components/CategoryFilterModal";
@@ -131,11 +136,11 @@ export function ExploreScreen() {
 
   const emptyStateText = searchMode
     ? debouncedQuery.trim().length === 0
-      ? "Type to search branches by name or place."
-      : "No branches match your search"
+      ? "Type to merchants by name or place."
+      : "No merchants match your search"
     : activeCategory != null
-      ? `No branches in this category nearby`
-      : "No branches near you yet";
+      ? `No merchants in this category nearby`
+      : "No merchants near you yet";
 
   type ExploreListItem =
     | { type: "header" }
@@ -202,7 +207,6 @@ export function ExploreScreen() {
             <Ionicons
               name="funnel-outline"
               size={16}
-              // color={theme.colors.textOnPrimary}
               color={
                 activeCategory ? theme.colors.primary : theme.colors.textMuted
               }
@@ -300,65 +304,94 @@ export function ExploreScreen() {
     </BlurView>
   );
 
+  const renderContent = () => {
+    if (branches.length === 0) {
+      return (
+        <View style={{ paddingHorizontal: 24 }}>
+          {renderSearchArea()}
+          {!hasLocation ? (
+            <SetLocationCta onPress={() => setLocationOpen(true)} />
+          ) : activeQuery.isLoading ? (
+            <LoadingState />
+          ) : activeQuery.isError ? (
+            <ErrorState
+              title="Couldn't load merchants"
+              message={friendlyErrorMessage(
+                activeQuery.error,
+                "We couldn't load merchants near you right now. Please try again.",
+              )}
+              onRetry={() => {
+                void activeQuery.refetch();
+              }}
+              retrying={activeQuery.isRefetching}
+            />
+          ) : (
+            <EmptyBranchesState
+              text={emptyStateText}
+              message="Oops. merchants in your area may not have active offers right now."
+            />
+          )}
+        </View>
+      );
+    }
+
+    return (
+      <FlatList
+        data={listData}
+        keyExtractor={(item) =>
+          item.type === "header" ? "header" : `branch-${item.branch.id}`
+        }
+        renderItem={({ item }) =>
+          item.type === "header" ? (
+            renderSearchArea()
+          ) : (
+            <BranchCard
+              branch={item.branch}
+              onPress={() =>
+                stackNavigation.navigate("BranchOffersDetail", {
+                  branch: item.branch,
+                })
+              }
+            />
+          )
+        }
+        stickyHeaderIndices={[0]}
+        onEndReached={() => activeQuery.fetchNextPage()}
+        onEndReachedThreshold={0.5}
+        ItemSeparatorComponent={({ leadingItem }) =>
+          leadingItem.type === "header" ? null : <View style={{ height: 20 }} />
+        }
+        stickyHeaderHiddenOnScroll
+        ListFooterComponent={
+          activeQuery.isFetchingNextPage ? (
+            <View style={styles.footerLoader}>
+              <ActivityIndicator color={theme.colors.primary} />
+            </View>
+          ) : null
+        }
+        contentContainerStyle={{
+          paddingBottom: tabBarOffset + bottomOffset,
+          paddingHorizontal: 24,
+        }}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+        refreshControl={
+          <AppRefreshControl
+            refreshing={activeQuery.isRefetching}
+            onRefresh={() => {
+              void activeQuery.refetch();
+            }}
+          />
+        }
+      />
+    );
+  };
+
   return (
     <ScreenBackground>
       <PageHeader />
       <ScreenBody edges={["bottom"]} padding={0}>
-        {branches.length === 0 ? (
-          <View style={{ paddingHorizontal: 24 }}>
-            {renderSearchArea()}
-            {!hasLocation ? (
-              <SetLocationCta onPress={() => setLocationOpen(true)} />
-            ) : activeQuery.isLoading ? (
-              <LoadingState />
-            ) : (
-              <EmptyBranchesState text={emptyStateText} />
-            )}
-          </View>
-        ) : (
-          <FlatList
-            data={listData}
-            keyExtractor={(item) =>
-              item.type === "header" ? "header" : `branch-${item.branch.id}`
-            }
-            renderItem={({ item }) =>
-              item.type === "header" ? (
-                renderSearchArea()
-              ) : (
-                <BranchCard
-                  branch={item.branch}
-                  onPress={() =>
-                    stackNavigation.navigate("BranchOffersDetail", {
-                      branch: item.branch,
-                    })
-                  }
-                />
-              )
-            }
-            stickyHeaderIndices={[0]}
-            onEndReached={() => activeQuery.fetchNextPage()}
-            onEndReachedThreshold={0.5}
-            ItemSeparatorComponent={({ leadingItem }) =>
-              leadingItem.type === "header" ? null : (
-                <View style={{ height: 20 }} />
-              )
-            }
-            stickyHeaderHiddenOnScroll
-            ListFooterComponent={
-              activeQuery.isFetchingNextPage ? (
-                <View style={styles.footerLoader}>
-                  <ActivityIndicator color={theme.colors.primary} />
-                </View>
-              ) : null
-            }
-            contentContainerStyle={{
-              paddingBottom: tabBarOffset + bottomOffset,
-              paddingHorizontal: 24,
-            }}
-            showsVerticalScrollIndicator={false}
-            keyboardShouldPersistTaps="handled"
-          />
-        )}
+        {renderContent()}
 
         <CategoryFilterModal
           visible={categoryModalOpen}
@@ -440,67 +473,24 @@ function SetLocationCta({ onPress }: { onPress: () => void }) {
 }
 
 function LoadingState() {
-  const theme = useThemeTokens();
   return (
     <View style={styles.loadingWrap}>
-      <ActivityIndicator size="large" color={theme.colors.primary} />
-      <Text
-        style={{
-          color: theme.colors.textMuted,
-          fontFamily: theme.typography.fontFamilyRegular,
-          fontSize: 13,
-          marginTop: 12,
-        }}
-      >
-        Loading nearby branches…
-      </Text>
+      <BranchCardSkeleton />
+      <BranchCardSkeleton />
+      <BranchCardSkeleton />
     </View>
   );
 }
 
-function EmptyBranchesState({ text }: { text: string }) {
-  const theme = useThemeTokens();
+function EmptyBranchesState({
+  text,
+  message,
+}: {
+  text: string;
+  message: string;
+}) {
   return (
-    <View
-      style={[
-        styles.emptyCard,
-        {
-          backgroundColor: theme.colors.surface,
-          borderColor: theme.colors.surfaceBorder,
-          borderRadius: theme.radii.lg,
-        },
-      ]}
-    >
-      <Ionicons
-        name="storefront-outline"
-        size={32}
-        color={theme.colors.textMuted}
-      />
-      <Text
-        style={{
-          color: theme.colors.text,
-          fontFamily: theme.typography.fontFamilySemiBold,
-          fontSize: 16,
-          marginTop: 12,
-          textAlign: "center",
-        }}
-      >
-        {text}
-      </Text>
-      <Text
-        style={{
-          color: theme.colors.textSecondary,
-          fontFamily: theme.typography.fontFamilyRegular,
-          fontSize: 13,
-          lineHeight: 19,
-          marginTop: 8,
-          textAlign: "center",
-        }}
-      >
-        Try a different location — merchants in your area may not have active
-        offers right now.
-      </Text>
-    </View>
+    <EmptyState icon="storefront-outline" title={text} message={message} />
   );
 }
 
@@ -559,9 +549,9 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   loadingWrap: {
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 40,
+    paddingHorizontal: 24,
+    paddingTop: 12,
+    gap: 20,
   },
   footerLoader: {
     paddingVertical: 16,

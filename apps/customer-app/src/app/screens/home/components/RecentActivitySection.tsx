@@ -1,5 +1,4 @@
 import {
-  ActivityIndicator,
   FlatList,
   StyleSheet,
   Text,
@@ -11,6 +10,9 @@ import { Ionicons } from "@expo/vector-icons";
 import type { CustomerActivity } from "@store-credit-platform/api-services";
 import ActivityRow from "../../../shared/components/ActivityRow";
 import GlassCard from "../../../shared/components/GlassCard";
+import ErrorState from "../../../shared/components/ErrorState";
+import { RowSkeleton } from "../../../shared/components/Skeleton";
+import { friendlyErrorMessage } from "../../../shared/utils/errorDisplay";
 import { useThemeTokens } from "../../../shared/theme/ThemeContext";
 
 const keyExtractor = (item: CustomerActivity) => `${item.kind}-${item.id}`;
@@ -24,11 +26,15 @@ export default function RecentActivitySection({
   previewError,
   previewItems,
   onOpenActivitiesModal,
+  onRetry,
+  retrying,
 }: {
   previewLoading: boolean;
   previewError: Error | null;
   previewItems: CustomerActivity[];
   onOpenActivitiesModal: () => void;
+  onRetry: () => void;
+  retrying: boolean;
 }) {
   const theme = useThemeTokens();
 
@@ -40,6 +46,55 @@ export default function RecentActivitySection({
       ]}
     />
   );
+
+  const renderContent = () => {
+    if (previewLoading && previewItems.length === 0) {
+      return (
+        <View style={styles.placeholderRow}>
+          <RowSkeleton />
+          <RowSkeleton />
+        </View>
+      );
+    }
+    if (previewError && previewItems.length === 0) {
+      return (
+        <ErrorState
+          compact
+          style={{ paddingVertical: 16 }}
+          title="Couldn't load activity"
+          message={friendlyErrorMessage(
+            previewError,
+            "We couldn't load your recent activity. Please try again.",
+          )}
+          onRetry={onRetry}
+          retrying={retrying}
+        />
+      );
+    }
+    if (previewItems.length === 0) {
+      return (
+        <Text
+          style={{
+            color: theme.colors.textMuted,
+            fontFamily: theme.typography.fontFamilyRegular,
+            fontSize: 14,
+          }}
+        >
+          No activity yet — visit a merchant to get started.
+        </Text>
+      );
+    }
+    return (
+      <FlatList
+        data={previewItems}
+        keyExtractor={keyExtractor}
+        renderItem={renderActivityRow}
+        ItemSeparatorComponent={ItemSeparator}
+        scrollEnabled={false}
+        showsVerticalScrollIndicator={false}
+      />
+    );
+  };
 
   return (
     <View style={styles.section}>
@@ -79,51 +134,7 @@ export default function RecentActivitySection({
           </TouchableOpacity>
         </View>
 
-        {/* Body — list, loading, error, or empty, all inside the card */}
-        {previewLoading && previewItems.length === 0 ? (
-          <View style={styles.placeholderRow}>
-            <ActivityIndicator size="small" color={theme.colors.primary} />
-            <Text
-              style={{
-                color: theme.colors.textSecondary,
-                fontFamily: theme.typography.fontFamilyRegular,
-                fontSize: 14,
-                marginLeft: 8,
-              }}
-            >
-              Loading activity…
-            </Text>
-          </View>
-        ) : previewError && previewItems.length === 0 ? (
-          <Text
-            style={{
-              color: theme.colors.error,
-              fontFamily: theme.typography.fontFamilyRegular,
-              fontSize: 14,
-            }}
-          >
-            Couldn't load activity.
-          </Text>
-        ) : previewItems.length === 0 ? (
-          <Text
-            style={{
-              color: theme.colors.textMuted,
-              fontFamily: theme.typography.fontFamilyRegular,
-              fontSize: 14,
-            }}
-          >
-            No activity yet — visit a merchant to get started.
-          </Text>
-        ) : (
-          <FlatList
-            data={previewItems}
-            keyExtractor={keyExtractor}
-            renderItem={renderActivityRow}
-            ItemSeparatorComponent={ItemSeparator}
-            scrollEnabled={false}
-            showsVerticalScrollIndicator={false}
-          />
-        )}
+        {renderContent()}
       </GlassCard>
     </View>
   );
@@ -151,8 +162,6 @@ const styles = StyleSheet.create({
     marginLeft: 68, // clears the arrow + avatar + gap (18 + 8 + 42 + 8 = 76, minus a touch)
   },
   placeholderRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 16,
+    paddingVertical: 4,
   },
 });

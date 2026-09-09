@@ -13,9 +13,8 @@ import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import type { NearbyOfferRow } from "@store-credit-platform/api-services";
 import ScreenBackground from "../../shared/components/ScreenBackground";
-import ScreenBody from "../../shared/components/ScreenBody";
+import AppRefreshControl from "../../shared/components/AppRefreshControl";
 import PageHeader from "../../shared/components/PageHeader";
-import OfferCard3 from "../../shared/components/OfferCard3";
 import {
   offerImageUri,
   offerStripIcon,
@@ -23,11 +22,14 @@ import {
   offerValueLabel,
 } from "../../shared/utils/offers.utils";
 import OfferDetailsModal from "../../shared/components/OfferDetailsModal";
+import EmptyState from "../../shared/components/EmptyState";
+import ErrorState from "../../shared/components/ErrorState";
+import { OfferCardSkeleton } from "../../shared/components/Skeleton";
+import { friendlyErrorMessage } from "../../shared/utils/errorDisplay";
 import { useNearbyOffersFeed } from "./useNearbyOffersFeed";
 import { useThemeTokens } from "../../shared/theme/ThemeContext";
 import type { AppStackParamList } from "../../navigation/RootNavigator";
 import OfferCard from "../../shared/components/OfferCard";
-import OfferCard2 from "../../shared/components/OfferCard2";
 
 // Headline collapses fully within this scroll distance and only returns
 // when the list is back at the very top.
@@ -111,46 +113,76 @@ export function NearbyOffersScreen() {
   const ListEmpty = useCallback(() => {
     if (query.isLoading || !query.isSuccess) return null;
     return (
-      <View style={styles.empty}>
-        <View
-          style={[
-            styles.emptyIconWrap,
-            {
-              backgroundColor: theme.colors.surfaceInput,
-              borderRadius: theme.radii.pill,
-            },
-          ]}
-        >
-          <Ionicons
-            name="pricetags-outline"
-            size={32}
-            color={theme.colors.textMuted}
-          />
-        </View>
-        <Text
-          style={{
-            color: theme.colors.textSecondary,
-            fontFamily: theme.typography.fontFamilyMedium,
-            fontSize: 15,
-            marginTop: 12,
-          }}
-        >
-          No offers nearby yet
-        </Text>
-        <Text
-          style={{
-            color: theme.colors.textMuted,
-            fontFamily: theme.typography.fontFamilyRegular,
-            fontSize: 13,
-            textAlign: "center",
-            marginTop: 4,
-          }}
-        >
-          Update your location in the header to see deals near you.
-        </Text>
-      </View>
+      <EmptyState
+        icon="pricetags-outline"
+        title="No offers nearby yet"
+        message="Update your location in the header to see deals near you."
+      />
     );
-  }, [query.isLoading, query.isSuccess, theme]);
+  }, [query.isLoading, query.isSuccess]);
+
+  const renderContent = () => {
+    if (!hasLocation) {
+      return <ListEmpty />;
+    }
+    if (query.isLoading) {
+      return (
+        <View style={styles.loadingWrap}>
+          <OfferCardSkeleton />
+          <OfferCardSkeleton />
+          <OfferCardSkeleton />
+        </View>
+      );
+    }
+    if (query.isError) {
+      return (
+        <ErrorState
+          style={{ paddingTop: 80 }}
+          title="Couldn't load offers"
+          message={friendlyErrorMessage(
+            query.error,
+            "We couldn't load deals near you right now. Please try again.",
+          )}
+          onRetry={() => {
+            void query.refetch();
+          }}
+          retrying={query.isRefetching}
+        />
+      );
+    }
+    return (
+      <FlatList
+        data={offers}
+        keyExtractor={(o) => `${o.config_type}-${o.config.id}`}
+        renderItem={renderItem}
+        ItemSeparatorComponent={ItemSeparator}
+        ListFooterComponent={ListFooter}
+        ListEmptyComponent={ListEmpty}
+        onScroll={Animated.event(
+          [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+          // JS driver — the native driver rejects a VirtualizedList event target.
+          { useNativeDriver: false },
+        )}
+        scrollEventThrottle={16}
+        refreshControl={
+          <AppRefreshControl
+            refreshing={query.isRefetching}
+            onRefresh={() => {
+              void query.refetch();
+            }}
+          />
+        }
+        onEndReached={() => {
+          if (query.hasNextPage && !query.isFetchingNextPage) {
+            query.fetchNextPage();
+          }
+        }}
+        onEndReachedThreshold={0.5}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.listContent}
+      />
+    );
+  };
 
   return (
     <ScreenBackground>
@@ -191,51 +223,9 @@ export function NearbyOffersScreen() {
             </View>
           </View>
         </Animated.View>
-        {!hasLocation ? (
-          <ListEmpty />
-        ) : query.isLoading ? (
-          <View style={styles.loadingWrap}>
-            <ActivityIndicator size="large" color={theme.colors.primary} />
-            <Text
-              style={{
-                color: theme.colors.textMuted,
-                fontFamily: theme.typography.fontFamilyRegular,
-                fontSize: 13,
-                marginTop: 12,
-              }}
-            >
-              Loading nearby offers…
-            </Text>
-          </View>
-        ) : (
-          <FlatList
-            data={offers}
-            keyExtractor={(o) => `${o.config_type}-${o.config.id}`}
-            renderItem={renderItem}
-            ItemSeparatorComponent={ItemSeparator}
-            ListFooterComponent={ListFooter}
-            ListEmptyComponent={ListEmpty}
-            onScroll={Animated.event(
-              [{ nativeEvent: { contentOffset: { y: scrollY } } }],
-              // JS driver — the native driver rejects a VirtualizedList event target.
-              { useNativeDriver: false },
-            )}
-            scrollEventThrottle={16}
-            onEndReached={() => {
-              if (query.hasNextPage && !query.isFetchingNextPage) {
-                query.fetchNextPage();
-              }
-            }}
-            onEndReachedThreshold={0.5}
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={styles.listContent}
-          />
-        )}
+        {renderContent()}
 
-        <OfferDetailsModal
-          offer={selected}
-          onClose={() => setSelected(null)}
-        />
+        <OfferDetailsModal offer={selected} onClose={() => setSelected(null)} />
       </View>
     </ScreenBackground>
   );
@@ -280,21 +270,8 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     paddingVertical: 12,
   },
-  empty: {
-    paddingVertical: 64,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 24,
-  },
-  emptyIconWrap: {
-    width: 64,
-    height: 64,
-    alignItems: "center",
-    justifyContent: "center",
-  },
   loadingWrap: {
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 40,
+    paddingTop: 80,
+    gap: 15,
   },
 });

@@ -17,6 +17,9 @@ import {
 import { customerCreditsService } from "../../../api/client";
 import type { AppStackParamList } from "../../../navigation/RootNavigator";
 import ScreenBody from "../../../shared/components/ScreenBody";
+import AppRefreshControl from "../../../shared/components/AppRefreshControl";
+import EmptyState from "../../../shared/components/EmptyState";
+import { RowSkeleton } from "../../../shared/components/Skeleton";
 import { useOffsets } from "../../../shared/hooks/useOffsets";
 
 const CREDITS_QUERY_KEY = ["customer", "credits"] as const;
@@ -91,41 +94,31 @@ export function CreditsMerchantAvailable({
   if (query.isLoading) {
     return (
       <View style={styles.centerFill}>
-        <Text style={{ color: theme.colors.textMuted }}>Loading…</Text>
+        <RowSkeleton />
+        <RowSkeleton />
+        <RowSkeleton />
+        <RowSkeleton />
       </View>
     );
   }
   if (!bucket) {
     return (
-      <View style={styles.centerFill}>
-        <Text
-          style={{
-            color: theme.colors.textSecondary,
-            fontFamily: theme.typography.fontFamilyRegular,
-            fontSize: 14,
-            textAlign: "center",
-          }}
-        >
-          No live credits at this merchant right now.
-        </Text>
-      </View>
+      <EmptyState
+        compact
+        icon="wallet-outline"
+        title="No live credits yet"
+        message="Credits you earn at this merchant will show up here."
+      />
     );
   }
   if (flatRows.length === 0) {
     return (
-      <View style={styles.centerFill}>
-        <Text
-          style={{
-            color: theme.colors.textSecondary,
-            fontFamily: theme.typography.fontFamilyRegular,
-            fontSize: 14,
-            textAlign: "center",
-          }}
-        >
-          Every credit here is reserved by a pending request. Cancel or wait for
-          approval to free it up.
-        </Text>
-      </View>
+      <EmptyState
+        compact
+        icon="hourglass-outline"
+        title="All credits reserved"
+        message="Every credit here is reserved by a pending request. Cancel or wait for approval to free it up."
+      />
     );
   }
 
@@ -172,6 +165,14 @@ export function CreditsMerchantAvailable({
             }}
             contentContainerStyle={styles.listContent}
             showsVerticalScrollIndicator={false}
+            refreshControl={
+              <AppRefreshControl
+                refreshing={query.isRefetching}
+                onRefresh={() => {
+                  void query.refetch();
+                }}
+              />
+            }
           />
         </GlassCard>
         <Pressable

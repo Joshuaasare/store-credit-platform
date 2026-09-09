@@ -9,11 +9,18 @@ import {
   type ListRenderItem,
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import type { BottomTabNavigationProp } from "@react-navigation/bottom-tabs";
+import { useNavigation } from "@react-navigation/native";
 import type { FavoritedConfig } from "@store-credit-platform/api-services";
 import ScreenBackground from "../../shared/components/ScreenBackground";
+import AppRefreshControl from "../../shared/components/AppRefreshControl";
 import ScreenBody from "../../shared/components/ScreenBody";
 import PageHeader from "../../shared/components/PageHeader";
 import OfferCard from "../../shared/components/OfferCard";
+import EmptyState from "../../shared/components/EmptyState";
+import ErrorState from "../../shared/components/ErrorState";
+import { OfferCardSkeleton } from "../../shared/components/Skeleton";
+import { friendlyErrorMessage } from "../../shared/utils/errorDisplay";
 import { useThemeTokens } from "../../shared/theme/ThemeContext";
 import {
   offerImageUri,
@@ -22,6 +29,7 @@ import {
   offerValueLabel,
 } from "../../shared/utils/offers.utils";
 import { useFavoritesFeed } from "./useFavoritesFeed";
+import type { TabStackParamList } from "../../navigation/TabNavigator";
 import OfferDetailsModal from "../../shared/components/OfferDetailsModal";
 import { useOffsets } from "../../shared/hooks/useOffsets";
 
@@ -31,6 +39,8 @@ const HERO_COLLAPSE_RANGE = 60;
 
 export function FavoritesScreen() {
   const theme = useThemeTokens();
+  const navigation =
+    useNavigation<BottomTabNavigationProp<TabStackParamList>>();
   const [selected, setSelected] = useState<FavoritedConfig | null>(null);
   const { tabBarOffset, bottomOffset } = useOffsets();
   const scrollY = useRef(new Animated.Value(0)).current;
@@ -127,48 +137,42 @@ export function FavoritesScreen() {
   }, [feedQuery, theme]);
 
   const ListEmpty = useCallback(() => {
-    if (feedQuery.isLoading || !feedQuery.isSuccess) return null;
-    return (
-      <View style={styles.empty}>
-        <View
-          style={[
-            styles.emptyIconWrap,
-            {
-              backgroundColor: theme.colors.surfaceInput,
-              borderRadius: theme.radii.pill,
-            },
-          ]}
-        >
-          <Ionicons
-            name="heart-outline"
-            size={32}
-            color={theme.colors.textMuted}
+    if (!feedQuery.isSuccess) {
+      if (feedQuery.isError) {
+        return (
+          <ErrorState
+            style={{ paddingTop: 80 }}
+            title="Couldn't load favorites"
+            message={friendlyErrorMessage(
+              feedQuery.error,
+              "We couldn't load your saved offers. Please try again.",
+            )}
+            onRetry={() => {
+              void feedQuery.refetch();
+            }}
+            retrying={feedQuery.isRefetching}
           />
+        );
+      }
+      if (!feedQuery.isLoading) return null;
+      return (
+        <View style={styles.skeletonList}>
+          <OfferCardSkeleton />
+          <OfferCardSkeleton />
+          <OfferCardSkeleton />
         </View>
-        <Text
-          style={{
-            color: theme.colors.textSecondary,
-            fontFamily: theme.typography.fontFamilyMedium,
-            fontSize: 15,
-            marginTop: 12,
-          }}
-        >
-          No favorites yet
-        </Text>
-        <Text
-          style={{
-            color: theme.colors.textMuted,
-            fontFamily: theme.typography.fontFamilyRegular,
-            fontSize: 13,
-            textAlign: "center",
-            marginTop: 4,
-          }}
-        >
-          Tap the heart on any offer to save it here.
-        </Text>
-      </View>
+      );
+    }
+    return (
+      <EmptyState
+        icon="heart-outline"
+        title="No favorites yet"
+        message="Tap the heart on any offer to save it here."
+        actionLabel="Explore offers"
+        onAction={() => navigation.navigate("Explore")}
+      />
     );
-  }, [feedQuery.isLoading, feedQuery.isSuccess, theme]);
+  }, [feedQuery, navigation]);
 
   return (
     <ScreenBackground>
@@ -233,6 +237,14 @@ export function FavoritesScreen() {
           }}
           onEndReachedThreshold={0.5}
           showsVerticalScrollIndicator={false}
+          refreshControl={
+            <AppRefreshControl
+              refreshing={feedQuery.isRefetching}
+              onRefresh={() => {
+                void feedQuery.refetch();
+              }}
+            />
+          }
           contentContainerStyle={{
             ...styles.listContent,
 
@@ -280,16 +292,8 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     paddingVertical: 12,
   },
-  empty: {
-    paddingVertical: 64,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 24,
-  },
-  emptyIconWrap: {
-    width: 64,
-    height: 64,
-    alignItems: "center",
-    justifyContent: "center",
+  skeletonList: {
+    paddingTop: 80,
+    gap: 15,
   },
 });
