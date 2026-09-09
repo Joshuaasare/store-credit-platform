@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { ThemeProvider } from "./shared/providers/ThemeProvider";
+import ErrorBoundary from "@shared/components/ErrorBoundary/ErrorBoundary";
 import { useAuthStore } from "@shared/stores/authStore";
 import ProtectedRoute from "@shared//components/ProtectedRoute/ProtectedRoute";
 import Credits from "./pages/Credits/Credits";
@@ -14,8 +15,8 @@ import Customers from "./pages/Customers/Customers";
 import CustomerDetail from "./pages/Customers/CustomerDetail";
 import Redemptions from "./pages/Redemptions/Redemptions";
 import Staff from "./pages/Staff/Staff";
-import VerifyOtp from "./pages/auth/VerifyOTP";
-import Login from "./pages/auth/Login";
+import Login from "./pages/Auth/Login";
+import VerifyOtp from "./pages/Auth/VerifyOTP";
 
 export function App() {
   const initialize = useAuthStore((state) => state.initialize);
@@ -26,26 +27,34 @@ export function App() {
 
   return (
     <ThemeProvider defaultTheme="light">
-      <Routes>
-        <Route path="/login" element={<Login />} />
-        <Route path="/verify-otp" element={<VerifyOtp />} />
-        <Route element={<ProtectedRoute />}>
-          <Route element={<MainLayout />}>
-            <Route path="/" element={<MyStore />} />
-            <Route path="/credits" element={<Credits />} />
-            <Route path="/profile" element={<Profile />} />
-            <Route path="/transactions" element={<Transactions />}>
-              <Route index element={<TransactionsList />} />
-              <Route path="leaderboard" element={<TransactionsLeaderboard />} />
+      <ErrorBoundary>
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          <Route path="/verify-otp" element={<VerifyOtp />} />
+          <Route element={<ProtectedRoute />}>
+            <Route element={<MainLayout />}>
+              <Route path="/" element={<MyStore />} />
+              <Route path="/credits" element={<Credits />} />
+              <Route path="/profile" element={<Profile />} />
+              <Route path="/transactions" element={<Transactions />}>
+                <Route index element={<TransactionsList />} />
+                <Route
+                  path="leaderboard"
+                  element={<TransactionsLeaderboard />}
+                />
+              </Route>
+              <Route path="/customers" element={<Customers />} />
+              <Route
+                path="/customers/:customerId"
+                element={<CustomerDetail />}
+              />
+              <Route path="/redemptions" element={<Redemptions />} />
+              <Route path="/staff" element={<Staff />} />
+              <Route path="/dashboard" element={<Navigate to="/" replace />} />
             </Route>
-            <Route path="/customers" element={<Customers />} />
-            <Route path="/customers/:customerId" element={<CustomerDetail />} />
-            <Route path="/redemptions" element={<Redemptions />} />
-            <Route path="/staff" element={<Staff />} />
-            <Route path="/dashboard" element={<Navigate to="/" replace />} />
           </Route>
-        </Route>
-      </Routes>
+        </Routes>
+      </ErrorBoundary>
     </ThemeProvider>
   );
 }

@@ -16,8 +16,9 @@ import {
 } from "@shared/types/api.types";
 import { createStorageService } from "@store-credit-platform/api-services";
 import { getCountryByCode } from "@shared/utils/countries";
+import { getErrorMessage } from "@shared/utils/errors.utils";
 import { CountryFlag } from "@shared/components/CountryFlag/CountryFlag";
-import { compressImage } from "@shared/utils/imageCompression.utils";
+import { compressStoreImage } from "@shared/utils/imageCompression.utils";
 import { useStoreStore } from "@shared/stores/storeStore";
 import { MerchantEditDialog } from "./MerchantEditDialog";
 import {
@@ -51,13 +52,17 @@ function useStoreImageUpload(
       toast.error("Please select an image file");
       return;
     }
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error("Image must be under 5MB");
+    // Only a sanity ceiling — compression below handles everything smaller.
+    if (file.size > 25 * 1024 * 1024) {
+      toast.error("Image must be under 25MB");
       return;
     }
     try {
       setIsWorking(true);
-      const compressed = await compressImage(file);
+      const compressed = await compressStoreImage(
+        file,
+        field === "cover_photo_url",
+      );
       const { publicUrl } = await storage.uploadFile(compressed, {
         bucket: STORE_ASSETS_BUCKET,
         folder: `${merchantFolder}/${folder}`,
@@ -70,10 +75,7 @@ function useStoreImageUpload(
         successToastProperties,
       );
     } catch (err) {
-      toast.error(
-        err instanceof Error ? err.message : "Upload failed",
-        errorToastProperties,
-      );
+      toast.error(getErrorMessage(err, "Upload failed"), errorToastProperties);
     } finally {
       setIsWorking(false);
     }
@@ -90,9 +92,7 @@ function useStoreImageUpload(
       await updateMerchant({ [field]: null } as UpdateMerchantRequest);
       toast.success(field === "logo_url" ? "Logo removed" : "Cover removed");
     } catch (err) {
-      toast.error(
-        err instanceof Error ? err.message : "Failed to remove image",
-      );
+      toast.error(getErrorMessage(err, "Failed to remove image"));
     } finally {
       setIsWorking(false);
     }

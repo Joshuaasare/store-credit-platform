@@ -38,13 +38,22 @@ export class TransactionService {
     const AddRedemptions =
       typeFilter === "all" || typeFilter === "credit_redeem";
 
+    // Half-open bounds: the webapp sends end=null for open-ended presets
+    // (e.g. "this year"), so each bound applies independently.
+    const dateRange =
+      filters.start != null || filters.end != null
+        ? { from: filters.start ?? undefined, to: filters.end ?? undefined }
+        : undefined;
+
     const [purchases, credits, redemptions] = await Promise.all([
       AddPurchases
-        ? this.fetchPurchases(filteredBranchIds)
+        ? this.fetchPurchases(filteredBranchIds, dateRange)
         : Promise.resolve([]),
-      AddCredits ? this.fetchCredits(filteredBranchIds) : Promise.resolve([]),
+      AddCredits
+        ? this.fetchCredits(filteredBranchIds, dateRange)
+        : Promise.resolve([]),
       AddRedemptions
-        ? this.fetchRedemptions(filteredBranchIds)
+        ? this.fetchRedemptions(filteredBranchIds, dateRange)
         : Promise.resolve([]),
     ]);
 
@@ -94,8 +103,8 @@ export class TransactionService {
   private async fetchPurchases(
     branchIds: number[],
     dateRange?: {
-      from: number;
-      to: number;
+      from?: number;
+      to?: number;
     },
   ) {
     const purchasesSelect = `${QueryFragments.BASE_CUSTOMER_PURCHASE},
@@ -110,10 +119,11 @@ export class TransactionService {
       .is("deleted_at", null)
       .order("transaction_date", { ascending: false });
 
-    if (dateRange?.to && dateRange?.from) {
-      query = query
-        .gte("transaction_date", dateRange.from)
-        .lte("transaction_date", dateRange.to);
+    if (dateRange?.from != null) {
+      query = query.gte("transaction_date", dateRange.from);
+    }
+    if (dateRange?.to != null) {
+      query = query.lte("transaction_date", dateRange.to);
     }
     const { data, error } = await query;
 
@@ -124,8 +134,8 @@ export class TransactionService {
   private async fetchCredits(
     branchIds: number[],
     dateRange?: {
-      from: number;
-      to: number;
+      from?: number;
+      to?: number;
     },
   ) {
     const creditSelect =
@@ -140,10 +150,11 @@ export class TransactionService {
       .is("revoked_at", null)
       .order("created_at", { ascending: false });
 
-    if (dateRange?.to && dateRange?.from) {
-      query = query
-        .gte("transaction_date", dateRange.from)
-        .lte("transaction_date", dateRange.to);
+    if (dateRange?.from != null) {
+      query = query.gte("transaction_date", dateRange.from);
+    }
+    if (dateRange?.to != null) {
+      query = query.lte("transaction_date", dateRange.to);
     }
 
     const { data, error } = await query;
@@ -154,8 +165,8 @@ export class TransactionService {
   private async fetchRedemptions(
     branchIds: number[],
     dateRange?: {
-      from: number;
-      to: number;
+      from?: number;
+      to?: number;
     },
   ) {
     const redemptionSelect = `${QueryFragments.BASE_CUSTOMER_CREDIT_REDEMPTION},
@@ -170,10 +181,11 @@ export class TransactionService {
       .not("approved_at", "is", null)
       .order("approved_at", { ascending: false });
 
-    if (dateRange?.to && dateRange?.from) {
-      query = query
-        .gte("transaction_date", dateRange.from)
-        .lte("transaction_date", dateRange.to);
+    if (dateRange?.from != null) {
+      query = query.gte("transaction_date", dateRange.from);
+    }
+    if (dateRange?.to != null) {
+      query = query.lte("transaction_date", dateRange.to);
     }
 
     const { data, error } = await query;

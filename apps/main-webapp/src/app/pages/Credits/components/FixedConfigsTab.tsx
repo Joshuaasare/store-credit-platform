@@ -6,6 +6,7 @@ import { creditConfigService } from "@store-credit-platform/api-services";
 import { isApiError } from "@shared/utils/api.utils";
 import { FixedConfigCard } from "./FixedConfigCard";
 import { FixedConfigDialog } from "./FixedConfigDialog";
+import ErrorState from "@shared/components/ErrorState/ErrorState";
 
 interface FixedConfigsTabProps {
   isManager: boolean;
@@ -43,9 +44,12 @@ export function FixedConfigsTab({ isManager }: FixedConfigsTabProps) {
       )}
 
       {query.isError && (
-        <div className="bg-card text-destructive rounded-xl border p-6 text-sm">
-          Failed to load fixed promos:{" "}
-          {query.error instanceof Error ? query.error.message : "Unknown error"}
+        <div className="bg-card rounded-xl border">
+          <ErrorState
+            error={query.error}
+            onRetry={() => void query.refetch()}
+            isRetrying={query.isFetching}
+          />
         </div>
       )}
 

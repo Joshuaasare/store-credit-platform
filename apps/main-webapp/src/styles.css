@@ -36,6 +36,23 @@
   src: url("/assets/fonts/inter-latin-700-normal.woff2") format("woff2");
 }
 
+/* Display faces for the promo image creator — single 400 weight each (the only
+ * weight these families ship), so don't extend to more weights. */
+@font-face {
+  font-family: "Archivo Black";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/assets/fonts/archivo-black-latin-400-normal.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Bebas Neue";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("/assets/fonts/bebas-neue-latin-400-normal.woff2") format("woff2");
+}
+
 :root {
   --radius: 0.625rem;
 }

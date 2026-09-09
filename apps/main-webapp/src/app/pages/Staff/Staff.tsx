@@ -35,6 +35,7 @@ import {
 } from "@store-credit-platform/web-components";
 import { staffService } from "@store-credit-platform/api-services";
 import { isApiError } from "@shared/utils/api.utils";
+import { getErrorMessage } from "@shared/utils/errors.utils";
 import { useStoreStore } from "@shared/stores/storeStore";
 import { useAuthStore } from "@shared/stores/authStore";
 import type { Staff } from "@shared/types/api.types";
@@ -52,6 +53,7 @@ import SearchInput from "@shared/components/SearchInput/SearchInput";
 import useDebounce from "@shared/hooks/useDebounce";
 import { FilterBar } from "@shared/components/FilterBar/FilterBar";
 import { PageHeader } from "@shared/components/PageHeader";
+import ErrorState from "@shared/components/ErrorState/ErrorState";
 import { allBranchOption, roleOptions } from "@shared/utils/options.utils";
 
 export default function Staff() {
@@ -119,7 +121,7 @@ export default function Staff() {
     },
     onError: (err) => {
       toast.error(
-        err instanceof Error ? err.message : "Failed to toggle access",
+        getErrorMessage(err, "Failed to toggle access"),
         errorToastProperties,
       );
     },
@@ -138,7 +140,7 @@ export default function Staff() {
     },
     onError: (err) => {
       toast.error(
-        err instanceof Error ? err.message : "Failed to delete staff member",
+        getErrorMessage(err, "Failed to delete staff member"),
         errorToastProperties,
       );
     },
@@ -148,6 +150,77 @@ export default function Staff() {
 
   const onClose = () => {
     setMode(undefined);
+  };
+
+  const renderContent = () => {
+    if (staffQuery.isError) {
+      return (
+        <ErrorState
+          error={staffQuery.error}
+          onRetry={() => void staffQuery.refetch()}
+          isRetrying={staffQuery.isFetching}
+        />
+      );
+    }
+
+    if (staffQuery.isPending) {
+      return (
+        <div className="space-y-2 p-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Skeleton key={i} className="h-14 w-full rounded-lg" />
+          ))}
+        </div>
+      );
+    }
+
+    if (visibleRows.length === 0) {
+      const search = debouncedSearchQuery.trim();
+      const firstStaff = branchId == null && roleFilter === "all";
+      let title = "No staff match these filters";
+      if (search) {
+        title = `No staff match "${search}"`;
+      } else if (firstStaff) {
+        title = "No staff yet";
+      }
+      const hint = search
+        ? "Try a different name or phone, or clear the filters."
+        : "Add your first staff member to start assigning roles and branches.";
+      return (
+        <div className="flex flex-col items-center justify-center gap-2 px-6 py-16 text-center">
+          <UserCog className="text-muted-foreground h-8 w-8" />
+          <p className="text-sm font-medium">{title}</p>
+          <p className="text-muted-foreground text-xs">{hint}</p>
+        </div>
+      );
+    }
+
+    return (
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Name</TableHead>
+            <TableHead>Role</TableHead>
+            <TableHead>Branch</TableHead>
+            <TableHead>Status</TableHead>
+            <TableHead>Last active</TableHead>
+            <TableHead className="w-12 text-right">Actions</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {visibleRows.map((s) => (
+            <StaffRow
+              key={s.id}
+              s={s}
+              selfId={user?.id ?? null}
+              onEdit={() => setEditing(s)}
+              onDelete={() => setDeleting(s)}
+              onToggleAccess={(next) => accessMutation.mutate({ s, next })}
+              pendingAccess={accessMutation.isPending}
+            />
+          ))}
+        </TableBody>
+      </Table>
+    );
   };
 
   const renderFilters = () => {
@@ -242,57 +315,7 @@ export default function Staff() {
           className="animate-fade-in-up overflow-hidden p-0 motion-reduce:animate-none"
           style={{ animationDelay: "120ms" }}
         >
-          {staffQuery.isPending ? (
-            <div className="space-y-2 p-4">
-              {Array.from({ length: 4 }).map((_, i) => (
-                <Skeleton key={i} className="h-14 w-full rounded-lg" />
-              ))}
-            </div>
-          ) : visibleRows.length === 0 ? (
-            <div className="flex flex-col items-center justify-center gap-2 px-6 py-16 text-center">
-              <UserCog className="text-muted-foreground h-8 w-8" />
-              <p className="text-sm font-medium">
-                {debouncedSearchQuery.trim()
-                  ? `No staff match "${debouncedSearchQuery.trim()}"`
-                  : branchId == null && roleFilter === "all"
-                    ? "No staff yet"
-                    : "No staff match these filters"}
-              </p>
-              <p className="text-muted-foreground text-xs">
-                {debouncedSearchQuery.trim()
-                  ? "Try a different name or phone, or clear the filters."
-                  : "Add your first staff member to start assigning roles and branches."}
-              </p>
-            </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Role</TableHead>
-                  <TableHead>Branch</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Last active</TableHead>
-                  <TableHead className="w-12 text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {visibleRows.map((s) => (
-                  <StaffRow
-                    key={s.id}
-                    s={s}
-                    selfId={user?.id ?? null}
-                    onEdit={() => setEditing(s)}
-                    onDelete={() => setDeleting(s)}
-                    onToggleAccess={(next) =>
-                      accessMutation.mutate({ s, next })
-                    }
-                    pendingAccess={accessMutation.isPending}
-                  />
-                ))}
-              </TableBody>
-            </Table>
-          )}
+          {renderContent()}
         </Card>
       </div>
 

@@ -32,6 +32,7 @@ import {
   errorToastProperties,
   successToastProperties,
 } from "@shared/utils/misc.utils";
+import { getErrorMessage } from "@shared/utils/errors.utils";
 import { isApiError } from "@shared/utils/api.utils";
 import { normalizePhone } from "@shared/utils/phone.utils";
 import { QrScanner } from "./QrScanner";
@@ -176,7 +177,7 @@ export function AddPurchaseDialog({
     },
     onError: (err) => {
       toast.error(
-        err instanceof Error ? err.message : "Failed to record purchase",
+        getErrorMessage(err, "Failed to record purchase"),
         errorToastProperties,
       );
     },
