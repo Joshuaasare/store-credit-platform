@@ -23,6 +23,7 @@ import {
 import { creditConfigService } from "@store-credit-platform/api-services";
 import type { RunningCreditConfig } from "@shared/types/api.types";
 import { isApiError } from "@shared/utils/api.utils";
+import { getErrorMessage } from "@shared/utils/errors.utils";
 import {
   errorToastProperties,
   successToastProperties,
@@ -67,9 +68,7 @@ export function RunningConfigCard({
 
   const deleteMutation = useMutation({
     mutationFn: async () => {
-      const res = await creditConfigService.deleteRunningConfig(
-        config.id,
-      );
+      const res = await creditConfigService.deleteRunningConfig(config.id);
       if (isApiError(res)) throw new Error(res.error);
     },
     onSuccess: () => {
@@ -78,7 +77,7 @@ export function RunningConfigCard({
     },
     onError: (err) =>
       toast.error(
-        err instanceof Error ? err.message : "Failed to delete config",
+        getErrorMessage(err, "Failed to delete config"),
         errorToastProperties,
       ),
   });
@@ -100,7 +99,7 @@ export function RunningConfigCard({
     },
     onError: (err) =>
       toast.error(
-        err instanceof Error ? err.message : "Failed to toggle config",
+        getErrorMessage(err, "Failed to toggle config"),
         errorToastProperties,
       ),
   });
@@ -231,7 +230,9 @@ export function RunningConfigCard({
                     className={isActive ? STATUS_DOT_ACTIVE : STATUS_DOT_PAUSED}
                   />
                   <span
-                    className={isActive ? STATUS_TEXT_ACTIVE : STATUS_TEXT_PAUSED}
+                    className={
+                      isActive ? STATUS_TEXT_ACTIVE : STATUS_TEXT_PAUSED
+                    }
                   >
                     {isActive ? "Active" : "Paused"}
                   </span>

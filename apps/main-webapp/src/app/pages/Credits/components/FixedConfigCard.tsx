@@ -21,15 +21,13 @@ import {
 import { creditConfigService } from "@store-credit-platform/api-services";
 import type { FixedCreditConfig } from "@shared/types/api.types";
 import { isApiError } from "@shared/utils/api.utils";
+import { getErrorMessage } from "@shared/utils/errors.utils";
 import {
   errorToastProperties,
   successToastProperties,
 } from "@shared/utils/misc.utils";
 import { formatEpochDate } from "@shared/utils/format";
-import {
-  endOfDayEpochMs,
-  fromEpochMs,
-} from "@shared/utils/date.utils";
+import { endOfDayEpochMs, fromEpochMs } from "@shared/utils/date.utils";
 import { ConfirmDialog } from "@shared/components/ConfirmDialog/ConfirmDialog";
 import { FixedConfigDialog } from "./FixedConfigDialog";
 import {
@@ -61,9 +59,7 @@ export function FixedConfigCard({ config, isManager }: FixedConfigCardProps) {
 
   const deleteMutation = useMutation({
     mutationFn: async () => {
-      const res = await creditConfigService.deleteFixedConfig(
-        config.id,
-      );
+      const res = await creditConfigService.deleteFixedConfig(config.id);
       if (isApiError(res)) throw new Error(res.error);
     },
     onSuccess: () => {
@@ -72,7 +68,7 @@ export function FixedConfigCard({ config, isManager }: FixedConfigCardProps) {
     },
     onError: (err) =>
       toast.error(
-        err instanceof Error ? err.message : "Failed to delete promo",
+        getErrorMessage(err, "Failed to delete promo"),
         errorToastProperties,
       ),
   });
@@ -94,7 +90,7 @@ export function FixedConfigCard({ config, isManager }: FixedConfigCardProps) {
     },
     onError: (err) =>
       toast.error(
-        err instanceof Error ? err.message : "Failed to toggle promo",
+        getErrorMessage(err, "Failed to toggle promo"),
         errorToastProperties,
       ),
   });
@@ -110,7 +106,8 @@ export function FixedConfigCard({ config, isManager }: FixedConfigCardProps) {
   const effectiveEnd =
     end != null ? endOfDayEpochMs(fromEpochMs(end) ?? new Date(end)) : null;
   const withinWindow =
-    (start == null || now >= start) && (effectiveEnd == null || now <= effectiveEnd);
+    (start == null || now >= start) &&
+    (effectiveEnd == null || now <= effectiveEnd);
   const activeRightNow = config.is_active && withinWindow;
 
   const statusLabel = activeRightNow
@@ -181,11 +178,11 @@ export function FixedConfigCard({ config, isManager }: FixedConfigCardProps) {
           )}
         </div>
 
-        <h3 className="mt-2 text-lg font-semibold leading-snug line-clamp-2">
+        <h3 className="mt-2 line-clamp-2 text-lg font-semibold leading-snug">
           {config.title?.trim() || "Untitled promo"}
         </h3>
         {config.description && (
-          <p className="text-muted-foreground mt-1 text-sm leading-relaxed line-clamp-2">
+          <p className="text-muted-foreground mt-1 line-clamp-2 text-sm leading-relaxed">
             {config.description}
           </p>
         )}
@@ -197,7 +194,7 @@ export function FixedConfigCard({ config, isManager }: FixedConfigCardProps) {
                 key={url + i}
                 src={url}
                 alt=""
-                className="h-16 w-16 rounded-md border border-border object-cover"
+                className="border-border h-16 w-16 rounded-md border object-cover"
               />
             ))}
             {overflow > 0 && (

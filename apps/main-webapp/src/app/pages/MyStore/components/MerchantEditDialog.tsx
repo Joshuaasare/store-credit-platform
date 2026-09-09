@@ -19,6 +19,7 @@ import {
 } from "@store-credit-platform/web-components";
 import { PhoneInput } from "@shared/components/PhoneInput/PhoneInput";
 import { countries, CountryCode } from "@shared/utils/countries";
+import { getErrorMessage } from "@shared/utils/errors.utils";
 import { useStoreStore } from "@shared/stores/storeStore";
 import { MerchantWithStats } from "@shared/types/api.types";
 import {
@@ -106,7 +107,7 @@ export function MerchantEditDialog({
       setOpen(false);
     } catch (err) {
       toast.error(
-        err instanceof Error ? err.message : "Failed to update store",
+        getErrorMessage(err, "Failed to update store"),
         errorToastProperties,
       );
     }

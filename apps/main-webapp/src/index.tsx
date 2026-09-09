@@ -9,6 +9,12 @@ const queryClient = new QueryClient({
     queries: {
       staleTime: 30_000,
       refetchOnWindowFocus: false,
+      // Permission errors won't resolve on retry — surface them immediately.
+      retry: (failureCount, error) =>
+        !(
+          error instanceof Error &&
+          /forbidden|unauthorized/i.test(error.message)
+        ) && failureCount < 3,
     },
   },
 });
