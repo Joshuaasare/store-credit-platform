@@ -23,7 +23,9 @@ import {
 } from "../../shared/utils/offers.utils";
 import OfferDetailsModal from "../../shared/components/OfferDetailsModal";
 import EmptyState from "../../shared/components/EmptyState";
+import ErrorState from "../../shared/components/ErrorState";
 import { OfferCardSkeleton } from "../../shared/components/Skeleton";
+import { friendlyErrorMessage } from "../../shared/utils/errorDisplay";
 import { useNearbyOffersFeed } from "./useNearbyOffersFeed";
 import { useThemeTokens } from "../../shared/theme/ThemeContext";
 import type { AppStackParamList } from "../../navigation/RootNavigator";
@@ -130,6 +132,22 @@ export function NearbyOffersScreen() {
           <OfferCardSkeleton />
           <OfferCardSkeleton />
         </View>
+      );
+    }
+    if (query.isError) {
+      return (
+        <ErrorState
+          style={{ paddingTop: 80 }}
+          title="Couldn't load offers"
+          message={friendlyErrorMessage(
+            query.error,
+            "We couldn't load deals near you right now. Please try again.",
+          )}
+          onRetry={() => {
+            void query.refetch();
+          }}
+          retrying={query.isRefetching}
+        />
       );
     }
     return (

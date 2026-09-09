@@ -132,6 +132,10 @@ export function HomeScreen() {
             previewError={previewQuery.error}
             previewItems={previewItems}
             onOpenActivitiesModal={openActivitiesModal}
+            onRetry={() => {
+              void previewQuery.refetch();
+            }}
+            retrying={previewQuery.isRefetching}
           />
 
           <NearbyOffersSection />

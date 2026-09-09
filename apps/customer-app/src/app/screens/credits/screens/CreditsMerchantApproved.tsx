@@ -3,7 +3,9 @@ import { FlatList } from "react-native";
 import GlassCard from "../../../shared/components/GlassCard";
 import MerchantActivityRow from "../../../shared/components/MerchantActivityRow";
 import EmptyState from "../../../shared/components/EmptyState";
+import ErrorState from "../../../shared/components/ErrorState";
 import { RowSkeleton } from "../../../shared/components/Skeleton";
+import { friendlyErrorMessage } from "../../../shared/utils/errorDisplay";
 import { useThemeTokens } from "../../../shared/theme/ThemeContext";
 import { formatRelativeTimestamp } from "../../../shared/utils/date.utils";
 import type { CustomerApprovedRedemption } from "@store-credit-platform/api-services";
@@ -49,20 +51,16 @@ export function CreditsMerchantApproved({
 
   if (isError) {
     return (
-      <View style={styles.centerFill}>
-        <Text
-          style={{
-            color: theme.colors.textSecondary,
-            fontFamily: theme.typography.fontFamilyRegular,
-            fontSize: 14,
-            textAlign: "center",
-          }}
-        >
-          {error instanceof Error
-            ? error.message
-            : "Couldn't load approved redemptions."}
-        </Text>
-      </View>
+      <ErrorState
+        compact
+        title="Couldn't load your history"
+        message={friendlyErrorMessage(
+          error,
+          "We couldn't load your approved redemptions. Please try again.",
+        )}
+        onRetry={refetch}
+        retrying={isRefetching}
+      />
     );
   }
 

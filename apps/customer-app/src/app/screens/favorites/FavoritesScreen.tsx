@@ -18,7 +18,9 @@ import ScreenBody from "../../shared/components/ScreenBody";
 import PageHeader from "../../shared/components/PageHeader";
 import OfferCard from "../../shared/components/OfferCard";
 import EmptyState from "../../shared/components/EmptyState";
+import ErrorState from "../../shared/components/ErrorState";
 import { OfferCardSkeleton } from "../../shared/components/Skeleton";
+import { friendlyErrorMessage } from "../../shared/utils/errorDisplay";
 import { useThemeTokens } from "../../shared/theme/ThemeContext";
 import {
   offerImageUri,
@@ -136,6 +138,22 @@ export function FavoritesScreen() {
 
   const ListEmpty = useCallback(() => {
     if (!feedQuery.isSuccess) {
+      if (feedQuery.isError) {
+        return (
+          <ErrorState
+            style={{ paddingTop: 80 }}
+            title="Couldn't load favorites"
+            message={friendlyErrorMessage(
+              feedQuery.error,
+              "We couldn't load your saved offers. Please try again.",
+            )}
+            onRetry={() => {
+              void feedQuery.refetch();
+            }}
+            retrying={feedQuery.isRefetching}
+          />
+        );
+      }
       if (!feedQuery.isLoading) return null;
       return (
         <View style={styles.skeletonList}>
@@ -154,7 +172,7 @@ export function FavoritesScreen() {
         onAction={() => navigation.navigate("Explore")}
       />
     );
-  }, [feedQuery.isLoading, feedQuery.isSuccess, navigation]);
+  }, [feedQuery, navigation]);
 
   return (
     <ScreenBackground>

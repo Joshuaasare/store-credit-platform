@@ -11,8 +11,9 @@ import GlassTransition from "../../shared/components/GlassTransition";
 import GlassCard from "../../shared/components/GlassCard";
 import MerchantActivityRow from "../../shared/components/MerchantActivityRow";
 import EmptyState from "../../shared/components/EmptyState";
+import ErrorState from "../../shared/components/ErrorState";
 import { RowSkeleton } from "../../shared/components/Skeleton";
-import ErrorState from "./components/ErrorState";
+import { friendlyErrorMessage } from "../../shared/utils/errorDisplay";
 import { useThemeTokens } from "../../shared/theme/ThemeContext";
 import { customerCreditsService } from "../../api/client";
 import { formatShortDate } from "../../shared/utils/date.utils";
@@ -55,11 +56,15 @@ export function CreditsScreen() {
     if (query.isError) {
       return (
         <ErrorState
-          message={
-            query.error instanceof Error
-              ? query.error.message
-              : "Couldn't load your credits."
-          }
+          title="Couldn't load your credits"
+          message={friendlyErrorMessage(
+            query.error,
+            "We couldn't reach your wallet right now. Please try again.",
+          )}
+          onRetry={() => {
+            void query.refetch();
+          }}
+          retrying={query.isRefetching}
         />
       );
     }

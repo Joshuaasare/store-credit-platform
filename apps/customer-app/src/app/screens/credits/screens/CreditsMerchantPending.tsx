@@ -1,7 +1,9 @@
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useThemeTokens } from "../../../shared/theme/ThemeContext";
 import EmptyState from "../../../shared/components/EmptyState";
+import ErrorState from "../../../shared/components/ErrorState";
 import { RowSkeleton } from "../../../shared/components/Skeleton";
+import { friendlyErrorMessage } from "../../../shared/utils/errorDisplay";
 import {
   customerCreditsService,
   customerRedemptionsService,
@@ -31,8 +33,6 @@ export function CreditsMerchantPending({
   onCancelRequest: () => void;
   onEditRequest: () => void;
 }) {
-  const theme = useThemeTokens();
-
   const creditsQuery = useQuery<CustomerCreditsApiResponse>({
     queryKey: CREDITS_QUERY_KEY,
     queryFn: () => customerCreditsService.getMyCredits(),
@@ -68,20 +68,18 @@ export function CreditsMerchantPending({
   }
   if (creditsQuery.isError) {
     return (
-      <View style={styles.centerFill}>
-        <Text
-          style={{
-            color: theme.colors.textSecondary,
-            fontFamily: theme.typography.fontFamilyRegular,
-            fontSize: 14,
-            textAlign: "center",
-          }}
-        >
-          {creditsQuery.error instanceof Error
-            ? creditsQuery.error.message
-            : "Couldn't load your pending request."}
-        </Text>
-      </View>
+      <ErrorState
+        compact
+        title="Couldn't load your request"
+        message={friendlyErrorMessage(
+          creditsQuery.error,
+          "We couldn't load your pending redemption. Please try again.",
+        )}
+        onRetry={() => {
+          void creditsQuery.refetch();
+        }}
+        retrying={creditsQuery.isRefetching}
+      />
     );
   }
 

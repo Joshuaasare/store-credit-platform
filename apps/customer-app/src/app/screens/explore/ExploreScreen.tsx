@@ -28,7 +28,9 @@ import { useTheme, useThemeTokens } from "../../shared/theme/ThemeContext";
 import type { AppStackParamList } from "../../navigation/RootNavigator";
 import LocationModal from "../../shared/components/LocationModal";
 import EmptyState from "../../shared/components/EmptyState";
+import ErrorState from "../../shared/components/ErrorState";
 import { BranchCardSkeleton } from "../../shared/components/Skeleton";
+import { friendlyErrorMessage } from "../../shared/utils/errorDisplay";
 import CategoryFilterModal, {
   CATEGORY_LABELS,
 } from "./components/CategoryFilterModal";
@@ -311,6 +313,18 @@ export function ExploreScreen() {
             <SetLocationCta onPress={() => setLocationOpen(true)} />
           ) : activeQuery.isLoading ? (
             <LoadingState />
+          ) : activeQuery.isError ? (
+            <ErrorState
+              title="Couldn't load merchants"
+              message={friendlyErrorMessage(
+                activeQuery.error,
+                "We couldn't load merchants near you right now. Please try again.",
+              )}
+              onRetry={() => {
+                void activeQuery.refetch();
+              }}
+              retrying={activeQuery.isRefetching}
+            />
           ) : (
             <EmptyBranchesState
               text={emptyStateText}

@@ -10,7 +10,9 @@ import { Ionicons } from "@expo/vector-icons";
 import type { CustomerActivity } from "@store-credit-platform/api-services";
 import ActivityRow from "../../../shared/components/ActivityRow";
 import GlassCard from "../../../shared/components/GlassCard";
+import ErrorState from "../../../shared/components/ErrorState";
 import { RowSkeleton } from "../../../shared/components/Skeleton";
+import { friendlyErrorMessage } from "../../../shared/utils/errorDisplay";
 import { useThemeTokens } from "../../../shared/theme/ThemeContext";
 
 const keyExtractor = (item: CustomerActivity) => `${item.kind}-${item.id}`;
@@ -24,11 +26,15 @@ export default function RecentActivitySection({
   previewError,
   previewItems,
   onOpenActivitiesModal,
+  onRetry,
+  retrying,
 }: {
   previewLoading: boolean;
   previewError: Error | null;
   previewItems: CustomerActivity[];
   onOpenActivitiesModal: () => void;
+  onRetry: () => void;
+  retrying: boolean;
 }) {
   const theme = useThemeTokens();
 
@@ -52,15 +58,17 @@ export default function RecentActivitySection({
     }
     if (previewError && previewItems.length === 0) {
       return (
-        <Text
-          style={{
-            color: theme.colors.error,
-            fontFamily: theme.typography.fontFamilyRegular,
-            fontSize: 14,
-          }}
-        >
-          Couldn't load activity.
-        </Text>
+        <ErrorState
+          compact
+          style={{ paddingVertical: 16 }}
+          title="Couldn't load activity"
+          message={friendlyErrorMessage(
+            previewError,
+            "We couldn't load your recent activity. Please try again.",
+          )}
+          onRetry={onRetry}
+          retrying={retrying}
+        />
       );
     }
     if (previewItems.length === 0) {
