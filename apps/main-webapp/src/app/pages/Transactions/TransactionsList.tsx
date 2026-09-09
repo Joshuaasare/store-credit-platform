@@ -39,6 +39,7 @@ import { AddPurchaseDialog } from "./components/AddPurchaseDialog/AddPurchaseDia
 import { TransactionDetailDialog } from "./components/TransactionDetailDialog";
 import { formatDisplayNumber } from "@shared/utils/ui.utils";
 import { TransactionTypeTag } from "@shared/components/TransactionTypeTag";
+import ErrorState from "@shared/components/ErrorState/ErrorState";
 
 const LIMIT = 20;
 
@@ -290,6 +291,13 @@ export default function TransactionsList() {
                     <Skeleton key={i} className="h-20 w-full" />
                   ))}
                 </div>
+              ) : transactionsQuery.isError ? (
+                <ErrorState
+                  compact
+                  error={transactionsQuery.error}
+                  onRetry={() => void transactionsQuery.refetch()}
+                  isRetrying={transactionsQuery.isFetching}
+                />
               ) : (
                 <div className="flex flex-col items-center justify-center gap-2 py-12 text-center">
                   <Receipt className="text-muted-foreground h-8 w-8" />

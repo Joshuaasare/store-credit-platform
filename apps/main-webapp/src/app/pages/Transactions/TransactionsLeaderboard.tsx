@@ -21,6 +21,7 @@ import {
   TransactionsFiltersValue,
 } from "./components/TransactionsFilters";
 import { formatDisplayNumber } from "@shared/utils/ui.utils";
+import ErrorState from "@shared/components/ErrorState/ErrorState";
 
 const LIMIT = 20;
 
@@ -197,6 +198,8 @@ export default function TransactionsLeaderboard() {
           value={
             stats ? (
               stats.total_customers.toLocaleString()
+            ) : statsQuery.isError ? (
+              <span className="text-muted-foreground">—</span>
             ) : (
               <Skeleton className="h-6 w-16" />
             )
@@ -210,6 +213,8 @@ export default function TransactionsLeaderboard() {
           value={
             stats ? (
               formatGHS(stats.total_purchases)
+            ) : statsQuery.isError ? (
+              <span className="text-muted-foreground">—</span>
             ) : (
               <Skeleton className="h-6 w-24" />
             )
@@ -223,6 +228,8 @@ export default function TransactionsLeaderboard() {
           value={
             stats ? (
               formatGHS(stats.total_credits_issued)
+            ) : statsQuery.isError ? (
+              <span className="text-muted-foreground">—</span>
             ) : (
               <Skeleton className="h-6 w-24" />
             )
@@ -272,6 +279,13 @@ export default function TransactionsLeaderboard() {
                     <Skeleton key={i} className="h-20 w-full" />
                   ))}
                 </div>
+              ) : leaderboardQuery.isError ? (
+                <ErrorState
+                  compact
+                  error={leaderboardQuery.error}
+                  onRetry={() => void leaderboardQuery.refetch()}
+                  isRetrying={leaderboardQuery.isFetching}
+                />
               ) : (
                 <div className="flex flex-col items-center justify-center gap-2 py-12 text-center">
                   <Users className="text-muted-foreground h-8 w-8" />

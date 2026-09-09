@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { Button, Input, cn } from "@store-credit-platform/web-components";
 import { createStorageService } from "@store-credit-platform/api-services";
 import { compressPromoImage } from "@shared/utils/imageCompression.utils";
+import { getErrorMessage } from "@shared/utils/errors.utils";
 import { errorToastProperties } from "@shared/utils/misc.utils";
 import {
   PROMO_FIELD_SETS,
@@ -156,7 +157,7 @@ export function PromoImageCreator({
       onSaved(publicUrl);
     } catch (err) {
       toast.error(
-        err instanceof Error ? err.message : "Failed to create promo image",
+        getErrorMessage(err, "Failed to create promo image"),
         errorToastProperties,
       );
     } finally {

@@ -23,6 +23,7 @@ import {
 } from "@store-credit-platform/web-components";
 import { PhoneInput } from "@shared/components/PhoneInput/PhoneInput";
 import { countries, CountryCode } from "@shared/utils/countries";
+import { getErrorMessage } from "@shared/utils/errors.utils";
 import { useStoreStore } from "@shared/stores/storeStore";
 import {
   BranchCategoryValues,
@@ -190,7 +191,7 @@ export function BranchEditDialog({
       onOpenChange?.(false);
     } catch (err) {
       toast.error(
-        err instanceof Error ? err.message : "Failed to save branch",
+        getErrorMessage(err, "Failed to save branch"),
         errorToastProperties,
       );
     }

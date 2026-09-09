@@ -1,8 +1,8 @@
 import { useEffect } from "react";
-import { RefreshCw } from "lucide-react";
-import { Button, Card, Skeleton } from "@store-credit-platform/web-components";
+import { Card, Skeleton } from "@store-credit-platform/web-components";
 import { useAuthStore } from "@shared/stores/authStore";
 import { useStoreStore } from "@shared/stores/storeStore";
+import ErrorState from "@shared/components/ErrorState/ErrorState";
 import { StoreHero } from "./components/StoreHero";
 import { StoreStatsRow } from "./components/StoreStatsRow";
 import { PoolStatusCard } from "./components/PoolStatusCard";
@@ -29,19 +29,12 @@ export default function MyStorePage() {
   if (error && !merchant) {
     return (
       <div className="flex min-h-screen items-center justify-center px-4">
-        <Card className="max-w-md p-6 text-center">
-          <h2 className="text-lg font-semibold">
-            Couldn&rsquo;t load your store
-          </h2>
-          <p className="text-muted-foreground mt-2 text-sm">{error}</p>
-          <Button
-            className="mt-4"
-            variant="outline"
-            onClick={() => void fetchStore()}
-          >
-            <RefreshCw className="mr-2 h-4 w-4" /> Retry
-          </Button>
-        </Card>
+        <ErrorState
+          error={error}
+          title="Couldn't load your store"
+          onRetry={() => void fetchStore()}
+          isRetrying={loading}
+        />
       </div>
     );
   }

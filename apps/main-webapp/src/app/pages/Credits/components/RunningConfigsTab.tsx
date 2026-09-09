@@ -6,6 +6,7 @@ import { creditConfigService } from "@store-credit-platform/api-services";
 import { isApiError } from "@shared/utils/api.utils";
 import { RunningConfigCard } from "./RunningConfigCard";
 import { RunningConfigDialog } from "./RunningConfigDialog";
+import ErrorState from "@shared/components/ErrorState/ErrorState";
 
 interface RunningConfigsTabProps {
   isManager: boolean;
@@ -43,11 +44,12 @@ export function RunningConfigsTab({ isManager }: RunningConfigsTabProps) {
       )}
 
       {query.isError && (
-        <div className="bg-card text-destructive rounded-xl border p-6 text-sm">
-          Failed to load running configs:{" "}
-          {query.error instanceof Error
-            ? query.error.message
-            : "Unknown error"}
+        <div className="bg-card rounded-xl border">
+          <ErrorState
+            error={query.error}
+            onRetry={() => void query.refetch()}
+            isRetrying={query.isFetching}
+          />
         </div>
       )}
 

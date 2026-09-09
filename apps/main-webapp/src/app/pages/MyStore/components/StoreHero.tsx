@@ -16,6 +16,7 @@ import {
 } from "@shared/types/api.types";
 import { createStorageService } from "@store-credit-platform/api-services";
 import { getCountryByCode } from "@shared/utils/countries";
+import { getErrorMessage } from "@shared/utils/errors.utils";
 import { CountryFlag } from "@shared/components/CountryFlag/CountryFlag";
 import { compressStoreImage } from "@shared/utils/imageCompression.utils";
 import { useStoreStore } from "@shared/stores/storeStore";
@@ -74,10 +75,7 @@ function useStoreImageUpload(
         successToastProperties,
       );
     } catch (err) {
-      toast.error(
-        err instanceof Error ? err.message : "Upload failed",
-        errorToastProperties,
-      );
+      toast.error(getErrorMessage(err, "Upload failed"), errorToastProperties);
     } finally {
       setIsWorking(false);
     }
@@ -94,9 +92,7 @@ function useStoreImageUpload(
       await updateMerchant({ [field]: null } as UpdateMerchantRequest);
       toast.success(field === "logo_url" ? "Logo removed" : "Cover removed");
     } catch (err) {
-      toast.error(
-        err instanceof Error ? err.message : "Failed to remove image",
-      );
+      toast.error(getErrorMessage(err, "Failed to remove image"));
     } finally {
       setIsWorking(false);
     }

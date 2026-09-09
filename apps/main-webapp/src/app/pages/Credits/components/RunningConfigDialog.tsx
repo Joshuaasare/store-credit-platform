@@ -28,6 +28,7 @@ import type {
   RunningCreditConfig,
 } from "@shared/types/api.types";
 import { isApiError } from "@shared/utils/api.utils";
+import { getErrorMessage } from "@shared/utils/errors.utils";
 import {
   errorToastProperties,
   successToastProperties,
@@ -175,10 +176,7 @@ export function RunningConfigDialog({
         setValue("images", [...images, ...uploaded], { shouldDirty: true });
       }
     } catch (err) {
-      toast.error(
-        err instanceof Error ? err.message : "Upload failed",
-        errorToastProperties,
-      );
+      toast.error(getErrorMessage(err, "Upload failed"), errorToastProperties);
     } finally {
       setUploadingCount(0);
     }
@@ -224,7 +222,7 @@ export function RunningConfigDialog({
     },
     onError: (err) =>
       toast.error(
-        err instanceof Error ? err.message : "Failed to save config",
+        getErrorMessage(err, "Failed to save config"),
         errorToastProperties,
       ),
   });

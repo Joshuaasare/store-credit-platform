@@ -24,6 +24,7 @@ import {
 } from "@store-credit-platform/web-components";
 import { PhoneInput } from "@shared/components/PhoneInput/PhoneInput";
 import { CountryCode } from "@shared/utils/countries";
+import { getErrorMessage } from "@shared/utils/errors.utils";
 import { staffService } from "@store-credit-platform/api-services";
 import { isApiError } from "@shared/utils/api.utils";
 import { useStoreStore } from "@shared/stores/storeStore";
@@ -134,7 +135,7 @@ export function StaffDialog({
       onOpenChange?.(false);
     } catch (err) {
       toast.error(
-        err instanceof Error ? err.message : "Failed to save staff member",
+        getErrorMessage(err, "Failed to save staff member"),
         errorToastProperties,
       );
     }

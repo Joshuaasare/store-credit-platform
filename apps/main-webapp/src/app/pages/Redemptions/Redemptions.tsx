@@ -40,6 +40,8 @@ import {
 import { formatDisplayNumber } from "@shared/utils/ui.utils";
 import RedemptionCodeDialog from "./components/RedemptionCodeDialog";
 import { PageHeader } from "@shared/components/PageHeader";
+import ErrorState from "@shared/components/ErrorState/ErrorState";
+import { getErrorMessage } from "@shared/utils/errors.utils";
 
 const LIMIT = 20;
 
@@ -147,7 +149,9 @@ const pendingRequestedAtColumn: ColumnDef<MerchantPendingRequest> = {
   header: "Requested at",
   cell: ({ row }) => (
     <span className="text-muted-foreground text-sm">
-      {formatIsoDate(new Date(Number(row.original.requested_date)).toISOString())}
+      {formatIsoDate(
+        new Date(Number(row.original.requested_date)).toISOString(),
+      )}
     </span>
   ),
 };
@@ -331,7 +335,7 @@ export default function Redemptions() {
     },
     onError: (err) => {
       toast.error(
-        err instanceof Error ? err.message : "Failed to approve redemption",
+        getErrorMessage(err, "Failed to approve redemption"),
         errorToastProperties,
       );
       // Keep dialog open so the user can retry with the correct code.
@@ -357,7 +361,7 @@ export default function Redemptions() {
     },
     onError: (err) => {
       toast.error(
-        err instanceof Error ? err.message : "Failed to reject redemption",
+        getErrorMessage(err, "Failed to reject redemption"),
         errorToastProperties,
       );
     },
@@ -372,14 +376,12 @@ export default function Redemptions() {
     }
   };
 
-  const dialogError =
-    approveMutation.isError || rejectMutation.isError
-      ? approveMutation.error instanceof Error
-        ? approveMutation.error.message
-        : rejectMutation.error instanceof Error
-          ? rejectMutation.error.message
-          : "Code did not match"
-      : null;
+  let dialogError: string | null = null;
+  if (approveMutation.isError) {
+    dialogError = getErrorMessage(approveMutation.error, "Code did not match");
+  } else if (rejectMutation.isError) {
+    dialogError = getErrorMessage(rejectMutation.error, "Code did not match");
+  }
 
   // Reset mutation state when the dialog closes so a new attempt starts clean.
   useEffect(() => {
@@ -547,6 +549,13 @@ export default function Redemptions() {
                       <Skeleton key={i} className="h-20 w-full" />
                     ))}
                   </div>
+                ) : activeQuery.isError ? (
+                  <ErrorState
+                    compact
+                    error={activeQuery.error}
+                    onRetry={() => void activeQuery.refetch()}
+                    isRetrying={activeQuery.isFetching}
+                  />
                 ) : (
                   <div className="flex flex-col items-center justify-center gap-2 py-12 text-center">
                     <Ticket className="text-muted-foreground h-8 w-8" />
